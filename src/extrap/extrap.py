@@ -13,7 +13,7 @@ directory for details.
 import logging
 import argparse
 import os
-from fileio.cube_file_reader import read_cube_file
+from fileio.cube_file_reader2 import read_cube_file
 from fileio.text_file_reader import read_text_file
 from fileio.talpas_file_reader import read_talpas_file
 from fileio.json_file_reader import read_json_file
@@ -121,6 +121,7 @@ def main():
                 #TODO: debug code
                 experiment.debug()
                 
+                """
                 # initialize model generator
                 model_generator = ModelGenerator(experiment)
             
@@ -136,6 +137,7 @@ def main():
                 # save formatted output to text file
                 if print_output == True:
                     save_output(text, print_path)
+                """
                 
             else:
                 logging.error("The given file path is not valid or the input file does not exist.")

@@ -79,7 +79,7 @@ One reason why the gui is not showing can be missing python packages!
 
 # TODO:
 
-* /bin directory is not needed anymore, remove it and test if scripts still work
+* ...
 
 ## C++ shared libraries
 
