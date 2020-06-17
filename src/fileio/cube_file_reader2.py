@@ -22,73 +22,15 @@ from entities.experiment import Experiment
 #from fileio.io_helper import create_call_tree
 #from ctypes import *  # @UnusedWildImport
 
-from glob import glob
 import os
 import re
-import logging
+#import logging
 
 from pycube import CubexParser  # @UnresolvedImport
 from pycube.utils.exceptions import MissingMetricError  # @UnresolvedImport
 
 """
 
-class ParameterValue():
-    def __init__(self, parameter, value):
-        self.parameter = parameter
-        self.value = value
-    def out(self):
-        print(self.parameter+""+str(self.value))
-
-
-def configure_prefix(dir_name):
-    prefix = os.listdir(dir_name)[0]
-    pos = prefix.find(".")
-    prefix = prefix[:pos]
-    return prefix
-
-
-def configure_nr_parameters(dir_name):
-    path = os.listdir(dir_name)[0]
-    pos = path.find(".")
-    path = path[pos+1:]
-    pos = path.find(".r")
-    parameter_values = path[:pos]
-    parameter_values_list = parameter_values.split(sep=".")
-    if len(parameter_values_list) == 1:
-        return 1
-    else:
-        return len(parameter_values_list)
-
-
-def configure_displayed_names(dir_name):
-    displayed_names = os.listdir(dir_name)[0]
-    pos = displayed_names.find(".")
-    displayed_names = displayed_names[pos+1:]
-    pos = displayed_names.find(".r")
-    displayed_names = displayed_names[:pos]
-    displayed_names = "".join([i for i in displayed_names if not i.isdigit()])
-    pos = displayed_names.find(".")
-    if pos != -1:
-        displayed_names = displayed_names.replace(".", ",")
-    if displayed_names[len(displayed_names)-1] == ",":
-        displayed_names = displayed_names[:-1]
-    return displayed_names
-   
-    
-def configure_names(dir_name):
-    configure_names = os.listdir(dir_name)[0]
-    pos = configure_names.find(".")
-    configure_names = configure_names[pos+1:]
-    pos = configure_names.find(".r")
-    configure_names = configure_names[:pos]
-    configure_names = "".join([i for i in configure_names if not i.isdigit()])
-    configure_names = "."+configure_names
-    configure_names = configure_names.replace(".", ",#")
-    configure_names = configure_names.replace("#", ".")
-    configure_names = configure_names[1:]
-    if configure_names[len(configure_names)-1] == ",":
-        configure_names = configure_names[:-1]
-    return configure_names
 
 
 def configure_repetitions(dir_name):
@@ -174,6 +116,13 @@ def configure_parameter_values(dir_name, num_params):
     return parameter_value_string
 
 """
+    
+"""  
+    # create the call tree and add it to the experiment
+    callpaths = experiment.get_callpaths()
+    call_tree = create_call_tree(callpaths)
+    experiment.add_call_tree(call_tree)
+"""
 
 
 def read_cube_file(dir_name, scaling_type):
@@ -194,6 +143,14 @@ def read_cube_file(dir_name, scaling_type):
         path = paths[path_id]
         folder_name = folders[path_id]
         
+        # create the metrics
+        if path_id == 0:
+            cubefile_path = path + "\\" + filename
+            with CubexParser(cubefile_path) as parsed:
+                for metric in parsed.get_metrics():
+                    if experiment.metric_exists(metric.display_name) == False:
+                        experiment.add_metric(Metric(metric.display_name))
+        
         # create the parameters
         pos = folder_name.find(".")
         folder_name = folder_name[pos+1:]
@@ -212,19 +169,30 @@ def read_cube_file(dir_name, scaling_type):
             parameter_value = float(param_list[1])
             
             # check if parameter already exists
-            if experiment.parameter_exists(parameter_name) == False:
-                parameter = Parameter(parameter_name)
-                experiment.add_parameter(parameter)
-                    
-            print(parameter_name)
-            print(parameter_value)
+            if path_id == 0:
+                if experiment.parameter_exists(parameter_name) == False:
+                    parameter = Parameter(parameter_name)
+                    experiment.add_parameter(parameter)
             
-            #TODO: create coordinate
+            # create coordinate
+            coordinate = Coordinate()
+            parameter_id = experiment.get_parameter_id(parameter_name)
+            parameter = experiment.get_parameter(parameter_id)
+            coordinate.add_parameter_value(parameter, parameter_value)
+            
+            # check if the coordinate already exists
+            if experiment.coordinate_exists(coordinate) == False:
+                experiment.add_coordinate(coordinate)
+                
+            # get the coordinate id
+            coordinate_id = experiment.get_coordinate_id(coordinate)
         
         # when there a several parameters
         elif len(parameters) > 1:
-            for i in range(len(parameters)):
-                parameter = parameters[i]
+            coordinate = Coordinate()
+            
+            for parameter_id in range(len(parameters)):
+                parameter = parameters[parameter_id]
                 param_list = re.split("(\d+)", parameter)
                 param_list.remove("")
                 parameter_name = param_list[0]
@@ -233,15 +201,23 @@ def read_cube_file(dir_name, scaling_type):
                 parameter_value = float(param_list[1])
                 
                 # check if parameter already exists
-                if experiment.parameter_exists(parameter_name) == False:
-                    parameter = Parameter(parameter_name)
-                    experiment.add_parameter(parameter)
+                if path_id == 0:
+                    if experiment.parameter_exists(parameter_name) == False:
+                        parameter = Parameter(parameter_name)
+                        experiment.add_parameter(parameter)
                         
-                print(parameter_name)
-                print(parameter_value)
+                # create coordinate
+                parameter_id = experiment.get_parameter_id(parameter_name)
+                parameter = experiment.get_parameter(parameter_id)
+                coordinate.add_parameter_value(parameter, parameter_value)
                 
-                #TODO: create coordinate
-        
+            # check if the coordinate already exists
+            if experiment.coordinate_exists(coordinate) == False:
+                experiment.add_coordinate(coordinate)
+                
+            # get the coordinate id
+            coordinate_id = experiment.get_coordinate_id(coordinate)
+
         
         #TODO: for windows systems only, add something for linux as well!
         cubefile_path = path + "\\" + filename
@@ -255,33 +231,52 @@ def read_cube_file(dir_name, scaling_type):
             # or offer the user to choose them...
             for metric in parsed.get_metrics():
                 
-                # create the metric
-                experiment.add_metric(Metric(metric.display_name))
-                
                 
                 
                 try:
                     metric_values = parsed.get_metric_values(metric=metric)
-                    # with the cnode_indices I can manipulate the region that is chosen
-                    # should put for here to extract all of them
-                    cnode = parsed.get_cnode(metric_values.cnode_indices[0])
-                    #debug
-                    #print(metric_values.cnode_indices)
-                    #print("node values:",metric_values.cnode_values(cnode.id))
-                    #print("number node values:",len(metric_values.cnode_values(cnode.id)))
-
-                    # the more processes the more values per node, like this shows only 5 of them
-                    # here we will do some magic with selecting only certain values based on that clustering algorithm
-                    cnode_values = metric_values.cnode_values(cnode.id)[:5]
-                    region = parsed.get_region(cnode)
-                    print('\t' + '-' * 100)
-                    print(f'\tRegion: {region.name}\n\tMetric: {metric.name}\n\tMetricValues: {cnode_values})')
+                    
+                    # get number of callpaths
+                    callpath_id = 0
+                    while callpath_id < len(metric_values.cnode_indices):
+                        #num_callpaths = len(metric_values.cnode_indices)
+                    
+                        # with the cnode_indices I can manipulate the region that is chosen
+                        # should put for here to extract all of them
+                        cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
+                        #debug
+                        #print(metric_values.cnode_indices)
+                        #print("node values:",metric_values.cnode_values(cnode.id))
+                        #print("number node values:",len(metric_values.cnode_values(cnode.id)))
+    
+                        # the more processes the more values per node, like this shows only 5 of them
+                        # here we will do some magic with selecting only certain values based on that clustering algorithm
+                        #TODO: measurements are read correctly and sorted to metrics, callpaths and coordinates
+                        #TODO: calc mean and median over all node values
+                        cnode_values = metric_values.cnode_values(cnode.id)[:5]
+                        
+                        
+                        #TODO: works, make screenshot of calltree in old application and callpaths
+                        # create callpath
+                        region = parsed.get_region(cnode)
+                        callpath_string = region.name
+                        callpath = Callpath(callpath_string)
+                        if experiment.callpath_exists(callpath_string) == False:
+                            experiment.add_callpath(callpath)
+                            
+                        # remember id of callpath for later
+                        
+                        
+                        print('\t' + '-' * 100)
+                        print(f'\tRegion: {region.name}\n\tMetric: {metric.name}\n\tMetricValues: {cnode_values})')
+                
+                        callpath_id += 1
+                
                 except MissingMetricError as e:
                     # Ignore missing metrics
                     pass
             
-        
-        break
+     
     
     return experiment
     
