@@ -59,7 +59,7 @@ One reason why the gui is not showing can be missing python packages!
 This command only works in windows shell...
 
 1. `python -m venv /tmppython` Create a new virtual python environment to test the code.
-2. `tmppython\Scripts\activate` Activate the virtual environment to use it for testing.
+2. `\tmppython\Scripts\activate` Activate the virtual environment to use it for testing.
 3. `deactivate` Deactivate the virtual environment.
 
 # Install the Extra-P package
