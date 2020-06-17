@@ -56,6 +56,8 @@ One reason why the gui is not showing can be missing python packages!
 
 # Build virtual env to test package
 
+This command only works in windows shell...
+
 1. `python -m venv /tmppython` Create a new virtual python environment to test the code.
 2. `tmppython\Scripts\activate` Activate the virtual environment to use it for testing.
 3. `deactivate` Deactivate the virtual environment.
@@ -74,8 +76,10 @@ One reason why the gui is not showing can be missing python packages!
 * PyQT needs to be install in order for the gui to display when running the extrapgui command in a terminal.
 * python -m pip install --user --upgrade twine
 * python -m pip install --user --upgrade setuptools wheel
-* `pip install -e C:\Users\Admin\git\Extra-P\`
+* `pip install -e C:\Users\Admin\git\extrap\`
 * `extrap --text --path C:\Users\Admin\git\Extra-P\data\text\two_parameter_1.txt`
+* `extrap --cube --path C:\Users\Admin\git\Extra-P\data\cube\kripke\`
+* `extrap --cube --path C:\Users\Admin\git\Extra-P\data\cube\blast\`
 
 # TODO:
 
