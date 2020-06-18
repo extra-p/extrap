@@ -29,7 +29,7 @@ import numpy as np
 
 from pycube import CubexParser  # @UnresolvedImport
 from pycube.utils.exceptions import MissingMetricError  # @UnresolvedImport
-from pycube.classes.calltree import CallTree  # @UnresolvedImport
+#from pycube.classes.calltree import CallTree  # @UnresolvedImport
 
 """
 
