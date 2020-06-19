@@ -30,6 +30,7 @@ class Test_TestOneParameterFiles(unittest.TestCase):
 
     def test_read_6(self):
         experiment = read_text_file("data/text/one_parameter_6.txt")
+        self.assertEqual(len(experiment.metrics), 1)
         self.assertEqual(len(experiment.parameters), 1)
         self.assertListEqual(experiment.callpaths, [
                              Callpath('met1'), Callpath('met2'), Callpath('met3'), Callpath('met4')])
@@ -45,6 +46,7 @@ class Test_TestOneParameterFiles(unittest.TestCase):
 
     def test_read_7(self):
         experiment = read_text_file("data/text/one_parameter_7.txt")
+        self.assertEqual(len(experiment.metrics), 1)
         self.assertEqual(len(experiment.parameters), 1)
         self.assertListEqual(experiment.callpaths, [Callpath('met1')])
         p = Parameter('p')
@@ -132,6 +134,7 @@ class Test_TestTwoParameterFiles(unittest.TestCase):
 
     def test_read_4(self):
         experiment = read_text_file("data/text/two_parameter_4.txt")
+        self.assertEqual(len(experiment.metrics), 1)
         self.assertEqual(len(experiment.parameters), 2)
         self.assertListEqual(experiment.callpaths, [Callpath(
             'met1'), Callpath('met2'), Callpath('met3'), Callpath('met4')])

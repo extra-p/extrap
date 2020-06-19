@@ -100,6 +100,9 @@ def read_text_file(path):
                     middle_id = int((len(sorted_data_list) + 1) / 2) - 1
                     value_median = sorted_data_list[middle_id]
 
+                if not experiment.metric_exists(last_metric):
+                    metric = Metric(last_metric)
+                    experiment.add_metric(metric)
                 callpath_id = experiment.get_callpath_id(last_callpath)
                 metric_id = experiment.get_metric_id(last_metric)
                 measurement = Measurement(
