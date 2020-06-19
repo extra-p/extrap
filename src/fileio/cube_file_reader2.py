@@ -25,6 +25,7 @@ from entities.experiment import Experiment
 import os
 import re
 import numpy as np
+import copy
 #import logging
 
 from pycube import CubexParser  # @UnresolvedImport
@@ -126,6 +127,55 @@ def configure_parameter_values(dir_name, num_params):
     experiment.add_call_tree(call_tree)
 """
 
+#TODO: refactor code to make it understandable
+def construct_parent(x, l, i):
+    l2 = l - 1
+    id1 = i-1
+    id2 = -1
+    while id1 >= 0:
+        y2 = x[id1]
+        l3 = y2.count("-")
+        if l2 == l3:
+            id2 = id1
+            break
+        id1 -= 1
+    y3 = x[id2]
+    if y3.count("-") == 0:
+        #y3 = y3 + "->"
+        return y3
+    else:
+        l3 = y3.count("-")
+        #print("count:",l3)
+        y4 = construct_parent(x, l3, i)
+        y3 = y3.replace("-","")
+        y5 = y4 + "->" + y3
+        return y5
+
+#TODO: refactor code to make it understandable        
+def fix_call_tree(calltree):
+    #print(calltree)
+    x = calltree.split("\n")
+    x.remove("")
+    #print(x)
+    
+    z = []
+    
+    for i in range(len(x)):
+        y = x[i]
+        if y.count("-") == 0:
+            z.append(y)
+        elif y.count("-") > 0:
+            l = y.count("-")
+            
+            y2 = construct_parent(x, l, i)
+            y2 = y2 + "->"
+            #print("boobs:",y2)
+            
+            y = y.replace("-","")
+            y3 = y2 + y
+            z.append(y3)
+            
+    return z
 
 def read_cube_file(dir_name, scaling_type):
     
@@ -219,14 +269,20 @@ def read_cube_file(dir_name, scaling_type):
         
         with CubexParser(cubefile_path) as parsed:
             
-            #TODO: get call tree
+            # get call tree
             if path_id == 0:
                 parsed.print_calltree()
                 print("\n")
                 call_tree = parsed.get_calltree()
-                #call_tree.print_tree()
-                print(call_tree)
-            
+                call_tree = fix_call_tree(call_tree)
+                
+                # create the callpaths
+                for i in range(len(call_tree)):
+                    print(call_tree[i])
+                    callpath = Callpath(call_tree[i])
+                    if experiment.callpath_exists(call_tree[i]) == False:
+                        experiment.add_callpath(callpath)
+
             #TODO: here we could choose which metrics to extract
             # iterate over all metrics
             counter = 0
@@ -247,16 +303,16 @@ def read_cube_file(dir_name, scaling_type):
                     for callpath_id in range(len(metric_values.cnode_indices)):
                         cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
                                             
-                        # create callpath
-                        region = parsed.get_region(cnode)
-                        callpath_string = region.name
-                        callpath = Callpath(callpath_string)
-                        if path_id == 0 and counter == 0:
-                            if experiment.callpath_exists(callpath_string) == False:
-                                experiment.add_callpath(callpath)
+                        #TODO: fix this creation will not be here,... create callpath
+                        #region = parsed.get_region(cnode)
+                        #callpath_string = region.name
+                        #callpath = Callpath(callpath_string)
+                        #if path_id == 0 and counter == 0:
+                        #    if experiment.callpath_exists(callpath_string) == False:
+                        #        experiment.add_callpath(callpath)
                                 
                         # get callpath id
-                        callpath_id = experiment.get_callpath_id(callpath_string)
+                        callpath_id = experiment.get_callpath_id("")
                     
                         
                         #TODO: calltree need to be done
@@ -283,6 +339,8 @@ def read_cube_file(dir_name, scaling_type):
                 
                 except MissingMetricError as e:  # @UnusedVariable
                     # Ignore missing metrics
+                    #TODO: check what happens here...!
+                    print("ERROR")
                     pass
             
                 counter += 1

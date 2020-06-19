@@ -119,7 +119,7 @@ def main():
                 experiment = read_cube_file(arguments.path, scaling_type)
                 
                 #TODO: debug code
-                #experiment.debug()
+                experiment.debug()
                 
                 """
                 # initialize model generator
