@@ -24,10 +24,13 @@ from entities.experiment import Experiment
 
 import os
 import re
+import numpy as np
+import copy
 #import logging
 
 from pycube import CubexParser  # @UnresolvedImport
 from pycube.utils.exceptions import MissingMetricError  # @UnresolvedImport
+#from pycube.classes.calltree import CallTree  # @UnresolvedImport
 
 """
 
@@ -124,6 +127,55 @@ def configure_parameter_values(dir_name, num_params):
     experiment.add_call_tree(call_tree)
 """
 
+#TODO: refactor code to make it understandable
+def construct_parent(x, l, i):
+    l2 = l - 1
+    id1 = i-1
+    id2 = -1
+    while id1 >= 0:
+        y2 = x[id1]
+        l3 = y2.count("-")
+        if l2 == l3:
+            id2 = id1
+            break
+        id1 -= 1
+    y3 = x[id2]
+    if y3.count("-") == 0:
+        #y3 = y3 + "->"
+        return y3
+    else:
+        l3 = y3.count("-")
+        #print("count:",l3)
+        y4 = construct_parent(x, l3, i)
+        y3 = y3.replace("-","")
+        y5 = y4 + "->" + y3
+        return y5
+
+#TODO: refactor code to make it understandable        
+def fix_call_tree(calltree):
+    #print(calltree)
+    x = calltree.split("\n")
+    x.remove("")
+    #print(x)
+    
+    z = []
+    
+    for i in range(len(x)):
+        y = x[i]
+        if y.count("-") == 0:
+            z.append(y)
+        elif y.count("-") > 0:
+            l = y.count("-")
+            
+            y2 = construct_parent(x, l, i)
+            y2 = y2 + "->"
+            #print("boobs:",y2)
+            
+            y = y.replace("-","")
+            y3 = y2 + y
+            z.append(y3)
+            
+    return z
 
 def read_cube_file(dir_name, scaling_type):
     
@@ -142,15 +194,7 @@ def read_cube_file(dir_name, scaling_type):
     for path_id in range(len(paths)):
         path = paths[path_id]
         folder_name = folders[path_id]
-        
-        # create the metrics
-        if path_id == 0:
-            cubefile_path = path + "\\" + filename
-            with CubexParser(cubefile_path) as parsed:
-                for metric in parsed.get_metrics():
-                    if experiment.metric_exists(metric.display_name) == False:
-                        experiment.add_metric(Metric(metric.display_name))
-        
+                
         # create the parameters
         pos = folder_name.find(".")
         folder_name = folder_name[pos+1:]
@@ -224,59 +268,84 @@ def read_cube_file(dir_name, scaling_type):
         print("path:",cubefile_path)
         
         with CubexParser(cubefile_path) as parsed:
-            parsed.print_calltree()
             
-            # extracting all the metrics
-            # should extract only the ones we can actually model
-            # or offer the user to choose them...
+            # get call tree
+            if path_id == 0:
+                parsed.print_calltree()
+                print("\n")
+                call_tree = parsed.get_calltree()
+                call_tree = fix_call_tree(call_tree)
+                
+                # create the callpaths
+                for i in range(len(call_tree)):
+                    print(call_tree[i])
+                    callpath = Callpath(call_tree[i])
+                    if experiment.callpath_exists(call_tree[i]) == False:
+                        experiment.add_callpath(callpath)
+
+            #TODO: here we could choose which metrics to extract
+            # iterate over all metrics
+            counter = 0
             for metric in parsed.get_metrics():
                 
-                
-                
+                # create the metrics
+                if path_id == 0:
+                    if experiment.metric_exists(metric.display_name) == False:
+                        experiment.add_metric(Metric(metric.display_name))
+                        
+                # get the metric id
+                metric_id = experiment.get_metric_id(metric.display_name)
+                        
                 try:
                     metric_values = parsed.get_metric_values(metric=metric)
                     
-                    # get number of callpaths
-                    callpath_id = 0
-                    while callpath_id < len(metric_values.cnode_indices):
-                        #num_callpaths = len(metric_values.cnode_indices)
-                    
-                        # with the cnode_indices I can manipulate the region that is chosen
-                        # should put for here to extract all of them
+                    # iterate over all callpaths
+                    for callpath_id in range(len(metric_values.cnode_indices)):
                         cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
-                        #debug
-                        #print(metric_values.cnode_indices)
-                        #print("node values:",metric_values.cnode_values(cnode.id))
-                        #print("number node values:",len(metric_values.cnode_values(cnode.id)))
-    
-                        # the more processes the more values per node, like this shows only 5 of them
-                        # here we will do some magic with selecting only certain values based on that clustering algorithm
+                                            
+                        #TODO: fix this creation will not be here,... create callpath
+                        #region = parsed.get_region(cnode)
+                        #callpath_string = region.name
+                        #callpath = Callpath(callpath_string)
+                        #if path_id == 0 and counter == 0:
+                        #    if experiment.callpath_exists(callpath_string) == False:
+                        #        experiment.add_callpath(callpath)
+                                
+                        # get callpath id
+                        callpath_id = experiment.get_callpath_id("")
+                    
+                        
+                        #TODO: calltree need to be done
+                        #print(callpath_string)
+                        #for child in cnode.get_children():
+                        #    if cnode is None:
+                        #        cnode = self._anchor_result.cnodes[0]
+                        #    self.print_calltree(indent + 1, cnode=child)
+                        
+                        
+                        
+                        
+                        #TODO: here we can use clustering algorithm to select only certain node level values
                         #TODO: measurements are read correctly and sorted to metrics, callpaths and coordinates
-                        #TODO: calc mean and median over all node values
-                        cnode_values = metric_values.cnode_values(cnode.id)[:5]
+                        # calc mean and median over all node values
+                        cnode_values = metric_values.cnode_values(cnode.id)    
+                        value_mean = np.mean(cnode_values)
+                        value_median = np.median(cnode_values)
                         
+                        measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
+                        experiment.add_measurement(measurement)
                         
-                        #TODO: works, make screenshot of calltree in old application and callpaths
-                        # create callpath
-                        region = parsed.get_region(cnode)
-                        callpath_string = region.name
-                        callpath = Callpath(callpath_string)
-                        if experiment.callpath_exists(callpath_string) == False:
-                            experiment.add_callpath(callpath)
-                            
-                        # remember id of callpath for later
-                        
-                        
-                        print('\t' + '-' * 100)
-                        print(f'\tRegion: {region.name}\n\tMetric: {metric.name}\n\tMetricValues: {cnode_values})')
                 
-                        callpath_id += 1
                 
-                except MissingMetricError as e:
+                except MissingMetricError as e:  # @UnusedVariable
                     # Ignore missing metrics
+                    #TODO: check what happens here...!
+                    print("ERROR")
                     pass
             
-     
+                counter += 1
+                
+        break
     
     return experiment
     
