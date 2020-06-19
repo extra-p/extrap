@@ -14,16 +14,14 @@ class Coordinate:
     """
     This class represents a coordinate, i.e. a point where a measurement is taken.
     """
-    
-    
-    def __init__(self):
+
+    def __init__(self, parampair=[]):
         """
         Initialize the coordinate object.
         """
-        self.parameters = []
-        self.values = []
+        self.parameters = [p for p, v in parampair]
+        self.values = [v for p, v in parampair]
         self.dimensions = 0
-
 
     def add_parameter_value(self, parameter, value):
         """
@@ -33,15 +31,13 @@ class Coordinate:
         self.parameters.append(parameter)
         self.values.append(value)
         self.dimensions += 1
-    
-    
+
     def get_dimensions(self):
         """
         Returns the number of dimensions of the coordinate.
         """
         return self.dimensions
-    
-    
+
     def get_parameter_value(self, dimension):
         """
         Returns the parameter-value combination of the given dimension.
@@ -49,8 +45,7 @@ class Coordinate:
         parameter = self.parameters[dimension]
         value = self.values[dimension]
         return parameter, value
-    
-    
+
     def get_as_string(self):
         """
         Returns a string representation of the coordinate.
@@ -62,5 +57,14 @@ class Coordinate:
             value = self.values[element_id]
             coordinate_string += "("+parameter_name+","+str(value)+")"
         return coordinate_string
-    
-    
+
+    def __hash__(self):
+        items = (tuple(self.parameters), tuple(self.values))
+        return hash(items)
+
+    def __eq__(self, other):
+        if not isinstance(other, __class__):
+            return False
+        return self is other or (
+            self.parameters == other.parameters and
+            self.values == self.values)
