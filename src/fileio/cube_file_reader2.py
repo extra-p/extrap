@@ -17,10 +17,7 @@ from entities.coordinate import Coordinate
 from entities.callpath import Callpath
 from entities.metric import Metric
 from entities.experiment import Experiment
-
-#from util.shared_library_interface import load_cube_interface
-#from fileio.io_helper import create_call_tree
-#from ctypes import *  # @UnusedWildImport
+from fileio.io_helper import create_call_tree
 
 import os
 import re
@@ -30,102 +27,7 @@ import copy
 
 from pycube import CubexParser  # @UnresolvedImport
 from pycube.utils.exceptions import MissingMetricError  # @UnresolvedImport
-#from pycube.classes.calltree import CallTree  # @UnresolvedImport
 
-"""
-
-
-
-def configure_repetitions(dir_name):
-    paths = os.listdir(dir_name)
-    parameter_value_list = []
-    for i in range(len(paths)):
-        coordinate_string = paths[i]
-        pos = coordinate_string.find(".")
-        coordinate_string = coordinate_string[pos+1:]
-        pos = coordinate_string.find(".r")
-        coordinate_string = coordinate_string[:pos]
-        if (parameter_value_list)==0:
-            parameter_value_list.append(coordinate_string)
-        else:
-            in_list = False
-            for j in range(len(parameter_value_list)):
-                parameter_value_element = parameter_value_list[j]
-                if coordinate_string == parameter_value_element:
-                    in_list = True
-                    break
-            if in_list == False:
-                parameter_value_list.append(coordinate_string)
-    rep_map = {}
-    for i in range(len(parameter_value_list)):
-        item = parameter_value_list[i]
-        rep_map[item] = 0
-    for i in range(len(paths)):
-        coordinate_string = paths[i]
-        pos = coordinate_string.find(".")
-        coordinate_string = coordinate_string[pos+1:]
-        pos = coordinate_string.find(".r")
-        coordinate_string = coordinate_string[:pos]
-        rep_map[coordinate_string] += 1
-    repetitions = rep_map[parameter_value_list[0]]
-    return repetitions
-
-
-def configure_parameter_values(dir_name, num_params):
-    paths = os.listdir(dir_name)
-    parameter_value_list = []
-    coordinate_list = []
-    for _ in range(num_params):
-        coordinate_list.append([])
-    for i in range(len(paths)):
-        coordinate_string = paths[i]
-        pos = coordinate_string.find(".")
-        coordinate_string = coordinate_string[pos+1:]
-        pos = coordinate_string.find(".r")
-        coordinate_string = coordinate_string[:pos]
-        parameter_value_list = coordinate_string.split(".")
-        for i in range(num_params):
-            if len(coordinate_list[i]) == 0:
-                coordinate_list[i].append(parameter_value_list[i])
-            else:
-                in_list = False
-                for j in range(len(coordinate_list[i])):
-                    if parameter_value_list[i] == coordinate_list[i][j]:
-                        in_list = True
-                        break
-                if in_list == False:
-                    coordinate_list[i].append(parameter_value_list[i])
-    coordinate_object_list = []
-    for j in range(num_params):
-        param_value_list = []
-        for i in range(len(coordinate_list[j])):
-            item = coordinate_list[j][i]
-            parameter_name = "".join([i for i in item if not i.isdigit()])
-            parameter_value = item.replace(",", ".")
-            parameter_value = "".join([i for i in parameter_value if i.isdigit() or i == "."])
-            parameter_value = float(parameter_value)
-            param_value = ParameterValue(parameter_name, parameter_value)
-            param_value_list.append(param_value)
-        param_value_list.sort(key=lambda ParameterValue: ParameterValue.value, reverse=False)
-        coordinate_object_list.append(param_value_list)
-    parameter_value_string = ""
-    for j in range(num_params):
-        for i in range(len(coordinate_object_list[j])):
-            item = coordinate_object_list[j][i]
-            parameter_value_string += str(item.value) + ","
-        parameter_value_string = parameter_value_string[:-1]
-        parameter_value_string += ";"
-    parameter_value_string = parameter_value_string[:-1]
-    return parameter_value_string
-
-"""
-    
-"""  
-    # create the call tree and add it to the experiment
-    callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths)
-    experiment.add_call_tree(call_tree)
-"""
 
 #TODO: refactor code to make it understandable
 def construct_parent(x, l, i):
@@ -177,6 +79,7 @@ def fix_call_tree(calltree):
             
     return z
 
+#TODO: check what the scaling type did in the code and c++ code...
 def read_cube_file(dir_name, scaling_type):
     
     # read the paths of the cube files in the given directory with dir_name
@@ -271,30 +174,32 @@ def read_cube_file(dir_name, scaling_type):
             
             # get call tree
             if path_id == 0:
-                parsed.print_calltree()
-                print("\n")
                 call_tree = parsed.get_calltree()
                 call_tree = fix_call_tree(call_tree)
                 
                 # create the callpaths
                 for i in range(len(call_tree)):
-                    print(call_tree[i])
                     callpath = Callpath(call_tree[i])
                     if experiment.callpath_exists(call_tree[i]) == False:
                         experiment.add_callpath(callpath)
+                
+                # create the call tree and add it to the experiment
+                callpaths = experiment.get_callpaths()
+                call_tree = create_call_tree(callpaths)
+                experiment.add_call_tree(call_tree)
 
-            #TODO: here we could choose which metrics to extract
+            #NOTE: here we could choose which metrics to extract
             # iterate over all metrics
             counter = 0
             for metric in parsed.get_metrics():
                 
                 # create the metrics
                 if path_id == 0:
-                    if experiment.metric_exists(metric.display_name) == False:
-                        experiment.add_metric(Metric(metric.display_name))
+                    if experiment.metric_exists(metric.name) == False:
+                        experiment.add_metric(Metric(metric.name))
                         
                 # get the metric id
-                metric_id = experiment.get_metric_id(metric.display_name)
+                metric_id = experiment.get_metric_id(metric.name)
                         
                 try:
                     metric_values = parsed.get_metric_values(metric=metric)
@@ -302,50 +207,26 @@ def read_cube_file(dir_name, scaling_type):
                     # iterate over all callpaths
                     for callpath_id in range(len(metric_values.cnode_indices)):
                         cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
-                                            
-                        #TODO: fix this creation will not be here,... create callpath
-                        #region = parsed.get_region(cnode)
-                        #callpath_string = region.name
-                        #callpath = Callpath(callpath_string)
-                        #if path_id == 0 and counter == 0:
-                        #    if experiment.callpath_exists(callpath_string) == False:
-                        #        experiment.add_callpath(callpath)
-                                
-                        # get callpath id
-                        callpath_id = experiment.get_callpath_id("")
-                    
                         
-                        #TODO: calltree need to be done
-                        #print(callpath_string)
-                        #for child in cnode.get_children():
-                        #    if cnode is None:
-                        #        cnode = self._anchor_result.cnodes[0]
-                        #    self.print_calltree(indent + 1, cnode=child)
-                        
-                        
-                        
-                        
-                        #TODO: here we can use clustering algorithm to select only certain node level values
-                        #TODO: measurements are read correctly and sorted to metrics, callpaths and coordinates
-                        # calc mean and median over all node values
+                        #NOTE: here we can use clustering algorithm to select only certain node level values
+                        # create the measurements
                         cnode_values = metric_values.cnode_values(cnode.id)    
                         value_mean = np.mean(cnode_values)
                         value_median = np.median(cnode_values)
-                        
                         measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
                         experiment.add_measurement(measurement)
-                        
-                
-                
+                                    
                 except MissingMetricError as e:  # @UnusedVariable
                     # Ignore missing metrics
                     #TODO: check what happens here...!
-                    print("ERROR")
+                    print(e)
                     pass
             
                 counter += 1
                 
         break
+    
+    #TODO: need to handle repetitions in experiment of measurements...
     
     return experiment
     
