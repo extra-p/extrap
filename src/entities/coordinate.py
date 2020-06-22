@@ -50,6 +50,12 @@ class Coordinate:
         """
         Returns a string representation of the coordinate.
         """
+        return str(self)
+
+    def __str__(self):
+        """
+        Returns a string representation of the coordinate.
+        """
         coordinate_string = ""
         for element_id in range(self.dimensions):
             parameter = self.parameters[element_id]
@@ -57,6 +63,12 @@ class Coordinate:
             value = self.values[element_id]
             coordinate_string += "("+parameter_name+","+str(value)+")"
         return coordinate_string
+
+    def __repr__(self):
+        """
+        Returns a string representation of the coordinate.
+        """
+        return f'Coordinate({str(self)})'
 
     def __hash__(self):
         items = (tuple(self.parameters), tuple(self.values))

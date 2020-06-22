@@ -1,11 +1,16 @@
+from util.deprecation import deprecated
+
+
 class Parameter:
 
     def __init__(self, name):
         self.name = name
 
+    @deprecated("Use property directly.")
     def set_name(self, name):
         self.name = name
 
+    @deprecated("Use property directly.")
     def get_name(self):
         return self.name
 

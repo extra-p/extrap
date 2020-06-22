@@ -34,3 +34,9 @@ class Callpath:
         if not isinstance(other, __class__):
             return False
         return self is other or self.name == other.name
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"Callpath({self.name})"
