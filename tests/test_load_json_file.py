@@ -14,11 +14,11 @@ class Test_TestFiles(unittest.TestCase):
         x = Parameter('x')
         self.assertListEqual(experiment.parameters, [x])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(x, 20)]),
-            Coordinate([(x, 30)]),
-            Coordinate([(x, 40)]),
-            Coordinate([(x, 50)]),
-            Coordinate([(x, 60)])
+            Coordinate([(x, 4)]),
+            Coordinate([(x, 8)]),
+            Coordinate([(x, 16)]),
+            Coordinate([(x, 32)]),
+            Coordinate([(x, 64)])
         ])
         self.assertListEqual(experiment.metrics, [
             Metric('time')

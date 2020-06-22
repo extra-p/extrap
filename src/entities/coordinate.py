@@ -79,4 +79,4 @@ class Coordinate:
             return False
         return self is other or (
             self.parameters == other.parameters and
-            self.values == self.values)
+            self.values == other.values)
