@@ -170,6 +170,7 @@ def read_cube_file(dir_name, scaling_type):
                 call_tree = fix_call_tree(call_tree)
                 
                 # create the callpaths
+                #todo change i to something else
                 for i in range(len(call_tree)):
                     callpath = Callpath(call_tree[i])
                     if experiment.callpath_exists(call_tree[i]) == False:
@@ -178,7 +179,21 @@ def read_cube_file(dir_name, scaling_type):
                 # create the call tree and add it to the experiment
                 callpaths = experiment.get_callpaths()
                 call_tree = create_call_tree(callpaths)
+                call_tree.print_tree()
                 experiment.add_call_tree(call_tree)
+                
+            # make list with region ids
+            metric_time_id = -1
+            for i in range(len(parsed.get_metrics())):
+                metric_name = parsed.get_metrics()[i].name
+                if metric_name == "time":
+                    metric_time_id = i
+                    break
+                
+            print(metric_time_id) 
+            metric_time = parsed.get_metrics()[metric_time_id]
+            
+            
 
             #NOTE: here we could choose which metrics to extract
             # iterate over all metrics
@@ -192,31 +207,105 @@ def read_cube_file(dir_name, scaling_type):
                         
                 # get the metric id
                 metric_id = experiment.get_metric_id(metric.name)
+                
+                print(metric.name)
                         
                 try:
                     metric_values = parsed.get_metric_values(metric=metric)
                     
+                    #TODO rmeove this code
+                    #print(len(metric_values.cnode_indices))
+                    
+                    #tODO: use region id from cube fiel reader format
+                    
+                    
+                    
                     # iterate over all callpaths
-                    for callpath_id in range(len(metric_values.cnode_indices)):
+                    #TODO change length here again... does not work like this
+                    for callpath_id in range(len(callpaths)):
+                        
                         cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
                         
-                        #NOTE: here we can use clustering algorithm to select only certain node level values
-                        # create the measurements
-                        cnode_values = metric_values.cnode_values(cnode.id)    
-                        value_mean = np.mean(cnode_values)
-                        value_median = np.median(cnode_values)
+                        region = parsed.get_region(cnode)
+                        #print(region)
+                        
+                        # standard case, all callpaths have values
+                        if len(metric_values.cnode_indices) == len(callpaths): 
+                            cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
+                            #NOTE: here we can use clustering algorithm to select only certain node level values
+                            # create the measurements
+                            cnode_values = metric_values.cnode_values(cnode.id)    
+                            value_mean = np.mean(cnode_values)
+                            value_median = np.median(cnode_values)
+                            measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
+                            experiment.add_measurement(measurement)
+                        
+                        #TODO: handle missing values for specific callpaths
+                        else:
+                            done = False
+                            if callpath_id >= len(metric_values.cnode_indices):
+                                done = True
+                            else:
+                                done = False
+                                
+                            if done == False:  
+                                cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
+                             
+                                if len(metric_values.cnode_indices) != len(callpaths): 
+                                    region = parsed.get_region(cnode)
+                                    actual_region_name = region.name
+                                    region_name_expected = callpaths[callpath_id].get_name()
+                                    
+                                    #print("Region1:",actual_region_name)
+                                    #print("Region2:",region_name_expected)
+                                    
+                                    if region_name_expected.count("->") > 0:
+                                        while region_name_expected.count("->") > 0:
+                                            pos = region_name_expected.find("->")
+                                            region_name_expected = region_name_expected[pos+2:]
+                                        if actual_region_name != region_name_expected:
+                                            value_mean = 0.0
+                                            value_median = 0.0
+                                        else:
+                                            cnode_values = metric_values.cnode_values(cnode.id)    
+                                            value_mean = np.mean(cnode_values)
+                                            value_median = np.median(cnode_values)
+                                            print(value_mean, value_median)
+                                    else:
+                                        if actual_region_name != region_name_expected:
+                                            value_mean = 0.0
+                                            value_median = 0.0
+                                        else:
+                                            cnode_values = metric_values.cnode_values(cnode.id)    
+                                            value_mean = np.mean(cnode_values)
+                                            value_median = np.median(cnode_values)
+                                            print(value_mean, value_median)
+                            
+                            else:
+                                value_mean = 0.0
+                                value_median = 0.0
+                            
+                            measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
+                            experiment.add_measurement(measurement)
+                                       
+                except MissingMetricError as e:  # @UnusedVariable
+                    # Take care of missing metrics
+                    
+                    # get the metric id
+                    metric_id = experiment.get_metric_id(metric.name)
+                    
+                    # iterate over all callpaths
+                    for callpath_id in range(len(callpaths)):
+                        
+                        # create measurement with 0.0 as value for all missing fields in cube file
+                        value_mean = 0.0
+                        value_median = 0.0
                         measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
                         experiment.add_measurement(measurement)
-                                    
-                except MissingMetricError as e:  # @UnusedVariable
-                    # Ignore missing metrics
-                    #TODO: check what happens here...!
-                    print(e)
-                    pass
             
                 counter += 1
                 
-        #break
+        break
     
     #TODO: need to handle repetitions in experiment of measurements...
     # should be able to use the method from iohelper class that auto. takes care of the repetitions...
