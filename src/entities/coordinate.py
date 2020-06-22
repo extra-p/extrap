@@ -21,7 +21,7 @@ class Coordinate:
         """
         self.parameters = [p for p, v in parampair]
         self.values = [v for p, v in parampair]
-        self.dimensions = 0
+        self.dimensions = len(parampair)
 
     def add_parameter_value(self, parameter, value):
         """

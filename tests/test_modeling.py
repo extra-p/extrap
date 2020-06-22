@@ -38,3 +38,12 @@ class Test_TestModeling(unittest.TestCase):
         self.assertEqual(len(models[3].hypothesis.function.compound_terms[0].simple_terms), 1)
         self.assertEqual(models[3].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
         self.assertAlmostEqual(models[3].hypothesis.function.compound_terms[0].simple_terms[0].exponent, 2.0)
+
+    def test_basic_multi_parameter_modeling(self):
+        experiment = read_text_file('data/text/two_parameter_1.txt')
+
+        # initialize model generator
+        model_generator = ModelGenerator(experiment)
+
+        # create models from data
+        experiment: Experiment = model_generator.model_all(False)
