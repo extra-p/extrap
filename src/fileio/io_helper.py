@@ -15,9 +15,13 @@ from entities.measurement import Measurement
 from entities.calltree import CallTree
 from entities.calltree import Node
 import logging
+from tqdm import tqdm
 
 
 def format_callpaths(experiment):
+    """
+    This method formats the ouput so that only the callpaths are shown.
+    """
     callpaths = experiment.get_callpaths()
     text = ""
     for callpath_id in range(len(callpaths)):
@@ -28,6 +32,9 @@ def format_callpaths(experiment):
 
 
 def format_metrics(experiment):
+    """
+    This method formats the ouput so that only the metrics are shown.
+    """
     metrics = experiment.get_metrics()
     text = ""
     for metric_id in range(len(metrics)):
@@ -38,6 +45,9 @@ def format_metrics(experiment):
 
 
 def format_parameters(experiment):
+    """
+    This method formats the ouput so that only the parameters are shown.
+    """
     parameters = experiment.get_parameters()
     text = ""
     for parameters_id in range(len(parameters)):
@@ -48,6 +58,9 @@ def format_parameters(experiment):
 
 
 def format_functions(experiment):
+    """
+    This method formats the ouput so that only the functions are shown.
+    """
     modeler = experiment.get_modeler(0)
     models = modeler.get_models()
     text = ""
@@ -66,6 +79,9 @@ def format_functions(experiment):
 
 
 def format_all(experiment):
+    """
+    This method formats the ouput so that all information is shown.
+    """
     coordinates = experiment.get_coordinates()
     callpaths = experiment.get_callpaths()
     metrics = experiment.get_metrics()
@@ -144,6 +160,12 @@ def compute_repetitions(experiment):
     repetitions, just one mean and one median value per coordinate.  
     """
     
+    logging.info("Computing measurement repetitions...")
+    
+    #TODO: should be only active when using the command line tool
+    # create a progress bar for computing the repetitions
+    pbar = tqdm(total=100)
+    
     # create a container for computing the mean or median values of the measurements for each coordinate
     computed_measurements = []
     for coordinate_id in range(experiment.get_len_coordinates()):
@@ -151,6 +173,9 @@ def compute_repetitions(experiment):
             for callpath_id in range(experiment.get_len_callpaths()):
                 measurement = Measurement(coordinate_id, callpath_id, metric_id, [], None)
                 computed_measurements.append(measurement)
+    
+    # update progress bar           
+    pbar.update(20)
     
     # iterate over all previously read measurements    
     measurements = experiment.get_measurements()
@@ -176,6 +201,9 @@ def compute_repetitions(experiment):
         # the field value_mean serves as a temporary storage for the real measured value, before the median and mean of the repetitions are computed
         # after theses value have been computed, they are written to the measurement object and the original measured value is overwritten
         computed_measurements[computed_measurement_id].value_mean.append(value)
+    
+    # update progress bar
+    pbar.update(20)
     
     # calculate median values of measurements
     for measurement_id in range(len(computed_measurements)):
@@ -204,6 +232,8 @@ def compute_repetitions(experiment):
         computed_measurement.set_value_median(median_value)
         computed_measurements[measurement_id] = computed_measurement
     
+    # update progress bar   
+    pbar.update(20)
     
     # calculate mean values of measurements
     for measurement_id in range(len(computed_measurements)):
@@ -224,6 +254,9 @@ def compute_repetitions(experiment):
     # remove the old measurement objects from the experiment
     experiment.clear_measurements()
     
+    # update progress bar   
+    pbar.update(20)
+    
     # add the new measurement objects to the experiment with the computed mean and median values
     for measurement_id in range(len(computed_measurements)):
         measurement = computed_measurements[measurement_id]
@@ -237,6 +270,10 @@ def compute_repetitions(experiment):
             value_mean = measurement.get_value_mean()
             value_median = measurement.get_value_median()
             logging.debug("Measurement: "+experiment.get_metric(metric_id).get_name()+", "+experiment.get_callpath(callpath_id).get_name()+", "+experiment.get_coordinate(coordinate_id).get_as_string()+": "+str(value_mean)+" (mean), "+str(value_median)+" (median)")
+    
+    # update progress bar   
+    pbar.update(20)
+    pbar.close()
     
     return experiment
 
@@ -315,9 +352,6 @@ def create_call_tree(callpaths):
                     else:
                         # do nothing
                         pass
-    
-    #TODO: debug code
-    #tree.print_tree()
     
     return tree
 

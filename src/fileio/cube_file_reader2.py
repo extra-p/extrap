@@ -23,7 +23,8 @@ from fileio.io_helper import compute_repetitions
 import os
 import re
 import numpy as np
-import logging  # @UnusedImport
+import logging
+from tqdm import tqdm
 
 # pycube package imports
 from pycube import CubexParser  # @UnresolvedImport
@@ -87,52 +88,26 @@ def read_cube_file(dir_name, scaling_type):
     filename = "profile.cubex"
     experiment = Experiment()
     
-    for path_id in range(len(paths)):
-        path = paths[path_id]
-        folder_name = folders[path_id]
-                
-        # create the parameters
-        pos = folder_name.find(".")
-        folder_name = folder_name[pos+1:]
-        pos = folder_name.find(".r")
-        folder_name = folder_name[:pos]
-        parameters = folder_name.split(".")
-        
-        # when there is only one parameter
-        if len(parameters) == 1:
-            parameter = parameters[0]
-            param_list = re.split("(\d+)", parameter)
-            param_list.remove("")
-            parameter_name = param_list[0]
-            if param_list[1].find(","):
-                param_list[1] = param_list[1].replace(",",".")
-            parameter_value = float(param_list[1])
+    logging.info("Reading cube files...")
+    
+    #TODO: should be only active when using the command line tool
+    # create a progress bar for reading the cube files
+    with tqdm(total=len(paths)) as pbar:
+    
+        for path_id in range(len(paths)):
+            path = paths[path_id]
+            folder_name = folders[path_id]
+                    
+            # create the parameters
+            pos = folder_name.find(".")
+            folder_name = folder_name[pos+1:]
+            pos = folder_name.find(".r")
+            folder_name = folder_name[:pos]
+            parameters = folder_name.split(".")
             
-            # check if parameter already exists
-            if path_id == 0:
-                if experiment.parameter_exists(parameter_name) == False:
-                    parameter = Parameter(parameter_name)
-                    experiment.add_parameter(parameter)
-            
-            # create coordinate
-            coordinate = Coordinate()
-            parameter_id = experiment.get_parameter_id(parameter_name)
-            parameter = experiment.get_parameter(parameter_id)
-            coordinate.add_parameter_value(parameter, parameter_value)
-            
-            # check if the coordinate already exists
-            if experiment.coordinate_exists(coordinate) == False:
-                experiment.add_coordinate(coordinate)
-                
-            # get the coordinate id
-            coordinate_id = experiment.get_coordinate_id(coordinate)
-        
-        # when there a several parameters
-        elif len(parameters) > 1:
-            coordinate = Coordinate()
-            
-            for parameter_id in range(len(parameters)):
-                parameter = parameters[parameter_id]
+            # when there is only one parameter
+            if len(parameters) == 1:
+                parameter = parameters[0]
                 param_list = re.split("(\d+)", parameter)
                 param_list.remove("")
                 parameter_name = param_list[0]
@@ -145,141 +120,174 @@ def read_cube_file(dir_name, scaling_type):
                     if experiment.parameter_exists(parameter_name) == False:
                         parameter = Parameter(parameter_name)
                         experiment.add_parameter(parameter)
-                        
+                
                 # create coordinate
+                coordinate = Coordinate()
                 parameter_id = experiment.get_parameter_id(parameter_name)
                 parameter = experiment.get_parameter(parameter_id)
                 coordinate.add_parameter_value(parameter, parameter_value)
                 
-            # check if the coordinate already exists
-            if experiment.coordinate_exists(coordinate) == False:
-                experiment.add_coordinate(coordinate)
-                
-            # get the coordinate id
-            coordinate_id = experiment.get_coordinate_id(coordinate)
-
-        
-        #TODO: for windows systems only, add something for linux as well!
-        cubefile_path = path + "\\" + filename
-        
-        #TODO: create progress bar during readin cube files
-        
-        with CubexParser(cubefile_path) as parsed:
+                # check if the coordinate already exists
+                if experiment.coordinate_exists(coordinate) == False:
+                    experiment.add_coordinate(coordinate)
+                    
+                # get the coordinate id
+                coordinate_id = experiment.get_coordinate_id(coordinate)
             
-            # get call tree
-            if path_id == 0:
-                call_tree = parsed.get_calltree()
-                call_tree = fix_call_tree(call_tree)
+            # when there a several parameters
+            elif len(parameters) > 1:
+                coordinate = Coordinate()
                 
-                # create the callpaths
-                #todo change i to something else
-                for i in range(len(call_tree)):
-                    callpath = Callpath(call_tree[i])
-                    if experiment.callpath_exists(call_tree[i]) == False:
-                        experiment.add_callpath(callpath)
+                for parameter_id in range(len(parameters)):
+                    parameter = parameters[parameter_id]
+                    param_list = re.split("(\d+)", parameter)
+                    param_list.remove("")
+                    parameter_name = param_list[0]
+                    if param_list[1].find(","):
+                        param_list[1] = param_list[1].replace(",",".")
+                    parameter_value = float(param_list[1])
+                    
+                    # check if parameter already exists
+                    if path_id == 0:
+                        if experiment.parameter_exists(parameter_name) == False:
+                            parameter = Parameter(parameter_name)
+                            experiment.add_parameter(parameter)
+                            
+                    # create coordinate
+                    parameter_id = experiment.get_parameter_id(parameter_name)
+                    parameter = experiment.get_parameter(parameter_id)
+                    coordinate.add_parameter_value(parameter, parameter_value)
+                    
+                # check if the coordinate already exists
+                if experiment.coordinate_exists(coordinate) == False:
+                    experiment.add_coordinate(coordinate)
+                    
+                # get the coordinate id
+                coordinate_id = experiment.get_coordinate_id(coordinate)
+    
+            
+            #TODO: for windows systems only, add something for linux as well!
+            cubefile_path = path + "\\" + filename
+            
+            with CubexParser(cubefile_path) as parsed:
                 
-                # create the call tree and add it to the experiment
-                callpaths = experiment.get_callpaths()
-                call_tree = create_call_tree(callpaths)
-                experiment.add_call_tree(call_tree)
-                
-            # make list with region ids
-            callpaths_ids = []
-            metric_time_id = -1
-            for i in range(len(parsed.get_metrics())):
-                metric_name = parsed.get_metrics()[i].name
-                if metric_name == "time":
-                    metric_time_id = i
-                    break
-                
-            metric_time = parsed.get_metrics()[metric_time_id]
-            metric_values = parsed.get_metric_values(metric=metric_time)
-            for callpath_id in range(len(metric_values.cnode_indices)):
-                cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
-                region = parsed.get_region(cnode)
-                region_id = int(region.id)
-                callpaths_ids.append(region_id)
-
-            #NOTE: here we could choose which metrics to extract
-            # iterate over all metrics
-            counter = 0
-            for metric in parsed.get_metrics():
-                
-                # create the metrics
+                # get call tree
                 if path_id == 0:
-                    if experiment.metric_exists(metric.name) == False:
-                        experiment.add_metric(Metric(metric.name))
-                        
-                # get the metric id
-                metric_id = experiment.get_metric_id(metric.name)
-                        
-                try:
-                    metric_values = parsed.get_metric_values(metric=metric)    
+                    call_tree = parsed.get_calltree()
+                    call_tree = fix_call_tree(call_tree)
                     
-                    # standard case, all callpaths have values
-                    if len(metric_values.cnode_indices) == len(callpaths):
-                        for callpath_id in range(len(callpaths)):
-                            cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
-                            cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
-                            #NOTE: here we can use clustering algorithm to select only certain node level values
-                            # create the measurements
-                            cnode_values = metric_values.cnode_values(cnode.id)    
-                            value_mean = np.mean(cnode_values)
-                            value_median = np.median(cnode_values)
-                            measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
-                            experiment.add_measurement(measurement)
+                    # create the callpaths
+                    #todo change i to something else
+                    for i in range(len(call_tree)):
+                        callpath = Callpath(call_tree[i])
+                        if experiment.callpath_exists(call_tree[i]) == False:
+                            experiment.add_callpath(callpath)
                     
-                    # handle missing values for specific callpaths
-                    else:
-                        done = False
-                        counter = 0
-                        cnode_counter = 0
-                        while done == False:
-                            cnode = parsed.get_cnode(metric_values.cnode_indices[cnode_counter])
-                            region = parsed.get_region(cnode)
-                            region_id = int(region.id)
-                            callpath_region_id = callpaths_ids[counter]
+                    # create the call tree and add it to the experiment
+                    callpaths = experiment.get_callpaths()
+                    call_tree = create_call_tree(callpaths)
+                    experiment.add_call_tree(call_tree)
+                    
+                # make list with region ids
+                callpaths_ids = []
+                metric_time_id = -1
+                for i in range(len(parsed.get_metrics())):
+                    metric_name = parsed.get_metrics()[i].name
+                    if metric_name == "time":
+                        metric_time_id = i
+                        break
+                    
+                metric_time = parsed.get_metrics()[metric_time_id]
+                metric_values = parsed.get_metric_values(metric=metric_time)
+                for callpath_id in range(len(metric_values.cnode_indices)):
+                    cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
+                    region = parsed.get_region(cnode)
+                    region_id = int(region.id)
+                    callpaths_ids.append(region_id)
+    
+                #NOTE: here we could choose which metrics to extract
+                # iterate over all metrics
+                counter = 0
+                for metric in parsed.get_metrics():
+                    
+                    # create the metrics
+                    if path_id == 0:
+                        if experiment.metric_exists(metric.name) == False:
+                            experiment.add_metric(Metric(metric.name))
                             
-                            # if ids dont match value is missing for this callpath
-                            if region_id != callpath_region_id:
-                                value_mean = 0.0
-                                value_median = 0.0
-                                measurement = Measurement(coordinate_id, counter, metric_id, value_mean, value_median)
-                                experiment.add_measurement(measurement)
-                                counter += 1
+                    # get the metric id
+                    metric_id = experiment.get_metric_id(metric.name)
                             
-                            # value exists
-                            else:
+                    try:
+                        metric_values = parsed.get_metric_values(metric=metric)    
+                        
+                        # standard case, all callpaths have values
+                        if len(metric_values.cnode_indices) == len(callpaths):
+                            for callpath_id in range(len(callpaths)):
+                                cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
+                                cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
                                 #NOTE: here we can use clustering algorithm to select only certain node level values
                                 # create the measurements
                                 cnode_values = metric_values.cnode_values(cnode.id)    
                                 value_mean = np.mean(cnode_values)
                                 value_median = np.median(cnode_values)
-                                measurement = Measurement(coordinate_id, counter, metric_id, value_mean, value_median)
+                                measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
                                 experiment.add_measurement(measurement)
-                                counter += 1
-                                if cnode_counter < len(metric_values.cnode_indices)-1:
-                                    cnode_counter += 1
-                                
-                            if len(metric_values.cnode_indices)-1 == cnode_counter and counter == len(callpaths):
-                                done = True
-          
-                except MissingMetricError as e:  # @UnusedVariable
-                    # Take care of missing metrics
-                    
-                    # get the metric id
-                    metric_id = experiment.get_metric_id(metric.name)
-                    
-                    # iterate over all callpaths
-                    for callpath_id in range(len(callpaths)):
                         
-                        # create measurement with 0.0 as value for all missing fields in cube file
-                        value_mean = 0.0
-                        value_median = 0.0
-                        measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
-                        experiment.add_measurement(measurement)
+                        # handle missing values for specific callpaths
+                        else:
+                            done = False
+                            counter = 0
+                            cnode_counter = 0
+                            while done == False:
+                                cnode = parsed.get_cnode(metric_values.cnode_indices[cnode_counter])
+                                region = parsed.get_region(cnode)
+                                region_id = int(region.id)
+                                callpath_region_id = callpaths_ids[counter]
+                                
+                                # if ids dont match value is missing for this callpath
+                                if region_id != callpath_region_id:
+                                    value_mean = 0.0
+                                    value_median = 0.0
+                                    measurement = Measurement(coordinate_id, counter, metric_id, value_mean, value_median)
+                                    experiment.add_measurement(measurement)
+                                    counter += 1
+                                
+                                # value exists
+                                else:
+                                    #NOTE: here we can use clustering algorithm to select only certain node level values
+                                    # create the measurements
+                                    cnode_values = metric_values.cnode_values(cnode.id)    
+                                    value_mean = np.mean(cnode_values)
+                                    value_median = np.median(cnode_values)
+                                    measurement = Measurement(coordinate_id, counter, metric_id, value_mean, value_median)
+                                    experiment.add_measurement(measurement)
+                                    counter += 1
+                                    if cnode_counter < len(metric_values.cnode_indices)-1:
+                                        cnode_counter += 1
+                                    
+                                if len(metric_values.cnode_indices)-1 == cnode_counter and counter == len(callpaths):
+                                    done = True
+              
+                    except MissingMetricError as e:  # @UnusedVariable
+                        # Take care of missing metrics
+                        
+                        # get the metric id
+                        metric_id = experiment.get_metric_id(metric.name)
+                        
+                        # iterate over all callpaths
+                        for callpath_id in range(len(callpaths)):
+                            
+                            # create measurement with 0.0 as value for all missing fields in cube file
+                            value_mean = 0.0
+                            value_median = 0.0
+                            measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
+                            experiment.add_measurement(measurement)
+                
+                    counter += 1
             
-                counter += 1
+            # update progress bar
+            pbar.update(1)
                     
     # take care of the repetitions of the measurements
     experiment = compute_repetitions(experiment)
