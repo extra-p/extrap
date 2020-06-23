@@ -18,11 +18,12 @@ from entities.callpath import Callpath
 from entities.metric import Metric
 from entities.experiment import Experiment
 from fileio.io_helper import create_call_tree
+from fileio.io_helper import compute_repetitions
 
 import os
 import re
 import numpy as np
-#import logging
+import logging  # @UnusedImport
 
 # pycube package imports
 from pycube import CubexParser  # @UnresolvedImport
@@ -160,7 +161,8 @@ def read_cube_file(dir_name, scaling_type):
         
         #TODO: for windows systems only, add something for linux as well!
         cubefile_path = path + "\\" + filename
-        print("path:",cubefile_path)
+        
+        #TODO: create progress bar during readin cube files
         
         with CubexParser(cubefile_path) as parsed:
             
@@ -227,7 +229,7 @@ def read_cube_file(dir_name, scaling_type):
                             measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
                             experiment.add_measurement(measurement)
                     
-                    #TODO: handle missing values for specific callpaths
+                    # handle missing values for specific callpaths
                     else:
                         done = False
                         counter = 0
@@ -278,14 +280,9 @@ def read_cube_file(dir_name, scaling_type):
                         experiment.add_measurement(measurement)
             
                 counter += 1
-                
-        break
-    
-    #TODO: need to handle repetitions in experiment of measurements...
-    # should be able to use the method from iohelper class that auto. takes care of the repetitions...
+                    
+    # take care of the repetitions of the measurements
+    experiment = compute_repetitions(experiment)
     
     return experiment
     
-    
-
-

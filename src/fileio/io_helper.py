@@ -1,8 +1,9 @@
 """
-This file is part of the Extra-P software (https://github.com/MeaParvitas/Extra-P)
+This file is part of the Extra-P software (https://github.com/extra-p/extrap)
 
-Copyright (c) 2020,
-Technische Universitaet Darmstadt, Germany
+Copyright (c) 2020 Technical University of Darmstadt, Darmstadt, Germany
+
+All rights reserved.
  
 This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base

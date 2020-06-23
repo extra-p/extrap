@@ -1,3 +1,16 @@
+"""
+This file is part of the Extra-P software (https://github.com/extra-p/extrap)
+
+Copyright (c) 2020 Technical University of Darmstadt, Darmstadt, Germany
+
+All rights reserved.
+ 
+This software may be modified and distributed under the terms of
+a BSD-style license. See the LICENSE file in the base
+directory for details.
+"""
+
+
 from entities.parameter import Parameter
 from entities.measurement import Measurement
 from entities.coordinate import Coordinate
