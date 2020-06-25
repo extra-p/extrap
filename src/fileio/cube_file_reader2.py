@@ -1,16 +1,3 @@
-"""
-This file is part of the Extra-P software (https://github.com/extra-p/extrap)
-
-Copyright (c) 2020 Technical University of Darmstadt, Darmstadt, Germany
-
-All rights reserved.
- 
-This software may be modified and distributed under the terms of
-a BSD-style license. See the LICENSE file in the base
-directory for details.
-"""
-
-
 from entities.parameter import Parameter
 from entities.measurement import Measurement
 from entities.coordinate import Coordinate
@@ -19,14 +6,12 @@ from entities.metric import Metric
 from entities.experiment import Experiment
 from fileio.io_helper import create_call_tree
 from fileio.io_helper import compute_repetitions
-
 import os
 import re
 import numpy
 import logging
 from tqdm import tqdm
-
-# pycube package imports
+from pathlib import Path
 from pycubexr import CubexParser  # @UnresolvedImport
 from pycubexr.utils.exceptions import MissingMetricError  # @UnresolvedImport
 
@@ -95,6 +80,7 @@ def read_cube_file(dir_name, scaling_type):
     with tqdm(total=len(paths)) as pbar:
     
         for path_id in range(len(paths)):
+            
             path = paths[path_id]
             folder_name = folders[path_id]
                     
@@ -182,9 +168,8 @@ def read_cube_file(dir_name, scaling_type):
                 # get the coordinate id
                 coordinate_id = experiment.get_coordinate_id(coordinate)
     
-            
-            #TODO: for windows systems only, add something for linux as well!
-            cubefile_path = path + "\\" + filename
+            cubefile_path = Path("")
+            cubefile_path = cubefile_path / path / filename
             
             with CubexParser(cubefile_path) as parsed:
                 
@@ -342,7 +327,7 @@ def read_cube_file(dir_name, scaling_type):
         
         if show_message == True:
             logging.warning("Strong scaling only works for one parameter. Using weak scaling instead.")
-                    
+                        
     # take care of the repetitions of the measurements
     experiment = compute_repetitions(experiment)
     

@@ -1,21 +1,9 @@
-"""
-This file is part of the Extra-P software (https://github.com/extra-p/extrap)
-
-Copyright (c) 2020 Technical University of Darmstadt, Darmstadt, Germany
-
-All rights reserved.
- 
-This software may be modified and distributed under the terms of
-a BSD-style license. See the LICENSE file in the base
-directory for details.
-"""
-
-
 from entities.measurement import Measurement
 from entities.calltree import CallTree
 from entities.calltree import Node
 import logging
 from tqdm import tqdm
+import numpy
 
 
 def format_callpaths(experiment):
@@ -159,26 +147,28 @@ def compute_repetitions(experiment):
     over all repetitions per coordinate. The return is the experiment without any measurement
     repetitions, just one mean and one median value per coordinate.  
     """
-    
     logging.info("Computing measurement repetitions...")
     
-    #TODO: should be only active when using the command line tool
+    #TODO: this progress bar should be only active when using the command line tool
     # create a progress bar for computing the repetitions
     pbar = tqdm(total=100)
     
     # create a container for computing the mean or median values of the measurements for each coordinate
+    progress_bar_counter = 0
+    update_interval = int(25 / experiment.get_len_coordinates())
     computed_measurements = []
     for coordinate_id in range(experiment.get_len_coordinates()):
         for metric_id in range(experiment.get_len_metrics()):
             for callpath_id in range(experiment.get_len_callpaths()):
                 measurement = Measurement(coordinate_id, callpath_id, metric_id, [], None)
                 computed_measurements.append(measurement)
+        # update progress bar     
+        pbar.update(update_interval)
+        progress_bar_counter += update_interval
     
-    # update progress bar           
-    pbar.update(20)
-    
-    # iterate over all previously read measurements    
+    # iterate over all previously read measurements 
     measurements = experiment.get_measurements()
+    update_interval = int(25 / len(measurements))
     for measurement_id in range(len(measurements)):
         measurement = measurements[measurement_id]
         coordinate_id = measurement.get_coordinate_id()
@@ -201,63 +191,40 @@ def compute_repetitions(experiment):
         # the field value_mean serves as a temporary storage for the real measured value, before the median and mean of the repetitions are computed
         # after theses value have been computed, they are written to the measurement object and the original measured value is overwritten
         computed_measurements[computed_measurement_id].value_mean.append(value)
+        
+        # update progress bar
+        pbar.update(update_interval)
+        progress_bar_counter += update_interval    
     
-    # update progress bar
-    pbar.update(20)
-    
-    # calculate median values of measurements
+    # calculate mean and median values of measurements
+    update_interval = int(25 / len(computed_measurements))
     for measurement_id in range(len(computed_measurements)):
         computed_measurement = computed_measurements[measurement_id]
         values = computed_measurement.get_value_mean()
         
         # if there exists at least one measurement for this coordinate, metric, callpath calculate the value
         if len(values) != 0:
-            sorted_values = sorted(values)
-
-            # even number of elements
-            if len(sorted_values) % 2 == 0:
-                middle_id_1 = int(len(sorted_values) / 2) -1
-                middle_id_2 = middle_id_1 + 1
-                median_value = (sorted_values[middle_id_1] + sorted_values[middle_id_2]) / 2
-            
-            # uneven number of elements
-            else:
-                middle_id = int((len(sorted_values) + 1) / 2) - 1
-                median_value = sorted_values[middle_id]
+            median_value = numpy.median(values)
+            mean_value = numpy.mean(values)
         
         # if not set value to empty value
         else:
             median_value = None
+            mean_value = None
         
         computed_measurement.set_value_median(median_value)
-        computed_measurements[measurement_id] = computed_measurement
-    
-    # update progress bar   
-    pbar.update(20)
-    
-    # calculate mean values of measurements
-    for measurement_id in range(len(computed_measurements)):
-        computed_measurement = computed_measurements[measurement_id]
-        values = computed_measurement.get_value_mean()
-        
-        # if there exists at least one measurement for this coordinate, metric, callpath calculate the value
-        if len(values) != 0:
-            mean_value = sum(values) / len(values)
-            
-        # if not set value to empty value
-        else:
-            mean_value = None
-            
         computed_measurement.set_value_mean(mean_value)
         computed_measurements[measurement_id] = computed_measurement
+        
+        # update progress bar
+        pbar.update(update_interval)
+        progress_bar_counter += update_interval 
         
     # remove the old measurement objects from the experiment
     experiment.clear_measurements()
     
-    # update progress bar   
-    pbar.update(20)
-    
     # add the new measurement objects to the experiment with the computed mean and median values
+    update_interval = int(25 / len(computed_measurements))
     for measurement_id in range(len(computed_measurements)):
         measurement = computed_measurements[measurement_id]
         
@@ -271,8 +238,12 @@ def compute_repetitions(experiment):
             value_median = measurement.get_value_median()
             logging.debug("Measurement: "+experiment.get_metric(metric_id).get_name()+", "+experiment.get_callpath(callpath_id).get_name()+", "+experiment.get_coordinate(coordinate_id).get_as_string()+": "+str(value_mean)+" (mean), "+str(value_median)+" (median)")
     
-    # update progress bar   
-    pbar.update(20)
+        # update progress bar   
+        pbar.update(update_interval)
+        progress_bar_counter += update_interval
+    
+    difference = 100 - progress_bar_counter
+    pbar.update(difference)
     pbar.close()
     
     return experiment
