@@ -22,13 +22,13 @@ from fileio.io_helper import compute_repetitions
 
 import os
 import re
-import numpy as np
+import numpy
 import logging
 from tqdm import tqdm
 
 # pycube package imports
-from pycube import CubexParser  # @UnresolvedImport
-from pycube.utils.exceptions import MissingMetricError  # @UnresolvedImport
+from pycubexr import CubexParser  # @UnresolvedImport
+from pycubexr.utils.exceptions import MissingMetricError  # @UnresolvedImport
 
 
 def construct_parent(calltree_elements, occurances, calltree_element_id):
@@ -73,7 +73,6 @@ def fix_call_tree(calltree):
     return calltree_elements_new
 
 
-#TODO: check what the scaling type did in the code and c++ code...
 def read_cube_file(dir_name, scaling_type):
     
     # read the paths of the cube files in the given directory with dir_name
@@ -90,8 +89,9 @@ def read_cube_file(dir_name, scaling_type):
     
     logging.info("Reading cube files...")
     
-    #TODO: should be only active when using the command line tool
+    #TODO: the progress bar should be only active when using the command line tool, since gui dont use it.
     # create a progress bar for reading the cube files
+    show_message = False
     with tqdm(total=len(paths)) as pbar:
     
         for path_id in range(len(paths)):
@@ -107,6 +107,14 @@ def read_cube_file(dir_name, scaling_type):
             
             # when there is only one parameter
             if len(parameters) == 1:
+                
+                # set scaling flag for experiment
+                if path_id == 0:
+                    if scaling_type == "weak":
+                        experiment.set_scaling("weak")
+                    elif scaling_type == "strong":
+                        experiment.set_scaling("strong")
+                
                 parameter = parameters[0]
                 param_list = re.split("(\d+)", parameter)
                 param_list.remove("")
@@ -136,6 +144,15 @@ def read_cube_file(dir_name, scaling_type):
             
             # when there a several parameters
             elif len(parameters) > 1:
+                
+                # set scaling flag for experiment
+                if path_id == 0:
+                    if scaling_type == "weak":
+                        experiment.set_scaling("weak")
+                    elif scaling_type == "strong":
+                        experiment.set_scaling("weak")
+                        show_message = True
+                
                 coordinate = Coordinate()
                 
                 for parameter_id in range(len(parameters)):
@@ -225,12 +242,28 @@ def read_cube_file(dir_name, scaling_type):
                         if len(metric_values.cnode_indices) == len(callpaths):
                             for callpath_id in range(len(callpaths)):
                                 cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
-                                cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
+                                
                                 #NOTE: here we can use clustering algorithm to select only certain node level values
                                 # create the measurements
-                                cnode_values = metric_values.cnode_values(cnode.id)    
-                                value_mean = np.mean(cnode_values)
-                                value_median = np.median(cnode_values)
+                                cnode_values = metric_values.cnode_values(cnode.id)
+                                
+                                # in case of weak scaling calculate mean and median over all mpi process values
+                                if scaling_type == "weak":
+                                    value_mean = float(numpy.mean(cnode_values))
+                                    value_median = float(numpy.median(cnode_values))
+                                    
+                                # in case of strong scaling calculate the sum over all mpi process values
+                                elif scaling_type == "strong":
+                                    # check number of parameters, if > 1 use weak scaling instead
+                                    # since sum values for strong scaling does not work for more than 1 parameter
+                                    if len(experiment.get_parameters()) > 1:
+                                        value_mean = float(numpy.mean(cnode_values))
+                                        value_median = float(numpy.median(cnode_values))
+                                    else:
+                                        value = float(numpy.sum(cnode_values))
+                                        value_mean = value
+                                        value_median = value
+                                    
                                 measurement = Measurement(coordinate_id, callpath_id, metric_id, value_mean, value_median)
                                 experiment.add_measurement(measurement)
                         
@@ -255,22 +288,40 @@ def read_cube_file(dir_name, scaling_type):
                                 
                                 # value exists
                                 else:
+                                    
                                     #NOTE: here we can use clustering algorithm to select only certain node level values
                                     # create the measurements
-                                    cnode_values = metric_values.cnode_values(cnode.id)    
-                                    value_mean = np.mean(cnode_values)
-                                    value_median = np.median(cnode_values)
+                                    cnode_values = metric_values.cnode_values(cnode.id)
+                                    
+                                    # in case of weak scaling calculate mean and median over all mpi process values
+                                    if scaling_type == "weak":
+                                        value_mean = float(numpy.mean(cnode_values))
+                                        value_median = float(numpy.median(cnode_values))
+                                        
+                                    # in case of strong scaling calculate the sum over all mpi process values
+                                    elif scaling_type == "strong":
+                                        # check number of parameters, if > 1 use weak scaling instead
+                                        # since sum values for strong scaling does not work for more than 1 parameter
+                                        if len(experiment.get_parameters()) > 1:
+                                            value_mean = float(numpy.mean(cnode_values))
+                                            value_median = float(numpy.median(cnode_values))
+                                        else:  
+                                            value = float(numpy.sum(cnode_values))
+                                            value_mean = value
+                                            value_median = value
+                                    
                                     measurement = Measurement(coordinate_id, counter, metric_id, value_mean, value_median)
                                     experiment.add_measurement(measurement)
+                                    
                                     counter += 1
                                     if cnode_counter < len(metric_values.cnode_indices)-1:
                                         cnode_counter += 1
                                     
                                 if len(metric_values.cnode_indices)-1 == cnode_counter and counter == len(callpaths):
                                     done = True
-              
+                    
+                    # Take care of missing metrics
                     except MissingMetricError as e:  # @UnusedVariable
-                        # Take care of missing metrics
                         
                         # get the metric id
                         metric_id = experiment.get_metric_id(metric.name)
@@ -288,6 +339,9 @@ def read_cube_file(dir_name, scaling_type):
             
             # update progress bar
             pbar.update(1)
+        
+        if show_message == True:
+            logging.warning("Strong scaling only works for one parameter. Using weak scaling instead.")
                     
     # take care of the repetitions of the measurements
     experiment = compute_repetitions(experiment)

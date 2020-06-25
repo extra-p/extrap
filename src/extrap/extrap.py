@@ -30,12 +30,12 @@ def main():
     parser.add_argument("--log", action="store", dest="log_level", help="set program's log level [INFO (default), DEBUG]")
     parser.add_argument("--version", action="version", version=programname+" 4.0")
     parser.add_argument("--path", action="store", dest="path", help="specify a file path for Extra-P to work with")
-    parser.add_argument("--scaling", action="store", dest="scaling", help="set weak or strong scaling when loading data from cube files [WEAK (default), STRONG]")
     parser.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from cube files")
-    parser.add_argument("--median", action="store_true", dest="median", help="use median values for computation instead of mean values")
     parser.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
     parser.add_argument("--talpas", action="store_true", default=False, dest="talpas", help="load data from talpas data format")
     parser.add_argument("--json", action="store_true", default=False, dest="json", help="load data from json file")
+    parser.add_argument("--scaling", action="store", dest="scaling_type", help="set weak or strong scaling when loading data from cube files [WEAK (default), STRONG]")
+    parser.add_argument("--median", action="store_true", dest="median", help="use median values for computation instead of mean values")
     parser.add_argument("--out", action="store", dest="out", help="specify the output path for Extra-P results")
     parser.add_argument("--print", action="store", dest="print_type", help="set which information should be displayed after modeling [ALL (default), CALLPATHS, METRICS, PARAMETERS, FUNCTIONS]")
     arguments = parser.parse_args()
@@ -86,20 +86,21 @@ def main():
 
 
     # check scaling type
-    scaling_type = 0
-    if not arguments.scaling is None:
-        if arguments.scaling.lower() == "weak":
-            scaling_type = 0
-        elif arguments.scaling.lower() == "strong":
-            scaling_type = 1
+    scaling_type = "weak"
+    if not arguments.scaling_type is None:
+        if arguments.scaling_type.lower() == "weak":
+            scaling_type = "weak"
+        elif arguments.scaling_type.lower() == "strong":
+            scaling_type = "strong"
         else:
-            logging.warning("Invalid scaling type.")
+            scaling_type = "weak"
+            logging.warning("Invalid scaling type. Supported types are WEAK (default) and STRONG. Using weak scaling instead.")
     
-    
-    # use mean or median?
-    median = 0
+
+    # set use mean or median for computation
+    median = False
     if arguments.median == True:
-        median = 1
+        median = True
     
     
     # save modeler output to file?

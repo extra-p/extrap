@@ -9,6 +9,15 @@ class Experiment:
         self.measurements = []
         self.call_tree = None
         self.modeler = []
+        self.scaling = None
+    
+    
+    def set_scaling(self, scaling_type):
+        self.scaling = scaling_type
+        
+    
+    def get_scaling(self):
+        return self.scaling
     
     
     def get_modeler(self, modeler_id):
