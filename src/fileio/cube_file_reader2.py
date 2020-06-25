@@ -83,6 +83,9 @@ def read_cube_file(dir_name, scaling_type):
             
             path = paths[path_id]
             folder_name = folders[path_id]
+            
+            #TODO debug
+            print("File:",folder_name)
                     
             # create the parameters
             pos = folder_name.find(".")
@@ -212,6 +215,8 @@ def read_cube_file(dir_name, scaling_type):
                     # create the call tree and add it to the experiment
                     callpaths = experiment.get_callpaths()
                     call_tree = create_call_tree(callpaths)
+                    #TODO debug
+                    call_tree.print_tree()
                     experiment.add_call_tree(call_tree)
                     
                 # make list with region ids
@@ -228,6 +233,8 @@ def read_cube_file(dir_name, scaling_type):
                 for callpath_id in range(len(metric_values.cnode_indices)):
                     cnode = parsed.get_cnode(metric_values.cnode_indices[callpath_id])
                     region = parsed.get_region(cnode)
+                    #TODO debug
+                    print(region)
                     region_id = int(region.id)
                     callpaths_ids.append(region_id)
     
@@ -281,10 +288,15 @@ def read_cube_file(dir_name, scaling_type):
                             done = False
                             counter = 0
                             cnode_counter = 0
+                            #debug
+                            print("len callpaths_ids:",len(callpaths_ids))
+                            #print("callpaths number:",len(callpaths))
                             while done == False:
                                 cnode = parsed.get_cnode(metric_values.cnode_indices[cnode_counter])
                                 region = parsed.get_region(cnode)
                                 region_id = int(region.id)
+                                #debug
+                                #print("counter:",counter)
                                 callpath_region_id = callpaths_ids[counter]
                                 
                                 # if ids dont match value is missing for this callpath
@@ -348,6 +360,9 @@ def read_cube_file(dir_name, scaling_type):
             
             # update progress bar
             pbar.update(1)
+            
+            #TODO: debug
+            #break
         
         if show_message == True:
             logging.warning("Strong scaling only works for one parameter. Using weak scaling instead.")
