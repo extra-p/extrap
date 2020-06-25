@@ -104,10 +104,22 @@ def read_cube_file(dir_name, scaling_type):
                 parameter = parameters[0]
                 param_list = re.split("(\d+)", parameter)
                 param_list.remove("")
-                parameter_name = param_list[0]
-                if param_list[1].find(","):
-                    param_list[1] = param_list[1].replace(",",".")
-                parameter_value = float(param_list[1])
+                
+                # if parameter is float value
+                if "," in param_list:
+                    parameter_name = param_list[0]
+                    parameter_value = ""
+                    counter = 1
+                    while counter < len(param_list):
+                        parameter_value += param_list[counter]
+                        counter += 1
+                    parameter_value = parameter_value.replace(",", ".")
+                    parameter_value = float(parameter_value)
+                
+                # if parameter is integer value
+                else:
+                    parameter_name = param_list[0]
+                    parameter_value = float(param_list[1])
                 
                 # check if parameter already exists
                 if path_id == 0:
@@ -145,10 +157,22 @@ def read_cube_file(dir_name, scaling_type):
                     parameter = parameters[parameter_id]
                     param_list = re.split("(\d+)", parameter)
                     param_list.remove("")
-                    parameter_name = param_list[0]
-                    if param_list[1].find(","):
-                        param_list[1] = param_list[1].replace(",",".")
-                    parameter_value = float(param_list[1])
+                    
+                    # if parameter is float value
+                    if "," in param_list:
+                        parameter_name = param_list[0]
+                        parameter_value = ""
+                        counter = 1
+                        while counter < len(param_list):
+                            parameter_value += param_list[counter]
+                            counter += 1
+                        parameter_value = parameter_value.replace(",", ".")
+                        parameter_value = float(parameter_value)
+                    
+                    # if parameter is integer value
+                    else:
+                        parameter_name = param_list[0]
+                        parameter_value = float(param_list[1])
                     
                     # check if parameter already exists
                     if path_id == 0:
