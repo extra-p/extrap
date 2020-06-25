@@ -37,11 +37,11 @@ class Test_TestOneParameterFiles(unittest.TestCase):
         p = Parameter('p')
         self.assertListEqual(experiment.parameters, [p])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(p, 1000)]),
-            Coordinate([(p, 2000)]),
-            Coordinate([(p, 4000)]),
-            Coordinate([(p, 8000)]),
-            Coordinate([(p, 16000)])
+            Coordinate(1000),
+            Coordinate(2000),
+            Coordinate(4000),
+            Coordinate(8000),
+            Coordinate(16000)
         ])
 
     def test_read_7(self):
@@ -52,11 +52,11 @@ class Test_TestOneParameterFiles(unittest.TestCase):
         p = Parameter('p')
         self.assertListEqual(experiment.parameters, [p])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(p, 1000)]),
-            Coordinate([(p, 2000)]),
-            Coordinate([(p, 4000)]),
-            Coordinate([(p, 8000)]),
-            Coordinate([(p, 16000)])
+            Coordinate(1000),
+            Coordinate(2000),
+            Coordinate(4000),
+            Coordinate(8000),
+            Coordinate(16000)
         ])
 
 
@@ -76,60 +76,35 @@ class Test_TestTwoParameterFiles(unittest.TestCase):
         self.assertListEqual(experiment.parameters, [
                              Parameter('x'), Parameter('y')])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(Parameter('x'), 20),
-                        (Parameter('y'), 1)]),
-            Coordinate([(Parameter('x'), 20),
-                        (Parameter('y'), 2)]),
-            Coordinate([(Parameter('x'), 20),
-                        (Parameter('y'), 3)]),
-            Coordinate([(Parameter('x'), 20),
-                        (Parameter('y'), 4)]),
-            Coordinate([(Parameter('x'), 20),
-                        (Parameter('y'), 5)]),
+            Coordinate(20, 1),
+            Coordinate(20, 2),
+            Coordinate(20, 3),
+            Coordinate(20, 4),
+            Coordinate(20, 5),
             #
-            Coordinate([(Parameter('x'), 30),
-                        (Parameter('y'), 1)]),
-            Coordinate([(Parameter('x'), 30),
-                        (Parameter('y'), 2)]),
-            Coordinate([(Parameter('x'), 30),
-                        (Parameter('y'), 3)]),
-            Coordinate([(Parameter('x'), 30),
-                        (Parameter('y'), 4)]),
-            Coordinate([(Parameter('x'), 30),
-                        (Parameter('y'), 5)]),
+            Coordinate(30, 1),
+            Coordinate(30, 2),
+            Coordinate(30, 3),
+            Coordinate(30, 4),
+            Coordinate(30, 5),
 
-            Coordinate([(Parameter('x'), 40),
-                        (Parameter('y'), 1)]),
-            Coordinate([(Parameter('x'), 40),
-                        (Parameter('y'), 2)]),
-            Coordinate([(Parameter('x'), 40),
-                        (Parameter('y'), 3)]),
-            Coordinate([(Parameter('x'), 40),
-                        (Parameter('y'), 4)]),
-            Coordinate([(Parameter('x'), 40),
-                        (Parameter('y'), 5)]),
+            Coordinate(40, 1),
+            Coordinate(40, 2),
+            Coordinate(40, 3),
+            Coordinate(40, 4),
+            Coordinate(40, 5),
 
-            Coordinate([(Parameter('x'), 50),
-                        (Parameter('y'), 1)]),
-            Coordinate([(Parameter('x'), 50),
-                        (Parameter('y'), 2)]),
-            Coordinate([(Parameter('x'), 50),
-                        (Parameter('y'), 3)]),
-            Coordinate([(Parameter('x'), 50),
-                        (Parameter('y'), 4)]),
-            Coordinate([(Parameter('x'), 50),
-                        (Parameter('y'), 5)]),
+            Coordinate(50, 1),
+            Coordinate(50, 2),
+            Coordinate(50, 3),
+            Coordinate(50, 4),
+            Coordinate(50, 5),
 
-            Coordinate([(Parameter('x'), 60),
-                        (Parameter('y'), 1)]),
-            Coordinate([(Parameter('x'), 60),
-                        (Parameter('y'), 2)]),
-            Coordinate([(Parameter('x'), 60),
-                        (Parameter('y'), 3)]),
-            Coordinate([(Parameter('x'), 60),
-                        (Parameter('y'), 4)]),
-            Coordinate([(Parameter('x'), 60),
-                        (Parameter('y'), 5)])
+            Coordinate(60, 1),
+            Coordinate(60, 2),
+            Coordinate(60, 3),
+            Coordinate(60, 4),
+            Coordinate(60, 5)
         ])
 
     def test_read_4(self):

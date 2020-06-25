@@ -8,19 +8,27 @@ This software may be modified and distributed under the terms of
 a BSD-style license.  See the COPYING file in the package base
 directory for details.
 """
+import itertools
+from util.deprecation import deprecated
 
 
 class Callpath:
     """
     This class represents a callpath of an application.
     """
+    """
+    Counter for global callpath ids
+    """
+    ID_COUNTER = itertools.count()
 
     def __init__(self, name):
         """
         Initialize callpath object.
         """
         self.name = name
+        self.id = next(__class__.ID_COUNTER)
 
+    @deprecated("Use property directly.")
     def get_name(self):
         """
         Return the name of a callpath object.

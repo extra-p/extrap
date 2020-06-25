@@ -28,3 +28,19 @@ def deprecated(func, replacement="", message="{name} is deprecated."):
                       stacklevel=2)
         return func(*args, **kwargs)
     return wrapper
+
+
+def _deprecated_code(replacement="", message="The code part at {name} is deprecated."):
+    """This is decorator marks functions as deprecated."""
+    import inspect
+    curframe = inspect.stack()
+    msg = message.format(name=str(curframe[1][0]))
+    if replacement != "":
+        msg += " "
+        msg += replacement
+    warnings.warn(msg,
+                  category=DeprecationWarning,
+                  stacklevel=2)
+
+
+deprecated.code = _deprecated_code

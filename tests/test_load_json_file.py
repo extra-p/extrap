@@ -38,6 +38,14 @@ class Test_TestFiles(unittest.TestCase):
 
     def test_read_5(self):
         experiment = read_json_file("data/json/input_5.JSON")
+        self.assertListEqual(experiment.parameters, [Parameter('x'), Parameter('y')])
+        self.assertListEqual(experiment.coordinates, [
+            Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0), Coordinate(4.0, 50.0),
+            Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0), Coordinate(8.0, 50.0),
+            Coordinate(16.0, 10.0), Coordinate(16.0, 20.0), Coordinate(16.0, 30.0), Coordinate(16.0, 40.0), Coordinate(16.0, 50.0),
+            Coordinate(32.0, 10.0), Coordinate(32.0, 20.0), Coordinate(32.0, 30.0), Coordinate(32.0, 40.0), Coordinate(32.0, 50.0),
+            Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0), Coordinate(64.0, 50.0)
+        ])
 
     def test_read_6(self):
         experiment = read_json_file("data/json/input_6.JSON")
@@ -56,3 +64,14 @@ class Test_TestFiles(unittest.TestCase):
 
     def test_read_11(self):
         experiment = read_json_file("data/json/input_11.JSON")
+
+    def test_read_12(self):
+        experiment = read_json_file("data/json/input_12.JSON")
+        self.assertListEqual(experiment.parameters, [Parameter('x'), Parameter('y')])
+        self.assertListEqual(experiment.coordinates, [
+            Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0), Coordinate(4.0, 50.0),
+            Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0), Coordinate(8.0, 50.0),
+            Coordinate(16.0, 10.0), Coordinate(16.0, 20.0), Coordinate(16.0, 30.0), Coordinate(16.0, 40.0), Coordinate(16.0, 50.0),
+            Coordinate(32.0, 10.0), Coordinate(32.0, 20.0), Coordinate(32.0, 30.0), Coordinate(32.0, 40.0), Coordinate(32.0, 50.0),
+            Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0), Coordinate(64.0, 50.0)
+        ])

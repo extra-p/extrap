@@ -9,24 +9,26 @@ from fileio.io_helper import create_call_tree
 import logging
 import json
 
+
 def read_json_file(path):
-    
+
     # read lines from json file
     with open(path, "r") as inputfile:
         json_data = json.load(inputfile)
-        
+
     # create an experiment object to save the date loaded from the text file
     experiment = Experiment()
-    
+
     # read parameters
     parameter_data = json_data["parameters"]
+    parameter_data = sorted(parameter_data, key=lambda x: x["id"])
     logging.debug("Number of parameters: "+str(len(parameter_data)))
     for i in range(len(parameter_data)):
         parameter_name = parameter_data[i]["name"]
         parameter = Parameter(parameter_name)
         experiment.add_parameter(parameter)
         logging.debug("Parameter "+str(i+1)+": "+parameter_name)
-    
+
     # read callpaths
     callpath_data = json_data["callpaths"]
     logging.debug("Number of callpaths: "+str(len(callpath_data)))
@@ -35,7 +37,7 @@ def read_json_file(path):
         callpath = Callpath(callpath_name)
         experiment.add_callpath(callpath)
         logging.debug("Callpath "+str(i+1)+": "+callpath_name)
-        
+
     # create the call tree and add it to the experiment
     callpaths = experiment.get_callpaths()
     call_tree = create_call_tree(callpaths)
@@ -55,6 +57,7 @@ def read_json_file(path):
     logging.debug("Number of coordinates: "+str(len(coordinate_data)))
     for i in range(len(coordinate_data)):
         parameter_value_pairs = coordinate_data[i]["parameter_value_pairs"]
+        parameter_value_pairs = sorted(parameter_value_pairs, key=lambda x: x["parameter_id"])
         coordinate = Coordinate()
         for j in range(len(parameter_value_pairs)):
             parameter_value_pair = parameter_value_pairs[j]
@@ -64,7 +67,8 @@ def read_json_file(path):
             coordinate.add_parameter_value(parameter, parameter_value)
         experiment.add_coordinate(coordinate)
         logging.debug("Coordinate "+str(i+1)+": "+coordinate.get_as_string())
-    
+
+    aggregate_data = {}
     # read measurements
     measurements_data = json_data["measurements"]
     logging.debug("Number of measurements: "+str(len(measurements_data)))
@@ -73,11 +77,19 @@ def read_json_file(path):
         callpath_id = int(measurements_data[i]["callpath_id"]) - 1
         metric_id = int(measurements_data[i]["metric_id"]) - 1
         value = float(measurements_data[i]["value"])
-        measurement = Measurement(coordinate_id, callpath_id, metric_id, value, None)
-        experiment.add_measurement(measurement)
-        
-    # compute the mean or median of the repetitions for each coordinate
-    experiment = compute_repetitions(experiment)
-    
-    return experiment
+        key = coordinate_id, callpath_id, metric_id
+        if key in aggregate_data:
+            aggregate_data[key].append(value)
+        else:
+            aggregate_data[key] = [value]
 
+    for key in aggregate_data:
+        coordinate_id, callpath_id, metric_id = key
+        coordinate = experiment.get_coordinate(coordinate_id)
+        callpath = experiment.get_callpath(callpath_id)
+        metric = experiment.get_metric(metric_id)
+        values = aggregate_data[key]
+        measurement = Measurement(coordinate, callpath, metric, values)
+        experiment.add_measurement(measurement)
+
+    return experiment
