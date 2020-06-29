@@ -10,12 +10,10 @@ directory for details.
 """
 
 
-
 from matplotlib.figure import Figure
 
 import numpy as np
 import matplotlib.patches as mpatches
-
 
 
 try:
@@ -203,7 +201,7 @@ class GraphDisplayWindow (FigureCanvas):
         Z_List = list()
         z_List = list()
         for model in model_list:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             zs = np.array([self.calculate_z(x, y, function)
                            for x, y in zip(np.ravel(X), np.ravel(Y))])
             Z = zs.reshape(X.shape)
@@ -228,10 +226,10 @@ class GraphDisplayWindow (FigureCanvas):
             left=left, bottom=bottom, right=right, top=top, wspace=wspace, hspace=hspace)
 
         # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).getName()
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
             x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).getName()
+        y_label = self.main_widget.data_display.getAxisParameter(1).name
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
@@ -281,7 +279,7 @@ class GraphDisplayWindow (FigureCanvas):
         # draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
-            labelName = str(key.getRegion().getName())
+            labelName = str(key.getRegion().name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)

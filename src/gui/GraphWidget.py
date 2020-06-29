@@ -3,7 +3,7 @@ This file is part of the Extra-P software (http://www.scalasca.org/software/extr
 
 Copyright (c) 2020,
 Technische Universitaet Darmstadt, Germany
- 
+
 This software may be modified and distributed under the terms of
 a BSD-style license.  See the COPYING file in the package base
 directory for details.
@@ -11,7 +11,7 @@ directory for details.
 
 
 import math
-
+import numpy
 
 try:
     from PyQt4.QtGui import *
@@ -57,7 +57,7 @@ class GraphWidget(QWidget):
             print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
 
     def getMaxX(self):
-        """ 
+        """
            This function returns the highest value of x that is being shown on x axis.
         """
         return self.max_x
@@ -68,7 +68,7 @@ class GraphWidget(QWidget):
         self.max_y = maxY
 
     def getMaxY(self):
-        """ 
+        """
            This function returns the highest value of Y that is being shown on x axis.
         """
         return self.max_y
@@ -79,7 +79,7 @@ class GraphWidget(QWidget):
         self.top_margin = topMargin
 
     def getTopMargin(self):
-        """ 
+        """
            This function returns the top margin value of the graph..
         """
         return self.top_margin
@@ -90,7 +90,7 @@ class GraphWidget(QWidget):
         self.bottom_margin = bottomMargin
 
     def getBottomMargin(self):
-        """ 
+        """
            This function returns the bottom margin value of the graph..
         """
         return self.bottom_margin
@@ -101,7 +101,7 @@ class GraphWidget(QWidget):
         self.left_margin = leftMargin
 
     def getLeftMargin(self):
-        """ 
+        """
            This function returns the left margin value of the graph..
         """
         return self.left_margin
@@ -112,7 +112,7 @@ class GraphWidget(QWidget):
         self.right_margin = rightMargin
 
     def getRightMargin(self):
-        """ 
+        """
            This function returns the right margin value of the graph..
         """
         return self.right_margin
@@ -148,7 +148,7 @@ class GraphWidget(QWidget):
         paint.end()
 
     def set_initial_value(self):
-        """ 
+        """
           This function sets the initial value for different parameters required for graph.
         """
         # Basic geometry constants
@@ -190,11 +190,11 @@ class GraphWidget(QWidget):
 
     @pyqtSlot(QPoint)
     def showContextMenu(self, point):
-        """ 
+        """
           This function takes care of different options and their visibility in the context menu.
         """
 
-        #selected_metric = self.main_widget.getSelectedMetric()
+        # selected_metric = self.main_widget.getSelectedMetric()
         selected_callpaths = self.main_widget.getSelectedCallpath()
 
         if not selected_callpaths:
@@ -256,7 +256,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def showMeanDataPoints(self):
-        """ 
+        """
           This function shows mean data points on the graph.
         """
         self.hide_action_status = True
@@ -272,7 +272,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def showMinDataPoints(self):
-        """ 
+        """
           This function shows minimum data points on the graph.
         """
         self.hide_action_status = True
@@ -288,7 +288,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def showMaxDataPoints(self):
-        """ 
+        """
           This function shows maximum data points on the graph
         """
         self.hide_action_status = True
@@ -304,7 +304,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def showMedianDataPoints(self):
-        """ 
+        """
           This function shows median data points on the graph.
         """
         self.hide_action_status = True
@@ -320,7 +320,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def showStandardDeviationDataPoints(self):
-        """ 
+        """
           This function shows standard deviation data points on the graph.
         """
         self.hide_action_status = True
@@ -349,7 +349,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def hideDataPoints(self):
-        """ 
+        """
           This function hides all the datapoints that is being shown on graph.
         """
         self.hide_action_status = False
@@ -368,7 +368,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def combineCallPaths(self):
-        """ 
+        """
           This function combine all callpathe shown on graph.
         """
         self.combine_action_status = False
@@ -387,7 +387,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def showAllCallPaths(self):
-        """ 
+        """
           This function shows all callpaths.
         """
         self.show_all_action_status = False
@@ -407,7 +407,7 @@ class GraphWidget(QWidget):
 
     @pyqtSlot()
     def exportData(self):
-        """ 
+        """
           This function allows to export the currently shown points and functions in a text format
         """
 
@@ -417,7 +417,7 @@ class GraphWidget(QWidget):
         if not selected_callpaths:
             return
 
-        #model_list = list()
+        # model_list = list()
 
         text = ''
 
@@ -426,10 +426,10 @@ class GraphWidget(QWidget):
                 selected_metric, selected_callpath)
             if model == None:
                 return
-            model_function = model.getModelFunction()
+            model_function = model.hypothesis.function
             data_points = [p for (_, p) in self.calculateDataPoints(
                 selected_metric, selected_callpath, True)]
-            callpath_name = selected_callpath.getRegion().getName()
+            callpath_name = selected_callpath.name
 
             parameters = self.main_widget.experiment.getParameters()
             model_function_text = 'Model: ' + \
@@ -447,16 +447,17 @@ class GraphWidget(QWidget):
             "Exported data (text can be copied to the clipboard using the context menu):")
         msg.setInformativeText(text)
         msg.setWindowTitle("Export Data")
-        #msg.setDetailedText("The details are as follows:")
+        # msg.setDetailedText("The details are as follows:")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
 
     def drawGraph(self, event, paint):
-        """ 
-            This function is being called by paintEvent to draw the graph 
+        """
+            This function is being called by paintEvent to draw the graph
         """
 
         # Get data
+        model_set = self.main_widget.getCurrentModel()
         selected_metric = self.main_widget.getSelectedMetric()
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
@@ -464,9 +465,9 @@ class GraphWidget(QWidget):
 
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
-            if model != None:
+            key = (selected_callpath.path, selected_metric)
+            if key in model_set.models:
+                model = model_set.models[key]
                 model_list.append(model)
 
         # Calculate geometry constraints
@@ -474,8 +475,7 @@ class GraphWidget(QWidget):
             self.right_margin
         self.graph_height = self.frameGeometry().height() - self.top_margin - \
             self.bottom_margin
-        self.setMaxY(self.calculateMaxY(
-            model_list, selected_metric, selected_callpaths) * 1.2)
+        self.setMaxY(self.calculateMaxY(model_list) * 1.2)
 
         # Draw coordinate system
         self.drawAxis(paint, selected_metric)
@@ -503,7 +503,7 @@ class GraphWidget(QWidget):
             pen = QPen(QColor("blue"))
             pen.setWidth(4)
             paint.setPen(pen)
-            #data_points_list = list()
+            # data_points_list = list()
             for selected_callpath in selectedCallpaths:
                 if self.datapoints_type == "outlier":
                     self.showOutlierPoints(
@@ -532,7 +532,7 @@ class GraphWidget(QWidget):
         if self.combine_all_callpath is False:
             text_len = 0
             for callpath, color in callpath_color_dict.items():
-                text_len = max(text_len, len(callpath.getRegion().getName()))
+                text_len = max(text_len, len(callpath.name))
             self.legend_width = 55 + text_len * (font_size-1)
             self.legend_height = counter_increment*(dict_size) + px_between
 
@@ -552,7 +552,7 @@ class GraphWidget(QWidget):
                 paint.setPen(QColor("black"))
                 paint.drawText(self.legend_x+45,
                                self.legend_y+px_between+counter,
-                               callpath.getRegion().getName())
+                               callpath.name)
                 counter = counter+counter_increment
 
         else:
@@ -560,9 +560,9 @@ class GraphWidget(QWidget):
             callpath_list = list()
 
             for callpath, color in callpath_color_dict.items():
-                callpath_list.append(callpath.getRegion().getName())
+                callpath_list.append(callpath.name)
                 text_len = max(text_len, text_len +
-                               len(callpath.getRegion().getName()))
+                               len(callpath.name))
 
             aggregated_callpath_name = str.join('+', callpath_list)
             self.legend_width = 55 + text_len * (font_size-1)
@@ -586,7 +586,7 @@ class GraphWidget(QWidget):
 
     def drawModel(self, paint, model, color):
 
-        function = model.getModelFunction()
+        function = model.hypothesis.function
 
         cord_list = self.calculate_function(function, self.graph_width)
 
@@ -604,7 +604,7 @@ class GraphWidget(QWidget):
     def drawAggregratedModel(self, paint, model_list):
         functions = list()
         for model in model_list:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             functions.append(function)
         cord_list = self.calculate_aggregate_callpath_function(
             functions, self.graph_width)
@@ -660,17 +660,17 @@ class GraphWidget(QWidget):
         # marking divions and subdivisons on x axis
         y = y_origin
         paint.drawText(self.left_margin-5, y+30, "0")
-        if(x_to_mark[0] is not 0):
+        if(x_to_mark[0] != 0):
             intermediate_x_offset = x_offset / \
                 (number_of_intermediate_points_on_x+1)
             intermediate_x = self.left_margin+intermediate_x_offset
             for _ in range(0, number_of_intermediate_points_on_x, +1):
                 paint.drawLine(intermediate_x, y-3, intermediate_x, y)
                 intermediate_x = intermediate_x+intermediate_x_offset
-            #x_last_position = self.left_margin
+            # x_last_position = self.left_margin
 
         # removing the  "_" sign form beginning if x_label has
-        x_label = self.main_widget.data_display.getAxisParameter(0).getName()
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
             x_label = x_label[1:]
 
@@ -688,7 +688,7 @@ class GraphWidget(QWidget):
                 intermediate_x = intermediate_x+intermediate_x_offset
             paint.drawLine(x, y-6, x, y)
             paint.drawText(x-15, y+30, str(x_to_mark[i]))
-            #x_last_position = x
+            # x_last_position = x
 
             for y_value in range((y_origin-7), y_other_end, -3):
                 paint.drawPoint(x, y_value)
@@ -696,7 +696,7 @@ class GraphWidget(QWidget):
         # marking divions and subdivisons on y axis
         x = self.left_margin
 
-        if(y_to_mark[0] is not 0):
+        if(y_to_mark[0] != 0):
             intermediate_y_offset = y_offset / \
                 (number_of_intermediate_points_on_y+1)
             intermediate_y = y_origin-intermediate_y_offset
@@ -704,13 +704,13 @@ class GraphWidget(QWidget):
                 paint.drawLine(x_origin, intermediate_y,
                                x_origin+3, intermediate_y)
                 intermediate_y = intermediate_y-intermediate_y_offset
-            #y_last_position = y_origin
+            # y_last_position = y_origin
 
         for j in range(len(y_to_mark)):
             y = self.logicalYtoPixel(y_to_mark_cal[j])
 
             if(j+1 == (int(len(y_to_mark)/2))):
-                paint.drawText(5, y-(y_offset/2), selectedMetric.getName())
+                paint.drawText(5, y-(y_offset/2), selectedMetric.name)
 
             intermediate_y_offset = y_offset / \
                 (number_of_intermediate_points_on_y+1)
@@ -721,7 +721,7 @@ class GraphWidget(QWidget):
                 intermediate_y = intermediate_y-intermediate_y_offset
             paint.drawLine(x_origin, y, x_origin+6, y)
             paint.drawText(x_origin-70, y+5, str(y_to_mark[j]))
-            #y_last_position = y
+            # y_last_position = y
             for x_value in range((x_origin+7), x_other_end, +3):
                 paint.drawPoint(x_value, y)
 
@@ -732,32 +732,23 @@ class GraphWidget(QWidget):
          then it uses ExtraP_Function_Generic to calculate the correspoding y value
         """
 
-        m_x_lower_bound = 1
-        number_of_x_points = int(length_x_axis/2)
-        width_between_x = float(
-            (float(self.max_x-m_x_lower_bound))/number_of_x_points)
+        # m_x_lower_bound = 1
+        number_of_x_points = int(length_x_axis / 2)
 
-        x_list = list()
-        y_list = list()
-        x_temp = float(m_x_lower_bound)
-
-        for _ in range(0, int((number_of_x_points)+1)):
-            x_list.append(x_temp)
-            x_temp = x_temp+width_between_x
-
+        x_values = numpy.linspace(0, self.max_x, number_of_x_points)
+        x_list = numpy.ndarray((len(self.main_widget.experiment.parameters), number_of_x_points))
+        param = self.main_widget.data_display.getAxisParameter(0).id
         parameter_value_list = self.main_widget.data_display.getValues()
-        param = self.main_widget.data_display.getAxisParameter(0)
+        for i, val in parameter_value_list.items():
+            x_list[i] = numpy.repeat(val, number_of_x_points)
+        x_list[param] = x_values
 
-        for x_value in x_list:
-            parameter_value_list[param] = x_value
-            #print(" paramter_value_list outside",  parameter_value_list)
-            y_value = function.evaluate(parameter_value_list)
-            y_list.append(y_value)
+        y_list = function.evaluate(x_list).reshape(-1)
 
-        cord_list_before_filtering = list(zip(x_list, y_list))
+        cord_list_before_filtering = zip(x_values, y_list)
         cord_list = [(x, y)
-                     for x, y in cord_list_before_filtering if not math.isnan(y)]
-        cord_list = [(x, y) for x, y in cord_list if y >= 0]
+                     for x, y in cord_list_before_filtering
+                     if not math.isnan(y) and y >= 0]
 
         return cord_list
 
@@ -780,7 +771,7 @@ class GraphWidget(QWidget):
             x_list.append(x_temp)
             x_temp = x_temp+width_between_x
 
-        #TODO: fix this
+        # TODO: fix this
         parameter_value_list = EXTRAP.ParameterValueList()
         parameters = self.main_widget.experiment.get_parameters()
         param = parameters[0]
@@ -791,7 +782,7 @@ class GraphWidget(QWidget):
             for function in functions:
                 value = function.evaluate(parameter_value_list)
                 y_value = y_value + value
-                #print ("function and y", function, y_value )
+                # print ("function and y", function, y_value )
             y_list.append(y_value)
 
         cord_list_before_filtering = list(zip(x_list, y_list))
@@ -799,7 +790,7 @@ class GraphWidget(QWidget):
                      for x, y in cord_list_before_filtering if not math.isnan(y)]
         cord_list = [(x, y) for x, y in cord_list if y >= 0]
 
-        #cord_list = self.calculate_function( functions[0], length_x_axis)
+        # cord_list = self.calculate_function( functions[0], length_x_axis)
 
         return cord_list
 
@@ -823,16 +814,16 @@ class GraphWidget(QWidget):
         return axis_points_to_mark
 
     def calculate_absolute_position(self, cord_list, identifier):
-        """ This function calculates the absolute position of the points on the 
+        """ This function calculates the absolute position of the points on the
             graph widget wrt the coordinate system.
         """
 
         absolute_position_list = list()
-        if identifier is "x":
+        if identifier == "x":
             for cord in cord_list:
                 cur_pixel = self.logicalXtoPixel(cord)
                 absolute_position_list.append(cur_pixel)
-        elif identifier is "y":
+        elif identifier == "y":
             for cord in cord_list:
                 cur_pixel = self.logicalYtoPixel(cord)
                 absolute_position_list.append(cur_pixel)
@@ -879,29 +870,29 @@ class GraphWidget(QWidget):
         """ This function calculates datapoints to be marked on the graph
         """
 
-        datapoints = self.main_widget.experiment.getPoints(
-            selectedMetric, selectedCallpath)
-        parameter_datapoint = self.main_widget.data_display.getAxisParameter(0)
+        datapoints = self.main_widget.getCurrentModel().models[(selectedCallpath.path, selectedMetric)].measurements
+        parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         datapoint_x_absolute_pos_list = list()
         datapoint_y_absolute_pos_list = list()
         datapoint_x_list = list()
         datapoint_y_list = list()
 
         if self.datapoints_type == "min":
-            datapoint_list = self.getMinDataPoints(
-                datapoints, parameter_datapoint, ignore_limit)
+            datapoint_list = self.getDataPoints(
+                datapoints, parameter_datapoint, ignore_limit, lambda d: d.minimum)
         elif self.datapoints_type == "mean":
-            datapoint_list = self.getMeanDataPoints(
-                datapoints, parameter_datapoint, ignore_limit)
+            datapoint_list = self.getDataPoints(
+                datapoints, parameter_datapoint, ignore_limit, lambda d: d.mean)
         elif self.datapoints_type == "max":
-            datapoint_list = self.getMaxDataPoints(
-                datapoints, parameter_datapoint, ignore_limit)
+            datapoint_list = self.getDataPoints(
+                datapoints, parameter_datapoint, ignore_limit, lambda d: d.maximum)
         elif self.datapoints_type == "median":
-            datapoint_list = self.getMedianDataPoints(
-                datapoints, parameter_datapoint, ignore_limit)
+            datapoint_list = self.getDataPoints(
+                datapoints, parameter_datapoint, ignore_limit, lambda d: d.median)
         elif self.datapoints_type == "standardDeviation":
-            datapoint_list = self.getStandardDeviationDataPoints(
-                datapoints, parameter_datapoint, ignore_limit)
+            datapoint_list = self.getDataPoints(
+                datapoints, parameter_datapoint, ignore_limit, lambda d: d.std)
+            # TODO think about drawing as bar around value
         else:
             datapoint_list = None
 
@@ -912,118 +903,53 @@ class GraphWidget(QWidget):
             datapoint_y_absolute_pos_list = self.calculate_absolute_position(
                 datapoint_y_list, "y")
 
-        datapoint_on_graph_values = list(
-            zip(datapoint_x_absolute_pos_list, datapoint_y_absolute_pos_list))
-        datapoint_actual_values = list(zip(datapoint_x_list, datapoint_y_list))
+        datapoint_on_graph_values = zip(datapoint_x_absolute_pos_list, datapoint_y_absolute_pos_list)
+        datapoint_actual_values = zip(datapoint_x_list, datapoint_y_list)
         return list(zip(datapoint_on_graph_values, datapoint_actual_values))
 
-    def getStandardDeviationDataPoints(self, datapoints, parameter_datapoint, ignore_limit):
-        """ This function calculates standard deviation datapoints to be marked on the graph
+    def getDataPoints(self, datapoints, parameter_datapoint, ignore_limit, key):
         """
-        datapoint_x_list = list()
-        datapoint_y_list = list()
-
-        for datapoint in datapoints:
-            x_value = datapoint.getParameterValue(parameter_datapoint)
-            if (x_value <= self.max_x or ignore_limit):
-                datapoint_x_list.append(x_value)
-                y_value = datapoint.getStandardDeviation()
-                datapoint_y_list.append(y_value)
-        return list(zip(datapoint_x_list, datapoint_y_list))
-
-    def getMedianDataPoints(self, datapoints, parameter_datapoint, ignore_limit):
-        """ This function calculates median datapoints to be marked on the graph
+        This function calculates datapoints with property selected by the
+        key function to be marked on the graph
         """
-        datapoint_x_list = list()
-        datapoint_y_list = list()
+        return [
+            (dp.coordinate[parameter_datapoint], key(dp))
+            for dp in datapoints
+            if (dp.coordinate[parameter_datapoint] <= self.max_x or ignore_limit)
+        ]
 
-        for datapoint in datapoints:
-            x_value = datapoint.getParameterValue(parameter_datapoint)
-            if (x_value <= self.max_x or ignore_limit):
-                datapoint_x_list.append(x_value)
-                y_value = datapoint.getMedian()
-                datapoint_y_list.append(y_value)
-        return list(zip(datapoint_x_list, datapoint_y_list))
-
-    def getMaxDataPoints(self, datapoints, parameter_datapoint, ignore_limit):
-        """ This function calculates standard deviation datapoints to be marked on the graph
-        """
-        datapoint_x_list = list()
-        datapoint_y_list = list()
-
-        for datapoint in datapoints:
-            x_value = datapoint.getParameterValue(parameter_datapoint)
-            if (x_value <= self.max_x or ignore_limit):
-                datapoint_x_list.append(x_value)
-                y_value = datapoint.getMaximum()
-                datapoint_y_list.append(y_value)
-        return list(zip(datapoint_x_list, datapoint_y_list))
-
-    def getMinDataPoints(self, datapoints, parameter_datapoint, ignore_limit):
-        """ This function calculates minimum datapoints to be marked on the graph
-        """
-
-        datapoint_x_list = list()
-        datapoint_y_list = list()
-
-        for datapoint in datapoints:
-            x_value = datapoint.getParameterValue(parameter_datapoint)
-            if (x_value <= self.max_x or ignore_limit):
-                datapoint_x_list.append(x_value)
-                y_value = datapoint.getMinimum()
-                datapoint_y_list.append(y_value)
-        return list(zip(datapoint_x_list, datapoint_y_list))
-
-    def getMeanDataPoints(self, datapoints, parameter_datapoint, ignore_limit):
-        """ This function calculate mean datapoints to be marked on the graph
-        """
-        datapoint_x_list = list()
-        datapoint_y_list = list()
-
-        for datapoint in datapoints:
-            x_value = datapoint.getParameterValue(parameter_datapoint)
-            if (x_value <= self.max_x or ignore_limit):
-                datapoint_x_list.append(x_value)
-                y_value = datapoint.getMean()
-                datapoint_y_list.append(y_value)
-        return list(zip(datapoint_x_list, datapoint_y_list))
-
-    def calculateMaxY(self, modelList, selectedMetric, selectedCallpaths):
+    def calculateMaxY(self, modelList):
 
         y_max = 0
         pv_list = self.main_widget.data_display.getValues()
-        param = self.main_widget.data_display.getAxisParameter(0)
+        param = self.main_widget.data_display.getAxisParameter(0).id
         pv_list[param] = self.max_x
 
         # Check the maximum value of a displayed data point
-        #TODO: fix this
+        # TODO: fix this
         if self.show_datapoints:
-            for selectedCallpath in selectedCallpaths:
-                y = EXTRAP.getMaxValueFromDatapoints(self.main_widget.experiment,
-                                                     selectedMetric,
-                                                     selectedCallpath,
-                                                     self.datapointType_Int_Map[self.datapoints_type],
-                                                     pv_list)
+            for model in modelList:
+                y = max(model.predictions)
                 y_max = max(y, y_max)
 
         if self.combine_all_callpath:
             y_agg = 0
             for model in modelList:
-                function = model.getModelFunction()
+                function = model.hypothesis.function
                 y_agg = y_agg + function.evaluate(pv_list)
 
             y_max = max(y_agg, y_max)
 
         # Check the value at the end of the displayed interval
         for model in modelList:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             y = function.evaluate(pv_list)
             y_max = max(y, y_max)
 
         # Check the value at the beginning of the displayed interval
         pv_list[param] = 1
         for model in modelList:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             y = function.evaluate(pv_list)
             y_max = max(y, y_max)
 
@@ -1034,16 +960,16 @@ class GraphWidget(QWidget):
         return y_max
 
     def showOutlierPoints(self, paint, selectedMetric, selectedCallpath):
-        datapoints = self.main_widget.experiment.getPoints(
-            selectedMetric, selectedCallpath)
-        parameter_datapoint = self.main_widget.data_display.getAxisParameter(0)
+        model_set = self.main_widget.getCurrentModel()
+        datapoints = model_set.models[(selectedCallpath.path, selectedMetric)].measurements
+        parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         for datapoint in datapoints:
-            x_value = datapoint.getParameterValue(parameter_datapoint)
+            x_value = datapoint.coordinate[parameter_datapoint]
             if (x_value <= self.max_x):
-                y_min_value = datapoint.getMinimum()
-                y_max_value = datapoint.getMaximum()
-                y_mean_value = datapoint.getMean()
-                y_median_value = datapoint.getMedian()
+                y_min_value = datapoint.minimum
+                y_max_value = datapoint.maximum
+                y_mean_value = datapoint.mean
+                y_median_value = datapoint.median
                 self.plotOutliers(paint, x_value, y_min_value,
                                   y_mean_value, y_median_value, y_max_value)
 
@@ -1055,8 +981,8 @@ class GraphWidget(QWidget):
         # create cordinates and merge them to list
         x_list = [x_value, x_value, x_value, x_value]
         y_list = [y_min_value, y_median_value, y_mean_value, y_max_value]
-        #outlier_list = list(zip(x_list, y_list))
-        #print("In plotOutliers", outlier_list)
+        # outlier_list = list(zip(x_list, y_list))
+        # print("In plotOutliers", outlier_list)
 
         outlier_x_absolute_pos_list = self.calculate_absolute_position(
             x_list, "x")
@@ -1069,7 +995,7 @@ class GraphWidget(QWidget):
         outlier_on_graph_list = list(
             zip(outlier_x_absolute_pos_list, outlier_y_absolute_pos_list))
         for (x_cordinate, y_cordinate) in outlier_on_graph_list:
-            #paint.drawPoint(x_cordinate, y_cordinate)
+            # paint.drawPoint(x_cordinate, y_cordinate)
             paint.drawLine(x_cordinate-2, y_cordinate,
                            x_cordinate+2, y_cordinate)
         pen = QPen(QColor("blue"))
@@ -1082,21 +1008,21 @@ class GraphWidget(QWidget):
         """
         for (x_cordinate, y_cordinate), (x_actual_val, y_actual_val) in dataPoints:
             paint.drawPoint(x_cordinate, y_cordinate)
-            #displayString="(" + str(x_actual_val)+ "," + str(y_actual_val) + ")"
-            #paint.drawText((x_cordinate-20), y_cordinate, displayString)
-        #paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.getRegion().getName())
+            # displayString="(" + str(x_actual_val)+ "," + str(y_actual_val) + ")"
+            # paint.drawText((x_cordinate-20), y_cordinate, displayString)
+        # paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.name)
 
     def mousePressEvent(self, QMouseEvent):
 
         self.clicked_x_pos = int(QMouseEvent.x())
         self.clicked_y_pos = int(QMouseEvent.y())
-        #print ("clicked_x_pos, clicked_y_pos", self.clicked_x_pos, self.clicked_y_pos)
+        # print ("clicked_x_pos, clicked_y_pos", self.clicked_x_pos, self.clicked_y_pos)
 
     def mouseReleaseEvent(self, releaseEvent):
 
         release_x_pos = int(releaseEvent.x())
         release_y_pos = int(releaseEvent.y())
-        #print ("mouse release event release_x_pos", release_x_pos)
+        # print ("mouse release event release_x_pos", release_x_pos)
 
         # move legend id clicked on legend
         if (0 <= self.clicked_x_pos-self.legend_x <= self.legend_width) and (0 <= self.clicked_y_pos-self.legend_y <= self.legend_height):

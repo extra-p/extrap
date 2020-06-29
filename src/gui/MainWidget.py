@@ -31,7 +31,7 @@ from fileio.text_file_reader import read_text_file
 from fileio.talpas_file_reader import read_talpas_file
 from fileio.json_file_reader import read_json_file
 from enum import Enum
-from entities.modelgenerator import ModelGenerator
+from modelers.model_generator import ModelGenerator
 
 
 class CallPathEnum(Enum):
@@ -50,13 +50,16 @@ class MainWidget(QMainWindow):
         super(MainWidget, self).__init__(*args, **kwargs)
         self.old_x_pos = 0
         self.experiment = None
-        self.graph_color_list = ['#8B0000', '#00008B', '#006400', '#2F4F4F', '#8B4513', '#556B2F',
-                                 '#808000', '#008080', '#FF00FF', '#800000', '#FF0000', '#000080', '#008000', '#00FFFF', '#800080']
+        self.graph_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
+                                 '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
+                                 '#bcbd22', '#17becf']
+        # ['#8B0000', '#00008B', '#006400', '#2F4F4F', '#8B4513', '#556B2F',
+        #  '#808000', '#008080', '#FF00FF', '#800000', '#FF0000', '#000080', '#008000', '#00FFFF', '#800080']
         self.font_size = 6
         self.experiment_change = True
         self.initUI()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        
+
         # switch for using mean or median measurement values for modeling
         # is used when loading the data from a file and then modeling directly
         self.median = 0
@@ -134,7 +137,7 @@ class MainWidget(QMainWindow):
         open_talpas_file_action = QAction(self.tr('Open talpas input'), self)
         open_talpas_file_action.setStatusTip(self.tr('Open talpas input file'))
         open_talpas_file_action.triggered.connect(self.open_talpas_file)
-        
+
         cube_file_action = QAction(self.tr('Open set of CUBE files'), self)
         cube_file_action.setStatusTip(self.tr('Open a set of CUBE files for single parameter models and generate data points for a new experiment from them'))
         cube_file_action.triggered.connect(self.open_cube_file)
@@ -168,7 +171,7 @@ class MainWidget(QMainWindow):
         # Main menu bar
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
-        
+
         file_menu = menubar.addMenu(self.tr('&File'))
         file_menu.addAction(cube_file_action)
         file_menu.addAction(open_text_file_action)
@@ -176,15 +179,15 @@ class MainWidget(QMainWindow):
         file_menu.addAction(open_talpas_file_action)
         file_menu.addAction(screenshot_action)
         file_menu.addAction(exit_action)
-        
+
         view_menu = menubar.addMenu(self.tr('View'))
         view_menu.addAction(change_font_action)
         view_menu.addAction(select_view_action)
-        
+
         model_menu = menubar.addMenu(self.tr('Model'))
         model_menu.addAction(model_delete_action)
         model_menu.addAction(model_rename_action)
-        
+
         filter_menu = menubar.addMenu(self.tr('Filter'))
         filter_menu.addAction(filter_callpath_action)
 
@@ -193,8 +196,7 @@ class MainWidget(QMainWindow):
         self.setCentralWidget(central_widget)
         self.experiment_change = False
         self.show()
-        
-        
+
     def get_file_name(self, fileName):
         """
         Extracts the file name of the return value of the
@@ -206,27 +208,24 @@ class MainWidget(QMainWindow):
             return fileName[0]
         else:
             return fileName
-        
-        
+
     def setExperiment(self, experiment):
         self.experiment_change = True
         self.experiment = experiment
-        self.selector_widget.createParameterSliders()
-        self.selector_widget.fillMetricList()
-        self.selector_widget.fillCalltree()
-        self.modeler_widget.fillModelerList()
-        self.data_display.experimentChange()
         self.selector_widget.updateModelList()
-        self.experiment_change = False
+        self.selector_widget.fillMetricList()
+        self.selector_widget.createParameterSliders()
+        self.selector_widget.fillCalltree()
         self.updateMinMaxValue()
+        self.selector_widget.tree_model.valuesChanged()
+        self.data_display.experimentChange()
+        self.experiment_change = False
         self.update()
-
 
     def updateAllWidget(self):
         if not self.experiment_change:
             self.data_display.updateWidget()
             self.update()
-
 
     def metricIndexChanged(self):
         if not self.experiment_change:
@@ -234,11 +233,9 @@ class MainWidget(QMainWindow):
             self.update()
             self.updateMinMaxValue()
 
-
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
             self.close()
-
 
     def closeEvent(self, event):
         reply = QMessageBox.question(self, self.tr('Quit'), self.tr(
@@ -247,23 +244,18 @@ class MainWidget(QMainWindow):
             event.accept()
         else:
             event.ignore()
-            
-            
+
     def getExperiment(self):
         return self.experiment
-    
-    
+
     def getSelectedMetric(self):
         return self.selector_widget.getSelectedMetric()
-    
-    
+
     def getSelectedCallpath(self):
         return self.selector_widget.getSelectedCallpath()
 
-
-    def getCurrentModel(self, metric, callpath):
-        return self.selector_widget.getCurrentModel(metric, callpath)
-
+    def getCurrentModel(self):
+        return self.selector_widget.getCurrentModel()
 
     def open_font_dialog_box(self):
         fontSizeItems = list()
@@ -277,11 +269,9 @@ class MainWidget(QMainWindow):
             self.data_display.updateWidget()
             self.update()
 
-
     def open_select_plots_dialog_box(self):
         dialog = PlotTypeSelector(self, self.data_display)
         dialog.exec_()
-
 
     def hide_callpath_dialog_box(self):
         callpathList = list()
@@ -290,10 +280,8 @@ class MainWidget(QMainWindow):
             _, _ = QInputDialog.getItem(
                 self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
 
-
     def getFontSize(self):
         return self.font_size
-
 
     def screenshot(self):
         """
@@ -319,16 +307,14 @@ class MainWidget(QMainWindow):
             image.save(file_name, filetype)
         self.statusBar().showMessage(self.tr("Ready"))
 
-
     def model_experiment(self, experiment):
         # initialize model generator
-        model_generator = ModelGenerator(experiment)
+        model_generator = ModelGenerator(experiment, use_median=self.median)
         # create models from data
-        experiment = model_generator.model_all(self.median)
+        model_generator.model_all()
         self.setExperiment(experiment)
-        self.selector_widget.selectLastModel()
-        self.selector_widget.renameCurrentModel("Default Model")
-
+        # self.selector_widget.selectLastModel()
+        # self.selector_widget.renameCurrentModel("Default Model")
 
     def open_text_file(self):
         file_name = QFileDialog.getOpenFileName(self, 'Open a text input file')
@@ -337,8 +323,7 @@ class MainWidget(QMainWindow):
             experiment = read_text_file(file_name)
             # call the modeler and create a function model
             self.model_experiment(experiment)
-            
-            
+
     def open_json_file(self):
         file_name = QFileDialog.getOpenFileName(self, 'Open a json input file')
         file_name = self.get_file_name(file_name)
@@ -346,7 +331,6 @@ class MainWidget(QMainWindow):
             experiment = read_json_file(file_name)
             # call the modeler and create a function model
             self.model_experiment(experiment)
-
 
     def open_talpas_file(self):
         file_name = QFileDialog.getOpenFileName(
@@ -356,8 +340,7 @@ class MainWidget(QMainWindow):
             experiment = read_talpas_file(file_name)
             # call the modeler and create a function model
             self.model_experiment(experiment)
-            
-            
+
     def open_cube_file(self):
         dir_name = QFileDialog.getExistingDirectory(
             self, 'Select a directory with a set of CUBE files', "", QFileDialog.ReadOnly)
@@ -370,7 +353,6 @@ class MainWidget(QMainWindow):
             self.selector_widget.selectLastModel()
             self.modeler_widget.remodel()
             self.selector_widget.renameCurrentModel("Default Model")
-                
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
@@ -382,7 +364,6 @@ class MainWidget(QMainWindow):
             self.max_value = updated_max_value
             self.min_value_label.setText(formatNumber(str(updated_min_value)))
             self.max_value_label.setText(formatNumber(str(updated_max_value)))
-
 
     def populateCallPathColorMap(self, callpaths):
         callpaths = list(set(callpaths))
@@ -400,11 +381,8 @@ class MainWidget(QMainWindow):
                 self.dict_callpath_color[callpath] = newcolor
             current_index = current_index + 1
 
-
     def getColorForCallPath(self, callpath):
         return self.dict_callpath_color[callpath]
 
-
     def get_callpath_color_map(self):
         return self.dict_callpath_color
-    

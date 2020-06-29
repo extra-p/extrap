@@ -205,7 +205,7 @@ class GraphDisplayWindow (FigureCanvas):
         Z_List = list()
         z_List = list()
         for model in model_list:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             zs = np.array([self.calculate_z(x, y, function)
                            for x, y in zip(np.ravel(X), np.ravel(Y))])
             Z = zs.reshape(X.shape)
@@ -232,10 +232,10 @@ class GraphDisplayWindow (FigureCanvas):
             left=left, bottom=bottom, right=right, top=top, wspace=wspace, hspace=hspace)
 
         # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).getName()
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
             x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).getName()
+        y_label = self.main_widget.data_display.getAxisParameter(1).name
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
@@ -261,7 +261,7 @@ class GraphDisplayWindow (FigureCanvas):
             ax.set_xlabel('\n' + x_label)
             ax.set_ylabel('\n' + y_label)
 
-            titleName = selected_callpaths[i].getRegion().getName()
+            titleName = selected_callpaths[i].getRegion().name
             if titleName.startswith("_"):
                 titleName = titleName[1:]
             ax.set_title(titleName)

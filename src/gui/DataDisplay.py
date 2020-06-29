@@ -154,7 +154,9 @@ class AxisSelection(QWidget):
             self.max_edit.setValue(self.max_z)
 
     def getParameter(self):
-        return Parameter(self.combo_box.currentText())
+        p = Parameter(self.combo_box.currentText())
+        p.id = self.combo_box.currentIndex()
+        return p
 
     def parameter_selected(self):
         new_name = self.combo_box.currentText()
@@ -390,7 +392,7 @@ class DataDisplayManager(QWidget):
         num_param = len(parameters)
         for i in range(num_axis, num_param):
             value_selection = ValueSelection(self, self,
-                                             parameters[i].getName())
+                                             parameters[i].name)
             self.value_selections.append(value_selection)
             self.grid.addWidget(value_selection, i, 0)
 
@@ -406,12 +408,11 @@ class DataDisplayManager(QWidget):
         if index < len(self.axis_selections):
             self.axis_selections[index].max_edit.setValue(value)
 
-    # TODO: fix this
-    #def getValues(self):
-    #    pv_list = EXTRAP.ParameterValueList()
-    #    for i in self.value_selections:
-    #        pv_list[EXTRAP.Parameter(i.parameter)] = i.getValue()
-    #    return pv_list
+    def getValues(self):
+        pv_list = {}
+        for i in self.value_selections:
+            pv_list[i.parameter] = i.getValue()
+        return pv_list
 
     def getAxisParameter(self, index):
         return self.axis_selections[index].getParameter()
@@ -420,7 +421,7 @@ class DataDisplayManager(QWidget):
         old_value = self.axis_selections[index].getValue()
         for i in self.axis_selections:
             if i.index != index:
-                if i.getParameter().getName() == newName:
+                if i.getParameter().name == newName:
                     self.setMaxValue(index, i.getValue())
                     self.setMaxValue(i.index, old_value)
                     i.switchParameter(oldName)

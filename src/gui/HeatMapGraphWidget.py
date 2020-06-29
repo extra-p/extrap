@@ -215,7 +215,7 @@ class GraphDisplayWindow (FigureCanvas):
         Z_List = list()
         z_List = list()
         for model in model_list:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             zs = np.array([self.calculate_z(x, y, function)
                            for x, y in zip(np.ravel(X), np.ravel(Y))])
             Z = zs.reshape(X.shape)
@@ -262,10 +262,10 @@ class GraphDisplayWindow (FigureCanvas):
         #max_Color_List = np.array(max_color_list).reshape(X.shape)
 
         # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).getName()
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
             x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).getName()
+        y_label = self.main_widget.data_display.getAxisParameter(1).name
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
@@ -302,7 +302,7 @@ class GraphDisplayWindow (FigureCanvas):
         # Step 3: Draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
-            labelName = str(key.getRegion().getName())
+            labelName = str(key.getRegion().name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
@@ -374,7 +374,7 @@ class GraphDisplayWindow (FigureCanvas):
             for point in points:
                 first = (point2[0] - point1[0], point2[1] - point1[1])
                 second = (point[0] - point2[0], point[1] - point2[1])
-                if (point != point2 and(self.findRelativePosition(first, second) == self.isRight or(self.findRelativePosition(first, second) == self.isInSameLine and self.isOnSamePlane(first, second)))):
+                if (point != point2 and (self.findRelativePosition(first, second) == self.isRight or (self.findRelativePosition(first, second) == self.isInSameLine and self.isOnSamePlane(first, second)))):
                     point2 = point
             point1 = point2
             points.remove(point1)
@@ -418,4 +418,3 @@ class MyCustomToolbar(NavigationToolbar):
     """
     toolitems = [toolitem for toolitem in NavigationToolbar.toolitems if
                  toolitem[0] in ('Home1', 'Save')]
-

@@ -16,7 +16,6 @@ import numpy as np
 import matplotlib.patches as mpatches
 
 
-
 try:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
@@ -208,7 +207,7 @@ class GraphDisplayWindow (FigureCanvas):
         # Get the z value for the x and y value
         Z_List = list()
         for model in model_list:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             zs = np.array([self.calculate_z(x, y, function)
                            for x, y in zip(np.ravel(X), np.ravel(Y))])
             Z = zs.reshape(X.shape)
@@ -221,10 +220,10 @@ class GraphDisplayWindow (FigureCanvas):
         # colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
 
         # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).getName()
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
             x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).getName()
+        y_label = self.main_widget.data_display.getAxisParameter(1).name
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
@@ -242,7 +241,7 @@ class GraphDisplayWindow (FigureCanvas):
         ax_all.set_xlabel('\n' + x_label)
         ax_all.set_ylabel('\n' + y_label, linespacing=3.1)
         ax_all.set_zlabel(
-            '\n' + self.main_widget.getSelectedMetric().getName(), linespacing=3.1)
+            '\n' + self.main_widget.getSelectedMetric().name, linespacing=3.1)
         for i in range(len(Z_List)):
             ax_all.plot_surface(
                 X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])
@@ -250,7 +249,7 @@ class GraphDisplayWindow (FigureCanvas):
         # draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
-            labelName = str(key.getRegion().getName())
+            labelName = str(key.getRegion().name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
@@ -287,4 +286,3 @@ class MyCustomToolbar(NavigationToolbar):
     """
     toolitems = [toolitem for toolitem in NavigationToolbar.toolitems if
                  toolitem[0] in ('Home1', 'Save')]
-

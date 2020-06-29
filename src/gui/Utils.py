@@ -11,33 +11,33 @@ directory for details.
 
 
 def makeExponent(exponent):
-    exponent = exponent.replace('0', 'â�°')
-    exponent = exponent.replace('1', 'Â¹')
-    exponent = exponent.replace('2', 'Â²')
-    exponent = exponent.replace('3', 'Â³')
-    exponent = exponent.replace('4', 'â�´')
-    exponent = exponent.replace('5', 'â�µ')
-    exponent = exponent.replace('6', 'â�¶')
-    exponent = exponent.replace('7', 'â�·')
-    exponent = exponent.replace('8', 'â�¸')
-    exponent = exponent.replace('9', 'â�¹')
-    exponent = exponent.replace('-', 'â�»')
-    exponent = exponent.replace('.', 'â‹…')
+    exponent = exponent.replace('0', '⁰')
+    exponent = exponent.replace('1', '¹')
+    exponent = exponent.replace('2', '²')
+    exponent = exponent.replace('3', '³')
+    exponent = exponent.replace('4', '⁴')
+    exponent = exponent.replace('5', '⁵')
+    exponent = exponent.replace('6', '⁶')
+    exponent = exponent.replace('7', '⁷')
+    exponent = exponent.replace('8', '⁸')
+    exponent = exponent.replace('9', '⁹')
+    exponent = exponent.replace('-', '⁻')
+    exponent = exponent.replace('.', '̇ ')
     return exponent
 
 
 def makeBase(base):
-    base = base.replace('0', 'â‚€')
-    base = base.replace('1', 'â‚�')
-    base = base.replace('2', 'â‚‚')
-    base = base.replace('3', 'â‚ƒ')
-    base = base.replace('4', 'â‚„')
-    base = base.replace('5', 'â‚…')
-    base = base.replace('6', 'â‚†')
-    base = base.replace('7', 'â‚‡')
-    base = base.replace('8', 'â‚ˆ')
-    base = base.replace('9', 'â‚‰')
-    base = base.replace('e', 'â‚‘')
+    base = base.replace('0', '₀')
+    base = base.replace('1', '₁')
+    base = base.replace('2', '₂')
+    base = base.replace('3', '₃')
+    base = base.replace('4', '₄')
+    base = base.replace('5', '₅')
+    base = base.replace('6', '₆')
+    base = base.replace('7', '₇')
+    base = base.replace('8', '₈')
+    base = base.replace('9', '₉')
+    base = base.replace('e', 'ₑ')
     return base
 
 
@@ -101,16 +101,7 @@ def formatNumber(value_str, precision=3):
 
 
 def isnumber(c):
-    return c == '0' or \
-        c == '1' or \
-        c == '2' or \
-        c == '3' or \
-        c == '4' or \
-        c == '5' or \
-        c == '6' or \
-        c == '7' or \
-        c == '8' or \
-        c == '9'
+    return c.isdecimal()
 
 
 def formatFormula(formula):
@@ -177,4 +168,3 @@ def formatFormula(formula):
                 mode = 0
         i = i + 1
     return formula
-

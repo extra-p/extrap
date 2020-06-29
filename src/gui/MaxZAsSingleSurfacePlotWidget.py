@@ -193,7 +193,7 @@ class GraphDisplayWindow (FigureCanvas):
         z_List = list()
         Z_List = list()
         for model in model_list:
-            function = model.getModelFunction()
+            function = model.hypothesis.function
             zs = np.array([self.calculate_z(x, y, function)
                            for x, y in zip(np.ravel(X), np.ravel(Y))])
             Z = zs.reshape(X.shape)
@@ -221,10 +221,10 @@ class GraphDisplayWindow (FigureCanvas):
         # Get the callpath color map
         #dict_callpath_color = self.main_widget.get_callpath_color_map()
         # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).getName()
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
             x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).getName()
+        y_label = self.main_widget.data_display.getAxisParameter(1).name
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
@@ -241,7 +241,7 @@ class GraphDisplayWindow (FigureCanvas):
         ax.set_xlabel('\n' + x_label, linespacing=3.2)
         ax.set_ylabel('\n' + y_label, linespacing=3.1)
         ax.set_zlabel(
-            '\n' + self.main_widget.getSelectedMetric().getName(), linespacing=3.1)
+            '\n' + self.main_widget.getSelectedMetric().name, linespacing=3.1)
         ax.set_title(r'Max Z value')
         self.fig.colorbar(im, ax=ax, orientation="horizontal",
                           pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
@@ -273,4 +273,3 @@ class MyCustomToolbar(NavigationToolbar):
     """
     toolitems = [toolitem for toolitem in NavigationToolbar.toolitems if
                  toolitem[0] in ('Home1', 'Save')]
-

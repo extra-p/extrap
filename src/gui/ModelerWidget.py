@@ -15,11 +15,12 @@ try:
 except ImportError:
     from PyQt5.QtGui import *  # @UnusedWildImport
     from PyQt5.QtWidgets import *  # @UnusedWildImport
-    from entities.modelgenerator import ModelGenerator
-    
+    from modelers.model_generator import ModelGenerator
+    from modelers import single_parameter
+    from modelers import multi_parameter
+
 
 class ModelerWidget(QWidget):
-    
 
     def __init__(self, mainWidget, parent):
         super(ModelerWidget, self).__init__(parent)
@@ -27,7 +28,6 @@ class ModelerWidget(QWidget):
         # use mean or median measurement values to compute the models
         self.mean = True
         self.initUI()
-
 
     def initUI(self):
         grid = QGridLayout(self)
@@ -57,11 +57,9 @@ class ModelerWidget(QWidget):
         model_button.setText("Generate models")
         model_button.pressed.connect(self.remodel)
         grid.addWidget(model_button, 3, 0)
-        
 
     def getName(self):
         return self.model_name_edit.text()
-    
 
     def remodel(self):
         # set the modeler options
@@ -69,20 +67,16 @@ class ModelerWidget(QWidget):
             self.mean = True
         elif (self.model_median_radio.isChecked()):
             self.mean = False
-        
-        #initialize model generator
+
+        # initialize model generator
         experiment = self.main_widget.getExperiment()
-        
+
         model_generator = ModelGenerator(experiment)
-        
-        
+
         model_generator.set_name(self.model_name_edit.text())
-        
+
         # create models from data
         experiment = model_generator.model_all(self.median)
-
-        
-
 
         self.main_widget.getExperiment().modelAll(
             modeler, self.main_widget.getExperiment(), self.options)
@@ -93,5 +87,3 @@ class ModelerWidget(QWidget):
         # must happen before 'valuesChanged' to update the color boxes
         self.main_widget.selector_widget.tree_model.valuesChanged()
         self.main_widget.update()
-        
-    

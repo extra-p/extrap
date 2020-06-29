@@ -20,6 +20,9 @@ except ImportError:
 from gui.TreeModel import TreeModel
 from gui.TreeView import TreeView
 from gui.ParameterValueSlider import ParameterValueSlider
+from modelers.model_generator import ModelGenerator
+from entities.metric import Metric
+from typing import List
 
 
 class SelectorWidget(QWidget):
@@ -71,9 +74,9 @@ class SelectorWidget(QWidget):
             self.grid.removeWidget(param)
         del self.parameter_sliders[:]
         experiment = self.main_widget.getExperiment()
-        parameters = experiment.get_parameters()
-        for i in range(len(parameters)):
-            new_widget = ParameterValueSlider(self, parameters[i], self)
+        parameters = experiment.parameters
+        for i, param in enumerate(parameters):
+            new_widget = ParameterValueSlider(self, param, self)
             self.parameter_sliders.append(new_widget)
             self.grid.addWidget(new_widget, i+4, 0, 1, 20)
 
@@ -99,21 +102,18 @@ class SelectorWidget(QWidget):
     def fillMetricList(self):
         self.metric_selector.clear()
         experiment = self.main_widget.getExperiment()
-        if not experiment == None:
-            metrics = experiment.get_metrics()
-            for i in range(len(metrics)):
-                self.metric_selector.addItem(metrics[i].get_name())
+        if experiment is None:
+            return
+        metrics = experiment.get_metrics()
+        for metric in metrics:
+            name = metric.name if metric.name != '' else '<default>'
+            self.metric_selector.addItem(name, metric)
 
     def changeAsymptoticBehavior(self):
         self.tree_model.valuesChanged()
 
-    def getSelectedMetric(self):
-        experiment = self.main_widget.getExperiment()
-        if not experiment == None:
-            index = self.metric_selector.currentIndex()
-            if index >= 0:
-                return experiment.get_metrics()[index]
-        return None
+    def getSelectedMetric(self) -> Metric:
+        return self.metric_selector.currentData()
 
     def getSelectedCallpath(self):
         indexes = self.tree_view.selectedIndexes()
@@ -127,26 +127,12 @@ class SelectorWidget(QWidget):
             callpath_list.append(callpath)
         return callpath_list
 
-    def getCurrentModel(self):
-        experiment = self.main_widget.getExperiment()
-        if experiment == None:
-            return None
-        models = experiment.get_models()
-        if len(models) == 0:
-            return None
-        index = self.getModelIndex()
-        if index < 0 or index >= len(models):
-            return None
-        return models[index]
+    def getCurrentModel(self) -> ModelGenerator:
+        return self.model_selector.currentData()
 
     def renameCurrentModel(self, newName):
-        experiment = self.main_widget.getExperiment()
-        metric = experiment.getMetrics()[0]
-        callpath = experiment.getRootCallpaths()[0]
-        index = self.getModelIndex()
-        model = experiment.getModels(metric, callpath)[index]
-        generator = model.getGenerator()
-        generator.setUserName(newName)
+        index = self.model_selector.currentIndex()
+        self.getCurrentModel().name = newName
         self.model_selector.setItemText(index, newName)
 
     def getModelIndex(self):
@@ -156,54 +142,24 @@ class SelectorWidget(QWidget):
         self.model_selector.setCurrentIndex(self.model_selector.count() - 1)
 
     def updateModelList(self):
-        models_list = self.get_model_list()
+        experiment = self.main_widget.getExperiment()
+        if not experiment:
+            return
+        models_list = experiment.modelers
         self.model_selector.clear()
-        for model, model_info in models_list:
-            self.model_selector.addItem(model, model_info)
+        for model in models_list:
+            self.model_selector.addItem(model.name, model)
         # self.main_widget.data_display.updateWidget()
         # self.update()
-
-    def get_model_list(self):
-        model_list = list()
-        model_additional_info_list = list()
-        #all_models = list()
-
-        experiment = self.main_widget.getExperiment()
-        if experiment == None:
-            model_list.append('No models to load')
-            model_additional_info_list.append("")
-            model_info_list = zip(model_list, model_additional_info_list)
-            return model_info_list
-
-        metric = experiment.get_metrics()[0]
-        call_tree = experiment.get_call_tree()
-        nodes = call_tree.get_nodes()
-        callpath = nodes[0]
-        all_models = self.get_all_models(experiment)
-        if all_models != None:
-            for model in all_models:
-                #TODO: this name should be pulled from the ui field
-                modeler_name = "New Model"
-                model_list.append(modeler_name)
-                #model_list.append(model.getGenerator().getUserName())
-                model_additional_info_list.append(model)
-
-        if len(model_list) == 0:
-            model_list.append('No models to load')
-            model_additional_info_list.append("")
-
-        model_info_list = zip(model_list, model_additional_info_list)
-        return model_info_list
 
     def model_changed(self):
         index = self.model_selector.currentIndex()
         text = str(self.model_selector.currentText())
-        model = self.model_selector.itemData(index)
 
-        #TODO: fix this
+        # TODO: fix this
         # Introduced " and text != "No models to load" " as a second guard since always when the text would be "No models to load" the gui would crash.
-        if model != None and text != "No models to load":
-            generator = model.getGenerator()
+        # if model != None and text != "No models to load":
+        #     generator = model._modeler
         self.main_widget.updateAllWidget()
         self.update()
 
@@ -237,14 +193,14 @@ class SelectorWidget(QWidget):
     def get_all_models(self, experiment):
         if experiment == None:
             return None
-        models = experiment.get_models()
+        models = experiment.modelers
         if len(models) == 0:
             return None
         return models
 
     def metric_index_changed(self):
         self.main_widget.metricIndexChanged()
-        
+
     def getParameterValues(self):
         ''' This functions returns the parameter value list with the
             parameter values from the bottom of the calltree selection.
@@ -261,19 +217,19 @@ class SelectorWidget(QWidget):
             It iterates the calltree recursively.
         '''
         value_list = list()
-        for i in range(0, len(callpaths)):
-            model = self.getCurrentModel()
+        for callpath in callpaths:
+            model = self.getCurrentModel().models[(callpath.path, metric)]
             if model == None:
                 return value_list
-            
-            
-            formula = model.getModelFunction()
+
+            formula = model.hypothesis.function
             value = formula.evaluate(paramValueList)
             value_list.append(value)
-            children = callpaths[i].getChildren()
-            value_list.extend(self.iterate_children(paramValueList,
-                                                    children, metric))
+            children = callpath.childs
+            value_list += self.iterate_children(paramValueList,
+                                                children, metric)
         return value_list
+
     def getMinMaxValue(self):
         ''' This function calculated the minimum and the maximum values that
             appear in the call tree. This information is e.g. used to scale
