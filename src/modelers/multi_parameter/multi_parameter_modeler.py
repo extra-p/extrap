@@ -149,7 +149,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             constant_function.set_constant_coefficient(meanModel)
             constant_hypothesis = ConstantHypothesis(constant_function, self.use_median)
             constant_hypothesis.compute_cost(measurements)
-            return constant_hypothesis
+            return Model(constant_hypothesis)
 
         # in case is only one parameter, make a single parameter function
         elif len(compound_term_pairs) == 1:
@@ -162,7 +162,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             multi_parameter_function.set_constant_coefficient(constant_coefficient)
             multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_median)
             multi_parameter_hypothesis.compute_cost(measurements, coordinates)
-            return multi_parameter_hypothesis
+            return Model(multi_parameter_hypothesis)
 
         hypotheses = []
 

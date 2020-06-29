@@ -1,10 +1,17 @@
 from util.deprecation import deprecated
+import itertools
 
 
 class Parameter:
 
+    """
+    Counter for global parameter ids
+    """
+    ID_COUNTER = itertools.count()
+
     def __init__(self, name):
         self.name = name
+        self.id = next(__class__.ID_COUNTER)
 
     @deprecated("Use property directly.")
     def set_name(self, name):

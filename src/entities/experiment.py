@@ -6,6 +6,7 @@ from entities.parameter import Parameter
 from entities.callpath import Callpath
 
 from util.deprecation import deprecated
+from util.unique_list import UniqueList
 from itertools import chain
 import logging
 
@@ -13,10 +14,10 @@ import logging
 class Experiment:
 
     def __init__(self):
-        self.callpaths = []
-        self.metrics: List[Metric] = []
-        self.parameters: List[Parameter] = []
-        self.coordinates: List[Coordinate] = []
+        self.callpaths = UniqueList()
+        self.metrics: List[Metric] = UniqueList()
+        self.parameters: List[Parameter] = UniqueList()
+        self.coordinates: List[Coordinate] = UniqueList()
         self.measurements: Dict[Tuple[Callpath,
                                       Metric], List[Measurement]] = {}
         self.call_tree = None

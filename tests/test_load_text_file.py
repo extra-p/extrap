@@ -106,6 +106,8 @@ class Test_TestTwoParameterFiles(unittest.TestCase):
             Coordinate(60, 4),
             Coordinate(60, 5)
         ])
+        self.assertListEqual(experiment.callpaths, [
+            Callpath('merge'), Callpath('sort')])
 
     def test_read_4(self):
         experiment = read_text_file("data/text/two_parameter_4.txt")
