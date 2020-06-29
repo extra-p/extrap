@@ -13,6 +13,8 @@ from typing import List
 from entities.parameter import Parameter
 from entities.terms import CompoundTerm
 from util.deprecation import deprecated
+import collections
+import numpy
 
 
 class Function:
@@ -65,7 +67,13 @@ class Function:
         """
         Evalute the function according to the given value and return the result.
         """
-        function_value = self.constant_coefficient
+        if isinstance(parameter_value, numpy.ndarray):
+            shape = parameter_value.shape
+            if len(shape) == 2:
+                shape = (shape[1],)
+            function_value = numpy.full(shape, self.constant_coefficient, dtype=float)
+        else:
+            function_value = self.constant_coefficient
         for t in self.compound_terms:
             function_value += t.evaluate(parameter_value)
         return function_value
@@ -115,6 +123,11 @@ class SingleParameterFunction(Function):
 
     def __init__(self, *compound_terms):
         super().__init__(*compound_terms)
+
+    def evaluate(self, parameter_value):
+        if hasattr(parameter_value, '__len__') and len(parameter_value) == 1:
+            parameter_value = parameter_value[0]
+        return super().evaluate(parameter_value)
 
 
 class MultiParameterFunction(Function):

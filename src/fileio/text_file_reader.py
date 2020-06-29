@@ -20,7 +20,7 @@ from entities.parameter import Parameter
 from fileio.io_helper import create_call_tree
 
 
-def read_text_file(path):
+def read_text_file(path, progress_event=lambda _: _):
 
     # read text file into list
     lines = []
@@ -45,8 +45,8 @@ def read_text_file(path):
     re_whitespace = re.compile(r'\s+')
 
     # parse text to extrap objects
-    for line in lines:
-
+    for i, line in enumerate(lines):
+        progress_event(i/len(lines))
         line = re_whitespace.sub(' ', line)
         # get field name
         field_seperator_idx = line.find(" ")
@@ -133,4 +133,5 @@ def read_text_file(path):
     call_tree = create_call_tree(callpaths)
     experiment.add_call_tree(call_tree)
 
+    progress_event(None)
     return experiment

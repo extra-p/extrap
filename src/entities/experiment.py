@@ -20,8 +20,13 @@ class Experiment:
         self.measurements: Dict[Tuple[Callpath,
                                       Metric], List[Measurement]] = {}
         self.call_tree = None
-        self.modeler = []
+        self.modelers = []
         self.scaling = None
+
+    @property
+    @deprecated("Use modelers property instead.")
+    def modeler(self):
+        return self.modelers
 
     @deprecated("Use property directly.")
     def set_scaling(self, scaling_type):
@@ -33,10 +38,10 @@ class Experiment:
 
     @deprecated("Use property directly.")
     def get_modeler(self, modeler_id):
-        return self.modeler[modeler_id]
+        return self.modelers[modeler_id]
 
     def add_modeler(self, modeler):
-        self.modeler.append(modeler)
+        self.modelers.append(modeler)
 
     @deprecated("Use property directly.")
     def get_new_modeler_id(self):

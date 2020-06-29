@@ -32,6 +32,7 @@ class Measurement:
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
         self.maximum: float = np.max(values)
+        self.std: float = np.std(values)
 
     def value(self, use_median):
         return self.median if use_median else self.mean

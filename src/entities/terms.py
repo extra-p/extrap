@@ -65,9 +65,9 @@ class SimpleTerm(SingleParameterTerm):
 
     def evaluate(self, parameter_value):
         if self.term_type == "polynomial":
-            return np.power(parameter_value, self.exponent)
+            return np.power(parameter_value, float(self.exponent))
         elif self.term_type == "logarithm":
-            return np.power(np.log2(parameter_value), self.exponent)
+            return np.power(np.log2(parameter_value), float(self.exponent))
 
 
 class CompoundTerm(SingleParameterTerm):

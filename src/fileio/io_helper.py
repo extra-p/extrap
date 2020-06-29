@@ -15,7 +15,8 @@ from entities.measurement import Measurement
 from entities.calltree import CallTree
 from entities.calltree import Node
 import logging
-from tqdm import tqdm
+from util.deprecation import deprecated
+from entities.callpath import Callpath
 
 
 def format_callpaths(experiment):
@@ -124,7 +125,7 @@ def format_all(experiment):
             text += "\t\tModel: " + function_string + "\n"
             text += "\t\tRSS: {:.2E}\n".format(rss)
             text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
-    return text      
+    return text
 
 
 def format_output(experiment, printtype):
@@ -143,7 +144,7 @@ def format_output(experiment, printtype):
     elif printtype == "FUNCTIONS":
         text = format_functions(experiment)
     return text
-    
+
 
 def save_output(text, path):
     """
@@ -153,19 +154,19 @@ def save_output(text, path):
         out.write(text)
 
 
-def compute_repetitions(experiment):
+@deprecated("Handle accumulation as part of file reader")
+def compute_repetitions(experiment, progress_event=lambda x: ()):
     """
     This method takes an experiment and computes the mean and median values of the measurements
     over all repetitions per coordinate. The return is the experiment without any measurement
     repetitions, just one mean and one median value per coordinate.  
     """
-    
+
     logging.info("Computing measurement repetitions...")
-    
-    #TODO: should be only active when using the command line tool
+    # TODO: should be only active when using the command line tool
     # create a progress bar for computing the repetitions
-    pbar = tqdm(total=100)
-    
+    progress_event(0)
+
     # create a container for computing the mean or median values of the measurements for each coordinate
     computed_measurements = []
     for coordinate_id in range(experiment.get_len_coordinates()):
@@ -173,11 +174,11 @@ def compute_repetitions(experiment):
             for callpath_id in range(experiment.get_len_callpaths()):
                 measurement = Measurement(coordinate_id, callpath_id, metric_id, [], None)
                 computed_measurements.append(measurement)
-    
-    # update progress bar           
-    pbar.update(20)
-    
-    # iterate over all previously read measurements    
+
+    # update progress bar
+    progress_event(20)
+
+    # iterate over all previously read measurements
     measurements = experiment.get_measurements()
     for measurement_id in range(len(measurements)):
         measurement = measurements[measurement_id]
@@ -186,7 +187,7 @@ def compute_repetitions(experiment):
         metric_id = measurement.get_metric_id()
         value = measurement.get_value_mean()
         computed_measurement_id = -1
-        
+
         # search the coordinate, metric, callpath that fits to the measurement and remember the id
         for computed_measurements_list_id in range(len(computed_measurements)):
             computed_measurement = computed_measurements[computed_measurements_list_id]
@@ -196,71 +197,71 @@ def compute_repetitions(experiment):
             if computed_coordinate_id == coordinate_id and computed_callpath_id == callpath_id and computed_metric_id == metric_id:
                 computed_measurement_id = computed_measurements_list_id
                 break
-        
+
         # add the value of the measurement to the container object and the list inside (one list per coordinate*callpath*metric)
         # the field value_mean serves as a temporary storage for the real measured value, before the median and mean of the repetitions are computed
         # after theses value have been computed, they are written to the measurement object and the original measured value is overwritten
         computed_measurements[computed_measurement_id].value_mean.append(value)
-    
+
     # update progress bar
-    pbar.update(20)
-    
+    progress_event(20)
+
     # calculate median values of measurements
     for measurement_id in range(len(computed_measurements)):
         computed_measurement = computed_measurements[measurement_id]
         values = computed_measurement.get_value_mean()
-        
+
         # if there exists at least one measurement for this coordinate, metric, callpath calculate the value
         if len(values) != 0:
             sorted_values = sorted(values)
 
             # even number of elements
             if len(sorted_values) % 2 == 0:
-                middle_id_1 = int(len(sorted_values) / 2) -1
+                middle_id_1 = int(len(sorted_values) / 2) - 1
                 middle_id_2 = middle_id_1 + 1
                 median_value = (sorted_values[middle_id_1] + sorted_values[middle_id_2]) / 2
-            
+
             # uneven number of elements
             else:
                 middle_id = int((len(sorted_values) + 1) / 2) - 1
                 median_value = sorted_values[middle_id]
-        
+
         # if not set value to empty value
         else:
             median_value = None
-        
+
         computed_measurement.set_value_median(median_value)
         computed_measurements[measurement_id] = computed_measurement
-    
-    # update progress bar   
-    pbar.update(20)
-    
+
+    # update progress bar
+    progress_event(20)
+
     # calculate mean values of measurements
     for measurement_id in range(len(computed_measurements)):
         computed_measurement = computed_measurements[measurement_id]
         values = computed_measurement.get_value_mean()
-        
+
         # if there exists at least one measurement for this coordinate, metric, callpath calculate the value
         if len(values) != 0:
             mean_value = sum(values) / len(values)
-            
+
         # if not set value to empty value
         else:
             mean_value = None
-            
+
         computed_measurement.set_value_mean(mean_value)
         computed_measurements[measurement_id] = computed_measurement
-        
+
     # remove the old measurement objects from the experiment
     experiment.clear_measurements()
-    
-    # update progress bar   
-    pbar.update(20)
-    
+
+    # update progress bar
+    progress_event(20)
+
     # add the new measurement objects to the experiment with the computed mean and median values
     for measurement_id in range(len(computed_measurements)):
         measurement = computed_measurements[measurement_id]
-        
+
         # ignore a coordinate, metric, callpath if no measurement are available for it
         if measurement.get_value_mean() != None and measurement.get_value_median() != None:
             experiment.add_measurement(measurement)
@@ -269,12 +270,13 @@ def compute_repetitions(experiment):
             coordinate_id = measurement.get_coordinate_id()
             value_mean = measurement.get_value_mean()
             value_median = measurement.get_value_median()
-            logging.debug("Measurement: "+experiment.get_metric(metric_id).get_name()+", "+experiment.get_callpath(callpath_id).get_name()+", "+experiment.get_coordinate(coordinate_id).get_as_string()+": "+str(value_mean)+" (mean), "+str(value_median)+" (median)")
-    
-    # update progress bar   
-    pbar.update(20)
-    pbar.close()
-    
+            logging.debug("Measurement: "+experiment.get_metric(metric_id).get_name()+", "+experiment.get_callpath(callpath_id).get_name()+", " +
+                          experiment.get_coordinate(coordinate_id).get_as_string()+": "+str(value_mean)+" (mean), "+str(value_median)+" (median)")
+
+    # update progress bar
+    progress_event(20)
+    progress_event(None)
+
     return experiment
 
 
@@ -287,72 +289,72 @@ def create_call_tree(callpaths):
     the correct order, as they would appear in the real program.
     """
     tree = CallTree()
-    
+
     # create a two dimensional array of the callpath elements as strings
     callpaths2 = []
     max_length = 0
-    
+
     for i in range(len(callpaths)):
         callpath = callpaths[i]
         callpath_string = callpath.get_name()
         elems = callpath_string.split("->")
         callpaths2.append(elems)
         if len(elems) > max_length:
-            max_length = len(elems)        
-    
+            max_length = len(elems)
+
     # iterate over the elements of one call path
     for i in range(max_length):
-        
+
         # iterate over all callpaths
         for j in range(len(callpaths2)):
-        
+
             # check that we do not try to access an element that does not exist
             length = len(callpaths2[j])
             length = length-1
-            
+
             if i > length:
                 pass
             # if the element does exist
             else:
                 callpath_string = callpaths2[j][i]
-                
+
                 # when at root level
                 if i == 0:
-                    
+
                     # check if that node is already existing
-                    # if no 
+                    # if no
                     if tree.node_exist(callpath_string) == False:
-                    
+
                         # add a new rootles node to the tree
-                        node = Node(callpath_string, None)
-                
+                        node = Node(callpath_string, Callpath(callpath_string))
+
                         tree.add_node(node)
-                    
+
                     # if yes
                     else:
                         # do nothing
                         pass
-                
+
                 # when not at root level the root node of the elements have to be checked
                 else:
-                    
+
                     # find the root node of the element that we want to add currently
                     root_node = find_root_node(callpaths2[j], tree, i)
-                                    
+
                     # check if that child node is already existing
-                    # if no 
+                    # if no
                     if root_node.child_exists(callpath_string) == False:
-                    
+
                         # add a new child node to the root node
                         child_node = Node(callpath_string, None)
-            
+
                         root_node.add_child_node(child_node)
-                    
+
                     # if yes
                     else:
                         # do nothing
                         pass
-    
+
     return tree
 
 
@@ -368,13 +370,13 @@ def find_root_node(callpath_elements, tree, loop_id):
     # root node already found
     if loop_id == level+1:
         return root_node
-    
+
     # need to search deeper in the tree for the root node
     else:
         return find_child_node(root_node, level, callpath_elements, loop_id)
 
 
-def find_child_node(root_node, level, callpath_elements, loop_id ):
+def find_child_node(root_node, level, callpath_elements, loop_id):
     """
     This method searches for a child node in the tree. Searches iteratively
     into the three and each nodes child nodes. Returns the root node of the
@@ -383,18 +385,17 @@ def find_child_node(root_node, level, callpath_elements, loop_id ):
     level = level+1
     root_element_string = callpath_elements[level]
     childs = root_node.childs
-    
+
     for i in range(len(childs)):
         child_name = childs[i].name
-        
+
         if child_name == root_element_string:
             new_root_node = childs[i]
-            
+
             # root node already found
             if loop_id == level+1:
                 return new_root_node
-            
+
             # need to search deeper in the tree for the root node
             else:
                 return find_child_node(new_root_node, level, callpath_elements, loop_id)
-

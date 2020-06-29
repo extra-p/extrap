@@ -1,4 +1,6 @@
 from util.deprecation import deprecated
+from util.caching import cached_property
+import numpy
 
 
 class Model:
@@ -7,6 +9,7 @@ class Model:
         self.hypothesis = hypothesis
         self.callpath = callpath
         self.metric = metric
+        self.measurements = []
 
     @deprecated("Use property directly.")
     def get_hypothesis(self):
@@ -19,3 +22,8 @@ class Model:
     @deprecated("Use property directly.")
     def get_metric_id(self):
         return self.metric.id
+
+    @cached_property
+    def predictions(self):
+        coordinates = numpy.array([m.coordinate for m in self.measurements])
+        return self.hypothesis.function.evaluate(coordinates.transpose())

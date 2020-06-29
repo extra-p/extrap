@@ -19,7 +19,7 @@ from itertools import chain
 
 # from experiment import Experiment
 # from fileio.fileio import open_json
-from fileio.cube_file_reader import read_cube_file
+from fileio.cube_file_reader2 import read_cube_file
 from fileio.text_file_reader import read_text_file
 from fileio.talpas_file_reader import read_talpas_file
 from fileio.json_file_reader import read_json_file

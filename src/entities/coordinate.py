@@ -115,3 +115,6 @@ class Coordinate:
 
     def __lt__(self, other):
         return self._values < other._values
+
+    def as_tuple(self):
+        return self._values

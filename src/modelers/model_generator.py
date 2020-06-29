@@ -76,7 +76,8 @@ class ModelGenerator:
         for (callpath, metric), model in self.models.items():
             model.callpath = callpath
             model.metric = metric
-            # add the modeler with the results to the experiment
+            model.measurements = self.experiment.measurements[(callpath, metric)]
+        # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
 
     @deprecated("Use property directly.")
