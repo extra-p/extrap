@@ -13,6 +13,7 @@ class Test_TestFiles(unittest.TestCase):
         experiment = read_json_file("data/json/input_1.JSON")
         x = Parameter('x')
         self.assertListEqual(experiment.parameters, [x])
+        self.assertListEqual([p.id for p in experiment.parameters], [0])
         self.assertListEqual(experiment.coordinates, [
             Coordinate([(x, 4)]),
             Coordinate([(x, 8)]),
@@ -39,6 +40,7 @@ class Test_TestFiles(unittest.TestCase):
     def test_read_5(self):
         experiment = read_json_file("data/json/input_5.JSON")
         self.assertListEqual(experiment.parameters, [Parameter('x'), Parameter('y')])
+        self.assertListEqual([p.id for p in experiment.parameters], [0, 1])
         self.assertListEqual(experiment.coordinates, [
             Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0), Coordinate(4.0, 50.0),
             Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0), Coordinate(8.0, 50.0),

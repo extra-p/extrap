@@ -40,7 +40,7 @@ class MeasurementPointsPlotWidget(QWidget):
     def __init__(self, main_widget, parent):
         super(MeasurementPointsPlotWidget, self).__init__(parent)
         self.main_widget = main_widget
-        self.initUI(parent)
+        self.initUI()
         self.set_initial_value()
         self.setMouseTracking(True)
 
@@ -152,10 +152,10 @@ class GraphDisplayWindow (FigureCanvas):
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
             return
+        model_set = self.main_widget.getCurrentModel().models
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model != None:
                 model_list.append(model)
 
@@ -258,34 +258,34 @@ class GraphDisplayWindow (FigureCanvas):
 
         for callpath in selected_callpaths:
             callpath_color = dict_callpath_color[callpath]
-            points = experiment.getPoints(selected_metric, callpath)
+            points = experiment.measurements[callpath.path, selected_metric]
             # for j in range( 0, points.size() ):
             for point in points:
-                x = point.getParameterValue(parameter_x)
-                y = point.getParameterValue(parameter_y)
+                x = point.coordinate[parameter_x.id]
+                y = point.coordinate[parameter_y.id]
                 if x < maxX and y < maxY:
                     # Draw points
-                    ax_all.scatter(x, y, point.getMean(),
+                    ax_all.scatter(x, y, point.mean,
                                    color=callpath_color,
                                    marker='o')
-                    ax_all.scatter(x, y, point.getMedian(),
+                    ax_all.scatter(x, y, point.median,
                                    color=callpath_color,
                                    marker='o')
-                    ax_all.scatter(x, y, point.getMinimum(),
+                    ax_all.scatter(x, y, point.minimum,
                                    color=callpath_color,
                                    marker='o')
-                    ax_all.scatter(x, y, point.getMaximum(),
+                    ax_all.scatter(x, y, point.maximum,
                                    color=callpath_color,
                                    marker='o')
                     # Draw connecting line
                     ax_all.plot([x, x], [y, y],
-                                [point.getMinimum(), point.getMaximum()],
+                                [point.minimum, point.maximum],
                                 color=callpath_color)
 
         # draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
-            labelName = str(key.getRegion().name)
+            labelName = str(key.name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
@@ -294,7 +294,7 @@ class GraphDisplayWindow (FigureCanvas):
         leg = ax_all.legend(handles=patches, fontsize=fontSize,
                             loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
-            leg.draggable()
+            leg.set_draggable(True)
 
     def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
         """ 

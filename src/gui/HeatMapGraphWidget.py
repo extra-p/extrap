@@ -44,7 +44,7 @@ class HeatMapGraphWidget(QWidget):
     def __init__(self, main_widget, parent):
         super(HeatMapGraphWidget, self).__init__(parent)
         self.main_widget = main_widget
-        self.initUI(parent)
+        self.initUI()
         self.set_initial_value()
         self.setMouseTracking(True)
 
@@ -164,10 +164,10 @@ class GraphDisplayWindow (FigureCanvas):
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
             return
+        model_set = self.main_widget.getCurrentModel().models
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model != None:
                 model_list.append(model)
 
@@ -302,7 +302,7 @@ class GraphDisplayWindow (FigureCanvas):
         # Step 3: Draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
-            labelName = str(key.getRegion().name)
+            labelName = str(key.name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
@@ -311,7 +311,7 @@ class GraphDisplayWindow (FigureCanvas):
         leg = ax.legend(handles=patches, fontsize=fontSize,
                         loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
-            leg.draggable()
+            leg.set_draggable(True)
 
     def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
         """ 

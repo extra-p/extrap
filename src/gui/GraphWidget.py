@@ -144,6 +144,7 @@ class GraphWidget(QWidget):
     def paintEvent(self, event):
         paint = QPainter()
         paint.begin(self)
+        paint.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
         self.drawGraph(event, paint)
         paint.end()
 
@@ -420,10 +421,9 @@ class GraphWidget(QWidget):
         # model_list = list()
 
         text = ''
-
+        model_set = self.main_widget.getCurrentModel().models
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model == None:
                 return
             model_function = model.hypothesis.function
@@ -431,10 +431,10 @@ class GraphWidget(QWidget):
                 selected_metric, selected_callpath, True)]
             callpath_name = selected_callpath.name
 
-            parameters = self.main_widget.experiment.getParameters()
+            parameters = self.main_widget.experiment.parameters
             model_function_text = 'Model: ' + \
                 formatFormula(
-                    model_function.getAsString(parameters))
+                    model_function.to_string(parameters))
 
             data_points_text = '\n'.join(
                 ('('+str(x) + ', ' + str(y)+')') for (x, y) in data_points)

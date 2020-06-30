@@ -14,6 +14,7 @@ try:
 except ImportError:
     from PyQt5.QtGui import *  # @UnusedWildImport
     from PyQt5.QtWidgets import *  # @UnusedWildImport
+    from PyQt5.Qt import *
 
 
 class ColorWidget(QWidget):
@@ -29,6 +30,7 @@ class ColorWidget(QWidget):
         self.setWindowTitle('Colours')
         self.rect_width = 0
         self.rect_height = 0
+        self.setContentsMargins(QMargins(0, 0, 0, 0))
         # self.red_component=0
         # self.green_component=0
         # self.blue_component=0
@@ -72,4 +74,3 @@ class ColorWidget(QWidget):
             paint.setPen(color)
             paint.setBrush(color)
             paint.drawRect(position, 0, 1, self.rect_height)
-

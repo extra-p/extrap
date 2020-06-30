@@ -42,7 +42,7 @@ class MaxZAsSingleSurfacePlotWidget(QWidget):
         self.set_initial_value()
         self.setMouseTracking(True)
 
-    def initUI(self):
+    def initUI(self, parent):
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)
         self.setMinimumWidth(300)
@@ -139,10 +139,10 @@ class GraphDisplayWindow (FigureCanvas):
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
             return
+        model_set = self.main_widget.getCurrentModel().models
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model != None:
                 model_list.append(model)
 

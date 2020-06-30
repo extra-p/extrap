@@ -97,10 +97,10 @@ class DominatingFunctionsAsHeatMapWidget(QWidget):
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
             return
+        model_set = self.main_widget.getCurrentModel().models
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model != None:
                 model_list.append(model)
 
@@ -189,7 +189,6 @@ class GraphDisplayCanvas (FigureCanvas):
         # map each function to a particular color
         dict_callpath_color = self.populateCallPathColorMap(functions, colors)
 
-
         # for each x,y value , calculate max z for all function and get the associated function
         # for which z is highest.
         # Also store the the associated z value.
@@ -245,7 +244,7 @@ class GraphDisplayCanvas (FigureCanvas):
         leg = ax1.legend(handles=patches, loc="upper right",
                          bbox_to_anchor=(1, 1))
         if leg:
-            leg.draggable()
+            leg.set_draggable(True)
 
     def calculate_z(self, x, y, functiontoEvaluate):
         return functiontoEvaluate

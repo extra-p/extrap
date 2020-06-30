@@ -68,35 +68,46 @@ class MainWidget(QMainWindow):
         """
         Initializes the User Interface of the main widget. E.g. the menus.
         """
+        self.setWindowTitle('Extra-P')
         # Status bar
         self.statusBar()
 
-        central_widget = QWidget(self)
-        top_widget = QWidget(central_widget)
-        bottom_widget = QWidget(central_widget)
+        #central_widget = QWidget(self)
+        #top_widget = QWidget(central_widget)
+        #bottom_widget = QWidget(central_widget)
 
         # Main splitter
-        hsplitter = QSplitter(top_widget)
+        #hsplitter = QSplitter(top_widget)
 
         # Left side: Callpath and metric selection
-        self.selector_widget = SelectorWidget(self, hsplitter)
+        dock = QDockWidget(self.tr("Selection"), self)
+        self.selector_widget = SelectorWidget(self, dock)
+        dock.setWidget(self.selector_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
         # middle: Graph
-        self.data_display = DataDisplayManager(self, hsplitter)
+
+        self.data_display = DataDisplayManager(self, self)
+        central_widget = self.data_display
 
         # Right side: Model configurator
-        self.modeler_widget = ModelerWidget(self, hsplitter)
+        dock = QDockWidget(self.tr("Modeler"), self)
+        self.modeler_widget = ModelerWidget(self, dock)
+        dock.setWidget(self.modeler_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
         # Set splitter sizes
-        w = self.width()
-        sizes = [w/3, w/3, w/3]
-        hsplitter.setSizes(sizes)
+        # w = self.width()
+        # sizes = [w/3, w/3, w/3]
+        # hsplitter.setSizes(sizes)
 
         # top widget
-        grid = QGridLayout(top_widget)
-        grid.addWidget(hsplitter, 0, 1)
+        # grid = QGridLayout(top_widget)
+        # grid.addWidget(hsplitter, 0, 1)
 
         # bottom widget
+        dock = QDockWidget(self.tr("Color Info"), self)
+        bottom_widget = QWidget(central_widget)
         grid = QGridLayout(bottom_widget)
         self.min_value = 1
         self.min_value_label = QLabel(formatNumber(str(self.min_value)))
@@ -106,12 +117,15 @@ class MainWidget(QMainWindow):
         grid.addWidget(self.min_value_label, 0, 0)
         grid.addWidget(self.max_value_label, 0, 20)
         grid.addWidget(self.color_widget, 1, 0, 1, 21)
+        bottom_widget.setLayout(grid)
+        dock.setWidget(bottom_widget)
+        self.addDockWidget(Qt.BottomDockWidgetArea, dock)
 
         # central_widget
-        grid = QGridLayout(central_widget)
-        central_widget.setLayout(grid)
-        grid.addWidget(top_widget, 0, 0, 50, 0)
-        grid.addWidget(bottom_widget, 51, 0, 2, 0)
+        # grid = QGridLayout(central_widget)
+        # central_widget.setLayout(grid)
+        # grid.addWidget(top_widget, 0, 0, 50, 0)
+        # grid.addWidget(bottom_widget, 51, 0, 2, 0)
 
         # Menu creation
 
@@ -151,6 +165,14 @@ class MainWidget(QMainWindow):
         select_view_action.setStatusTip(self.tr('Select the Plots you want to view'))
         select_view_action.triggered.connect(self.open_select_plots_dialog_box)
 
+        # Plots menu
+        graphs = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots', 'Dominating models in a 3D Scatter plot',
+                  'Max z as a single surface plot', 'Dominating models and max z as heat map', 'Selected models in contour plot', 'Selected models in interpolated contour plots', 'Measurement points']
+        graph_actions = [QAction(self.tr(g), self) for g in graphs]
+        for i, g in enumerate(graph_actions):
+            slot = (lambda k: lambda: self.data_display.reloadTabs((k,)))(i)
+            g.triggered.connect(slot)
+
         # Model menu
         model_delete_action = QAction(self.tr('Delete model'), self)
         model_delete_action.setShortcut('Ctrl+D')
@@ -183,6 +205,10 @@ class MainWidget(QMainWindow):
         view_menu = menubar.addMenu(self.tr('View'))
         view_menu.addAction(change_font_action)
         view_menu.addAction(select_view_action)
+
+        plots_menu = menubar.addMenu(self.tr('Plots'))
+        for g in graph_actions:
+            plots_menu.addAction(g)
 
         model_menu = menubar.addMenu(self.tr('Model'))
         model_menu.addAction(model_delete_action)

@@ -40,6 +40,9 @@ class AllFunctionsAsOneSurfacePlotWidget(QWidget):
     def __init__(self, main_widget, parent):
         super(AllFunctionsAsOneSurfacePlotWidget, self).__init__(parent)
         self.main_widget = main_widget
+        # Get the font size as selected by the user and set it
+        self.font_size = int(self.main_widget.getFontSize())
+        self.graphDisplayWindow = None
         self.initUI(parent)
         self.set_initial_value()
         self.setMouseTracking(True)
@@ -109,16 +112,19 @@ class AllFunctionsAsOneSurfacePlotWidget(QWidget):
         """ 
             This function is being called by paintEvent to draw the graph 
         """
-
         # Get the font size as selected by the user and set it
         self.font_size = int(self.main_widget.getFontSize())
-
-        # Call the 3D function display window
-        graphDisplayWindow = GraphDisplayWindow(
-            self, self.main_widget, width=5, height=4, dpi=100)
-        self.toolbar = MyCustomToolbar(graphDisplayWindow, self)
-        self.grid.addWidget(graphDisplayWindow, 0, 0)
-        self.grid.addWidget(self.toolbar, 1, 0)
+        if self.graphDisplayWindow is None:
+            self.graphDisplayWindow = GraphDisplayWindow(
+                self, self.main_widget, width=5, height=4, dpi=100)
+            self.toolbar = MyCustomToolbar(self.graphDisplayWindow, self)
+            self.grid.addWidget(self.graphDisplayWindow, 0, 0)
+            self.grid.addWidget(self.toolbar, 1, 0)
+            self.grid.setContentsMargins(QMargins(0, 0, 0, 0))
+        else:
+            # Call the 3D function display window
+            self.graphDisplayWindow.draw_figure()
+            self.graphDisplayWindow.draw()
 
     def getNumAxis(self):
         """ 
@@ -150,10 +156,10 @@ class GraphDisplayWindow (FigureCanvas):
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
             return
+        model_set = self.main_widget.getCurrentModel().models
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model != None:
                 model_list.append(model)
 
@@ -249,7 +255,7 @@ class GraphDisplayWindow (FigureCanvas):
         # draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
-            labelName = str(key.getRegion().name)
+            labelName = str(key.name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
@@ -258,7 +264,7 @@ class GraphDisplayWindow (FigureCanvas):
         leg = ax_all.legend(handles=patches, fontsize=fontSize,
                             loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
-            leg.draggable()
+            leg.set_draggable(True)
 
     def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
         """ 

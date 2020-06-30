@@ -53,6 +53,7 @@ class ParameterValueSlider(QWidget):
         self.grid.addWidget(name_label, 0, 0)
         self.grid.addWidget(self.spinbox, 0, 1)
         self.grid.addWidget(self.slider, 0, 2)
+        self.grid.setContentsMargins(QMargins(0, 0, 0, 0))
 
     def spinboxValueChanged(self):
         value = self.spinbox.value()

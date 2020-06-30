@@ -36,6 +36,9 @@ class SelectorWidget(QWidget):
     def initUI(self):
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)
+        # self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+        # self.grid.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+        # self.setWidth(100)
 
         # Model selection
         model_label = QLabel("Model :", self)
@@ -62,11 +65,11 @@ class SelectorWidget(QWidget):
 
         # Positioning
         self.grid.addWidget(model_label, 0, 0)
-        self.grid.addWidget(self.model_selector, 0, 1, 1, 10)
+        self.grid.addWidget(self.model_selector, 0, 1)
         self.grid.addWidget(metric_label, 1, 0)
-        self.grid.addWidget(self.metric_selector, 1, 1, 1, 10)
-        self.grid.addWidget(self.tree_view, 2, 0, 1, 20)
-        self.grid.addWidget(self.asymptoticCheckBox, 3, 15, 1, 5)
+        self.grid.addWidget(self.metric_selector, 1, 1)
+        self.grid.addWidget(self.tree_view, 2, 0, 1, 2)
+        self.grid.addWidget(self.asymptoticCheckBox, 3, 1, Qt.AlignRight)
 
     def createParameterSliders(self):
         for param in self.parameter_sliders:
@@ -78,7 +81,7 @@ class SelectorWidget(QWidget):
         for i, param in enumerate(parameters):
             new_widget = ParameterValueSlider(self, param, self)
             self.parameter_sliders.append(new_widget)
-            self.grid.addWidget(new_widget, i+4, 0, 1, 20)
+            self.grid.addWidget(new_widget, i+4, 0, 1, 2)
 
     def fillCalltree(self):
         self.tree_model = TreeModel(self)

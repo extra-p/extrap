@@ -43,7 +43,7 @@ class InterpolatedContourDisplayWidget(QWidget):
     def __init__(self, main_widget, parent):
         super(InterpolatedContourDisplayWidget, self).__init__(parent)
         self.main_widget = main_widget
-        self.initUI(parent)
+        self.initUI()
         self.set_initial_value()
         self.setMouseTracking(True)
 
@@ -154,10 +154,10 @@ class GraphDisplayWindow (FigureCanvas):
         selected_callpaths = self.main_widget.getSelectedCallpath()
         if not selected_callpaths:
             return
+        model_set = self.main_widget.getCurrentModel().models
         model_list = list()
         for selected_callpath in selected_callpaths:
-            model = self.main_widget.getCurrentModel(
-                selected_metric, selected_callpath)
+            model = model_set[selected_callpath.path, selected_metric]
             if model != None:
                 model_list.append(model)
 
@@ -261,7 +261,7 @@ class GraphDisplayWindow (FigureCanvas):
             ax.set_xlabel('\n' + x_label)
             ax.set_ylabel('\n' + y_label)
 
-            titleName = selected_callpaths[i].getRegion().name
+            titleName = selected_callpaths[i].name
             if titleName.startswith("_"):
                 titleName = titleName[1:]
             ax.set_title(titleName)
