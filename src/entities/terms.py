@@ -61,7 +61,7 @@ class SimpleTerm(SingleParameterTerm):
         if self.term_type == "polynomial":
             return f"({parameter}^{self.exponent})"
         elif self.term_type == "logarithm":
-            return f"log({parameter}, 2)^{self.exponent}"
+            return f"log2({parameter})^({self.exponent})"
 
     def evaluate(self, parameter_value):
         if self.term_type == "polynomial":

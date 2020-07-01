@@ -217,14 +217,7 @@ class TreeModel(QAbstractItemModel):
         else:
             parentItem = parent.internalPointer()
 
-        callpath = parentItem.data()
-        if callpath == None:
-            experiment = self.main_widget.getExperiment()
-            if not experiment == None:
-                return len(experiment.get_callpaths())
-            return 0
-        else:
-            return len(callpath.get_childs())
+        return len(parentItem.child_items)
 
     def setupModelData(self, nodes, root):
         for i in range(0, len(nodes)):

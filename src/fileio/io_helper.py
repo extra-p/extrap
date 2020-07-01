@@ -346,7 +346,7 @@ def create_call_tree(callpaths):
                     if root_node.child_exists(callpath_string) == False:
 
                         # add a new child node to the root node
-                        child_node = Node(callpath_string, None)
+                        child_node = Node(callpath_string, callpaths[j])
 
                         root_node.add_child_node(child_node)
 

@@ -205,6 +205,10 @@ class MainWidget(QMainWindow):
         view_menu = menubar.addMenu(self.tr('View'))
         view_menu.addAction(change_font_action)
         view_menu.addAction(select_view_action)
+        ui_parts_menu = self.createPopupMenu()
+        if ui_parts_menu:
+            ui_parts_menu_action = view_menu.addMenu(ui_parts_menu)
+            ui_parts_menu_action.setText('Tool Windows')
 
         plots_menu = menubar.addMenu(self.tr('Plots'))
         for g in graph_actions:
