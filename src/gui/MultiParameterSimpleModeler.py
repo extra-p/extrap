@@ -12,8 +12,8 @@ directory for details.
 try:
     from PyQt4.QtGui import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtWidgets import *  # @UnusedWildImport
 
 
 class MultiParameterSimpleModeler(QWidget):
@@ -42,17 +42,17 @@ class MultiParameterSimpleModeler(QWidget):
 
     def remodel(self):
         pass
-        #TODO: use the multiparameter model generator when done
+        # TODO: use the multiparameter model generator when done
         #modeler = EXTRAP.MultiParameterSimpleModelGenerator()
         #options = EXTRAP.ModelGeneratorOptions()
 
-        #TODO: delete this not needed anymore
+        # TODO: delete this not needed anymore
         # init the optins
-        #options.setMinNumberPoints(5)
-        #options.setUseAddPoints(False)
-        #options.setNumberAddPoints(0)
-        #options.setSinglePointsStrategy(EXTRAP.FIRST_POINTS_FOUND)
-        #options.setMultiPointsStrategy(EXTRAP.INCREASING_COST)
+        # options.setMinNumberPoints(5)
+        # options.setUseAddPoints(False)
+        # options.setNumberAddPoints(0)
+        # options.setSinglePointsStrategy(EXTRAP.FIRST_POINTS_FOUND)
+        # options.setMultiPointsStrategy(EXTRAP.INCREASING_COST)
 
         # call the modeler
         #self.modeler_widget.onGenerate(modeler, options)

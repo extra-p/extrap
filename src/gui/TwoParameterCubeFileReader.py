@@ -9,7 +9,7 @@ a BSD-style license.  See the COPYING file in the package base
 directory for details.
 """
 
-#TODO: is this class even needed???
+# TODO: is this class even needed???
 
 
 import os
@@ -19,11 +19,13 @@ try:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
-    from PyQt5.QtCore import *  # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtWidgets import *  # @UnusedWildImport
+    from PySide2.QtCore import *  # @UnusedWildImport
 
-#TODO: fix this
+# TODO: fix this
+
+
 def convert_string_to_numberlist(str):
     words = str.split(",")
     numbers = EXTRAP.StdVectorInt()
@@ -31,7 +33,9 @@ def convert_string_to_numberlist(str):
         numbers.push_back(int(float(word)))
     return numbers
 
-#TODO: fix this
+# TODO: fix this
+
+
 def remove_digits(str):
 
     return "".join([i for i in str if not i.isdigit()])

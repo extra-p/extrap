@@ -12,8 +12,8 @@ directory for details.
 try:
     from PyQt4.QtGui import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtWidgets import *  # @UnusedWildImport
 from entities.modelgenerator import ModelGenerator
 
 
@@ -45,9 +45,9 @@ class SingleParameterRefiningModeler(QWidget):
         return "Single Parameter Model Generator"
 
     def remodel(self):
-        #TODO: code not used anymore, just delete in the end
+        # TODO: code not used anymore, just delete in the end
 
-         # initialize model generator
+        # initialize model generator
         model_generator = ModelGenerator(experiment)
         # create models from data
         experiment = model_generator.model_all(self.median)
@@ -58,10 +58,10 @@ class SingleParameterRefiningModeler(QWidget):
         #options = EXTRAP.ModelGeneratorOptions()
 
         # init the optins
-        #options.setMinNumberPoints(5)
-        #options.setUseAddPoints(False)
-        #options.setNumberAddPoints(0)
-        #options.setSinglePointsStrategy(EXTRAP.FIRST_POINTS_FOUND)
-        #options.setMultiPointsStrategy(EXTRAP.INCREASING_COST)
+        # options.setMinNumberPoints(5)
+        # options.setUseAddPoints(False)
+        # options.setNumberAddPoints(0)
+        # options.setSinglePointsStrategy(EXTRAP.FIRST_POINTS_FOUND)
+        # options.setMultiPointsStrategy(EXTRAP.INCREASING_COST)
 
         #self.modeler_widget.onGenerate(modeler, options)

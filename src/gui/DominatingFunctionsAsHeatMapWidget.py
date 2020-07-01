@@ -17,17 +17,11 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap
 from gui.AdvancedPlotWidget import GraphDisplayWindow
 
-try:
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
-except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtCore import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 #####################################################################
 

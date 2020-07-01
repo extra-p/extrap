@@ -13,8 +13,8 @@ directory for details.
 try:
     from PyQt4.QtGui import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtWidgets import *  # @UnusedWildImport
 
 
 class MultiParameterSparseModeler(QWidget):
@@ -138,42 +138,42 @@ class MultiParameterSparseModeler(QWidget):
 
     def remodel(self):
         pass
-        #TODO: use the multi parmaeter modeler when done
+        # TODO: use the multi parmaeter modeler when done
         # call model generator
         #modeler = EXTRAP.MultiParameterSparseModelGenerator()
 
         # set modeler options
         #self.number_single_points = self.spinner1.value()
         #self.number_additional_points = self.points_number_edit.value()
-        #self.single_options()
-        #self.multi_options()
+        # self.single_options()
+        # self.multi_options()
 
-        #TODO: delete this
+        # TODO: delete this
         # create new options object
         #options = EXTRAP.ModelGeneratorOptions()
 
         # set strategy single
-        #if(self.single_option == 0):
+        # if(self.single_option == 0):
         #    options.setSinglePointsStrategy(EXTRAP.FIRST_POINTS_FOUND)
-        #if(self.single_option == 1):
+        # if(self.single_option == 1):
         #    options.setSinglePointsStrategy(EXTRAP.MAX_NUMBER_POINTS)
-        #if(self.single_option == 2):
+        # if(self.single_option == 2):
         #    options.setSinglePointsStrategy(EXTRAP.MOST_EXPENSIVE_POINTS)
-        #if(self.single_option == 3):
+        # if(self.single_option == 3):
         #    options.setSinglePointsStrategy(EXTRAP.CHEAPEST_POINTS)
 
         # set strategy multi
-        #if(self.multi_option == 0):
+        # if(self.multi_option == 0):
         #    options.setMultiPointsStrategy(EXTRAP.INCREASING_COST)
-        #if(self.multi_option == 1):
+        # if(self.multi_option == 1):
         #    options.setMultiPointsStrategy(EXTRAP.DECREASING_COST)
 
-        #options.setMinNumberPoints(self.number_single_points)
-        #options.setUseAddPoints(self.additional_points)
-        #options.setNumberAddPoints(self.number_additional_points)
+        # options.setMinNumberPoints(self.number_single_points)
+        # options.setUseAddPoints(self.additional_points)
+        # options.setNumberAddPoints(self.number_additional_points)
 
         # set auto select strategy if enabled
-        #options.setUseAutoSelect(self.auto_select)
+        # options.setUseAutoSelect(self.auto_select)
 
         # call modeling method
         #self.modeler_widget.onGenerate(modeler, options)

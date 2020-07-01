@@ -1,9 +1,9 @@
 #import logging
 
 import sys
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QPalette, QColor
-from PyQt5.Qt import Qt
+from PySide2.QtWidgets import QApplication
+from PySide2.QtGui import QPalette, QColor
+from PySide2.QtCore import Qt
 from gui.MainWidget import MainWidget
 from fileio.text_file_reader import read_text_file
 from fileio.json_file_reader import read_json_file

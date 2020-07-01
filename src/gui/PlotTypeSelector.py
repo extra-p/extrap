@@ -13,8 +13,8 @@ directory for details.
 try:
     from PyQt4.QtGui import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtWidgets import *  # @UnusedWildImport
 
 
 class PlotTypeSelector(QDialog):

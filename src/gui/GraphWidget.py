@@ -17,9 +17,9 @@ try:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtCore import *  # @UnusedWildImport
-    from PyQt5.QtWidgets import *  # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtCore import *  # @UnusedWildImport
+    from PySide2.QtWidgets import *  # @UnusedWildImport
 from gui.Utils import formatFormula
 from gui.Utils import formatNumber
 
@@ -189,7 +189,7 @@ class GraphWidget(QWidget):
         self.datapointType_Int_Map = {
             'min': 1, 'mean': 2, 'max': 3, 'median': 4, 'standardDeviation': 5, 'outlier': 6}
 
-    @pyqtSlot(QPoint)
+    @Slot(QPoint)
     def showContextMenu(self, point):
         """
           This function takes care of different options and their visibility in the context menu.
@@ -255,7 +255,7 @@ class GraphWidget(QWidget):
 
         menu.exec_(self.mapToGlobal(point))
 
-    @pyqtSlot()
+    @Slot()
     def showMeanDataPoints(self):
         """
           This function shows mean data points on the graph.
@@ -271,7 +271,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = "mean"
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def showMinDataPoints(self):
         """
           This function shows minimum data points on the graph.
@@ -287,7 +287,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = "min"
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def showMaxDataPoints(self):
         """
           This function shows maximum data points on the graph
@@ -303,7 +303,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = "max"
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def showMedianDataPoints(self):
         """
           This function shows median data points on the graph.
@@ -319,7 +319,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = "median"
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def showStandardDeviationDataPoints(self):
         """
           This function shows standard deviation data points on the graph.
@@ -335,7 +335,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = "standardDeviation"
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def showOutlierDataPoints(self):
         self.hide_action_status = True
         self.show_outlier_action_status = False
@@ -348,7 +348,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = "outlier"
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def hideDataPoints(self):
         """
           This function hides all the datapoints that is being shown on graph.
@@ -367,7 +367,7 @@ class GraphWidget(QWidget):
         self.datapoints_type = ""
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def combineCallPaths(self):
         """
           This function combine all callpathe shown on graph.
@@ -386,7 +386,7 @@ class GraphWidget(QWidget):
         self.combine_all_callpath = True
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def showAllCallPaths(self):
         """
           This function shows all callpaths.
@@ -406,7 +406,7 @@ class GraphWidget(QWidget):
 
         self.update()
 
-    @pyqtSlot()
+    @Slot()
     def exportData(self):
         """
           This function allows to export the currently shown points and functions in a text format

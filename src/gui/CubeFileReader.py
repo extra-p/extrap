@@ -16,9 +16,9 @@ try:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 except ImportError:
-    from PyQt5.QtGui import *  # @UnusedWildImport
-    from PyQt5.QtCore import *   # @UnusedWildImport
-    from PyQt5.QtWidgets import *   # @UnusedWildImport
+    from PySide2.QtGui import *  # @UnusedWildImport
+    from PySide2.QtCore import *   # @UnusedWildImport
+    from PySide2.QtWidgets import *   # @UnusedWildImport
 from fileio.cube_file_reader import read_cube_file
 
 
@@ -28,6 +28,7 @@ class ParameterWidget(QWidget):
         super(ParameterWidget, self).__init__(parent)
         self.name = "Parameter"
         self.values = "1"
+
     def init_UI(self):
         self.name_edit = QLineEdit(self)
         self.name_edit.setText(self.name)
@@ -71,6 +72,7 @@ class CubeFileReader(QDialog):
             self.parameters.append(ParameterWidget(self))
 
         self.init_UI()
+
     def init_UI(self):
         self.setWindowTitle("Import settings")
         self.setFixedWidth(320)
@@ -168,6 +170,7 @@ class CubeFileReader(QDialog):
         cancel_button.pressed.connect(self.close)
 
         self.change_param_num()
+
     def change_param_num(self):
         self.num_params = self.num_params_choice.value()
         self.parameter_tabs.clear()
