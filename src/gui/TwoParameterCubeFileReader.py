@@ -15,13 +15,9 @@ directory for details.
 import os
 import re
 
-try:
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
-except ImportError:
-    from PySide2.QtGui import *  # @UnusedWildImport
-    from PySide2.QtWidgets import *  # @UnusedWildImport
-    from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide2.QtCore import *  # @UnusedWildImport
 
 # TODO: fix this
 

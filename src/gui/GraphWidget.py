@@ -13,13 +13,10 @@ directory for details.
 import math
 import numpy
 
-try:
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
-except ImportError:
-    from PySide2.QtGui import *  # @UnusedWildImport
-    from PySide2.QtCore import *  # @UnusedWildImport
-    from PySide2.QtWidgets import *  # @UnusedWildImport
+
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
 from gui.Utils import formatFormula
 from gui.Utils import formatNumber
 
