@@ -162,9 +162,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             multi_parameter_term = MultiParameterTerm(compound_term_pairs[0])
             multi_parameter_term.set_coefficient(compound_term.get_coefficient())
             multi_parameter_function.add_multi_parameter_term(multi_parameter_term)
-            constant_coefficient = functions[param].get_constant_coefficient()
-            multi_parameter_function.set_constant_coefficient(constant_coefficient)
+            # constant_coefficient = functions[param].get_constant_coefficient()
+            # multi_parameter_function.set_constant_coefficient(constant_coefficient)
             multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_median)
+            multi_parameter_hypothesis.compute_coefficients(measurements, coordinates)
             multi_parameter_hypothesis.compute_cost(measurements, coordinates)
             return Model(multi_parameter_hypothesis)
 
