@@ -93,10 +93,14 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         for m in measurements:
             for p in range(dimensions):
                 if coordinate_is_mostly_equal(m.coordinate, min_coordinate[p], p):
-                    candidate_list[p].append(m)
+                    m_sp = copy.copy(m)
+                    m_sp.coordinate = Coordinate(m.coordinate[p])
+                    candidate_list[p].append(m_sp)
                 elif coordinate_is_mostly_lower(m.coordinate, min_coordinate[p], p):
                     candidate_list[p].clear()
-                    candidate_list[p].append(m)
+                    m_sp = copy.copy(m)
+                    m_sp.coordinate = Coordinate(m.coordinate[p])
+                    candidate_list[p].append(m_sp)
                     min_coordinate[p] = m.coordinate
 
         return candidate_list
