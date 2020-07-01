@@ -30,5 +30,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
-    install_requires=["pyside", "numpy", "matplotlib", "tqdm", "pycuber"],
+    install_requires=["pyside2", "numpy", "matplotlib", "tqdm", "pycuber"],
 )
