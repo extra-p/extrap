@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 import numpy as np
 import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap
-
+from gui.AdvancedPlotWidget import GraphDisplayWindow
 
 try:
     from PyQt4.QtGui import *
@@ -32,89 +32,7 @@ except ImportError:
 #####################################################################
 
 
-class DominatingFunctionsAsHeatMapWidget(QWidget):
-    """This class represents a Widget that is used to show the graph on
-       the main window.
-    """
-#####################################################################
-
-    def __init__(self, main_widget, parent):
-        super(DominatingFunctionsAsHeatMapWidget, self).__init__(parent)
-        self.main_widget = main_widget
-        self.initUI(parent)
-        self.set_initial_value()
-        self.setMouseTracking(True)
-
-    def setMax(self, axis, maxValue):
-        """ This function sets the highest value of x that is being shown on x axis.
-        """
-        if axis == 0:
-            #self.main_widget.data_display.setMaxValue( 0, maxValue )
-            self.max_x = maxValue
-        elif axis == 1:
-            #self.main_widget.data_display.setMaxValue( 1, maxValue)
-            self.max_y = maxValue
-
-        else:
-            print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
-
-    def setMaxX(self, maxX):
-        """ This function sets the highest value of Y that is being shown on x axis.
-        """
-        self.max_y = maxX
-
-    def getMaxX(self):
-        """ 
-           This function returns the highest value of x that is being shown on x axis.
-        """
-        return self.max_x
-
-    def setMaxY(self, maxY):
-        """ This function sets the highest value of Y that is being shown on x axis.
-        """
-        self.max_y = maxY
-
-    def getMaxY(self):
-        """ 
-           This function returns the highest value of Y that is being shown on x axis.
-        """
-        return self.max_y
-
-    def set_initial_value(self):
-        """ 
-          This function sets the initial value for different parameters required for graph.
-        """
-        # Basic geometry constants
-        self.max_x = 10
-        self.max_y = 10
-
-    def drawGraph(self):
-        """ 
-            This function is being called by paintEvent to draw the graph 
-        """
-        # Get data
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths:
-            return
-        model_set = self.main_widget.getCurrentModel().models
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            model = model_set[selected_callpath.path, selected_metric]
-            if model != None:
-                model_list.append(model)
-
-        graphDisplayCanvas = GraphDisplayCanvas(
-            self, width=5, height=4, dpi=100)
-        self.toolbar = MyCustomToolbar(graphDisplayCanvas, self)
-        self.grid.addWidget(graphDisplayCanvas, 0, 0)
-        self.grid.addWidget(self.toolbar, 1, 0)
-
-    def getNumAxis(self):
-        return 2
-
-
-class GraphDisplayCanvas (FigureCanvas):
+class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
     def __init__(self, heatMapGraphWidget, width=5, height=4, dpi=100):
 
         self.heatMapGraphWidget = heatMapGraphWidget
@@ -124,11 +42,11 @@ class GraphDisplayCanvas (FigureCanvas):
         self.epsilon = sys.float_info.epsilon
 
         self.fig = Figure(figsize=(width, height), dpi=dpi)
-        FigureCanvas.__init__(self, self.fig)
-        FigureCanvas.setSizePolicy(self,
-                                   QSizePolicy.Expanding,
-                                   QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
+        super().__init__(self, self.fig)
+        super().setSizePolicy(self,
+                              QSizePolicy.Expanding,
+                              QSizePolicy.Expanding)
+        super().updateGeometry(self)
         self.draw_figure()
 
     def draw_figure(self):

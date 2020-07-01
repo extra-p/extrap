@@ -18,7 +18,7 @@ import numpy as np
 import matplotlib.patches as mpatches
 from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
-
+from gui.AdvancedPlotWidget import GraphDisplayWindow
 
 try:
     from PyQt4.QtGui import *
@@ -35,107 +35,8 @@ except ImportError:
 #####################################################################
 
 
-class HeatMapGraphWidget(QWidget):
-    """This class represents a Widget that is used to show the graph on
-       the main window.
-    """
-#####################################################################
-
-    def __init__(self, main_widget, parent):
-        super(HeatMapGraphWidget, self).__init__(parent)
-        self.main_widget = main_widget
-        self.initUI()
-        self.set_initial_value()
-        self.setMouseTracking(True)
-
-    def initUI(self):
-        self.grid = QGridLayout(self)
-        self.setLayout(self.grid)
-        self.setMinimumWidth(300)
-        self.setMinimumHeight(300)
-        self.show()
-
-    def setMax(self, axis, maxValue):
-        """ This function sets the highest value of x  and y that is being shown on x and y axis.
-        """
-        if axis == 0:
-            self.main_widget.data_display.setMaxValue(0, maxValue)
-            self.max_x = maxValue
-        elif axis == 1:
-            self.main_widget.data_display.setMaxValue(1, maxValue)
-            self.max_y = maxValue
-
-        else:
-            print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
-
-    def setMaxX(self, maxX):
-        """ This function sets the highest value of X that is being shown on x axis.
-        """
-        self.max_x = maxX
-
-    def getMaxX(self):
-        """ 
-           This function returns the highest value of X that is being shown on x axis.
-        """
-        return self.max_x
-
-    def setMaxY(self, maxY):
-        """ This function sets the highest value of Y that is being shown on x axis.
-        """
-        self.max_y = maxY
-
-    def getMaxY(self):
-        """ 
-           This function returns the highest value of Y that is being shown on x axis.
-        """
-        return self.max_y
-
-    def setFontSize(self, font_size):
-        """ This function sets the font size of the legend.
-        """
-        self.font_size = font_size
-
-    def getFontSize(self):
-        """ 
-           This function returns the font size of the legend.
-        """
-        return self.font_size
-
-    def set_initial_value(self):
-        """ 
-          This function sets the initial value for different parameters required for graph.
-        """
-        self.max_x = 10
-        self.max_y = 10
-        self.font_size = 6
-
-    def drawGraph(self):
-        """ 
-            This function is being called by paintEvent to draw the graph 
-        """
-
-        # Get the font size as selected by the user and set it
-        self.font_size = int(self.main_widget.getFontSize())
-
-        # Call the 3D function display window
-        graphDisplayWindow = GraphDisplayWindow(
-            self, self.main_widget, width=5, height=4, dpi=100)
-        self.toolbar = MyCustomToolbar(graphDisplayWindow, self)
-        self.grid.addWidget(graphDisplayWindow, 0, 0)
-        self.grid.addWidget(self.toolbar, 1, 0)
-
-    def getNumAxis(self):
-        """ 
-          This function returns the number of axis. If its a 2-paramter model, it returns 2
-        """
-        return 2
-
-
-class GraphDisplayWindow (FigureCanvas):
+class HeatMapGraph(GraphDisplayWindow):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
-
-        self.graphWidget = graphWidget
-        self.main_widget = main_widget
         try:
             self.colormap = cm.get_cmap('viridis')
         except:
@@ -147,13 +48,7 @@ class GraphDisplayWindow (FigureCanvas):
         self.isInSameLine = 0
         self.epsilon = sys.float_info.epsilon
 
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        FigureCanvas.__init__(self, self.fig)
-        FigureCanvas.setSizePolicy(self,
-                                   QSizePolicy.Expanding,
-                                   QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
-        self.draw_figure()
+        super().__init__(graphWidget, main_widget, width, height, dpi)
 
     def draw_figure(self):
         """ 
@@ -313,25 +208,6 @@ class GraphDisplayWindow (FigureCanvas):
         if leg:
             leg.set_draggable(True)
 
-    def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
-        """ 
-           This function calculate the gap in pixels based on number of pixels and max value 
-        """
-        pixelGap = (upperlimit - lowerlimit)/numberOfPixels
-        return pixelGap
-
-    def calculate_z(self, x, y, function):
-        """ 
-           This function evaluates the function passed to it. 
-        """
-        parameter_value_list = self.main_widget.data_display.getValues()
-        param1 = self.main_widget.data_display.getAxisParameter(0)
-        param2 = self.main_widget.data_display.getAxisParameter(1)
-        parameter_value_list[param1] = x
-        parameter_value_list[param2] = y
-        z_value = function.evaluate(parameter_value_list)
-        return z_value
-
     def getColorMap(self):
         """ 
            This function creates a color map and return it.
@@ -410,11 +286,3 @@ class GraphDisplayWindow (FigureCanvas):
             return False
         else:
             return True
-
-
-class MyCustomToolbar(NavigationToolbar):
-    """This class represents a Toolbar that is used to show the x,y, z value
-       and save the figure.
-    """
-    toolitems = [toolitem for toolitem in NavigationToolbar.toolitems if
-                 toolitem[0] in ('Home1', 'Save')]

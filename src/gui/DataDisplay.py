@@ -19,14 +19,15 @@ except ImportError:
     from PyQt5.QtWidgets import *  # @UnusedWildImport
 
 from gui.GraphWidget import GraphWidget
-from gui.HeatMapGraphWidget import HeatMapGraphWidget
-from gui.IsolinesDisplayWidget import IsolinesDisplayWidget
-from gui.InterpolatedContourDisplayWidget import InterpolatedContourDisplayWidget
-from gui.MeasurementPointsPlotWidget import MeasurementPointsPlotWidget
-from gui.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlotWidget
-from gui.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlotWidget
-from gui.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlotWidget
-from gui.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlotWidget
+from gui.HeatMapGraphWidget import HeatMapGraph
+from gui.IsolinesDisplayWidget import IsolinesDisplay
+from gui.InterpolatedContourDisplayWidget import InterpolatedContourDisplay
+from gui.MeasurementPointsPlotWidget import MeasurementPointsPlot
+from gui.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
+from gui.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
+from gui.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
+from gui.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
+from gui.AdvancedPlotWidget import AdvancedPlotWidget
 from entities.parameter import Parameter
 
 
@@ -309,79 +310,32 @@ class DataDisplayManager(QWidget):
         # 6: IsolinesDisplayWidget
         # 7: InterpolatedContourDisplayWidget
         # 8: Measurement Points
-
         if (0 in selectedCheckBoxesIndex):
             labelText = "Line graph"
             tabStatus = self.ifTabAlreadyOpened(labelText)
             if tabStatus is False:
                 graph = GraphWidget(self.main_widget, self)
                 self.display_widget.addTab(graph, labelText)
+            selectedCheckBoxesIndex.remove(0)
 
-        if (1 in selectedCheckBoxesIndex):
-            labelText = "SurfacePlot_All"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                allFunctionsAsOneSurfacePlotGraph = AllFunctionsAsOneSurfacePlotWidget(
-                    self.main_widget, self)
+        graph_widgets = {
+            1: ('SurfacePlot_All', AllFunctionsAsOneSurfacePlot),
+            2: ('SurfacePlot_Single', AllFunctionsAsDifferentSurfacePlot),
+            3: ('ScatterPlot_Dominating', DominatingFunctionsAsSingleScatterPlot),
+            4: ('SurfacePlot_MaxZ', MaxZAsSingleSurfacePlot),
+            5: ("Heat Map", HeatMapGraph),
+            6: ("Contour Plot", IsolinesDisplay),
+            7: ("Interpolated Contour", InterpolatedContourDisplay),
+            8: ("Measurement Points", MeasurementPointsPlot)
+        }
+
+        for i in selectedCheckBoxesIndex:
+            labelText, plot = graph_widgets[i]
+            if not self.ifTabAlreadyOpened(labelText):
+                advance_plot_widget = AdvancedPlotWidget(
+                    self.main_widget, self, plot)
                 self.display_widget.addTab(
-                    allFunctionsAsOneSurfacePlotGraph, labelText)
-
-        if (2 in selectedCheckBoxesIndex):
-            labelText = "SurfacePlot_Single"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                allFunctionsAsDifferntSurfacePlotGraph = AllFunctionsAsDifferentSurfacePlotWidget(
-                    self.main_widget, self)
-                self.display_widget.addTab(
-                    allFunctionsAsDifferntSurfacePlotGraph, labelText)
-
-        if (3 in selectedCheckBoxesIndex):
-            labelText = "ScatterPlot_Dominating"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                dominatingFunctionsAsSingleScatterPlotWidget = DominatingFunctionsAsSingleScatterPlotWidget(
-                    self.main_widget, self)
-                self.display_widget.addTab(
-                    dominatingFunctionsAsSingleScatterPlotWidget, labelText)
-
-        if (4 in selectedCheckBoxesIndex):
-            labelText = "SurfacePlot_MaxZ"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                maxZAsSingleSurfacePlotWidget = MaxZAsSingleSurfacePlotWidget(
-                    self.main_widget, self)
-                self.display_widget.addTab(
-                    maxZAsSingleSurfacePlotWidget, labelText)
-
-        if (5 in selectedCheckBoxesIndex):
-            labelText = "Heat Map"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                heatMapGraph = HeatMapGraphWidget(self.main_widget, self)
-                self.display_widget.addTab(heatMapGraph, labelText)
-
-        if (6 in selectedCheckBoxesIndex):
-            labelText = "Contour Plot"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                isolinesGraph = IsolinesDisplayWidget(self.main_widget, self)
-                self.display_widget.addTab(isolinesGraph, labelText)
-
-        if (7 in selectedCheckBoxesIndex):
-            labelText = "Interpolated Contour"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                interpolatedContourGraph = InterpolatedContourDisplayWidget(
-                    self.main_widget, self)
-                self.display_widget.addTab(interpolatedContourGraph, labelText)
-
-        if (8 in selectedCheckBoxesIndex):
-            labelText = "Measurement Points"
-            tabStatus = self.ifTabAlreadyOpened(labelText)
-            if tabStatus is False:
-                measurementPointGraph = MeasurementPointsPlotWidget(
-                    self.main_widget, self)
-                self.display_widget.addTab(measurementPointGraph, labelText)
+                    advance_plot_widget, labelText)
 
     def generateSelections(self, parameters):
 
