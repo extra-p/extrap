@@ -9,10 +9,8 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-try:
-    from PyQt4.QtCore import *
-except ImportError:
-    from PySide2.QtCore import *  # @UnusedWildImport
+
+from PySide2.QtCore import *  # @UnusedWildImport
 from gui.Utils import formatFormula
 from gui.Utils import formatNumber
 

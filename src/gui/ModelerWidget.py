@@ -10,14 +10,11 @@ directory for details.
 """
 
 
-try:
-    from PyQt4.QtGui import *
-except ImportError:
-    from PySide2.QtGui import *  # @UnusedWildImport
-    from PySide2.QtWidgets import *  # @UnusedWildImport
-    from modelers.model_generator import ModelGenerator
-    from modelers import single_parameter
-    from modelers import multi_parameter
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
+from modelers.model_generator import ModelGenerator
+from modelers import single_parameter
+from modelers import multi_parameter
 
 
 class ModelerWidget(QWidget):

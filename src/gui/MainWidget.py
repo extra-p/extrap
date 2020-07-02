@@ -8,30 +8,25 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-
-
-import signal
-try:
-    from PyQt4.QtGui import *
-    from PyQt4.QtCore import *
-    pyqt_version = 4
-except ImportError:
-    from PySide2.QtGui import *  # @UnusedWildImport
-    from PySide2.QtCore import *  # @UnusedWildImport
-    from PySide2.QtWidgets import *  # @UnusedWildImport
-    pyqt_version = 5
-from gui.ColorWidget import ColorWidget
-from gui.CubeFileReader import CubeFileReader
-from gui.DataDisplay import DataDisplayManager
-from gui.ModelerWidget import ModelerWidget
-from gui.PlotTypeSelector import PlotTypeSelector
-from gui.SelectorWidget import SelectorWidget
-from gui.Utils import formatNumber
-from fileio.text_file_reader import read_text_file
-from fileio.talpas_file_reader import read_talpas_file
-from fileio.json_file_reader import read_json_file
-from enum import Enum
+from gui.ProgressWindow import ProgressWindow
 from modelers.model_generator import ModelGenerator
+from enum import Enum
+from fileio.json_file_reader import read_json_file
+from fileio.talpas_file_reader import read_talpas_file
+from fileio.text_file_reader import read_text_file
+from gui.Utils import formatNumber
+from gui.SelectorWidget import SelectorWidget
+from gui.PlotTypeSelector import PlotTypeSelector
+from gui.ModelerWidget import ModelerWidget
+from gui.DataDisplay import DataDisplayManager
+from gui.CubeFileReader import CubeFileReader
+from gui.ColorWidget import ColorWidget
+import signal
+
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
+pyqt_version = 5
 
 
 class CallPathEnum(Enum):

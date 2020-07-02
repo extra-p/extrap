@@ -9,11 +9,9 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-try:
-    from PyQt4.QtGui import *
-except ImportError:
-    from PySide2.QtGui import *  # @UnusedWildImport
-    from PySide2.QtWidgets import *  # @UnusedWildImport
+
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
 
 
 class MultiParameterSimpleModeler(QWidget):
