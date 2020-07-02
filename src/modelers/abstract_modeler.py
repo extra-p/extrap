@@ -5,16 +5,16 @@ from entities.model import Model
 
 
 class AbstractModeler(ABC):
-    def __init__(self, use_median):
+    def __init__(self, use_median: bool):
         # use mean or median measurement values to calculate models
         self._use_median = use_median
 
     @property
-    def use_median(self):
+    def use_median(self) -> bool:
         return self._use_median
 
     @use_median.setter
-    def use_median(self, value):
+    def use_median(self, value: bool):
         self._use_median = value
 
     @abstractmethod

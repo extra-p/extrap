@@ -31,9 +31,6 @@ class SelectorWidget(QWidget):
     def initUI(self):
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)
-        # self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
-        # self.grid.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
-        # self.setWidth(100)
 
         # Model selection
         model_label = QLabel("Model :", self)

@@ -302,8 +302,8 @@ class MainWidget(QMainWindow):
         callpathList = list()
         for callpath in CallPathEnum:
             callpathList.append(callpath.value)
-            _, _ = QInputDialog.getItem(
-                self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
+        _, _ = QInputDialog.getItem(
+            self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
 
     def getFontSize(self):
         return self.font_size
@@ -382,8 +382,8 @@ class MainWidget(QMainWindow):
     def updateMinMaxValue(self):
         if not self.experiment_change:
             updated_value_list = self.selector_widget.getMinMaxValue()
-            updated_max_value = max(updated_value_list)
             # don't allow values < 0
+            updated_max_value = max(0.0, max(updated_value_list))
             updated_min_value = max(0.0, min(updated_value_list))
             self.min_value = updated_min_value
             self.max_value = updated_max_value

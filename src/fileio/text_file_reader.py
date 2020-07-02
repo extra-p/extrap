@@ -23,7 +23,6 @@ from fileio.io_helper import create_call_tree
 def read_text_file(path, progress_event=lambda _: _):
 
     # read text file into list
-    lines = []
     with open(path) as file:
         lines = file.readlines()
 

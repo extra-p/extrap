@@ -9,25 +9,21 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 
-from typing import List, Tuple, Dict
-from entities.terms import CompoundTerm
-from entities.hypotheses import SingleParameterHypothesis
-from entities.functions import SingleParameterFunction
-from entities.functions import ConstantFunction
-from entities.hypotheses import ConstantHypothesis
-from entities.model import Model
-from entities.coordinate import Coordinate
-from modelers import single_parameter
-from entities.functions import MultiParameterFunction
-from entities.terms import MultiParameterTerm
-from entities.hypotheses import MultiParameterHypothesis
-import logging
 import copy
-from pip._internal.cli.cmdoptions import retries
-from modelers.abstract_modeler import MultiParameterModeler as AbstractMultiParameterModeler
-from modelers.abstract_modeler import LegacyModeler
+import logging
+from typing import List
+
+from entities.coordinate import Coordinate
+from entities.functions import ConstantFunction
+from entities.functions import MultiParameterFunction
+from entities.hypotheses import ConstantHypothesis
+from entities.hypotheses import MultiParameterHypothesis
 from entities.measurement import Measurement
-import itertools
+from entities.model import Model
+from entities.terms import MultiParameterTerm
+from modelers import single_parameter
+from modelers.abstract_modeler import LegacyModeler
+from modelers.abstract_modeler import MultiParameterModeler as AbstractMultiParameterModeler
 
 
 class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
@@ -37,13 +33,13 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
     The result is either a constant function or one based on the PMNF.
     """
 
-    NAME = 'Multiparameter'
+    NAME = 'Multi-Parameter'
 
     def __init__(self):
         """
         Initialize SingleParameterModeler object.
         """
-        super().__init__(use_median=False, single_parameter_modeler=single_parameter.default())
+        super().__init__(use_median=False, single_parameter_modeler=single_parameter.Default())
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
 
@@ -74,6 +70,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         This method returns the measurments that should be used for creating
         the single parameter models.
         """
+
         def coordinate_is_mostly_lower(coordinate, other, except_position):
             return all(a <= b
                        for i, (a, b) in enumerate(zip(coordinate, other))
@@ -122,7 +119,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            logging.error("Number of measurements for each parameter needs to be at least 5 in order to create a performance model.")
+            logging.error(
+                "Number of measurements for each parameter needs to be at least 5 in order to create a performance model.")
             return None
 
         # get the coordinates for modeling
@@ -179,7 +177,6 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # add Hypotheses for 2 parameter models
         if len(parameters) == 2:
-
             # create multi parameter functions
             mp_functions = [
                 # create f1 function a*b
@@ -201,7 +198,6 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # add Hypotheses for 3 parameter models
         if len(parameters) == 3:
-
             # create multiplicative multi parameter terms
             # x*y
             mult_x_y = MultiParameterTerm(compound_term_pairs[0], compound_term_pairs[1])
@@ -281,8 +277,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         best_hypothesis.compute_cost(measurements, coordinates)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-        print("hypothesis 0 : "+str(best_hypothesis.get_function().to_string())+" --- smape: "+str(best_hypothesis.get_SMAPE())+" --- ar2: "+str(best_hypothesis.get_AR2()) +
-              " --- rss: "+str(best_hypothesis.get_RSS())+" --- rrss: "+str(best_hypothesis.get_rRSS())+" --- re: "+str(best_hypothesis.get_RE()))
+        print("hypothesis 0 : " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
+            best_hypothesis.get_SMAPE()) + " --- ar2: " + str(best_hypothesis.get_AR2()) +
+              " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
+            best_hypothesis.get_rRSS()) + " --- re: " + str(best_hypothesis.get_RE()))
 
         # find the best hypothesis
         for i in range(1, len(hypotheses)):
@@ -290,8 +288,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             hypotheses[i].compute_cost(measurements, coordinates)
             hypotheses[i].compute_adjusted_rsquared(constantCost, measurements)
 
-            print("hypothesis "+str(i)+" : "+str(hypotheses[i].get_function().to_string())+" --- smape: "+str(hypotheses[i].get_SMAPE())+" --- ar2: " +
-                  str(hypotheses[i].get_AR2())+" --- rss: "+str(hypotheses[i].get_RSS())+" --- rrss: "+str(hypotheses[i].get_rRSS())+" --- re: "+str(hypotheses[i].get_RE()))
+            print("hypothesis " + str(i) + " : " + str(hypotheses[i].get_function().to_string()) + " --- smape: " + str(
+                hypotheses[i].get_SMAPE()) + " --- ar2: " +
+                  str(hypotheses[i].get_AR2()) + " --- rss: " + str(hypotheses[i].get_RSS()) + " --- rrss: " + str(
+                hypotheses[i].get_rRSS()) + " --- re: " + str(hypotheses[i].get_RE()))
 
             if hypotheses[i].get_SMAPE() < best_hypothesis.get_SMAPE():
                 best_hypothesis = copy.deepcopy(hypotheses[i])
@@ -299,7 +299,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         # add the best found hypothesis to the model list
         model = Model(best_hypothesis)
 
-        print("best hypothesis: "+str(best_hypothesis.get_function().to_string())+" --- smape: "+str(best_hypothesis.get_SMAPE())+" --- ar2: "+str(best_hypothesis.get_AR2()) +
-              " --- rss: "+str(best_hypothesis.get_RSS())+" --- rrss: "+str(best_hypothesis.get_rRSS())+" --- re: "+str(best_hypothesis.get_RE()))
+        print("best hypothesis: " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
+            best_hypothesis.get_SMAPE()) + " --- ar2: " + str(best_hypothesis.get_AR2()) +
+              " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
+            best_hypothesis.get_rRSS()) + " --- re: " + str(best_hypothesis.get_RE()))
 
         return model

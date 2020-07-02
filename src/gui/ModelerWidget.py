@@ -54,6 +54,8 @@ class ModelerWidget(QWidget):
         model_button.setText("Generate models")
         model_button.pressed.connect(self.remodel)
         grid.addWidget(model_button, 3, 0)
+        grid.addWidget(QWidget(),4,0)
+        grid.setRowStretch(4,1)
 
     def getName(self):
         return self.model_name_edit.text()
@@ -68,12 +70,12 @@ class ModelerWidget(QWidget):
         # initialize model generator
         experiment = self.main_widget.getExperiment()
 
-        model_generator = ModelGenerator(experiment)
+        model_generator = ModelGenerator(experiment,use_median=self.median)
 
         model_generator.set_name(self.model_name_edit.text())
 
         # create models from data
-        experiment = model_generator.model_all(self.median)
+        model_generator.model_all()
 
         self.main_widget.getExperiment().modelAll(
             modeler, self.main_widget.getExperiment(), self.options)
@@ -84,3 +86,4 @@ class ModelerWidget(QWidget):
         # must happen before 'valuesChanged' to update the color boxes
         self.main_widget.selector_widget.tree_model.valuesChanged()
         self.main_widget.update()
+

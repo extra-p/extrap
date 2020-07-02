@@ -311,7 +311,6 @@ class DataDisplayManager(QWidget):
             if tabStatus is False:
                 graph = GraphWidget(self.main_widget, self)
                 self.display_widget.addTab(graph, labelText)
-            selectedCheckBoxesIndex.remove(0)
 
         graph_widgets = {
             1: ('SurfacePlot_All', AllFunctionsAsOneSurfacePlot),
@@ -325,6 +324,8 @@ class DataDisplayManager(QWidget):
         }
 
         for i in selectedCheckBoxesIndex:
+            if i == 0:
+                continue
             labelText, plot = graph_widgets[i]
             if not self.ifTabAlreadyOpened(labelText):
                 advance_plot_widget = AdvancedPlotWidget(

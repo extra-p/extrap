@@ -9,19 +9,17 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 
-from util.deprecation import deprecated
+import itertools
+from typing import Dict, Union, Tuple
 
-from typing import ClassVar, Dict, List, Union, Tuple
-import inspect
-import pkgutil
+from entities.callpath import Callpath
+from entities.experiment import Experiment
+from entities.metric import Metric
+from entities.model import Model
 from modelers import multi_parameter
 from modelers import single_parameter
 from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
-import itertools
-from entities.experiment import Experiment
-from entities.model import Model
-from entities.callpath import Callpath
-from entities.metric import Metric
+from util.deprecation import deprecated
 
 
 class ModelGenerator:
@@ -38,34 +36,34 @@ class ModelGenerator:
         self.name = name
         self.id = next(__class__.ID_COUNTER)
         # choose the modeler based on the input data
-        self._modeler: AbstractModeler = None
-        self._choose_modeler(modeler, use_median)
+        self._modeler: AbstractModeler = self._choose_modeler(modeler, use_median)
         # all models modeled with this model generator
         self.models: Dict[Tuple[Callpath, Metric], Model] = {}
 
-    def _choose_modeler(self, modeler, use_median):
+    def _choose_modeler(self, modeler: Union[AbstractModeler, str], use_median: bool) -> AbstractModeler:
         if isinstance(modeler, str):
             try:
                 if len(self.experiment.parameters) == 1:
                     # single parameter model generator init here...
-                    self._modeler = single_parameter.all_modelers[modeler]()
+                    result_modeler = single_parameter.all_modelers[modeler]()
                 else:
                     # multi parameter model generator init here...
-                    self._modeler = multi_parameter.all_modelers[modeler]()
-                self._modeler.use_median = use_median
+                    result_modeler = multi_parameter.all_modelers[modeler]()
+                result_modeler.use_median = use_median
             except KeyError:
                 raise ValueError(
                     f'Modeler with name "{modeler}" does not exist.')
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
                 # single parameter model generator init here...
-                self._modeler = modeler
+                result_modeler = modeler
                 if use_median is not None:
-                    self._modeler.use_median = use_median
-            elif (len(self.experiment.parameters) > 1):
+                    result_modeler.use_median = use_median
+            elif len(self.experiment.parameters) > 1:
                 raise ValueError("Modeler must use multiple parameters.")
             else:
                 raise ValueError("Modeler must use one parameter.")
+        return result_modeler
 
     def model_all(self):
         models = self._modeler.model(
