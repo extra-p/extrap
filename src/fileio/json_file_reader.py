@@ -23,7 +23,7 @@ import logging
 import json
 
 
-def read_json_file(path):
+def read_json_file(path,progress_event=lambda _:_):
 
     # read lines from json file
     with open(path, "r") as inputfile:

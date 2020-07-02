@@ -345,26 +345,29 @@ class MainWidget(QMainWindow):
         file_name = QFileDialog.getOpenFileName(self, 'Open a text input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            experiment = read_text_file(file_name)
-            # call the modeler and create a function model
-            self.model_experiment(experiment)
+            with ProgressWindow(self,"Loading file","") as pw:
+                experiment = read_text_file(file_name,pw.progress_event)
+                # call the modeler and create a function model
+                self.model_experiment(experiment)
 
     def open_json_file(self):
         file_name = QFileDialog.getOpenFileName(self, 'Open a json input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            experiment = read_json_file(file_name)
-            # call the modeler and create a function model
-            self.model_experiment(experiment)
+            with ProgressWindow(self, "Loading file", "") as pw:
+                experiment = read_json_file(file_name,pw.progress_event)
+                # call the modeler and create a function model
+                self.model_experiment(experiment)
 
     def open_talpas_file(self):
         file_name = QFileDialog.getOpenFileName(
             self, 'Open a talpas input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            experiment = read_talpas_file(file_name)
-            # call the modeler and create a function model
-            self.model_experiment(experiment)
+            with ProgressWindow(self, "Loading file", "") as pw:
+                experiment = read_talpas_file(file_name,pw.progress_event)
+                # call the modeler and create a function model
+                self.model_experiment(experiment)
 
     def open_cube_file(self):
         dir_name = QFileDialog.getExistingDirectory(

@@ -23,7 +23,7 @@ import logging
 import json
 
 
-def read_talpas_file(path):
+def read_talpas_file(path,progress_event=lambda _:_):
     # create an experiment object to save the date loaded from the text file
     experiment = Experiment()
 

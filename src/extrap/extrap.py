@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 
-
 import logging
 import argparse
 import os
@@ -25,13 +24,13 @@ from fileio.talpas_file_reader import read_talpas_file
 from fileio.json_file_reader import read_json_file
 from fileio.io_helper import save_output
 from fileio.io_helper import format_output
-from modelers.modelgenerator import ModelGenerator
+from modelers.model_generator import ModelGenerator
 from modelers import single_parameter
 from modelers import multi_parameter
+from tqdm import tqdm
 
 
 def Main():
-
     # Initialize()
 
     # argparse
@@ -40,24 +39,30 @@ def Main():
         chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys()))
     parser = argparse.ArgumentParser(description=programname)
 
-    parser.add_argument("--log", action="store", dest="log_level", help="set program's log level [INFO (default), DEBUG]")
+    parser.add_argument("--log", action="store", dest="log_level",
+                        help="set program's log level [INFO (default), DEBUG]")
     parser.add_argument("--version", action="version", version=programname + " 4.0")
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from cube files")
     group.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
-    group.add_argument("--talpas", action="store_true", default=False, dest="talpas", help="load data from talpas data format")
+    group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
+                       help="load data from talpas data format")
     group.add_argument("--json", action="store_true", default=False, dest="json", help="load data from json file")
 
     parser.add_argument("--modeler", action="store", dest="modeler", default='default',
-                        help="select one of the following modelers: "+modelers_list)
+                        help="select one of the following modelers: " + modelers_list)
 
-    parser.add_argument("--scaling", action="store", dest="scaling_type", help="set weak or strong scaling when loading data from cube files [WEAK (default), STRONG]")
-    parser.add_argument("--median", action="store_true", dest="median", help="use median values for computation instead of mean values")
+    parser.add_argument("--scaling", action="store", dest="scaling_type",
+                        help="set weak or strong scaling when loading data from cube files [WEAK (default), STRONG]")
+    parser.add_argument("--median", action="store_true", dest="median",
+                        help="use median values for computation instead of mean values")
     parser.add_argument("--out", action="store", dest="out", help="specify the output path for Extra-P results")
-    parser.add_argument("--print", action="store", dest="print_type", help="set which information should be displayed after modeling [ALL (default), CALLPATHS, METRICS, PARAMETERS, FUNCTIONS]")
+    parser.add_argument("--print", action="store", dest="print_type",
+                        help="set which information should be displayed after modeling [ALL (default), CALLPATHS, METRICS, PARAMETERS, FUNCTIONS]")
 
-    parser.add_argument("path", metavar="FILEPATH", action="store", help="specify a file path for Extra-P to work with")
+    parser.add_argument("path", metavar="FILEPATH", type=str, action="store",
+                        help="specify a file path for Extra-P to work with")
 
     arguments = parser.parse_args()
 
@@ -100,8 +105,9 @@ def Main():
         #    log_file = open("../temp/extrap.log","w")
         #    log_file.close()
         # logging.basicConfig(format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s", level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p", filename="../temp/extrap.log", filemode="w")
-        logging.basicConfig(format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s",
-                            level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p")
+        logging.basicConfig(
+            format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s",
+            level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p")
     else:
         logging.basicConfig(
             format="%(levelname)s: %(message)s", level=loglevel)
@@ -115,7 +121,8 @@ def Main():
             scaling_type = "strong"
         else:
             scaling_type = "weak"
-            logging.warning("Invalid scaling type. Supported types are WEAK (default) and STRONG. Using weak scaling instead.")
+            logging.warning(
+                "Invalid scaling type. Supported types are WEAK (default) and STRONG. Using weak scaling instead.")
 
     # use mean or median?
     use_median = arguments.median
@@ -129,31 +136,44 @@ def Main():
     else:
         print_output = False
 
-    if not arguments.path is None:
-        if arguments.cube == True:
-            # load data from cube files
-            if os.path.isdir(arguments.path):
-                experiment = read_cube_file(arguments.path, scaling_type)
+    if arguments.path is not None:
+        with tqdm(total=100, unit='%') as pbar:
+            previous_progress = 0
+
+            def progress_bar_event(x):
+                nonlocal previous_progress
+                if x is None:
+                    pbar.update(100 - previous_progress)
+                    pbar.close()
+                else:
+                    val = x * 100
+                    pbar.update(val - previous_progress)
+                    previous_progress = val
+
+            if arguments.cube == True:
+                # load data from cube files
+                if os.path.isdir(arguments.path):
+                    experiment = read_cube_file(arguments.path, scaling_type)
+                else:
+                    logging.error("The given file path is not valid.")
+                    return 1
+            elif os.path.isfile(arguments.path):
+                if arguments.text == True:
+                    # load data from text files
+                    experiment = read_text_file(arguments.path, progress_bar_event)
+                elif arguments.talpas == True:
+                    # load data from talpas format
+                    experiment = read_talpas_file(arguments.path, progress_bar_event)
+                elif arguments.json == True:
+                    # load data from json file
+                    experiment = read_json_file(arguments.path, progress_bar_event)
+                else:
+                    logging.error(
+                        "The file format specifier is missing.")
+                    return 1
             else:
                 logging.error("The given file path is not valid.")
                 return 1
-        elif os.path.isfile(arguments.path):
-            if arguments.text == True:
-                # load data from text files
-                experiment = read_text_file(arguments.path)
-            elif arguments.talpas == True:
-                # load data from talpas format
-                experiment = read_talpas_file(arguments.path)
-            elif arguments.json == True:
-                # load data from json file
-                experiment = read_json_file(arguments.path)
-            else:
-                logging.error(
-                    "The file format specifier is missing.")
-                return 1
-        else:
-            logging.error("The given file path is not valid.")
-            return 1
 
         # TODO: debug code
         experiment.debug()

@@ -98,15 +98,8 @@ def format_all(experiment):
             text += "\tMetric: " + metric_string + "\n"
             for coordinate_id in range(len(coordinates)):
                 coordinate = coordinates[coordinate_id]
-                dimensions = coordinate.get_dimensions()
-                coordinate_text = "Measurement point: ("
-                for dimension in range(dimensions):
-                    parameter, value = coordinate.get_parameter_value(dimension)
-                    value_string = "{:.2E}".format(value)
-                    parameter_name = parameter.get_name()
-                    coordinate_text += parameter_name + "=" + value_string + ","
-                coordinate_text = coordinate_text[:-1]
-                coordinate_text += ")"
+                coordinate_text = "Measurement point: "
+                coordinate_text += str(coordinate)
                 measurement = experiment.get_measurement(coordinate_id, callpath_id, metric_id)
                 value_mean = measurement.get_value_mean()
                 value_mean_string = "{:.2E}".format(value_mean)
