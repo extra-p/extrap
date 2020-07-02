@@ -1,5 +1,5 @@
 """
-This file is part of the Extra-P software (https://github.com/MeaParvitas/Extra-P)
+This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 
 Copyright (c) 2020,
 Technische Universitaet Darmstadt, Germany
