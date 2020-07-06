@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 
-
 import copy
 import logging
 from typing import List
@@ -23,8 +22,10 @@ from entities.measurement import Measurement
 from entities.coordinate import Coordinate
 from modelers.abstract_modeler import LegacyModeler
 from entities.model import Model
+from modelers.modeler_options import modeler_options
 
 
+@modeler_options
 class SingleParameterModeler(LegacyModeler):
     """
     This class represents the modeler for single parameter functions.
@@ -33,6 +34,8 @@ class SingleParameterModeler(LegacyModeler):
     """
 
     NAME = 'Basic'
+    allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
+    use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
 
     def __init__(self):
         """
@@ -50,10 +53,10 @@ class SingleParameterModeler(LegacyModeler):
         self.min_measurement_points = 5
 
         # check if logarithmic terms should be allowed
-        self.allow_log_terms = True
+        # self.allow_log_terms = True
 
         # check if logarithmic terms should be allowed
-        self.use_crossvalidation = True
+        # self.use_crossvalidation = True
 
         # create the building blocks for the hypothesis
         self.hypotheses_building_blocks: List[CompoundTerm] = self.create_default_building_blocks(
@@ -246,8 +249,8 @@ class SingleParameterModeler(LegacyModeler):
                 return False
 
         # print smapes in debug mode
-        logging.debug("next hypothesis SMAPE: "+str(new.SMAPE)+' RSS:' + str(new.RSS))
-        logging.debug("best hypothesis SMAPE: "+str(old.SMAPE)+' RSS:' + str(old.RSS))
+        logging.debug("next hypothesis SMAPE: " + str(new.SMAPE) + ' RSS:' + str(new.RSS))
+        logging.debug("best hypothesis SMAPE: " + str(old.SMAPE) + ' RSS:' + str(old.RSS))
 
         return new.SMAPE < old.SMAPE
 
@@ -275,7 +278,6 @@ class SingleParameterModeler(LegacyModeler):
             if self.use_crossvalidation:
                 # cycle through points and leave one out per iteration
                 for element_id in range(len(measurements)):
-
                     # copy measurements to create the training sets
                     training_measurements = copy.copy(measurements)
 
@@ -298,7 +300,7 @@ class SingleParameterModeler(LegacyModeler):
                 # compute the model coefficients using all data
                 next_hypothesis.compute_coefficients(measurements)
                 logging.debug(
-                    f"Single parameter model {i}: "+next_hypothesis.function.to_string(Parameter('p')))
+                    f"Single parameter model {i}: " + next_hypothesis.function.to_string(Parameter('p')))
             else:
                 # compute the model coefficients based on the training data
                 next_hypothesis.compute_coefficients(measurements)
@@ -348,7 +350,7 @@ class SingleParameterModeler(LegacyModeler):
         # compute cost of the constant model
         constant_hypothesis.compute_cost(measurements)
         constant_cost = constant_hypothesis.get_RSS()
-        logging.debug("Constant model cost: "+str(constant_cost))
+        logging.debug("Constant model cost: " + str(constant_cost))
 
         # use constat model when cost is 0
         if constant_cost == 0:
