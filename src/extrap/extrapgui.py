@@ -1,4 +1,4 @@
-#import logging
+# import logging
 
 import sys
 from PySide2.QtWidgets import QApplication
@@ -10,7 +10,6 @@ from fileio.json_file_reader import read_json_file
 
 
 def main():
-
     # TODO: add logging to the gui application
 
     app = QApplication(sys.argv)
@@ -20,12 +19,14 @@ def main():
     palette.setColor(QPalette.Window, QColor(190, 190, 190))
     palette.setColor(QPalette.WindowText, Qt.black)
     palette.setColor(QPalette.Base, QColor(220, 220, 220))
-    palette.setColor(QPalette.AlternateBase, QColor(10, 10, 15))
+    palette.setColor(QPalette.AlternateBase, QColor(10, 10, 10))
     palette.setColor(QPalette.Text, Qt.black)
     palette.setColor(QPalette.Button, QColor(220, 220, 220))
     palette.setColor(QPalette.ButtonText, Qt.black)
     palette.setColor(QPalette.Highlight, QColor(31, 119, 180))
     palette.setColor(QPalette.HighlightedText, Qt.white)
+    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(40, 40, 40))
+    palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
     app.setPalette(palette)
 
     window = MainWidget()

@@ -155,13 +155,7 @@ class RefiningModeler():
 
         return best_hypothesis
 
-    def create_model(self, callpath_id, metric_id):
-        # select the measurements by callpath_id and metric_id
-        all_measurements = self.experiment.get_measurements()
-        measurements = []
-        for i in range(len(all_measurements)):
-            if all_measurements[i].get_callpath_id() == callpath_id and all_measurements[i].get_metric_id() == metric_id:
-                measurements.append(all_measurements[i])
+    def create_model(self, measurements):
 
         # TODO: it would be best to have this check when doing the fileio... and remove it here...
         # check if the number of measurements satisfies the reuqirements of the modeler (>=5)

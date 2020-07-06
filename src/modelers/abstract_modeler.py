@@ -38,6 +38,7 @@ class LegacyModeler(AbstractModeler, ABC):
 
 
 class MultiParameterModeler(AbstractModeler, ABC):
+
     def __init__(self, use_median, single_parameter_modeler):
         super().__init__(use_median)
         single_parameter_modeler.use_median = use_median

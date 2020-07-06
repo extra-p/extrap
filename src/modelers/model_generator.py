@@ -29,7 +29,7 @@ class ModelGenerator:
     ID_COUNTER = itertools.count()
 
     def __init__(self, experiment: Experiment,
-                 modeler: Union[AbstractModeler, str] = "default",
+                 modeler: Union[AbstractModeler, str] = "Default",
                  name: str = "New Modeler",
                  use_median: bool = False):
         self.experiment = experiment
@@ -39,6 +39,10 @@ class ModelGenerator:
         self._modeler: AbstractModeler = self._choose_modeler(modeler, use_median)
         # all models modeled with this model generator
         self.models: Dict[Tuple[Callpath, Metric], Model] = {}
+
+    @property
+    def modeler(self):
+        return self._modeler
 
     def _choose_modeler(self, modeler: Union[AbstractModeler, str], use_median: bool) -> AbstractModeler:
         if isinstance(modeler, str):

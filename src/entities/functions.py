@@ -8,7 +8,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-from typing import List
+from typing import List, Mapping
 
 from entities.parameter import Parameter
 from entities.terms import CompoundTerm
@@ -125,7 +125,7 @@ class SingleParameterFunction(Function):
         super().__init__(*compound_terms)
 
     def evaluate(self, parameter_value):
-        if hasattr(parameter_value, '__len__') and len(parameter_value) == 1:
+        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value,Mapping)):
             parameter_value = parameter_value[0]
         return super().evaluate(parameter_value)
 
