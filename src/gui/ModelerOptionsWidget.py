@@ -90,7 +90,9 @@ class ModelerOptionsWidget(QWidget):
         return option.field.replace('_', ' ').title()
 
     def _determine_field(self, name, option):
-        slot = lambda value: self.check_and_apply(option, value)
+        def slot(value):
+            self.check_and_apply(option, value)
+
         if isinstance(option.range, Mapping):
             field = QComboBox()
             for name, item in option.range.items():
