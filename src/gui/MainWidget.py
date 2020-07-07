@@ -26,6 +26,7 @@ import signal
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
+
 pyqt_version = 5
 
 
@@ -43,6 +44,8 @@ class MainWidget(QMainWindow):
         Initializes the main application widget.
         """
         super(MainWidget, self).__init__(*args, **kwargs)
+        self.max_value = 1
+        self.min_value = 1
         self.old_x_pos = 0
         self.experiment = None
         self.graph_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
@@ -148,7 +151,8 @@ class MainWidget(QMainWindow):
         open_talpas_file_action.triggered.connect(self.open_talpas_file)
 
         cube_file_action = QAction(self.tr('Open set of CUBE files'), self)
-        cube_file_action.setStatusTip(self.tr('Open a set of CUBE files for single parameter models and generate data points for a new experiment from them'))
+        cube_file_action.setStatusTip(self.tr(
+            'Open a set of CUBE files for single parameter models and generate data points for a new experiment from them'))
         cube_file_action.triggered.connect(self.open_cube_file)
 
         # View menu
@@ -161,8 +165,11 @@ class MainWidget(QMainWindow):
         select_view_action.triggered.connect(self.open_select_plots_dialog_box)
 
         # Plots menu
-        graphs = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots', 'Dominating models in a 3D Scatter plot',
-                  'Max z as a single surface plot', 'Dominating models and max z as heat map', 'Selected models in contour plot', 'Selected models in interpolated contour plots', 'Measurement points']
+        graphs = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots',
+                  'Dominating models in a 3D Scatter plot',
+                  'Max z as a single surface plot', 'Dominating models and max z as heat map',
+                  'Selected models in contour plot', 'Selected models in interpolated contour plots',
+                  'Measurement points']
         graph_actions = [QAction(self.tr(g), self) for g in graphs]
         for i, g in enumerate(graph_actions):
             slot = (lambda k: lambda: self.data_display.reloadTabs((k,)))(i)
@@ -290,7 +297,7 @@ class MainWidget(QMainWindow):
 
         fontSize, ok = QInputDialog.getItem(
             self, "Font Size", "Select the font Size:", fontSizeItems, 0, False)
-        if(ok):
+        if (ok):
             self.font_size = fontSize
             self.data_display.updateWidget()
             self.update()
@@ -346,8 +353,8 @@ class MainWidget(QMainWindow):
         file_name = QFileDialog.getOpenFileName(self, 'Open a text input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self,"Loading file","") as pw:
-                experiment = read_text_file(file_name,pw.progress_event)
+            with ProgressWindow(self, "Loading file", "") as pw:
+                experiment = read_text_file(file_name, pw.progress_event)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
 
@@ -356,7 +363,7 @@ class MainWidget(QMainWindow):
         file_name = self.get_file_name(file_name)
         if file_name:
             with ProgressWindow(self, "Loading file", "") as pw:
-                experiment = read_json_file(file_name,pw.progress_event)
+                experiment = read_json_file(file_name, pw.progress_event)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
 
@@ -366,7 +373,7 @@ class MainWidget(QMainWindow):
         file_name = self.get_file_name(file_name)
         if file_name:
             with ProgressWindow(self, "Loading file", "") as pw:
-                experiment = read_talpas_file(file_name,pw.progress_event)
+                experiment = read_talpas_file(file_name, pw.progress_event)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
 
@@ -391,8 +398,7 @@ class MainWidget(QMainWindow):
             updated_min_value = max(0.0, min(updated_value_list))
             self.min_value = updated_min_value
             self.max_value = updated_max_value
-            self.min_value_label.setText(formatNumber(str(updated_min_value)))
-            self.max_value_label.setText(formatNumber(str(updated_max_value)))
+            self.color_widget.update_min_max(self.min_value, self.max_value)
 
     def populateCallPathColorMap(self, callpaths):
         callpaths = list(set(callpaths))
@@ -400,13 +406,13 @@ class MainWidget(QMainWindow):
         size_of_color_list = len(self.graph_color_list)
         self.dict_callpath_color = {}
         for callpath in callpaths:
-            if(current_index < size_of_color_list):
+            if (current_index < size_of_color_list):
                 self.dict_callpath_color[callpath] = self.graph_color_list[current_index]
             else:
-                offset = (current_index-size_of_color_list) % size_of_color_list
+                offset = (current_index - size_of_color_list) % size_of_color_list
                 multiple = int(current_index / size_of_color_list)
                 color = self.graph_color_list[offset]
-                newcolor = color[:-1]+str(multiple)
+                newcolor = color[:-1] + str(multiple)
                 self.dict_callpath_color[callpath] = newcolor
             current_index = current_index + 1
 

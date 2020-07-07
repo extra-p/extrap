@@ -13,6 +13,8 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from entities.model import Model
+
 
 class TreeView(QTreeView):
 
@@ -27,7 +29,7 @@ class TreeView(QTreeView):
             if self.selectedIndexes():
                 selectedCallpath = self.model().getValue(
                     self.selectedIndexes()[0])
-                selectedModel = self.model().getSelectedModel(selectedCallpath.path)
+                selectedModel: Model = self.model().getSelectedModel(selectedCallpath.path)
                 expandAction = menu.addAction("Expand All")
                 expandAction.triggered.connect(self.expandAll)
                 # showCommentsAction = menu.addAction("Show Comments")
@@ -38,6 +40,11 @@ class TreeView(QTreeView):
                 showDataPointsAction = menu.addAction("Show Data Points")
                 showDataPointsAction.triggered.connect(
                     lambda: self.showDataPoints(selectedModel))
+                copyModel = menu.addAction("Copy Model")
+                copyModel.triggered.connect(
+                    lambda: QGuiApplication.clipboard().setText(selectedModel.hypothesis.function.to_string(
+                        self.model().main_widget.getExperiment().parameters))
+                )
                 menu.exec_(self.mapToGlobal(event.pos()))
 
     def showComments(self, model):
@@ -63,7 +70,7 @@ class TreeView(QTreeView):
         layout = msg.layout()
         layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
 
-        msg_txt = "Callpath: " + model.callpath.name+"\n\n"
+        msg_txt = "Callpath: " + model.callpath.name + "\n\n"
         row_format = "{:20} {:>15} {:>15} {:>15}\n"
         msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
         row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"

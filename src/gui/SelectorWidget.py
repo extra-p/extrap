@@ -37,7 +37,7 @@ class SelectorWidget(QWidget):
         self.model_selector = QComboBox(self)
         self.model_selector.currentIndexChanged.connect(self.model_changed)
 
-        #model_list = list()
+        # model_list = list()
         self.updateModelList()
 
         # Metric selection
@@ -73,7 +73,7 @@ class SelectorWidget(QWidget):
         for i, param in enumerate(parameters):
             new_widget = ParameterValueSlider(self, param, self)
             self.parameter_sliders.append(new_widget)
-            self.grid.addWidget(new_widget, i+4, 0, 1, 2)
+            self.grid.addWidget(new_widget, i + 4, 0, 1, 2)
 
     def fillCalltree(self):
         self.tree_model = TreeModel(self)
@@ -90,7 +90,7 @@ class SelectorWidget(QWidget):
 
     def callpath_selection_changed(self):
         callpath_list = self.getSelectedCallpath()
-        #self.dict_callpath_color = {}
+        # self.dict_callpath_color = {}
         self.main_widget.populateCallPathColorMap(callpath_list)
         self.main_widget.updateAllWidget()
 
@@ -151,10 +151,11 @@ class SelectorWidget(QWidget):
         index = self.model_selector.currentIndex()
         text = str(self.model_selector.currentText())
 
-        # TODO: fix this
         # Introduced " and text != "No models to load" " as a second guard since always when the text would be "No models to load" the gui would crash.
         # if model != None and text != "No models to load":
         #     generator = model._modeler
+        self.main_widget.selector_widget.tree_model.valuesChanged()
+
         self.main_widget.updateAllWidget()
         self.update()
 

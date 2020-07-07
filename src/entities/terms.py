@@ -59,7 +59,7 @@ class SimpleTerm(SingleParameterTerm):
 
     def to_string(self, parameter='p'):
         if self.term_type == "polynomial":
-            return f"({parameter}^{self.exponent})"
+            return f"{parameter}^({self.exponent})"
         elif self.term_type == "logarithm":
             return f"log2({parameter})^({self.exponent})"
 
@@ -90,10 +90,15 @@ class CompoundTerm(SingleParameterTerm):
         return function_value
 
     def to_string(self, parameter='p'):
-        function_string = str(self.coefficient)
-        for t in self.simple_terms:
+        function_string = ""
+        if self.coefficient != 1:
+            function_string += str(self.coefficient)
             function_string += ' * '
+        for t in self.simple_terms[:-1]:
             function_string += t.to_string(parameter)
+            function_string += ' * '
+        if len(self.simple_terms) > 0:
+            function_string += self.simple_terms[-1].to_string(parameter)
         return function_string
 
     def __imul__(self, term: SingleParameterTerm):

@@ -23,6 +23,7 @@ def makeExponent(exponent):
     exponent = exponent.replace('9', '⁹')
     exponent = exponent.replace('-', '⁻')
     exponent = exponent.replace('.', '̇ ')
+    exponent = exponent.replace('/', '⸍')
     return exponent
 
 
@@ -52,7 +53,6 @@ def replace_substr(formula, begin, end, substr):
 
 
 def formatNumber(value_str, precision=3):
-
     # try to convert long 0.00000 prefixes to 10^-x
     if value_str.find('.') != -1 and value_str.find('e') == -1:
         splitted_value = value_str.split('.')
@@ -68,10 +68,10 @@ def formatNumber(value_str, precision=3):
                     splitted_value[1][zero_count:]) - 1)
                 value_str = value_str.replace("+", "")
 
-        elif(len(splitted_value[0]) > 4):
-            count_digits_before_decimal = len(splitted_value[0])-1
+        elif (len(splitted_value[0]) > 4):
+            count_digits_before_decimal = len(splitted_value[0]) - 1
             while splitted_value[0][count_digits_before_decimal] == '0':
-                count_digits_before_decimal = count_digits_before_decimal-1
+                count_digits_before_decimal = count_digits_before_decimal - 1
             value_str = '{:.{}e}'.format(float(value_str), len(
                 splitted_value[0][:count_digits_before_decimal]))
             value_str = value_str.replace("+", "")
@@ -85,9 +85,11 @@ def formatNumber(value_str, precision=3):
         else:
             value_after_e = splitted_value[1]
         value_str = '{:.{}f}'.format(
-            float(splitted_value[0]), precision)+"e" + ''.join(value_after_e)
-    else:
+            float(splitted_value[0]), precision) + "e" + ''.join(value_after_e)
+    elif '.' in value_str:
         value_str = '{:.{}f}'.format(float(value_str), precision)
+    else:
+        value_str = '{:d}'.format(int(value_str))
 
     # Convert scientific exponent notation into 10^
     value_str = value_str.replace('e', 'x10^')
@@ -96,7 +98,7 @@ def formatNumber(value_str, precision=3):
     if value_str.find('^') != -1:
         split_value_str = value_str.split('^')
         value_after = makeExponent(split_value_str[1])
-        value_str = split_value_str[0]+(value_after)
+        value_str = split_value_str[0] + (value_after)
     return value_str
 
 
@@ -105,7 +107,6 @@ def isnumber(c):
 
 
 def formatFormula(formula):
-
     end = 0
     # Set logarithm base
     while formula.find('log', end) != -1:
@@ -120,21 +121,30 @@ def formatFormula(formula):
     end = 0
     while formula.find('^', end) != -1:
         begin = formula.find('^', end)
-        end = begin+1
+        offset = 1
+        end_offset = 0
+        end = begin + offset
+        if formula[end] == '(':
+            end += 1
+            offset += 1
         if formula[end] == '-':
             end = end + 1
-        while formula[end].isdigit() or formula[end] == '.':
+        while formula[end].isdigit() or formula[end] == '.' or formula[end] == '/':
             end = end + 1
-        exponent = formula[begin+1:end]
+        if formula[end] == ')':
+            end_offset += 1
+
+        exponent = formula[begin + offset:end]
         # Skip exponent 1
         if exponent == '1':
             exponent = exponent.replace('1', '')
         else:
             exponent = makeExponent(exponent)
-        formula = replace_substr(formula, begin, end, exponent)
+        formula = replace_substr(formula, begin, end + end_offset, exponent)
 
     # Replace '+-'
-    formula = formula.replace('+-', '-')
+    formula = formula.replace('+-', '−')
+    formula = formula.replace('+ -', '− ')
 
     # Format numbers
     # last to get exponenten and base out of the way
@@ -161,7 +171,7 @@ def formatFormula(formula):
             if isnumber(formula[i]) or formula[i] == '+' or formula[i] == '-':
                 mode = 1
             else:
-                end = i-1
+                end = i - 1
                 number = formatNumber(formula[begin:end])
                 formula = replace_substr(formula, begin, end, number)
                 i = begin + len(number)

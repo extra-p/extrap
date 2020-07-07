@@ -1,3 +1,4 @@
+from entities.hypotheses import Hypothesis
 from util.deprecation import deprecated
 from util.caching import cached_property
 import numpy
@@ -6,7 +7,7 @@ import numpy
 class Model:
 
     def __init__(self, hypothesis, callpath=None, metric=None):
-        self.hypothesis = hypothesis
+        self.hypothesis: Hypothesis = hypothesis
         self.callpath = callpath
         self.metric = metric
         self.measurements = []
