@@ -106,10 +106,16 @@ class CompoundTerm(SingleParameterTerm):
         return self
 
     @staticmethod
-    def create(a, b, c):
+    def create(a, b, c=None):
+        if c is None:
+            c = b
+            f = a
+        else:
+            f = Fraction(a, b)
+            
         compound_term = CompoundTerm()
         if a != 0:
-            compound_term *= SimpleTerm("polynomial", Fraction(a, b))
+            compound_term *= SimpleTerm("polynomial", f)
         if c != 0:
             compound_term *= SimpleTerm("logarithm", c)
         return compound_term

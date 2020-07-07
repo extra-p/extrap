@@ -10,6 +10,7 @@ directory for details.
 """
 
 import copy
+import itertools
 import logging
 from typing import List
 
@@ -37,6 +38,21 @@ class SingleParameterModeler(LegacyModeler):
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
     use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
 
+    poly_exponents = modeler_options.add('', str, 'Set of polynomial exponents. Use comma separated list.',
+                                         name='Polynomial', on_change=lambda self, v: self._exponents_changed())
+    log_exponents = modeler_options.add('', str, 'Set of logarithmic exponents. Use comma separated list.',
+                                        name='Logarithmic', on_change=lambda self, v: self._exponents_changed())
+    retain_default_exponents = modeler_options.add(False, bool,
+                                                   'If set the default exponents are added to the given ones.',
+                                                   name='Retain Default',
+                                                   on_change=lambda self, v: self._exponents_changed())
+    force_combination_exponents = modeler_options.add(False, bool,
+                                                      'If set the exact combination of exponents is forced.',
+                                                      name='Force Combination',
+                                                      on_change=lambda self, v: self._exponents_changed())
+    modeler_options.group('Exponents', poly_exponents, log_exponents, retain_default_exponents,
+                          force_combination_exponents)
+
     def __init__(self):
         """
         Initialize SingleParameterModeler object.
@@ -61,6 +77,23 @@ class SingleParameterModeler(LegacyModeler):
         # create the building blocks for the hypothesis
         self.hypotheses_building_blocks: List[CompoundTerm] = self.create_default_building_blocks(
             self.allow_log_terms)
+
+    def _exponents_changed(self):
+        def parse_expos(expos):
+            expos = expos.split(',')
+            return [float(e) if '.' in e else int(e)
+                    for e in expos if e.isnumeric()]
+
+        polyexpos = parse_expos(self.poly_exponents)
+        logexpos = parse_expos(self.log_exponents)
+
+        if len(polyexpos) > 0 or len(logexpos) > 0:
+            self.hypotheses_building_blocks = self.generate_building_blocks(polyexpos, logexpos,
+                                                                            self.force_combination_exponents)
+            if self.retain_default_exponents:
+                self.hypotheses_building_blocks.extend(self.create_default_building_blocks(self.allow_log_terms))
+        else:
+            self.hypotheses_building_blocks = self.create_default_building_blocks(self.allow_log_terms)
 
     def get_matching_hypotheses(self, measurements: List[Measurement]):
         """
@@ -210,6 +243,17 @@ class SingleParameterModeler(LegacyModeler):
                     f"Compound term {i}: {compound_term.to_string(parameter)}")
 
         return hypotheses_building_blocks
+
+    def generate_building_blocks(self, poly_exponents, log_exponents, force_combination=False):
+        if force_combination:
+            exponents = itertools.product(poly_exponents, log_exponents)
+        else:
+            exponents = itertools.chain(
+                itertools.product(poly_exponents, [0]),
+                itertools.product([0], log_exponents),
+                itertools.product(poly_exponents, log_exponents))
+
+        return [CompoundTerm.create(*e) for e in exponents]
 
     def create_constant_model(self, measurements):
         """
