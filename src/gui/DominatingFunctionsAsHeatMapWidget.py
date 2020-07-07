@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 import sys
 from matplotlib.figure import Figure
 import numpy as np
@@ -22,6 +21,7 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 
 #####################################################################
 
@@ -52,7 +52,7 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         maxX = self.heatMapGraphWidget.getMaxX()
         maxY = self.heatMapGraphWidget.getMaxY()
 
-        #100, 75, 50
+        # 100, 75, 50
         if maxX <= 1000:
             numberOfPixels_x = 100
         elif maxX > 1000 and maxX <= 1000000000:
@@ -67,7 +67,7 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         else:
             numberOfPixels_y = 50
 
-        #print("max x:", maxX, "max y:", maxY)
+        # print("max x:", maxX, "max y:", maxY)
         pixelGap_x = self.getPixelGap(lowerlimit, maxX, numberOfPixels_x)
         pixelGap_y = self.getPixelGap(lowerlimit, maxY, numberOfPixels_y)
         x = np.arange(1.0, maxX, pixelGap_x)
@@ -80,12 +80,12 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         functions.append("2*y**3-x**2")
         functions.append("5.4*x*y")
         functions.append("12.68+3.67*10**-2*x**(5/4)*y")
-        #functions.append("1.95*10**4+81.8*np.log(x)*y**(7/4) +4.62*10**3*y**(7/4)")
+        # functions.append("1.95*10**4+81.8*np.log(x)*y**(7/4) +4.62*10**3*y**(7/4)")
         functions.append("9.82+9.62*10**-3*x*y**(3/2)")
 
         for i in range(len(functions)):
             func = functions[i]
-            #print ( "func", functions[i])
+            # print ( "func", functions[i])
             zs = np.array([self.calculate_z(x, y, eval(func))
                            for x, y in zip(np.ravel(X), np.ravel(Y))])
             Z = zs.reshape(X.shape)
@@ -94,8 +94,8 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
 
         # define a color map depending upon the number of functions we have
         # todo: as of now hardcoding
-        #colors = ['r','g','b']
-        #colors = ['c','m','y']
+        # colors = ['r','g','b']
+        # colors = ['c','m','y']
         colors = ['r', 'g', 'b', 'c', 'm', 'y']
 
         # map each function to a particular color
@@ -113,7 +113,7 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
 
         for i in range(len(z_List[0])):
             for j in range(len(functions)):
-                if(z_List[j][i] > max_z_val):
+                if (z_List[j][i] > max_z_val):
                     max_z_val = z_List[j][i]
                     func_with_max_z = functions[j]
                     color_for_max_z = dict_callpath_color[func_with_max_z]
@@ -121,14 +121,14 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
             max_function_list.append(func_with_max_z)
             max_color_list.append(color_for_max_z)
 
-        #indicesList = list()
+        # indicesList = list()
         function_indices_map = {}
         for i in range(len(functions)):
             indices = self.get_dominating_function_indices(
                 functions[i], max_function_list)
             if indices:
                 function_indices_map[functions[i]] = indices
-        #print ("function_indices_map", function_indices_map)
+        # print ("function_indices_map", function_indices_map)
 
         max_Z_List = np.array(max_z_list).reshape(X.shape)
         max_Color_List = np.array(max_color_list).reshape(X.shape)
@@ -161,10 +161,6 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
     def calculate_z(self, x, y, functiontoEvaluate):
         return functiontoEvaluate
 
-    def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
-        pixelGap = (upperlimit - lowerlimit)/numberOfPixels
-        return pixelGap
-
     def populateCallPathColorMap(self, callpaths, colors):
         dict_callpath_color = {}
         current_index = 0
@@ -192,14 +188,8 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         functionIndex = -1
         while True:
             try:
-                functionIndex = functionList.index(function, functionIndex+1)
+                functionIndex = functionList.index(function, functionIndex + 1)
                 functionIndexList.append(functionIndex)
             except ValueError:
                 break
         return functionIndexList
-
-
-class MyCustomToolbar(NavigationToolbar):
-
-    toolitems = [toolitem for toolitem in NavigationToolbar.toolitems if
-                 toolitem[0] in ('Home1', 'Save')]

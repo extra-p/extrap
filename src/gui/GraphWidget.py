@@ -9,16 +9,15 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 import math
 import numpy
-
 
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 from gui.Utils import formatFormula
 from gui.Utils import formatNumber
+
 
 #####################################################################
 
@@ -27,7 +26,8 @@ class GraphWidget(QWidget):
     """This class represents a Widget that is used to show the graph on
        the main window.
     """
-#####################################################################
+
+    #####################################################################
 
     def __init__(self, main_widget, parent):
         super(GraphWidget, self).__init__(parent)
@@ -155,8 +155,8 @@ class GraphWidget(QWidget):
         self.setBottomMargin(80)
         self.setTopMargin(20)
         self.setRightMargin(20)
-        self.legend_x = 100   # X-coordinate of the upper left corner of the legend
-        self.legend_y = 20    # Y-coordinate of the upper left corner of the legend
+        self.legend_x = 100  # X-coordinate of the upper left corner of the legend
+        self.legend_y = 20  # Y-coordinate of the upper left corner of the legend
 
         # the actual value for below 3 variables will be set later in the code
         self.setMaxY(0)
@@ -430,13 +430,13 @@ class GraphWidget(QWidget):
 
             parameters = self.main_widget.experiment.parameters
             model_function_text = 'Model: ' + \
-                formatFormula(
-                    model_function.to_string(parameters))
+                                  formatFormula(
+                                      model_function.to_string(parameters))
 
             data_points_text = '\n'.join(
-                ('('+str(x) + ', ' + str(y)+')') for (x, y) in data_points)
+                ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)
             text += callpath_name + '\n' + data_points_text + \
-                '\n' + model_function_text + '\n\n'
+                    '\n' + model_function_text + '\n\n'
 
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
@@ -469,9 +469,9 @@ class GraphWidget(QWidget):
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - \
-            self.right_margin
+                           self.right_margin
         self.graph_height = self.frameGeometry().height() - self.top_margin - \
-            self.bottom_margin
+                            self.bottom_margin
         self.setMaxY(self.calculateMaxY(model_list) * 1.2)
 
         # Draw coordinate system
@@ -530,8 +530,8 @@ class GraphWidget(QWidget):
             text_len = 0
             for callpath, color in callpath_color_dict.items():
                 text_len = max(text_len, len(callpath.name))
-            self.legend_width = 55 + text_len * (font_size-1)
-            self.legend_height = counter_increment*(dict_size) + px_between
+            self.legend_width = 55 + text_len * (font_size - 1)
+            self.legend_height = counter_increment * (dict_size) + px_between
 
             paint.drawRect(self.legend_x,
                            self.legend_y,
@@ -542,15 +542,15 @@ class GraphWidget(QWidget):
                 pen = QPen(QColor(color))
                 pen.setWidth(2)
                 paint.setPen(pen)
-                paint.drawLine(self.legend_x+5,
-                               self.legend_y+px_between+counter,
-                               self.legend_x+35,
-                               self.legend_y+px_between+counter)
+                paint.drawLine(self.legend_x + 5,
+                               self.legend_y + px_between + counter,
+                               self.legend_x + 35,
+                               self.legend_y + px_between + counter)
                 paint.setPen(QColor("black"))
-                paint.drawText(self.legend_x+45,
-                               self.legend_y+px_between+counter,
+                paint.drawText(self.legend_x + 45,
+                               self.legend_y + px_between + counter,
                                callpath.name)
-                counter = counter+counter_increment
+                counter = counter + counter_increment
 
         else:
             text_len = 0
@@ -562,8 +562,8 @@ class GraphWidget(QWidget):
                                len(callpath.name))
 
             aggregated_callpath_name = str.join('+', callpath_list)
-            self.legend_width = 55 + text_len * (font_size-1)
-            self.legend_height = counter_increment*1 + px_between
+            self.legend_width = 55 + text_len * (font_size - 1)
+            self.legend_height = counter_increment * 1 + px_between
 
             paint.drawRect(self.legend_x,
                            self.legend_y,
@@ -572,13 +572,13 @@ class GraphWidget(QWidget):
             pen = QPen(QColor("red"))
             pen.setWidth(2)
             paint.setPen(pen)
-            paint.drawLine(self.legend_x+5,
-                           self.legend_y+px_between,
-                           self.legend_x+35,
-                           self.legend_y+px_between)
+            paint.drawLine(self.legend_x + 5,
+                           self.legend_y + px_between,
+                           self.legend_x + 35,
+                           self.legend_y + px_between)
             paint.setPen(QColor("black"))
-            paint.drawText(self.legend_x+45,
-                           self.legend_y+px_between,
+            paint.drawText(self.legend_x + 45,
+                           self.legend_y + px_between,
                            aggregated_callpath_name)
 
     def drawModel(self, paint, model, color):
@@ -592,7 +592,6 @@ class GraphWidget(QWidget):
         paint.setPen(pen)
 
         for (x0, y0, x1, y1) in self.draw_line(cord_list):
-
             paint.drawLine(int(self.logicalXtoPixel(x0)),
                            int(self.logicalYtoPixel(y0)),
                            int(self.logicalXtoPixel(x1)),
@@ -610,7 +609,6 @@ class GraphWidget(QWidget):
         paint.setPen(pen)
 
         for (x0, y0, x1, y1) in self.draw_line(cord_list):
-
             paint.drawLine(int(self.logicalXtoPixel(x0)),
                            int(self.logicalYtoPixel(y0)),
                            int(self.logicalXtoPixel(x1)),
@@ -624,15 +622,15 @@ class GraphWidget(QWidget):
         y_other_end = self.top_margin
         x_other_end = self.graph_width + self.left_margin
 
-        num_points_marked_on_x_axis = int(self.graph_width/x_offset)
-        if(num_points_marked_on_x_axis < self.minimum_number_points_marked):
+        num_points_marked_on_x_axis = int(self.graph_width / x_offset)
+        if (num_points_marked_on_x_axis < self.minimum_number_points_marked):
             num_points_marked_on_x_axis = self.minimum_number_points_marked
-        x_offset = self.graph_width/num_points_marked_on_x_axis
+        x_offset = self.graph_width / num_points_marked_on_x_axis
 
-        num_points_marked_on_y_axis = int(self.graph_height/x_offset)
+        num_points_marked_on_y_axis = int(self.graph_height / x_offset)
         if num_points_marked_on_y_axis == 0:
             num_points_marked_on_y_axis = 1
-        y_offset = self.graph_height/num_points_marked_on_y_axis
+        y_offset = self.graph_height / num_points_marked_on_y_axis
 
         x_to_mark_cal = self.get_axis_mark_list(
             self.max_x, num_points_marked_on_x_axis)
@@ -647,6 +645,7 @@ class GraphWidget(QWidget):
         number_of_intermediate_points_on_y = 4
 
         # drawing the rectangular region that would contain the graph
+        paint.setPen(QColor("white"))
         paint.setBrush(QColor("white"))
         paint.drawRect(self.frameGeometry())
         # drawing x axis and y axis
@@ -656,14 +655,14 @@ class GraphWidget(QWidget):
 
         # marking divions and subdivisons on x axis
         y = y_origin
-        paint.drawText(self.left_margin-5, y+30, "0")
-        if(x_to_mark[0] != 0):
+        paint.drawText(self.left_margin - 5, y + 30, "0")
+        if (x_to_mark[0] != 0):
             intermediate_x_offset = x_offset / \
-                (number_of_intermediate_points_on_x+1)
-            intermediate_x = self.left_margin+intermediate_x_offset
+                                    (number_of_intermediate_points_on_x + 1)
+            intermediate_x = self.left_margin + intermediate_x_offset
             for _ in range(0, number_of_intermediate_points_on_x, +1):
-                paint.drawLine(intermediate_x, y-3, intermediate_x, y)
-                intermediate_x = intermediate_x+intermediate_x_offset
+                paint.drawLine(intermediate_x, y - 3, intermediate_x, y)
+                intermediate_x = intermediate_x + intermediate_x_offset
             # x_last_position = self.left_margin
 
         # removing the  "_" sign form beginning if x_label has
@@ -674,52 +673,52 @@ class GraphWidget(QWidget):
         for i in range(len(x_to_mark)):
             x = self.logicalXtoPixel(x_to_mark_cal[i])
 
-            if(i == (int(len(x_to_mark)/2))):
-                paint.drawText(x, y+50, x_label)
+            if (i == (int(len(x_to_mark) / 2))):
+                paint.drawText(x, y + 50, x_label)
 
             intermediate_x_offset = x_offset / \
-                (number_of_intermediate_points_on_x+1)
-            intermediate_x = x+intermediate_x_offset
+                                    (number_of_intermediate_points_on_x + 1)
+            intermediate_x = x + intermediate_x_offset
             for _ in range(0, number_of_intermediate_points_on_x, +1):
-                paint.drawLine(intermediate_x, y-3, intermediate_x, y)
-                intermediate_x = intermediate_x+intermediate_x_offset
-            paint.drawLine(x, y-6, x, y)
-            paint.drawText(x-15, y+30, str(x_to_mark[i]))
+                paint.drawLine(intermediate_x, y - 3, intermediate_x, y)
+                intermediate_x = intermediate_x + intermediate_x_offset
+            paint.drawLine(x, y - 6, x, y)
+            paint.drawText(x - 15, y + 30, str(x_to_mark[i]))
             # x_last_position = x
 
-            for y_value in range((y_origin-7), y_other_end, -3):
+            for y_value in range((y_origin - 7), y_other_end, -3):
                 paint.drawPoint(x, y_value)
 
         # marking divions and subdivisons on y axis
         x = self.left_margin
 
-        if(y_to_mark[0] != 0):
+        if (y_to_mark[0] != 0):
             intermediate_y_offset = y_offset / \
-                (number_of_intermediate_points_on_y+1)
-            intermediate_y = y_origin-intermediate_y_offset
+                                    (number_of_intermediate_points_on_y + 1)
+            intermediate_y = y_origin - intermediate_y_offset
             for _ in range(0, number_of_intermediate_points_on_y, +1):
                 paint.drawLine(x_origin, intermediate_y,
-                               x_origin+3, intermediate_y)
-                intermediate_y = intermediate_y-intermediate_y_offset
+                               x_origin + 3, intermediate_y)
+                intermediate_y = intermediate_y - intermediate_y_offset
             # y_last_position = y_origin
 
         for j in range(len(y_to_mark)):
             y = self.logicalYtoPixel(y_to_mark_cal[j])
 
-            if(j+1 == (int(len(y_to_mark)/2))):
-                paint.drawText(5, y-(y_offset/2), selectedMetric.name)
+            if (j + 1 == (int(len(y_to_mark) / 2))):
+                paint.drawText(5, y - (y_offset / 2), selectedMetric.name)
 
             intermediate_y_offset = y_offset / \
-                (number_of_intermediate_points_on_y+1)
-            intermediate_y = y-intermediate_y_offset
+                                    (number_of_intermediate_points_on_y + 1)
+            intermediate_y = y - intermediate_y_offset
             for _ in range(0, number_of_intermediate_points_on_y, +1):
                 paint.drawLine(x_origin, intermediate_y,
-                               x_origin+3, intermediate_y)
-                intermediate_y = intermediate_y-intermediate_y_offset
-            paint.drawLine(x_origin, y, x_origin+6, y)
-            paint.drawText(x_origin-70, y+5, str(y_to_mark[j]))
+                               x_origin + 3, intermediate_y)
+                intermediate_y = intermediate_y - intermediate_y_offset
+            paint.drawLine(x_origin, y, x_origin + 6, y)
+            paint.drawText(x_origin - 70, y + 5, str(y_to_mark[j]))
             # y_last_position = y
-            for x_value in range((x_origin+7), x_other_end, +3):
+            for x_value in range((x_origin + 7), x_other_end, +3):
                 paint.drawPoint(x_value, y)
 
     def calculate_function(self, function, length_x_axis):
@@ -757,16 +756,16 @@ class GraphWidget(QWidget):
         calculate and aggreagate the correspoding y value for all the model functios
        """
         m_x_lower_bound = 1
-        number_of_x_points = int(length_x_axis/2)
+        number_of_x_points = int(length_x_axis / 2)
         width_between_x = float(
-            (float(self.max_x-m_x_lower_bound))/number_of_x_points)
+            (float(self.max_x - m_x_lower_bound)) / number_of_x_points)
         x_list = list()
         y_list = list()
         x_temp = float(m_x_lower_bound)
 
-        for _ in range(0, int((number_of_x_points)+1)):
+        for _ in range(0, int((number_of_x_points) + 1)):
             x_list.append(x_temp)
-            x_temp = x_temp+width_between_x
+            x_temp = x_temp + width_between_x
 
         # TODO: fix this
         parameter_value_list = EXTRAP.ParameterValueList()
@@ -797,10 +796,10 @@ class GraphWidget(QWidget):
         """
 
         axis_points_to_mark = list()
-        axis_range = float((float(max_val-0))/number_of_points)
+        axis_range = float((float(max_val - 0)) / number_of_points)
         value = 0
-        for _ in range(1, number_of_points+1):
-            value = value+axis_range
+        for _ in range(1, number_of_points + 1):
+            value = value + axis_range
             if value < 1:
                 digits_after_point = int(math.log10(1 / value)) + 2
                 value_to_append = float(
@@ -861,7 +860,7 @@ class GraphWidget(QWidget):
         splitted_value = value.split('e')
         first_part = float(splitted_value[0])
         first_part = round(first_part, 2)
-        return '{:g}'.format(float(first_part))+"e" + ''.join(splitted_value[1])
+        return '{:g}'.format(float(first_part)) + "e" + ''.join(splitted_value[1])
 
     def calculateDataPoints(self, selectedMetric, selectedCallpath, ignore_limit=False):
         """ This function calculates datapoints to be marked on the graph
@@ -993,8 +992,8 @@ class GraphWidget(QWidget):
             zip(outlier_x_absolute_pos_list, outlier_y_absolute_pos_list))
         for (x_cordinate, y_cordinate) in outlier_on_graph_list:
             # paint.drawPoint(x_cordinate, y_cordinate)
-            paint.drawLine(x_cordinate-2, y_cordinate,
-                           x_cordinate+2, y_cordinate)
+            paint.drawLine(x_cordinate - 2, y_cordinate,
+                           x_cordinate + 2, y_cordinate)
         pen = QPen(QColor("blue"))
         pen.setWidth(2)
         paint.setPen(pen)
@@ -1022,7 +1021,8 @@ class GraphWidget(QWidget):
         # print ("mouse release event release_x_pos", release_x_pos)
 
         # move legend id clicked on legend
-        if (0 <= self.clicked_x_pos-self.legend_x <= self.legend_width) and (0 <= self.clicked_y_pos-self.legend_y <= self.legend_height):
+        if (0 <= self.clicked_x_pos - self.legend_x <= self.legend_width) and (
+                0 <= self.clicked_y_pos - self.legend_y <= self.legend_height):
             self.legend_x = self.legend_x + release_x_pos - self.clicked_x_pos
             self.legend_y = self.legend_y + release_y_pos - self.clicked_y_pos
             self.legend_x = max(0, self.legend_x)

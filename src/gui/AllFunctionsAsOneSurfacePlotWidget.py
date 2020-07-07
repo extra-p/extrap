@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 from matplotlib.figure import Figure
 
 import numpy as np
@@ -17,10 +16,11 @@ import matplotlib.patches as mpatches
 from gui.AdvancedPlotWidget import GraphDisplayWindow
 
 from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *   # @UnusedWildImport
-from PySide2.QtWidgets import *   # @UnusedWildImport
+from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 
 #####################################################################
 
@@ -62,32 +62,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
             maxY = lower_max
 
         # define grid parameters based on max x and max y value
-        if (maxX < 10):
-            numberOfPixels_x = 45
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-
-        elif maxX >= 10 and maxX <= 1000:
-            numberOfPixels_x = 40
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX > 1000 and maxX <= 1000000000:
-            numberOfPixels_x = 15
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        else:
-            numberOfPixels_x = 5
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-
-        if (maxY < 10):
-            numberOfPixels_y = 45
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY >= 10 and maxY <= 1000:
-            numberOfPixels_y = 40
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY > 1000 and maxY <= 1000000000:
-            numberOfPixels_y = 15
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        else:
-            numberOfPixels_y = 5
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
+        pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
 
         # Get the grid of the x and y values
         x = np.arange(1.0, maxX, pixelGap_x)
@@ -106,7 +81,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         # Get the callpath color map
         dict_callpath_color = self.main_widget.get_callpath_color_map()
 
-        #colors = ['r','g','b','c','m','y']
+        # colors = ['r','g','b','c','m','y']
         # colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
 
         # Set the x_label and y_label based on parameter selected.
@@ -149,22 +124,3 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
                             loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
             leg.set_draggable(True)
-
-    def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
-        """ 
-           This function calculate the gap in pixels based on number of pixels and max value 
-        """
-        pixelGap = (upperlimit - lowerlimit)/numberOfPixels
-        return pixelGap
-
-    def calculate_z(self, x, y, function):
-        """ 
-           This function evaluates the function passed to it. 
-        """
-        parameter_value_list = self.main_widget.data_display.getValues()
-        param1 = self.main_widget.data_display.getAxisParameter(0).id
-        param2 = self.main_widget.data_display.getAxisParameter(1).id
-        parameter_value_list[param1] = x
-        parameter_value_list[param2] = y
-        z_value = function.evaluate(parameter_value_list)
-        return z_value

@@ -33,16 +33,14 @@ class AxisSelection(QWidget):
         shown on one of the graph axis. It allows to set the maximum
         value for the axis in the graph.
     '''
-#####################################################################
+    #####################################################################
 
-    max_x = 10
-    max_y = 10
-    max_y = 10
+    max_values = [10, 10, 10]
 
-    def __init__(self, manager, parent, index, parameters):
+    def __init__(self, manager, parent, index: int, parameters):
         super(AxisSelection, self).__init__(parent)
         self.manager = manager
-        self.index = index
+        self.index: int = index
         self.initUI(parameters)
         self.updateDisplay()
 
@@ -52,7 +50,7 @@ class AxisSelection(QWidget):
         self.grid.setColumnStretch(3, 1)
         if self.index == 0:
             label1 = QLabel("X-axis")
-            #label1.setMinimumHeight( 75 )
+            # label1.setMinimumHeight( 75 )
         elif self.index == 1:
             label1 = QLabel("Y-axis")
         elif self.index == 2:
@@ -61,7 +59,7 @@ class AxisSelection(QWidget):
             label1 = QLabel("Axis " + str(self.index))
         label1.setMinimumWidth(75)
         self.combo_box = QComboBox(self)
-        #self.combo_box.setMinimumWidth( 75 )
+        # self.combo_box.setMinimumWidth( 75 )
         self.combo_box.setMinimumHeight(20)
         for i in range(0, len(parameters)):
             self.combo_box.addItem(parameters[i].get_name())
@@ -76,15 +74,11 @@ class AxisSelection(QWidget):
         self.max_edit.setMinimum(1)
         self.max_edit.setMinimumHeight(25)
         self.max_edit.setMaximum(10000000)
-        if self.index == 0:
-            self.max_edit.setValue(AxisSelection.max_x)
-        elif self.index == 1:
-            self.max_edit.setValue(AxisSelection.max_y)
-        elif self.index == 2:
-            self.max_edit.setValue(AxisSelection.max_z)
+        if self.index <= 2:
+            self.max_edit.setValue(AxisSelection.max_values[self.index])
         else:
             self.max_edit.setValue(10)
-        #self.max_edit.setValue( 10 )
+        # self.max_edit.setValue( 10 )
         self.max_edit.valueChanged.connect(self.max_changed)
 
         self.grid.addWidget(label1, 0, 0)
@@ -123,12 +117,8 @@ class AxisSelection(QWidget):
         '''
         display = self.manager.display_widget.currentWidget()
 
-        if self.index == 0:
-            AxisSelection.max_x = float(self.max_edit.text())
-        elif self.index == 1:
-            AxisSelection.max_y = float(self.max_edit.text())
-        elif self.index == 2:
-            AxisSelection.max_z = float(self.max_edit.text())
+        if self.index <= 2:
+            AxisSelection.max_values[self.index] = float(self.max_edit.text())
 
         display.setMax(self.index, float(self.max_edit.text()))
 
@@ -143,16 +133,9 @@ class AxisSelection(QWidget):
                     self.clearLayout(item.layout())
 
     def setMax(self, axis, maxValue):
-
-        if axis == 0:
-            self.max_x = maxValue
-            self.max_edit.setValue(self.max_x)
-        elif axis == 1:
-            self.max_y = maxValue
-            self.max_edit.setValue(self.max_y)
-        elif axis == 2:
-            self.max_z = maxValue
-            self.max_edit.setValue(self.max_z)
+        if axis <= 2:
+            self.max_values[axis] = maxValue
+            self.max_edit.setValue(maxValue)
 
     def getParameter(self):
         p = Parameter(self.combo_box.currentText())
@@ -181,7 +164,8 @@ class ValueSelection(QWidget):
         for this parameter.
         It is a helper class for the class DataDisplay.
     '''
-#####################################################################
+
+    #####################################################################
 
     def __init__(self, manager, parent, param_id, parameter_name):
         super(ValueSelection, self).__init__(parent)
@@ -255,13 +239,15 @@ class DataDisplayManager(QWidget):
         5. For evaluation of functions retrieve the value if fixed parameters
            with getValues()
     """
-#####################################################################
+
+    #####################################################################
 
     def __init__(self, main_widget, parent):
         super(DataDisplayManager, self).__init__(parent)
         self.main_widget = main_widget
         self.axis_selections = list()
         self.value_selections = list()
+        self._experiment = None
         self.initUI()
 
     def initUI(self):
@@ -362,6 +348,12 @@ class DataDisplayManager(QWidget):
         experiment = self.main_widget.getExperiment()
         if experiment == None:
             return
+        if self._experiment is None or self._experiment != experiment:
+            self._experiment = experiment
+            max_coordinate = max(experiment.coordinates)
+            for i in range(min(len(max_coordinate), 3)):
+                AxisSelection.max_values[i] = max_coordinate[i] * 1.2
+
         parameters = experiment.get_parameters()
         self.generateSelections(parameters)
         self.updateWidget()

@@ -15,17 +15,17 @@ from matplotlib.figure import Figure
 
 from gui.AdvancedPlotWidget import GraphDisplayWindow
 
-
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+
 #####################################################################
 
 
-class AllFunctionsAsDifferentSurfacePlot (GraphDisplayWindow):
+class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
         super().__init__(graphWidget, main_widget, width, height, dpi)
 
@@ -61,31 +61,7 @@ class AllFunctionsAsDifferentSurfacePlot (GraphDisplayWindow):
             maxY = lower_max
 
         # define grid parameters based on max x and max y value
-        if (maxX < 10):
-            numberOfPixels_x = 45
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX >= 10 and maxX <= 1000:
-            numberOfPixels_x = 40
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX > 1000 and maxX <= 1000000000:
-            numberOfPixels_x = 15
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        else:
-            numberOfPixels_x = 5
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-
-        if (maxY < 10):
-            numberOfPixels_y = 45
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY >= 10 and maxY <= 1000:
-            numberOfPixels_y = 40
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY > 1000 and maxY <= 1000000000:
-            numberOfPixels_y = 15
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        else:
-            numberOfPixels_y = 5
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
+        pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
 
         # Get the grid of the x and y values
         x = np.arange(1.0, maxX, pixelGap_x)
@@ -130,7 +106,7 @@ class AllFunctionsAsDifferentSurfacePlot (GraphDisplayWindow):
         # Draw the graphs in subplots
         for i in range(len(Z_List)):
             ax = self.fig.add_subplot(
-                1, number_of_subplots, i+1, projection='3d')
+                1, number_of_subplots, i + 1, projection='3d')
             ax.mouse_init()
             ax.get_xaxis().get_major_formatter().set_scientific(True)
             ax.xaxis.major.formatter._useMathText = True
@@ -156,3 +132,5 @@ class AllFunctionsAsDifferentSurfacePlot (GraphDisplayWindow):
                         loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
             leg.set_draggable(True)
+
+        self.fig.tight_layout()

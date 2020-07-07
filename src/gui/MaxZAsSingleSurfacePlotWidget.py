@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 from matplotlib.figure import Figure
 import matplotlib.ticker as ticker
 import numpy as np
@@ -21,6 +20,8 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+
 #####################################################################
 
 
@@ -62,31 +63,7 @@ class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
             maxY = lower_max
 
         # define grid parameters based on max x and max y value
-        if (maxX < 10):
-            numberOfPixels_x = 45
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX >= 10 and maxX <= 1000:
-            numberOfPixels_x = 40
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX > 1000 and maxX <= 1000000000:
-            numberOfPixels_x = 15
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        else:
-            numberOfPixels_x = 5
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-
-        if (maxY < 10):
-            numberOfPixels_y = 45
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY >= 10 and maxY <= 1000:
-            numberOfPixels_y = 40
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY > 1000 and maxY <= 1000000000:
-            numberOfPixels_y = 15
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        else:
-            numberOfPixels_y = 5
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
+        pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
 
         # Get the grid of the x and y values
         x = np.arange(1, maxX, pixelGap_x)
@@ -116,14 +93,14 @@ class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
             for i in range(len(z_List[0])):
                 max_z_val = z_List[0][i]
                 for j in range(len(model_list)):
-                    if(z_List[j][i] > max_z_val):
+                    if (z_List[j][i] > max_z_val):
                         max_z_val = z_List[j][i]
                 max_z_list.append(max_z_val)
 
             max_Z_List = np.array(max_z_list).reshape(X.shape)
 
         # Get the callpath color map
-        #dict_callpath_color = self.main_widget.get_callpath_color_map()
+        # dict_callpath_color = self.main_widget.get_callpath_color_map()
         # Set the x_label and y_label based on parameter selected.
         x_label = self.main_widget.data_display.getAxisParameter(0).name
         if x_label.startswith("_"):
