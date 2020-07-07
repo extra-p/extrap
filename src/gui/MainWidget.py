@@ -68,14 +68,9 @@ class MainWidget(QMainWindow):
         """
         self.setWindowTitle('Extra-P')
         # Status bar
-        self.statusBar()
-
-        #central_widget = QWidget(self)
-        #top_widget = QWidget(central_widget)
-        #bottom_widget = QWidget(central_widget)
+        # self.statusBar()
 
         # Main splitter
-        #hsplitter = QSplitter(top_widget)
 
         # Left side: Callpath and metric selection
         dock = QDockWidget(self.tr("Selection"), self)
@@ -94,36 +89,12 @@ class MainWidget(QMainWindow):
         dock.setWidget(self.modeler_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
-        # Set splitter sizes
-        # w = self.width()
-        # sizes = [w/3, w/3, w/3]
-        # hsplitter.setSizes(sizes)
-
-        # top widget
-        # grid = QGridLayout(top_widget)
-        # grid.addWidget(hsplitter, 0, 1)
-
         # bottom widget
         dock = QDockWidget(self.tr("Color Info"), self)
-        bottom_widget = QWidget(central_widget)
-        grid = QGridLayout(bottom_widget)
-        self.min_value = 1
-        self.min_value_label = QLabel(formatNumber(str(self.min_value)))
-        self.max_value = 1
-        self.max_value_label = QLabel(formatNumber(str(self.max_value)))
-        self.color_widget = ColorWidget(bottom_widget)
-        grid.addWidget(self.min_value_label, 0, 0)
-        grid.addWidget(self.max_value_label, 0, 20)
-        grid.addWidget(self.color_widget, 1, 0, 1, 21)
-        bottom_widget.setLayout(grid)
-        dock.setWidget(bottom_widget)
-        self.addDockWidget(Qt.BottomDockWidgetArea, dock)
-
-        # central_widget
-        # grid = QGridLayout(central_widget)
-        # central_widget.setLayout(grid)
-        # grid.addWidget(top_widget, 0, 0, 50, 0)
-        # grid.addWidget(bottom_widget, 51, 0, 2, 0)
+        self.color_widget = ColorWidget(self)
+        self.color_widget.update_min_max(self.min_value, self.max_value)
+        dock.setWidget(self.color_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
         # Menu creation
 

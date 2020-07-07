@@ -10,10 +10,11 @@ directory for details.
 """
 from PySide2.QtCore import QMargins
 
-
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 from PySide2.QtCore import *
+
+from gui.Utils import formatNumber
 
 
 class ColorWidget(QWidget):
@@ -21,15 +22,26 @@ class ColorWidget(QWidget):
     def __init__(self, parent):
         super(ColorWidget, self).__init__()
 
+        self.max_label = QLabel()
+        self.min_label = QLabel()
         self.initUI()
 
     def initUI(self):
 
-        self.setMinimumHeight(27)
+        self.setMinimumHeight(40)
+        self.setMinimumWidth(200)
         self.setWindowTitle('Colours')
         self.rect_width = 0
         self.rect_height = 0
-        self.setContentsMargins(QMargins(0, 0, 0, 0))
+        self.setContentsMargins(10, 10, 10, 10)
+
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
+        grid = QGridLayout(self)
+        grid.setContentsMargins(5, 0, 5, 0)
+        self.setStyleSheet("QLabel {color : white; }")
+        grid.addWidget(self.min_label, 0, 0)
+        grid.addWidget(self.max_label, 0, 1, Qt.AlignRight)
+        self.setLayout(grid)
         # self.red_component=0
         # self.green_component=0
         # self.blue_component=0
@@ -66,10 +78,15 @@ class ColorWidget(QWidget):
 
         self.rect_width = self.frameGeometry().width()
         self.rect_height = self.frameGeometry().height()
+        (mleft, mtop, mright, mbottom) = self.getContentsMargins()
 
-        for position in range(0, self.rect_width):
-            ratio = float(position)/self.rect_width
+        for position in range(mleft, self.rect_width - mright):
+            ratio = float(position) / self.rect_width
             color = self.getColor(ratio)
             paint.setPen(color)
             paint.setBrush(color)
-            paint.drawRect(position, 0, 1, self.rect_height)
+            paint.drawRect(position, mtop, 1, self.rect_height - mbottom - mtop)
+
+    def update_min_max(self, min_value, max_value):
+        self.min_label.setText(formatNumber(str(min_value)))
+        self.max_label.setText(formatNumber(str(max_value)))
