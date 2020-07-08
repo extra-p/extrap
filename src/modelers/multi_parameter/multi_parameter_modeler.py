@@ -11,7 +11,10 @@ directory for details.
 
 import copy
 import logging
+import warnings
 from typing import List
+
+import numpy as np
 
 from entities.coordinate import Coordinate
 from entities.functions import ConstantFunction
@@ -24,8 +27,10 @@ from entities.terms import MultiParameterTerm
 from modelers import single_parameter
 from modelers.abstract_modeler import LegacyModeler
 from modelers.abstract_modeler import MultiParameterModeler as AbstractMultiParameterModeler
+from modelers.modeler_options import modeler_options
 
 
+@modeler_options
 class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
     """
     This class represents the modeler for multi parameter functions.
@@ -34,6 +39,12 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
     """
 
     NAME = 'Multi-Parameter'
+
+    single_parameter_point_selection = modeler_options.add('auto', str, range=['auto', 'smallest', 'all'],
+                                                           description="Sets the point selection method for creating "
+                                                                       "the single-parameter models.")
+    allow_combinations_of_sums_and_products = modeler_options.add(True, bool,
+                                                                  description="Allows models that consist of combinations of sums and products.")
 
     def __init__(self):
         """
@@ -64,6 +75,57 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         _, value = coordinate.get_parameter_value(parameter_id)
         parameter_value_list.append(float(value))
         return parameter_value_list
+
+    def find_all_measurement_points(self, measurements: List[Measurement]):
+
+        if len(measurements) < self.min_measurement_points ** 2:
+            return None
+
+        dimensions = measurements[0].coordinate.dimensions
+        groups = [
+            {} for _ in range(dimensions)
+        ]
+
+        for m in measurements:
+            for p in range(dimensions):
+                coordinate_p_ = m.coordinate[p]
+                groups_p_ = groups[p]
+                if coordinate_p_ in groups_p_:
+                    groups_p_[coordinate_p_].append(m)
+                else:
+                    groups_p_[coordinate_p_] = [m]
+
+        def coordinate_except(m, pg):
+            return tuple(c for pc, c in enumerate(m.coordinate) if pc != pg)
+
+        for pg, g in enumerate(groups):
+            cms = iter(g.values())
+            first = next(cms)
+            len_first = len(first)
+            coord_set = set(coordinate_except(m, pg) for m in first)
+            for ms in cms:
+                if len_first != len(ms):
+                    return None
+                if any(coordinate_except(m, pg) not in coord_set for m in ms):
+                    return None
+
+        def make_measurement(c, ms: List[Measurement]):
+            values = mean = [m.mean for m in ms]
+            if self.use_median:
+                values = [m.median for m in ms]
+
+            measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, values)
+            measurement.median = measurement.mean
+            measurement.maximum = np.mean([m.maximum / m.mean for m in ms]) * measurement.mean
+            measurement.minimum = np.mean([m.minimum / m.mean for m in ms]) * measurement.mean
+            measurement.std = np.mean([m.std / m.mean for m in ms]) * measurement.mean
+
+            return measurement
+
+        combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items()]
+                                 for p, grp in enumerate(groups)]
+
+        return combined_measurements
 
     def find_first_measurement_points(self, measurements: List[Measurement]):
         """
@@ -106,9 +168,18 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         """
         Create a model for the given callpath and metric using the given data.
         """
-
-        # use the first base points found for each parameter for modeling for the single parameter functions
-        measurements_sp = self.find_first_measurement_points(measurements)
+        if self.single_parameter_point_selection == 'auto' or self.single_parameter_point_selection == 'all':
+            measurements_sp = self.find_all_measurement_points(measurements)
+            if not measurements_sp:
+                if self.single_parameter_point_selection == 'all':
+                    warnings.warn(
+                        "Could not use all measurement points. At least 25 measurements are needed; one for each "
+                        "combination of parameters.")
+                    # use the first base points found for each parameter for modeling for the single parameter functions
+                measurements_sp = self.find_first_measurement_points(measurements)
+        else:
+            # use the first base points found for each parameter for modeling for the single parameter functions
+            measurements_sp = self.find_first_measurement_points(measurements)
         # print(coordinates_list)
 
         # model all single parmaeter experiments using only the selected points from the step before
@@ -181,13 +252,16 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             mp_functions = [
                 # create f1 function a*b
                 MultiParameterFunction(mult),
-                # create f2 function a*b+a
-                MultiParameterFunction(add[0], mult),
-                # create f3 function a*b+b
-                MultiParameterFunction(add[1], mult),
                 # create f4 function a+b
                 MultiParameterFunction(*add)
             ]
+            if self.allow_combinations_of_sums_and_products:
+                mp_functions += [
+                    # create f2 function a*b+a
+                    MultiParameterFunction(add[0], mult),
+                    # create f3 function a*b+b
+                    MultiParameterFunction(add[1], mult)
+                ]
 
             # create the hypotheses from the functions
             mph = [MultiParameterHypothesis(f, self.use_median)
@@ -208,62 +282,63 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
             # create multi parameter functions
             mp_functions = [
-
                 # x*y*z
                 MultiParameterFunction(mult),
                 # x+y+z
-                MultiParameterFunction(*add),
-
-                # x*y*z+x
-                MultiParameterFunction(mult, add[0]),
-                # x*y*z+y
-                MultiParameterFunction(mult, add[1]),
-                # x*y*z+z
-                MultiParameterFunction(mult, add[2]),
-
-                # x*y*z+x*y
-                MultiParameterFunction(mult, mult_x_y),
-                # x*y*z+y*z
-                MultiParameterFunction(mult, mult_y_z),
-                # x*y*z+x*z
-                MultiParameterFunction(mult, mult_x_z),
-
-                # x*y*z+x*y+z
-                MultiParameterFunction(mult, mult_x_y, add[2]),
-                # x*y*z+y*z+x
-                MultiParameterFunction(mult, mult_y_z, add[0]),
-                # x*y*z+x*z+y
-                MultiParameterFunction(mult, mult_x_z, add[1]),
-
-                # x*y*z+x+y
-                MultiParameterFunction(mult, add[0], add[1]),
-                # x*y*z+x+z
-                MultiParameterFunction(mult, add[0], add[2]),
-                # x*y*z+y+z
-                MultiParameterFunction(mult, add[1], add[2]),
-
-                # x*y+z
-                MultiParameterFunction(mult_x_y, add[2]),
-                # x*y+z+y
-                MultiParameterFunction(mult_x_y, add[2], add[1]),
-                # x*y+z+x
-                MultiParameterFunction(mult_x_y, add[2], add[0]),
-
-                # x*z+y
-                MultiParameterFunction(mult_x_z, add[1]),
-                # x*z+y+x
-                MultiParameterFunction(mult_x_z, add[1], add[0]),
-                # x*z+y+z
-                MultiParameterFunction(mult_x_z, add[1], add[2]),
-
-                # y*z+x
-                MultiParameterFunction(mult_y_z, add[0]),
-                # y*z+x+y
-                MultiParameterFunction(mult_y_z, add[0], add[1]),
-                # y*z+x+z
-                MultiParameterFunction(mult_y_z, add[0], add[2])
+                MultiParameterFunction(*add)
             ]
+            if self.allow_combinations_of_sums_and_products:
+                # create multi parameter functions
+                mp_functions += [
+                    # x*y*z+x
+                    MultiParameterFunction(mult, add[0]),
+                    # x*y*z+y
+                    MultiParameterFunction(mult, add[1]),
+                    # x*y*z+z
+                    MultiParameterFunction(mult, add[2]),
 
+                    # x*y*z+x*y
+                    MultiParameterFunction(mult, mult_x_y),
+                    # x*y*z+y*z
+                    MultiParameterFunction(mult, mult_y_z),
+                    # x*y*z+x*z
+                    MultiParameterFunction(mult, mult_x_z),
+
+                    # x*y*z+x*y+z
+                    MultiParameterFunction(mult, mult_x_y, add[2]),
+                    # x*y*z+y*z+x
+                    MultiParameterFunction(mult, mult_y_z, add[0]),
+                    # x*y*z+x*z+y
+                    MultiParameterFunction(mult, mult_x_z, add[1]),
+
+                    # x*y*z+x+y
+                    MultiParameterFunction(mult, add[0], add[1]),
+                    # x*y*z+x+z
+                    MultiParameterFunction(mult, add[0], add[2]),
+                    # x*y*z+y+z
+                    MultiParameterFunction(mult, add[1], add[2]),
+
+                    # x*y+z
+                    MultiParameterFunction(mult_x_y, add[2]),
+                    # x*y+z+y
+                    MultiParameterFunction(mult_x_y, add[2], add[1]),
+                    # x*y+z+x
+                    MultiParameterFunction(mult_x_y, add[2], add[0]),
+
+                    # x*z+y
+                    MultiParameterFunction(mult_x_z, add[1]),
+                    # x*z+y+x
+                    MultiParameterFunction(mult_x_z, add[1], add[0]),
+                    # x*z+y+z
+                    MultiParameterFunction(mult_x_z, add[1], add[2]),
+
+                    # y*z+x
+                    MultiParameterFunction(mult_y_z, add[0]),
+                    # y*z+x+y
+                    MultiParameterFunction(mult_y_z, add[0], add[1]),
+                    # y*z+x+z
+                    MultiParameterFunction(mult_y_z, add[0], add[2])
+                ]
             # create the hypotheses from the functions
             mph = [MultiParameterHypothesis(f, self.use_median)
                    for f in mp_functions]
