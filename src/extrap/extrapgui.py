@@ -1,7 +1,9 @@
 # import logging
 
 import sys
-from PySide2.QtWidgets import QApplication
+import warnings
+
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QPalette, QColor
 from PySide2.QtCore import Qt
 from gui.MainWidget import MainWidget
@@ -30,6 +32,19 @@ def main():
     app.setPalette(palette)
 
     window = MainWidget()
+
+    _old_warnings_handler = warnings.showwarning
+
+    def _warnings_handler(message: Warning, category, filename, lineno, file=None, line=None):
+        msgBox = QMessageBox(window)
+        msgBox.setWindowTitle('Warning')
+        msgBox.setIcon(QMessageBox.Icon.Warning)
+        msgBox.setText(str(message))
+        msgBox.open()
+        return _old_warnings_handler(message, category, filename, lineno, file, line)
+
+    warnings.showwarning = _warnings_handler
+
     window.show()
 
     if len(sys.argv) == 3 and '--text' == sys.argv[1]:

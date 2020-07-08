@@ -62,13 +62,19 @@ class TreeView(QTreeView):
 
     # print the data points used in compute cost
     def showDataPoints(self, model):
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
+        msgBox = QDialog()
+        msgBox.setWindowTitle("Data Points")
+        msgBox.setFixedSize(600, 400)
+        layout = QGridLayout()
+        msg = QTextEdit()
         msg.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         msg.setFont(QFont('Courier'))
-        horizontalSpacer = QSpacerItem(800, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        layout = msg.layout()
-        layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
+        layout.addWidget(msg)
+        btn = QPushButton('OK', msgBox)
+        btn.setDefault(True)
+        btn.clicked.connect(msgBox.accept)
+        layout.addWidget(btn)
+        msgBox.setLayout(layout)
 
         msg_txt = "Callpath: " + model.callpath.name + "\n\n"
         row_format = "{:20} {:>15} {:>15} {:>15}\n"
@@ -77,10 +83,8 @@ class TreeView(QTreeView):
         for pred, m in zip(model.predictions, model.measurements):
             msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
             # print(str(ps[i])+","+str(actual_points[i]))
+
         print(msg_txt)
         print("")
         msg.setText(msg_txt)
-        msg.setWindowTitle("Data Points")
-        # msg.setDetailedText("The details are as follows:")
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msgBox.exec_()

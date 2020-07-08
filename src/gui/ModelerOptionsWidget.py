@@ -9,9 +9,9 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from typing import Mapping
+from typing import Mapping, Collection
 from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
-    QComboBox, QVBoxLayout
+    QComboBox, QVBoxLayout, QLabel, QSizePolicy, QGridLayout
 
 from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
 from modelers.modeler_options import ModelerOption, ModelerOptionsGroup
@@ -30,23 +30,24 @@ class ModelerOptionsWidget(QWidget):
         layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
         self.setLayout(layout)
         self.parent().setEnabled(keep_parent_enabled)
+        
+        if hasattr(self._modeler, 'OPTIONS'):
+            self.parent().setEnabled(True)
+            self._create_options(layout, self._modeler.OPTIONS.items())
 
         if isinstance(self._modeler, MultiParameterModeler) and self._modeler.single_parameter_modeler is not None:
             group = self._create_single_parameter_selection()
             layout.addRow(group)
             self.parent().setEnabled(True)
 
-        if hasattr(self._modeler, 'OPTIONS'):
-            self.parent().setEnabled(True)
-            self._create_options(layout, self._modeler.OPTIONS.items())
-
     def _create_options(self, layout, options):
         for name, option in options:
             if isinstance(option, ModelerOption):
-                layout.addRow(self._determine_name(option), self._determine_field(name, option))
+                layout.addRow(self._determine_label(option), self._determine_field(name, option))
             elif isinstance(option, ModelerOptionsGroup):
                 group = QGroupBox(name)
                 group.setToolTip(option.description)
+                group.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
                 g_layout = QFormLayout()
                 g_layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
                 self._create_options(g_layout, option.items())
@@ -55,6 +56,7 @@ class ModelerOptionsWidget(QWidget):
 
     def _create_single_parameter_selection(self):
         group = QGroupBox('Single Parameter Modeler')
+        group.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         g_layout = QVBoxLayout()
         g_layout.setContentsMargins(0, 0, 0, 0)
         modeler_selection = QComboBox()
@@ -77,6 +79,7 @@ class ModelerOptionsWidget(QWidget):
 
         g_layout.addWidget(modeler_selection)
         g_layout.addWidget(self._single_parameter_modeler_widget)
+        g_layout.addStrut(1)
         group.setLayout(g_layout)
         return group
 
@@ -84,10 +87,14 @@ class ModelerOptionsWidget(QWidget):
         value = option.type(value)
         setattr(self._modeler, option.field, value)
 
-    def _determine_name(self, option):
+    def _determine_label(self, option):
         if option.name is not None:
-            return option.name
-        return option.field.replace('_', ' ').title()
+            name = option.name
+        else:
+            name = option.field.replace('_', ' ').title()
+        label = QLabel(name)
+        label.setToolTip(option.description)
+        return label
 
     def _determine_field(self, name, option):
         def slot(value):
@@ -100,6 +107,13 @@ class ModelerOptionsWidget(QWidget):
                 if item == option.value:
                     field.setCurrentText(name)
             field.currentIndexChanged.connect(lambda: self.check_and_apply(option, field.currentData()))
+        elif option.type is str and isinstance(option.range, Collection):
+            field = QComboBox()
+            for name in option.range:
+                field.addItem(str(name))
+                if name == option.value:
+                    field.setCurrentText(name)
+            field.currentIndexChanged.connect(lambda: self.check_and_apply(option, field.currentText()))
         elif option.type is bool:
             field = QCheckBox()
             field.setChecked(option.value)

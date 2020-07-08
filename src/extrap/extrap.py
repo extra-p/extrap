@@ -168,7 +168,7 @@ def Main():
 
         # apply modeler options
         modeler = model_generator.modeler
-        if isinstance(modeler, MultiParameterModeler):
+        if isinstance(modeler, MultiParameterModeler) and arguments.modeler_options:
             # set single parameter modeler of multi parameter modeler
             single_modeler = arguments.modeler_options[SINGLE_PARAMETER_MODELER_KEY]
             if single_modeler is not None:

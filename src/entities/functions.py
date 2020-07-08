@@ -11,7 +11,7 @@ directory for details.
 from typing import List, Mapping
 
 from entities.parameter import Parameter
-from entities.terms import CompoundTerm
+from entities.terms import CompoundTerm, MultiParameterTerm
 from util.deprecation import deprecated
 import collections
 import numpy
@@ -125,14 +125,14 @@ class SingleParameterFunction(Function):
         super().__init__(*compound_terms)
 
     def evaluate(self, parameter_value):
-        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value,Mapping)):
+        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
             parameter_value = parameter_value[0]
         return super().evaluate(parameter_value)
 
 
 class MultiParameterFunction(Function):
 
-    def __init__(self, *compound_terms):
+    def __init__(self, *compound_terms: MultiParameterTerm):
         super().__init__(*compound_terms)
 
     @deprecated("Use add_compound_term(Term) instead.")

@@ -1,3 +1,5 @@
+import warnings
+
 from util.deprecation import deprecated
 from abc import ABC, abstractmethod
 from entities.fraction import Fraction
@@ -67,7 +69,10 @@ class SimpleTerm(SingleParameterTerm):
         if self.term_type == "polynomial":
             return np.power(parameter_value, float(self.exponent))
         elif self.term_type == "logarithm":
-            return np.power(np.log2(parameter_value), float(self.exponent))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                log = np.log2(parameter_value)
+            return np.power(log, float(self.exponent))
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -85,20 +90,16 @@ class CompoundTerm(SingleParameterTerm):
 
     def evaluate(self, parameter_value: float):
         function_value = self.coefficient
-        for t in self.simple_terms:
-            function_value *= t.evaluate(parameter_value)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for t in self.simple_terms:
+                function_value *= t.evaluate(parameter_value)
         return function_value
 
     def to_string(self, parameter='p'):
-        function_string = ""
+        function_string = ' * '.join(t.to_string(parameter) for t in self.simple_terms)
         if self.coefficient != 1:
-            function_string += str(self.coefficient)
-            function_string += ' * '
-        for t in self.simple_terms[:-1]:
-            function_string += t.to_string(parameter)
-            function_string += ' * '
-        if len(self.simple_terms) > 0:
-            function_string += self.simple_terms[-1].to_string(parameter)
+            function_string = str(self.coefficient) + ' * ' + function_string
         return function_string
 
     def __imul__(self, term: SingleParameterTerm):
@@ -112,7 +113,7 @@ class CompoundTerm(SingleParameterTerm):
             f = a
         else:
             f = Fraction(a, b)
-            
+
         compound_term = CompoundTerm()
         if a != 0:
             compound_term *= SimpleTerm("polynomial", f)
@@ -123,7 +124,7 @@ class CompoundTerm(SingleParameterTerm):
 
 class MultiParameterTerm(Term):
 
-    def __init__(self, *terms: List[Tuple[int, SingleParameterTerm]]):
+    def __init__(self, *terms: Tuple[int, SingleParameterTerm]):
         super().__init__()
         self.parameter_term_pairs = list(terms)
 
