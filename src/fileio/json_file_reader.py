@@ -16,17 +16,23 @@ from entities.coordinate import Coordinate
 from entities.callpath import Callpath
 from entities.metric import Metric
 from entities.experiment import Experiment
+from fileio import io_helper
 from fileio.io_helper import compute_repetitions
 from fileio.io_helper import create_call_tree
 import logging
 import json
+from json.decoder import JSONDecodeError
 
+from util.exceptions import FileFormatError
 
 
 def read_json_file(path, progress_event=lambda _: _):
     # read lines from json file
     with open(path, "r") as inputfile:
-        json_data = json.load(inputfile)
+        try:
+            json_data = json.load(inputfile)
+        except JSONDecodeError as error:
+            raise FileFormatError(error)
 
     # create an experiment object to save the date loaded from the text file
     experiment = Experiment()
@@ -103,5 +109,7 @@ def read_json_file(path, progress_event=lambda _: _):
         values = aggregate_data[key]
         measurement = Measurement(coordinate, callpath, metric, values)
         experiment.add_measurement(measurement)
+
+    io_helper.validate_experiment(experiment)
 
     return experiment

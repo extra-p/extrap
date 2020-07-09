@@ -21,18 +21,18 @@ class TestFindFirstMeasurements(unittest.TestCase):
 
         self.assertEqual(len(f_msm), 2)
         self.assertListEqual([m.coordinate for m in f_msm[0]], [
-            Coordinate((20, 1)),
-            Coordinate((30, 1)),
-            Coordinate((40, 1)),
-            Coordinate((50, 1)),
-            Coordinate((60, 1))
+            Coordinate((20,)),
+            Coordinate((30,)),
+            Coordinate((40,)),
+            Coordinate((50,)),
+            Coordinate((60,))
         ])
         self.assertListEqual([m.coordinate for m in f_msm[1]], [
-            Coordinate((20, 1)),
-            Coordinate((20, 2)),
-            Coordinate((20, 3)),
-            Coordinate((20, 4)),
-            Coordinate((20, 5))
+            Coordinate((1,)),
+            Coordinate((2,)),
+            Coordinate((3,)),
+            Coordinate((4,)),
+            Coordinate((5,))
         ])
 
     def test_2parameters_reversed(self):
@@ -46,18 +46,18 @@ class TestFindFirstMeasurements(unittest.TestCase):
 
         self.assertEqual(len(f_msm), 2)
         self.assertListEqual([m.coordinate for m in f_msm[0]], [
-            Coordinate((60, 1)),
-            Coordinate((50, 1)),
-            Coordinate((40, 1)),
-            Coordinate((30, 1)),
-            Coordinate((20, 1))
+            Coordinate((60,)),
+            Coordinate((50,)),
+            Coordinate((40,)),
+            Coordinate((30,)),
+            Coordinate((20,))
         ])
         self.assertListEqual([m.coordinate for m in f_msm[1]], [
-            Coordinate((20, 5)),
-            Coordinate((20, 4)),
-            Coordinate((20, 3)),
-            Coordinate((20, 2)),
-            Coordinate((20, 1))
+            Coordinate((5,)),
+            Coordinate((4,)),
+            Coordinate((3,)),
+            Coordinate((2,)),
+            Coordinate((1,))
         ])
 
     def test_2parameters_random(self):
@@ -72,18 +72,18 @@ class TestFindFirstMeasurements(unittest.TestCase):
 
             self.assertEqual(len(f_msm), 2)
             self.assertSetEqual(set(m.coordinate for m in f_msm[0]), set([
-                Coordinate((20, 1)),
-                Coordinate((30, 1)),
-                Coordinate((40, 1)),
-                Coordinate((50, 1)),
-                Coordinate((60, 1))
+                Coordinate((20)),
+                Coordinate((30)),
+                Coordinate((40)),
+                Coordinate((50)),
+                Coordinate((60))
             ]))
             self.assertSetEqual(set(m.coordinate for m in f_msm[1]), set([
-                Coordinate((20, 1)),
-                Coordinate((20, 2)),
-                Coordinate((20, 3)),
-                Coordinate((20, 4)),
-                Coordinate((20, 5))
+                Coordinate((1)),
+                Coordinate((2)),
+                Coordinate((3)),
+                Coordinate((4)),
+                Coordinate((5))
             ]))
 
     def test_3parameters_basic(self):
@@ -95,25 +95,25 @@ class TestFindFirstMeasurements(unittest.TestCase):
 
         self.assertEqual(len(f_msm), 3)
         self.assertListEqual([m.coordinate for m in f_msm[0]], [
-            Coordinate((20, 1, 100)),
-            Coordinate((30, 1, 100)),
-            Coordinate((40, 1, 100)),
-            Coordinate((50, 1, 100)),
-            Coordinate((60, 1, 100))
+            Coordinate(20),
+            Coordinate(30),
+            Coordinate(40),
+            Coordinate(50),
+            Coordinate(60)
         ])
         self.assertListEqual([m.coordinate for m in f_msm[1]], [
-            Coordinate((20, 1, 100)),
-            Coordinate((20, 2, 100)),
-            Coordinate((20, 3, 100)),
-            Coordinate((20, 4, 100)),
-            Coordinate((20, 5, 100))
+            Coordinate(1),
+            Coordinate(2),
+            Coordinate(3),
+            Coordinate(4),
+            Coordinate(5)
         ])
         self.assertListEqual([m.coordinate for m in f_msm[2]], [
-            Coordinate((20, 1, 100)),
-            Coordinate((20, 1, 200)),
-            Coordinate((20, 1, 300)),
-            Coordinate((20, 1, 400)),
-            Coordinate((20, 1, 500))
+            Coordinate(100),
+            Coordinate(200),
+            Coordinate(300),
+            Coordinate(400),
+            Coordinate(500)
         ])
 
     def test_3parameters_reversed(self):
@@ -127,25 +127,25 @@ class TestFindFirstMeasurements(unittest.TestCase):
 
         self.assertEqual(len(f_msm), 3)
         self.assertListEqual([m.coordinate for m in f_msm[0]], [
-            Coordinate((60, 1, 100)),
-            Coordinate((50, 1, 100)),
-            Coordinate((40, 1, 100)),
-            Coordinate((30, 1, 100)),
-            Coordinate((20, 1, 100))
+            Coordinate(60),
+            Coordinate(50),
+            Coordinate(40),
+            Coordinate(30),
+            Coordinate(20)
         ])
         self.assertListEqual([m.coordinate for m in f_msm[1]], [
-            Coordinate((20, 5, 100)),
-            Coordinate((20, 4, 100)),
-            Coordinate((20, 3, 100)),
-            Coordinate((20, 2, 100)),
-            Coordinate((20, 1, 100))
+            Coordinate(5),
+            Coordinate(4),
+            Coordinate(3),
+            Coordinate(2),
+            Coordinate(1)
         ])
         self.assertListEqual([m.coordinate for m in f_msm[2]], [
-            Coordinate((20, 1, 500)),
-            Coordinate((20, 1, 400)),
-            Coordinate((20, 1, 300)),
-            Coordinate((20, 1, 200)),
-            Coordinate((20, 1, 100))
+            Coordinate(500),
+            Coordinate(400),
+            Coordinate(300),
+            Coordinate(200),
+            Coordinate(100)
         ])
 
     def test_3parameters_random(self):
@@ -160,23 +160,23 @@ class TestFindFirstMeasurements(unittest.TestCase):
 
             self.assertEqual(len(f_msm), 3)
             self.assertSetEqual(set(m.coordinate for m in f_msm[0]), set([
-                Coordinate((20, 1, 100)),
-                Coordinate((30, 1, 100)),
-                Coordinate((40, 1, 100)),
-                Coordinate((50, 1, 100)),
-                Coordinate((60, 1, 100))
+                Coordinate(20),
+                Coordinate(30),
+                Coordinate(40),
+                Coordinate(50),
+                Coordinate(60)
             ]))
             self.assertSetEqual(set(m.coordinate for m in f_msm[1]), set([
-                Coordinate((20, 1, 100)),
-                Coordinate((20, 2, 100)),
-                Coordinate((20, 3, 100)),
-                Coordinate((20, 4, 100)),
-                Coordinate((20, 5, 100))
+                Coordinate(1),
+                Coordinate(2),
+                Coordinate(3),
+                Coordinate(4),
+                Coordinate(5)
             ]))
             self.assertSetEqual(set(m.coordinate for m in f_msm[2]), set([
-                Coordinate((20, 1, 100)),
-                Coordinate((20, 1, 200)),
-                Coordinate((20, 1, 300)),
-                Coordinate((20, 1, 400)),
-                Coordinate((20, 1, 500))
+                Coordinate(100),
+                Coordinate(200),
+                Coordinate(300),
+                Coordinate(400),
+                Coordinate(500)
             ]))

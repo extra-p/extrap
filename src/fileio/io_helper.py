@@ -9,12 +9,14 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
+from entities.experiment import Experiment
 from entities.measurement import Measurement
 from entities.calltree import CallTree
 from entities.calltree import Node
 import logging
 from util.deprecation import deprecated
 from entities.callpath import Callpath
+from util.exceptions import InvalidExperimentError
 
 
 def format_callpaths(experiment):
@@ -393,3 +395,18 @@ def find_child_node(root_node, level, callpath_elements, loop_id):
             # need to search deeper in the tree for the root node
             else:
                 return find_child_node(new_root_node, level, callpath_elements, loop_id)
+
+
+def validate_experiment(experiment: Experiment):
+    def require(cond, message):
+        if not cond:
+            raise InvalidExperimentError(message)
+
+    require(len(experiment.parameters) > 0, "Parameters are missing.")
+    require(len(experiment.coordinates) > 0, "Coordinates are missing.")
+    require(len(experiment.metrics) > 0, "Metrics are missing.")
+    require(len(experiment.callpaths) > 0, "Callpaths are missing.")
+    require(len(experiment.call_tree.nodes) > 0, "Calltree is missing.")
+    for k, m in experiment.measurements.items():
+        require(len(m) == len(experiment.coordinates),
+                f'The number of measurements for {k} does not match the number of coordinates.')

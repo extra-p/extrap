@@ -1,3 +1,4 @@
+import itertools
 import unittest
 from fileio.json_file_reader import read_json_file
 from entities.callpath import Callpath
@@ -5,6 +6,8 @@ from entities.parameter import Parameter
 from entities.coordinate import Coordinate
 from entities.metric import Metric
 import timeit
+
+from util.exceptions import InvalidExperimentError
 
 
 class Test_TestFiles(unittest.TestCase):
@@ -38,15 +41,21 @@ class Test_TestFiles(unittest.TestCase):
         experiment = read_json_file("data/json/input_4.JSON")
 
     def test_read_5(self):
+        Coordinate.ID_COUNTER = itertools.count()
         experiment = read_json_file("data/json/input_5.JSON")
         self.assertListEqual(experiment.parameters, [Parameter('x'), Parameter('y')])
         self.assertListEqual([p.id for p in experiment.parameters], [0, 1])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0), Coordinate(4.0, 50.0),
-            Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0), Coordinate(8.0, 50.0),
-            Coordinate(16.0, 10.0), Coordinate(16.0, 20.0), Coordinate(16.0, 30.0), Coordinate(16.0, 40.0), Coordinate(16.0, 50.0),
-            Coordinate(32.0, 10.0), Coordinate(32.0, 20.0), Coordinate(32.0, 30.0), Coordinate(32.0, 40.0), Coordinate(32.0, 50.0),
-            Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0), Coordinate(64.0, 50.0)
+            Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0),
+            Coordinate(4.0, 50.0),
+            Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0),
+            Coordinate(8.0, 50.0),
+            Coordinate(16.0, 10.0), Coordinate(16.0, 20.0), Coordinate(16.0, 30.0), Coordinate(16.0, 40.0),
+            Coordinate(16.0, 50.0),
+            Coordinate(32.0, 10.0), Coordinate(32.0, 20.0), Coordinate(32.0, 30.0), Coordinate(32.0, 40.0),
+            Coordinate(32.0, 50.0),
+            Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0),
+            Coordinate(64.0, 50.0)
         ])
 
     def test_read_6(self):
@@ -65,15 +74,20 @@ class Test_TestFiles(unittest.TestCase):
         experiment = read_json_file("data/json/input_10.JSON")
 
     def test_read_11(self):
-        experiment = read_json_file("data/json/input_11.JSON")
+        self.assertRaises(InvalidExperimentError, read_json_file, "data/json/input_11.JSON")
 
     def test_read_12(self):
         experiment = read_json_file("data/json/input_12.JSON")
         self.assertListEqual(experiment.parameters, [Parameter('x'), Parameter('y')])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0), Coordinate(4.0, 50.0),
-            Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0), Coordinate(8.0, 50.0),
-            Coordinate(16.0, 10.0), Coordinate(16.0, 20.0), Coordinate(16.0, 30.0), Coordinate(16.0, 40.0), Coordinate(16.0, 50.0),
-            Coordinate(32.0, 10.0), Coordinate(32.0, 20.0), Coordinate(32.0, 30.0), Coordinate(32.0, 40.0), Coordinate(32.0, 50.0),
-            Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0), Coordinate(64.0, 50.0)
+            Coordinate(4.0, 10.0), Coordinate(4.0, 20.0), Coordinate(4.0, 30.0), Coordinate(4.0, 40.0),
+            Coordinate(4.0, 50.0),
+            Coordinate(8.0, 10.0), Coordinate(8.0, 20.0), Coordinate(8.0, 30.0), Coordinate(8.0, 40.0),
+            Coordinate(8.0, 50.0),
+            Coordinate(16.0, 10.0), Coordinate(16.0, 20.0), Coordinate(16.0, 30.0), Coordinate(16.0, 40.0),
+            Coordinate(16.0, 50.0),
+            Coordinate(32.0, 10.0), Coordinate(32.0, 20.0), Coordinate(32.0, 30.0), Coordinate(32.0, 40.0),
+            Coordinate(32.0, 50.0),
+            Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0),
+            Coordinate(64.0, 50.0)
         ])

@@ -9,6 +9,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
+from json import JSONDecodeError
 
 from entities.parameter import Parameter
 from entities.measurement import Measurement
@@ -16,10 +17,13 @@ from entities.coordinate import Coordinate
 from entities.callpath import Callpath
 from entities.metric import Metric
 from entities.experiment import Experiment
+from fileio import io_helper
 from fileio.io_helper import compute_repetitions
 from fileio.io_helper import create_call_tree
 import logging
 import json
+
+from util.exceptions import FileFormatError
 
 
 def read_talpas_file(path, progress_event=lambda _: _):
@@ -35,7 +39,11 @@ def read_talpas_file(path, progress_event=lambda _: _):
                 continue
             line = line.replace(';', ',')
 
-            data = json.loads(line)
+            try:
+                data = json.loads(line)
+            except JSONDecodeError as error:
+                raise FileFormatError(f'Decoding of line failed: {str(error).replace(",", ";")}. Line: "{line}"')
+
             key = Callpath(data['callpath']), Metric(data['metric'])
             coordinate = Coordinate([(Parameter(p), v)
                                      for p, v in data['parameters'].items()])
@@ -67,5 +75,7 @@ def read_talpas_file(path, progress_event=lambda _: _):
     callpaths = experiment.get_callpaths()
     call_tree = create_call_tree(callpaths)
     experiment.add_call_tree(call_tree)
+
+    io_helper.validate_experiment(experiment)
 
     return experiment

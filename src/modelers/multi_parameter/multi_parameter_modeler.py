@@ -190,9 +190,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            logging.error(
+            warnings.warn(
                 "Number of measurements for each parameter needs to be at least 5 in order to create a performance model.")
-            return None
+            # return None
 
         # get the coordinates for modeling
         coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())

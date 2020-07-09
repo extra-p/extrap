@@ -6,6 +6,8 @@ from entities.coordinate import Coordinate
 from entities.metric import Metric
 import timeit
 
+from util.exceptions import InvalidExperimentError
+
 
 class Test_TestFiles(unittest.TestCase):
 
@@ -54,4 +56,4 @@ class Test_TestFiles(unittest.TestCase):
         experiment = read_talpas_file("data/talpas/talpas_9.txt")
 
     def test_read_10(self):
-        experiment = read_talpas_file("data/talpas/talpas_10.txt")
+        self.assertRaises(InvalidExperimentError, read_talpas_file, "data/talpas/talpas_10.txt")

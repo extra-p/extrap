@@ -2,6 +2,7 @@
 
 import sys
 import warnings
+import traceback
 
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QPalette, QColor
@@ -9,6 +10,7 @@ from PySide2.QtCore import Qt
 from gui.MainWidget import MainWidget
 from fileio.text_file_reader import read_text_file
 from fileio.json_file_reader import read_json_file
+from util.exceptions import RecoverableError
 
 
 def main():
@@ -34,6 +36,7 @@ def main():
     window = MainWidget()
 
     _old_warnings_handler = warnings.showwarning
+    _old_exception_handler = sys.excepthook
 
     def _warnings_handler(message: Warning, category, filename, lineno, file=None, line=None):
         msgBox = QMessageBox(window)
@@ -43,7 +46,25 @@ def main():
         msgBox.open()
         return _old_warnings_handler(message, category, filename, lineno, file, line)
 
+    def _exception_handler(type, value, traceback_):
+        msgBox = QMessageBox(window)
+        if hasattr(value, 'NAME'):
+            msgBox.setWindowTitle(value.NAME)
+        else:
+            msgBox.setWindowTitle('Error')
+        msgBox.setIcon(QMessageBox.Icon.Critical)
+        msgBox.setText(str(value))
+        traceback_lines = traceback.extract_tb(traceback_).format()
+        msgBox.setDetailedText(''.join(traceback_lines))
+        if issubclass(type, RecoverableError):
+            _old_exception_handler(type, value, traceback_)
+            msgBox.open()
+        else:
+            _old_exception_handler(type, value, traceback_)
+            sys.exit(1)
+
     warnings.showwarning = _warnings_handler
+    sys.excepthook = _exception_handler
 
     window.show()
 

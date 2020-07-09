@@ -17,11 +17,14 @@ from entities.experiment import Experiment
 from entities.measurement import Measurement
 from entities.metric import Metric
 from entities.parameter import Parameter
+from fileio import io_helper
 from fileio.io_helper import create_call_tree
+from util.exceptions import FileFormatError
+
+re_whitespace = re.compile(r'\s+')
 
 
 def read_text_file(path, progress_event=lambda _: _):
-
     # read text file into list
     with open(path) as file:
         lines = file.readlines()
@@ -41,11 +44,14 @@ def read_text_file(path, progress_event=lambda _: _):
     last_callpath = Callpath("")
     coordinate_id = 0
 
-    re_whitespace = re.compile(r'\s+')
+    if len(lines) == 0:
+        raise FileFormatError(f'File contains no data: "{path}"')
 
     # parse text to extrap objects
     for i, line in enumerate(lines):
         progress_event(i / len(lines))
+        if line.startswith('#'):
+            continue  # allow comments
         line = re_whitespace.sub(' ', line)
         # get field name
         field_separator_idx = line.find(" ")
@@ -122,6 +128,8 @@ def read_text_file(path, progress_event=lambda _: _):
             else:
                 logging.warning(
                     "This input format supports a maximum of 4 parameters.")
+        else:
+            raise FileFormatError(f'Encountered wrong field: "{field_name}" in line {i}: {line}')
 
     if last_metric == Metric(''):
         experiment.metrics.append(last_metric)
@@ -131,6 +139,8 @@ def read_text_file(path, progress_event=lambda _: _):
     callpaths = experiment.get_callpaths()
     call_tree = create_call_tree(callpaths)
     experiment.add_call_tree(call_tree)
+
+    io_helper.validate_experiment(experiment)
 
     progress_event(None)
     return experiment

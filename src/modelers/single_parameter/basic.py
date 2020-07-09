@@ -12,6 +12,7 @@ directory for details.
 import copy
 import itertools
 import logging
+import warnings
 from typing import List
 
 from entities.terms import CompoundTerm
@@ -372,9 +373,9 @@ class SingleParameterModeler(LegacyModeler):
 
         # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            logging.warning(
+            warnings.warn(
                 "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
-            return None
+            # return None
 
         # create a constant function
         constant_function = self.create_constant_model(measurements)
