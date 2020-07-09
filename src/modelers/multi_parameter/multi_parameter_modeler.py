@@ -129,7 +129,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
     def find_first_measurement_points(self, measurements: List[Measurement]):
         """
-        This method returns the measurments that should be used for creating
+        This method returns the measurements that should be used for creating
         the single parameter models.
         """
 
@@ -352,9 +352,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         best_hypothesis.compute_cost(measurements, coordinates)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-        print("hypothesis 0 : " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
+        logging.info("hypothesis 0 : " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
             best_hypothesis.get_SMAPE()) + " --- ar2: " + str(best_hypothesis.get_AR2()) +
-              " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
+                     " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
             best_hypothesis.get_rRSS()) + " --- re: " + str(best_hypothesis.get_RE()))
 
         # find the best hypothesis
@@ -363,10 +363,11 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             hypotheses[i].compute_cost(measurements, coordinates)
             hypotheses[i].compute_adjusted_rsquared(constantCost, measurements)
 
-            print("hypothesis " + str(i) + " : " + str(hypotheses[i].get_function().to_string()) + " --- smape: " + str(
-                hypotheses[i].get_SMAPE()) + " --- ar2: " +
-                  str(hypotheses[i].get_AR2()) + " --- rss: " + str(hypotheses[i].get_RSS()) + " --- rrss: " + str(
-                hypotheses[i].get_rRSS()) + " --- re: " + str(hypotheses[i].get_RE()))
+            logging.info(
+                "hypothesis " + str(i) + " : " + str(hypotheses[i].get_function().to_string()) + " --- smape: " + str(
+                    hypotheses[i].get_SMAPE()) + " --- ar2: " +
+                str(hypotheses[i].get_AR2()) + " --- rss: " + str(hypotheses[i].get_RSS()) + " --- rrss: " + str(
+                    hypotheses[i].get_rRSS()) + " --- re: " + str(hypotheses[i].get_RE()))
 
             if hypotheses[i].get_SMAPE() < best_hypothesis.get_SMAPE():
                 best_hypothesis = copy.deepcopy(hypotheses[i])
@@ -374,9 +375,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         # add the best found hypothesis to the model list
         model = Model(best_hypothesis)
 
-        print("best hypothesis: " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
+        logging.info("best hypothesis: " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
             best_hypothesis.get_SMAPE()) + " --- ar2: " + str(best_hypothesis.get_AR2()) +
-              " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
+                     " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
             best_hypothesis.get_rRSS()) + " --- re: " + str(best_hypothesis.get_RE()))
 
         return model

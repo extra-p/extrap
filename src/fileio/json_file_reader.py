@@ -10,7 +10,6 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 
-
 from entities.parameter import Parameter
 from entities.measurement import Measurement
 from entities.coordinate import Coordinate
@@ -23,8 +22,8 @@ import logging
 import json
 
 
-def read_json_file(path,progress_event=lambda _:_):
 
+def read_json_file(path, progress_event=lambda _: _):
     # read lines from json file
     with open(path, "r") as inputfile:
         json_data = json.load(inputfile)
@@ -35,21 +34,21 @@ def read_json_file(path,progress_event=lambda _:_):
     # read parameters
     parameter_data = json_data["parameters"]
     parameter_data = sorted(parameter_data, key=lambda x: x["id"])
-    logging.debug("Number of parameters: "+str(len(parameter_data)))
+    logging.debug("Number of parameters: " + str(len(parameter_data)))
     for i in range(len(parameter_data)):
         parameter_name = parameter_data[i]["name"]
         parameter = Parameter(parameter_name)
         experiment.add_parameter(parameter)
-        logging.debug("Parameter "+str(i+1)+": "+parameter_name)
+        logging.debug("Parameter " + str(i + 1) + ": " + parameter_name)
 
     # read callpaths
     callpath_data = json_data["callpaths"]
-    logging.debug("Number of callpaths: "+str(len(callpath_data)))
+    logging.debug("Number of callpaths: " + str(len(callpath_data)))
     for i in range(len(callpath_data)):
         callpath_name = callpath_data[i]["name"]
         callpath = Callpath(callpath_name)
         experiment.add_callpath(callpath)
-        logging.debug("Callpath "+str(i+1)+": "+callpath_name)
+        logging.debug("Callpath " + str(i + 1) + ": " + callpath_name)
 
     # create the call tree and add it to the experiment
     callpaths = experiment.get_callpaths()
@@ -58,16 +57,16 @@ def read_json_file(path,progress_event=lambda _:_):
 
     # read metrics
     metric_data = json_data["metrics"]
-    logging.debug("Number of metrics: "+str(len(metric_data)))
+    logging.debug("Number of metrics: " + str(len(metric_data)))
     for i in range(len(metric_data)):
         metric_name = metric_data[i]["name"]
         metric = Metric(metric_name)
         experiment.add_metric(metric)
-        logging.debug("Metric "+str(i+1)+": "+metric_name)
+        logging.debug("Metric " + str(i + 1) + ": " + metric_name)
 
     # read coordinates
     coordinate_data = json_data["coordinates"]
-    logging.debug("Number of coordinates: "+str(len(coordinate_data)))
+    logging.debug("Number of coordinates: " + str(len(coordinate_data)))
     for i in range(len(coordinate_data)):
         parameter_value_pairs = coordinate_data[i]["parameter_value_pairs"]
         parameter_value_pairs = sorted(parameter_value_pairs, key=lambda x: x["parameter_id"])
@@ -79,12 +78,12 @@ def read_json_file(path,progress_event=lambda _:_):
             parameter = experiment.get_parameter(parameter_id)
             coordinate.add_parameter_value(parameter, parameter_value)
         experiment.add_coordinate(coordinate)
-        logging.debug("Coordinate "+str(i+1)+": "+coordinate.get_as_string())
+        logging.debug("Coordinate " + str(i + 1) + ": " + coordinate.get_as_string())
 
     aggregate_data = {}
     # read measurements
     measurements_data = json_data["measurements"]
-    logging.debug("Number of measurements: "+str(len(measurements_data)))
+    logging.debug("Number of measurements: " + str(len(measurements_data)))
     for i in range(len(measurements_data)):
         coordinate_id = int(measurements_data[i]["coordinate_id"]) - 1
         callpath_id = int(measurements_data[i]["callpath_id"]) - 1

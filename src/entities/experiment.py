@@ -1,4 +1,6 @@
 from typing import List, Dict, Tuple
+
+from entities.calltree import CallTree
 from entities.metric import Metric
 from entities.measurement import Measurement
 from entities.coordinate import Coordinate
@@ -20,7 +22,7 @@ class Experiment:
         self.coordinates: List[Coordinate] = UniqueList()
         self.measurements: Dict[Tuple[Callpath,
                                       Metric], List[Measurement]] = {}
-        self.call_tree = None
+        self.call_tree: CallTree = None
         self.modelers = []
         self.scaling = None
 
@@ -46,7 +48,7 @@ class Experiment:
 
     @deprecated("Use property directly.")
     def get_new_modeler_id(self):
-        return len(self.modeler)+1
+        return len(self.modeler) + 1
 
     @deprecated("Use property directly.")
     def get_call_tree(self):
@@ -197,21 +199,21 @@ class Experiment:
         if not logging.getLogger().isEnabledFor(logging.DEBUG):
             return
         for i in range(len(self.metrics)):
-            logging.debug("Metric "+str(i+1)+": "+self.metrics[i].get_name())
+            logging.debug("Metric " + str(i + 1) + ": " + self.metrics[i].get_name())
         for i in range(len(self.parameters)):
-            logging.debug("Parameter "+str(i+1)+": " +
+            logging.debug("Parameter " + str(i + 1) + ": " +
                           self.parameters[i].get_name())
         for i in range(len(self.callpaths)):
-            logging.debug("Callpath "+str(i+1)+": " +
+            logging.debug("Callpath " + str(i + 1) + ": " +
                           self.callpaths[i].get_name())
         for i in range(len(self.coordinates)):
             dimensions = self.coordinates[i].get_dimensions()
-            coordinate_string = "Coordinate "+str(i+1)+": ("
+            coordinate_string = "Coordinate " + str(i + 1) + ": ("
             for dimension in range(dimensions):
                 parameter, value = self.coordinates[i].get_parameter_value(
                     dimension)
                 parameter_name = parameter.get_name()
-                coordinate_string += parameter_name+"="+str(value)+","
+                coordinate_string += parameter_name + "=" + str(value) + ","
             coordinate_string = coordinate_string[:-1]
             coordinate_string += ")"
             logging.debug(coordinate_string)

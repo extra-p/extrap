@@ -9,8 +9,6 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-
-
 from entities.measurement import Measurement
 from entities.calltree import CallTree
 from entities.calltree import Node
@@ -263,8 +261,11 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             coordinate_id = measurement.get_coordinate_id()
             value_mean = measurement.get_value_mean()
             value_median = measurement.get_value_median()
-            logging.debug("Measurement: "+experiment.get_metric(metric_id).get_name()+", "+experiment.get_callpath(callpath_id).get_name()+", " +
-                          experiment.get_coordinate(coordinate_id).get_as_string()+": "+str(value_mean)+" (mean), "+str(value_median)+" (median)")
+            logging.debug(
+                "Measurement: " + experiment.get_metric(metric_id).get_name() + ", " + experiment.get_callpath(
+                    callpath_id).get_name() + ", " +
+                experiment.get_coordinate(coordinate_id).get_as_string() + ": " + str(value_mean) + " (mean), " + str(
+                    value_median) + " (median)")
 
     # update progress bar
     progress_event(20)
@@ -303,7 +304,7 @@ def create_call_tree(callpaths):
 
             # check that we do not try to access an element that does not exist
             length = len(callpaths2[j])
-            length = length-1
+            length = length - 1
 
             if i > length:
                 pass
@@ -361,7 +362,7 @@ def find_root_node(callpath_elements, tree, loop_id):
     root_node = tree.get_node(root_element_string)
 
     # root node already found
-    if loop_id == level+1:
+    if loop_id == level + 1:
         return root_node
 
     # need to search deeper in the tree for the root node
@@ -375,7 +376,7 @@ def find_child_node(root_node, level, callpath_elements, loop_id):
     into the three and each nodes child nodes. Returns the root node of the
     child.
     """
-    level = level+1
+    level = level + 1
     root_element_string = callpath_elements[level]
     childs = root_node.childs
 
@@ -386,7 +387,7 @@ def find_child_node(root_node, level, callpath_elements, loop_id):
             new_root_node = childs[i]
 
             # root node already found
-            if loop_id == level+1:
+            if loop_id == level + 1:
                 return new_root_node
 
             # need to search deeper in the tree for the root node

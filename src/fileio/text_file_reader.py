@@ -45,12 +45,12 @@ def read_text_file(path, progress_event=lambda _: _):
 
     # parse text to extrap objects
     for i, line in enumerate(lines):
-        progress_event(i/len(lines))
+        progress_event(i / len(lines))
         line = re_whitespace.sub(' ', line)
         # get field name
-        field_seperator_idx = line.find(" ")
-        field_name = line[:field_seperator_idx]
-        field_value = line[field_seperator_idx + 1:].strip()
+        field_separator_idx = line.find(" ")
+        field_name = line[:field_separator_idx]
+        field_value = line[field_separator_idx + 1:].strip()
 
         if field_name == "METRIC":
             # create a new metric if not already exists
@@ -117,7 +117,7 @@ def read_text_file(path, progress_event=lambda _: _):
                 for coordinate_string in coordinate_strings:
                     coordinate_string = coordinate_string.strip()
                     values = coordinate_string.split(" ")
-                    coordinate = Coordinate(float(v)for v in values)
+                    coordinate = Coordinate(float(v) for v in values)
                     experiment.coordinates.append(coordinate)
             else:
                 logging.warning(

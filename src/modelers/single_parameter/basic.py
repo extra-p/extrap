@@ -68,12 +68,6 @@ class SingleParameterModeler(LegacyModeler):
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
 
-        # check if logarithmic terms should be allowed
-        # self.allow_log_terms = True
-
-        # check if logarithmic terms should be allowed
-        # self.use_crossvalidation = True
-
         # create the building blocks for the hypothesis
         self.hypotheses_building_blocks: List[CompoundTerm] = self.create_default_building_blocks(
             self.allow_log_terms)
