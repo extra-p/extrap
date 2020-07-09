@@ -16,8 +16,6 @@ from itertools import chain
 
 from tqdm import tqdm
 
-# from experiment import Experiment
-# from fileio.fileio import open_json
 from fileio.cube_file_reader2 import read_cube_file
 from fileio.io_helper import format_output
 from fileio.io_helper import save_output
@@ -32,8 +30,8 @@ from util.options_parser import ModelerOptionsAction, ModelerHelpAction
 from util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_OPTIONS_KEY
 
 
-def Main():
-    # Initialize()
+
+def main():
 
     # argparse
     programname = "Extra-P"
@@ -85,7 +83,6 @@ def Main():
             loglevel = logging.INFO
     else:
         loglevel = logging.INFO
-
     # set output print type
     printtype = arguments.print_type.upper()
 
@@ -108,7 +105,7 @@ def Main():
     # check scaling type
     scaling_type = arguments.scaling_type
 
-    # use mean or median?
+    # set use mean or median for computation
     use_median = arguments.median
 
     # save modeler output to file?
@@ -202,4 +199,4 @@ def Main():
 
 
 if __name__ == "__main__":
-    Main()
+    main()
