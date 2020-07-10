@@ -301,72 +301,72 @@ def create_call_tree(callpaths):
     the correct order, as they would appear in the real program.
     """
     tree = CallTree()
-    
+
     # create a two dimensional array of the callpath elements as strings
     callpaths2 = []
     max_length = 0
-    
+
     for i in range(len(callpaths)):
         callpath = callpaths[i]
         callpath_string = callpath.get_name()
         elems = callpath_string.split("->")
         callpaths2.append(elems)
         if len(elems) > max_length:
-            max_length = len(elems)        
-    
-    # iterate over the elements of one call path
+            max_length = len(elems)
+
+            # iterate over the elements of one call path
     for i in range(max_length):
-        
+
         # iterate over all callpaths
         for j in range(len(callpaths2)):
-        
+
             # check that we do not try to access an element that does not exist
             length = len(callpaths2[j])
-            length = length-1
-            
+            length = length - 1
+
             if i > length:
                 pass
             # if the element does exist
             else:
                 callpath_string = callpaths2[j][i]
-                
+
                 # when at root level
                 if i == 0:
-                    
+
                     # check if that node is already existing
                     # if no 
                     if tree.node_exist(callpath_string) == False:
-                    
+
                         # add a new rootles node to the tree
-                        node = Node(callpath_string, None)
-                
+                        node = Node(callpath_string, Callpath(callpath_string))
+
                         tree.add_node(node)
-                    
+
                     # if yes
                     else:
                         # do nothing
                         pass
-                
+
                 # when not at root level the root node of the elements have to be checked
                 else:
-                    
+
                     # find the root node of the element that we want to add currently
                     root_node = find_root_node(callpaths2[j], tree, i)
-                                    
+
                     # check if that child node is already existing
                     # if no 
                     if root_node.child_exists(callpath_string) == False:
-                    
+
                         # add a new child node to the root node
-                        child_node = Node(callpath_string, None)
-            
+                        child_node = Node(callpath_string, callpaths[j])
+
                         root_node.add_child_node(child_node)
-                    
+
                     # if yes
                     else:
                         # do nothing
                         pass
-    
+
     return tree
 
 
@@ -380,34 +380,34 @@ def find_root_node(callpath_elements, tree, loop_id):
     root_node = tree.get_node(root_element_string)
 
     # root node already found
-    if loop_id == level+1:
+    if loop_id == level + 1:
         return root_node
-    
+
     # need to search deeper in the tree for the root node
     else:
         return find_child_node(root_node, level, callpath_elements, loop_id)
 
 
-def find_child_node(root_node, level, callpath_elements, loop_id ):
+def find_child_node(root_node, level, callpath_elements, loop_id):
     """
     This method searches for a child node in the tree. Searches iteratively
     into the three and each nodes child nodes. Returns the root node of the
     child.
     """
-    level = level+1
+    level = level + 1
     root_element_string = callpath_elements[level]
     childs = root_node.childs
-    
+
     for i in range(len(childs)):
         child_name = childs[i].name
-        
+
         if child_name == root_element_string:
             new_root_node = childs[i]
-            
+
             # root node already found
-            if loop_id == level+1:
+            if loop_id == level + 1:
                 return new_root_node
-            
+
             # need to search deeper in the tree for the root node
             else:
                 return find_child_node(new_root_node, level, callpath_elements, loop_id)
