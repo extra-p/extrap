@@ -33,7 +33,6 @@ from util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_O
 
 def main():
 
-def main():
     # argparse
     programname = "Extra-P"
     modelers_list = list(set(
