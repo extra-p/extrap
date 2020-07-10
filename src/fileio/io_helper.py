@@ -9,8 +9,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-
-
+from entities.experiment import Experiment
 from entities.measurement import Measurement
 from entities.calltree import CallTree
 from entities.calltree import Node
@@ -18,6 +17,7 @@ import logging
 from tqdm import tqdm
 import numpy
 from entities.callpath import Callpath
+from util.deprecation import deprecated
 from util.exceptions import InvalidExperimentError
 
 
@@ -105,8 +105,7 @@ def format_all(experiment):
                 for dimension in range(dimensions):
                     parameter, value = coordinate.get_parameter_value(dimension)
                     value_string = "{:.2E}".format(value)
-                    parameter_name = parameter.get_name()
-                    coordinate_text += parameter_name + "=" + value_string + ","
+                    coordinate_text += value_string + ","
                 coordinate_text = coordinate_text[:-1]
                 coordinate_text += ")"
                 measurement = experiment.get_measurement(coordinate_id, callpath_id, metric_id)
