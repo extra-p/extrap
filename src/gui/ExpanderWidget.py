@@ -27,7 +27,7 @@ class ExpanderWidget(QGroupBox):
         return self._title
 
     def setContent(self, widget: QWidget):
-        widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         widget.setMinimumHeight(0)
         self.layout().replaceWidget(self._content, widget, Qt.FindChildOption.FindDirectChildrenOnly)
         self._content.deleteLater()

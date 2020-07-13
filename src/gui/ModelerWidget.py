@@ -69,7 +69,7 @@ class ModelerWidget(QWidget):
         self._model_button.setEnabled(False)
 
         grid.addWidget(QWidget(), 2, 0, 1, 2)
-        grid.addWidget(QLabel(self.tr('Model Generator:')), 3, 0,1,2)
+        grid.addWidget(QLabel(self.tr('Model Generator:')), 3, 0, 1, 2)
         grid.addWidget(self._model_selector, 4, 0, 1, 2)
         grid.addWidget(self._options_container, 5, 0, 1, 2)
         grid.addWidget(self._model_button, 6, 0, 1, 2)
@@ -79,12 +79,13 @@ class ModelerWidget(QWidget):
 
     def getName(self):
         return self.model_name_edit.text()
+
     @Slot()
     def _modeler_selected(self):
-        modeler_class=self._model_selector.currentData()
+        modeler_class = self._model_selector.currentData()
         if modeler_class:
             self._modeler = modeler_class()
-            self._options_container.setContent(ModelerOptionsWidget(self, self._modeler))
+            self._options_container.setContent(ModelerOptionsWidget(self._options_container, self._modeler))
             self._options_container.setEnabled(True)
         else:
             self._options_container.setContent(QWidget())

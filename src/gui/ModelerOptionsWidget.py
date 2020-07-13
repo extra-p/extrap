@@ -30,10 +30,10 @@ class ModelerOptionsWidget(QWidget):
         layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
         self.setLayout(layout)
         self.parent().setEnabled(keep_parent_enabled)
-        
+
         if hasattr(self._modeler, 'OPTIONS'):
             self.parent().setEnabled(True)
-            self._create_options(layout, self._modeler.OPTIONS.items())
+            self._create_options(layout, getattr(self._modeler, 'OPTIONS').items())
 
         if isinstance(self._modeler, MultiParameterModeler) and self._modeler.single_parameter_modeler is not None:
             group = self._create_single_parameter_selection()
@@ -47,7 +47,6 @@ class ModelerOptionsWidget(QWidget):
             elif isinstance(option, ModelerOptionsGroup):
                 group = QGroupBox(name)
                 group.setToolTip(option.description)
-                group.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
                 g_layout = QFormLayout()
                 g_layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
                 self._create_options(g_layout, option.items())
@@ -55,8 +54,9 @@ class ModelerOptionsWidget(QWidget):
                 layout.addRow(group)
 
     def _create_single_parameter_selection(self):
+        self._modeler: MultiParameterModeler
+
         group = QGroupBox('Single Parameter Modeler')
-        group.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         g_layout = QVBoxLayout()
         g_layout.setContentsMargins(0, 0, 0, 0)
         modeler_selection = QComboBox()
