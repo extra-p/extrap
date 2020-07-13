@@ -1,4 +1,3 @@
-
 """
 This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 
@@ -13,7 +12,7 @@ directory for details.
 import logging
 import numpy
 from util.deprecation import deprecated
-from .functions import Function
+from .functions import Function, MultiParameterFunction
 from .measurement import Measurement
 from .coordinate import Coordinate
 from typing import List
@@ -79,7 +78,7 @@ class Hypothesis:
             raise RuntimeError("Costs are not calculated.")
         return self._RE
 
-# region Deprecated Getter and Setter
+    # region Deprecated Getter and Setter
     @deprecated("Use property directly.")
     def get_function(self):
         """
@@ -156,7 +155,8 @@ class Hypothesis:
         Set the RE.
         """
         self._RE = RE
-# endregion
+
+    # endregion
 
     def is_valid(self):
         """
@@ -179,6 +179,9 @@ class Hypothesis:
 
         if abs(self.function.constant_coefficient / minimum) < phi:
             self.function.constant_coefficient = 0
+
+    def __repr__(self):
+        return f"Hypothesis({self.function}, RSS:{self._RSS:5f}, SMAPE:{self._SMAPE:5f})"
 
 
 class ConstantHypothesis(Hypothesis):
@@ -245,12 +248,8 @@ class SingleParameterHypothesis(Hypothesis):
         """
         value = validation_measurement.coordinate[0]
         predicted = self.function.evaluate(value)
-        if self._use_median == True:
-            actual = validation_measurement.median
-        else:
-            actual = validation_measurement.mean
-        # TODO: remove old code
-        # actual = validation_measurement.get_value()
+        actual = validation_measurement.value(self._use_median)
+
         difference = predicted - actual
         self._RSS += difference * difference
         relative_difference = difference / actual
@@ -258,7 +257,7 @@ class SingleParameterHypothesis(Hypothesis):
         abssum = abs(actual) + abs(predicted)
         if abssum != 0:
             self._SMAPE += (abs(difference) / abssum * 2) / \
-                len(training_measurements) * 100
+                           len(training_measurements) * 100
         self._costs_are_calculated = True
 
     def compute_cost_all_points(self, measurements: List[Measurement]):
@@ -304,15 +303,12 @@ class SingleParameterHypothesis(Hypothesis):
         b_list = []
         for measurement in measurements:
             value = measurement.value(self._use_median)
-            # TODO: remove old code
-            # value = measurement.value
             list_element = []
             list_element.append(1)  # for constant coefficient
             for compound_term in self.function.compound_terms:
                 parameter_value = measurement.coordinate[0]
                 compound_term.coefficient = 1
-                compound_term_value = compound_term.evaluate(
-                    parameter_value)
+                compound_term_value = compound_term.evaluate(parameter_value)
                 list_element.append(compound_term_value)
             a_list.append(list_element)
             b_list.append(value)
@@ -327,7 +323,7 @@ class SingleParameterHypothesis(Hypothesis):
         # setting the coefficients for the hypothesis
         self.function.constant_coefficient = X[0][0]
         for i, compound_term in enumerate(self.function.compound_terms):
-            compound_term.coefficient = X[0][i+1]
+            compound_term.coefficient = X[0][i + 1]
 
     def calc_term_contribution(self, term, measurements: List[Measurement]):
         """
@@ -336,14 +332,7 @@ class SingleParameterHypothesis(Hypothesis):
         maximum_term_contribution = 0
         for measurement in measurements:
             parameter_value = measurement.coordinate[0]
-            if self._use_median == True:
-                contribution = abs(term.evaluate(
-                    parameter_value) / measurement.median)
-            else:
-                contribution = abs(term.evaluate(
-                    parameter_value) / measurement.mean)
-            # TODO: remove old code
-            # contribution = abs( term.evaluate(parameter_value) / measurement.value)
+            contribution = abs(term.evaluate(parameter_value) / measurement.value(self._use_median))
             if contribution > maximum_term_contribution:
                 maximum_term_contribution = contribution
         return maximum_term_contribution
@@ -357,13 +346,15 @@ class MultiParameterHypothesis(Hypothesis):
     model that fits the data.
     """
 
-    def __init__(self, function, use_median):
+    function: MultiParameterFunction
+
+    def __init__(self, function: MultiParameterFunction, use_median):
         """
         Initialize MultiParameterHypothesis object.
         """
         super().__init__(function, use_median)
 
-    def compute_cost(self, measurements, coordinates):
+    def compute_cost(self, measurements):
         """
         Compute the cost for a multi parameter hypothesis.
         """
@@ -380,10 +371,9 @@ class MultiParameterHypothesis(Hypothesis):
 
             predicted = self.function.evaluate(parameter_value_pairs)
             # print(predicted)
-            if self._use_median == True:
-                actual = measurement.get_value_median()
-            else:
-                actual = measurement.get_value_mean()
+
+            actual = measurement.value(self._use_median)
+
             # print(actual)
 
             difference = predicted - actual
@@ -396,10 +386,8 @@ class MultiParameterHypothesis(Hypothesis):
             re_sum = re_sum + relative_error
 
             self._RSS += difference * difference
-            if self._use_median == True:
-                relativeDifference = difference / measurement.get_value_median()
-            else:
-                relativeDifference = difference / measurement.get_value_mean()
+
+            relativeDifference = difference / actual
             self._rRSS += relativeDifference * relativeDifference
 
             if abssum != 0.0:
@@ -426,7 +414,7 @@ class MultiParameterHypothesis(Hypothesis):
         degrees_freedom = len(measurements) - counter - 1
         self._AR2 = (1.0 - (1.0 - adjR) * (len(measurements) - 1.0) / degrees_freedom)
 
-    def compute_coefficients(self, measurements, coordinates):
+    def compute_coefficients(self, measurements):
         """
         Computes the coefficients of the function using the least squares solution.
         """
@@ -442,7 +430,7 @@ class MultiParameterHypothesis(Hypothesis):
                 if multi_parameter_term_id == 0:
                     list_element.append(1)
                 else:
-                    multi_parameter_term = self.function[multi_parameter_term_id-1]
+                    multi_parameter_term = self.function[multi_parameter_term_id - 1]
                     coordinate = measurement.coordinate
                     multi_parameter_term_value = multi_parameter_term.evaluate(coordinate)
                     list_element.append(multi_parameter_term_value)
@@ -460,8 +448,8 @@ class MultiParameterHypothesis(Hypothesis):
 
         # setting the coefficients for the hypothesis
         self.function.set_constant_coefficient(X[0][0])
-        for multi_parameter_term_id in range(hypothesis_total_terms-1):
-            self.function[multi_parameter_term_id].set_coefficient(X[0][multi_parameter_term_id+1])
+        for multi_parameter_term_id in range(hypothesis_total_terms - 1):
+            self.function[multi_parameter_term_id].set_coefficient(X[0][multi_parameter_term_id + 1])
 
     def calc_term_contribution(self, term_index, measurements, coordinates):
         """
@@ -477,10 +465,10 @@ class MultiParameterHypothesis(Hypothesis):
             for i in range(dimensions):
                 parameter, value = coordinates[element_id].get_parameter_value(i)
                 parameter_value_pairs[parameter.get_name()] = float(value)
-            if self._use_median == True:
-                contribution = abs(multi_parameter_terms[term_index].evaluate(parameter_value_pairs) / measurements[element_id].get_value_median())
-            else:
-                contribution = abs(multi_parameter_terms[term_index].evaluate(parameter_value_pairs) / measurements[element_id].get_value_mean())
+
+            contribution = abs(multi_parameter_terms[term_index].evaluate(parameter_value_pairs) / measurements[
+                element_id].value(self._use_median))
+
             if contribution > maximum_term_contribution:
                 maximum_term_contribution = contribution
         return maximum_term_contribution
