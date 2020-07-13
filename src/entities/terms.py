@@ -88,7 +88,7 @@ class CompoundTerm(SingleParameterTerm):
     def add_simple_term(self, simple_term):
         self.simple_terms.append(simple_term)
 
-    def evaluate(self, parameter_value: float):
+    def evaluate(self, parameter_value):
         function_value = self.coefficient
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -109,8 +109,7 @@ class CompoundTerm(SingleParameterTerm):
     @staticmethod
     def create(a, b, c=None):
         if c is None:
-            c = b
-            f = a
+            f, c = a, b
         else:
             f = Fraction(a, b)
 

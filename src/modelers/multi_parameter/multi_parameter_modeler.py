@@ -348,8 +348,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # select one function as the bestHypothesis for the start
         best_hypothesis = copy.deepcopy(hypotheses[0])
-        best_hypothesis.compute_coefficients(measurements, coordinates)
-        best_hypothesis.compute_cost(measurements, coordinates)
+        best_hypothesis.compute_coefficients(measurements)
+        best_hypothesis.compute_cost(measurements)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
         logging.info("hypothesis 0 : " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
@@ -359,8 +359,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # find the best hypothesis
         for i in range(1, len(hypotheses)):
-            hypotheses[i].compute_coefficients(measurements, coordinates)
-            hypotheses[i].compute_cost(measurements, coordinates)
+            hypotheses[i].compute_coefficients(measurements)
+            hypotheses[i].compute_cost(measurements)
             hypotheses[i].compute_adjusted_rsquared(constantCost, measurements)
 
             logging.info(

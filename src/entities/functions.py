@@ -97,6 +97,9 @@ class Function:
     def __getitem__(self, i):
         return self.compound_terms[i]
 
+    def __str__(self):
+        return self.to_string()
+
 
 class ConstantFunction(Function):
     """
