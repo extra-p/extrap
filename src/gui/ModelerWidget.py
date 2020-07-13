@@ -86,7 +86,6 @@ class ModelerWidget(QWidget):
         if modeler_class:
             self._modeler = modeler_class()
             self._options_container.setContent(ModelerOptionsWidget(self._options_container, self._modeler))
-            self._options_container.setEnabled(True)
         else:
             self._options_container.setContent(QWidget())
             self._options_container.toggle(True)

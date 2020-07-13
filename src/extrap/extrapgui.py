@@ -1,5 +1,5 @@
 # import logging
-
+import logging
 import sys
 import warnings
 import traceback
@@ -16,6 +16,9 @@ from util.exceptions import RecoverableError
 def main():
     # TODO: add logging to the gui application
 
+    logging.basicConfig(
+        format="%(levelname)s: %(message)s", level=logging.DEBUG)
+
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     # app.setStyleSheet('QWidget{background:#333;color:#eee}')
@@ -29,7 +32,8 @@ def main():
     palette.setColor(QPalette.ButtonText, Qt.black)
     palette.setColor(QPalette.Highlight, QColor(31, 119, 180))
     palette.setColor(QPalette.HighlightedText, Qt.white)
-    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(40, 40, 40))
+    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
     app.setPalette(palette)
 
@@ -60,8 +64,8 @@ def main():
             _old_exception_handler(type, value, traceback_)
             msgBox.open()
         else:
-            _old_exception_handler(type, value, traceback_)
-            sys.exit(1)
+            msgBox.open()
+            return _old_exception_handler(type, value, traceback_)
 
     warnings.showwarning = _warnings_handler
     sys.excepthook = _exception_handler

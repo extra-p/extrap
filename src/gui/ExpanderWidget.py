@@ -37,10 +37,17 @@ class ExpanderWidget(QGroupBox):
     def content(self) -> QWidget:
         return self._content
 
+    def setEnabled(self, arg: bool):
+        if not arg:
+            self.toggle(True)
+        super().setEnabled(arg)
+
     def initUI(self):
         self.setStyleSheet('ExpanderWidget{ '
-                           '    padding:2px -1px -1px 0px; margin-left:-1px; }'
-                           '    QGroupBox::title{ display:none; '
+                           '    padding:2px -1px -1px 0px; margin-left:-1px; '
+                           '}'
+                           'ExpanderWidget::title{ '
+                           '    display:none; '
                            '}'
                            'ExpanderWidget>#expanderToggle{ '
                            '    background: transparent;'
@@ -57,8 +64,11 @@ class ExpanderWidget(QGroupBox):
                            'ExpanderWidget>#expanderToggle:checked,'
                            'ExpanderWidget>#expanderToggle:checked:pressed,'
                            'ExpanderWidget>#expanderToggle:pressed{'
-                           '    background: #CBCBCB;'
+                           '    background: palette(background);'
                            '    border: 1px solid #B0B0B0; border-radius:2px;'
+                           '}'
+                           'ExpanderWidget:disabled{'
+                           '    border: 1px solid transparent; border-radius:2px;'
                            '}'
                            'ExpanderWidget>#expanderToggle:focus{'
                            '    border: 1px solid palette(highlight); border-radius:2px;'
