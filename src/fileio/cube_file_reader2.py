@@ -206,7 +206,7 @@ def read_cube_file(dir_name, scaling_type):
                     call_tree = fix_call_tree(call_tree)
                     
                     # create the callpaths
-                    #todo change i to something else
+                    #TODO: change i to something else
                     for i in range(len(call_tree)):
                         callpath = Callpath(call_tree[i])
                         if experiment.callpath_exists(call_tree[i]) == False:

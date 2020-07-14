@@ -30,5 +30,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
-    install_requires=["pyqt5", "numpy", "matplotlib", "tqdm", "pycuber"],
+    install_requires=["pyqt5", "numpy", "matplotlib", "tqdm", "pycubexr"],
 )
