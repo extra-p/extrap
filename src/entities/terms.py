@@ -31,6 +31,14 @@ class Term(ABC):
     def __repr__(self):
         return f"Term({self.to_string()})"
 
+    def __eq__(self, other):
+        if not isinstance(other, Term):
+            return False
+        elif self is other:
+            return True
+        else:
+            return self.coefficient == other.coefficient
+
 
 class SingleParameterTerm(Term, ABC):
     @abstractmethod
@@ -48,6 +56,8 @@ class SingleParameterTerm(Term, ABC):
 class SimpleTerm(SingleParameterTerm):
 
     def __init__(self, term_type, exponent):
+        super().__init__()
+        del self.coefficient
         self.term_type = term_type
         self.exponent = exponent
 
@@ -73,6 +83,15 @@ class SimpleTerm(SingleParameterTerm):
                 warnings.simplefilter("ignore")
                 log = np.log2(parameter_value)
             return np.power(log, float(self.exponent))
+
+    def __eq__(self, other):
+        if not isinstance(other, SimpleTerm):
+            return False
+        elif self is other:
+            return True
+        else:
+            return self.exponent == other.exponent and \
+                   self.term_type == other.term_type
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -120,6 +139,15 @@ class CompoundTerm(SingleParameterTerm):
             compound_term *= SimpleTerm("logarithm", c)
         return compound_term
 
+    def __eq__(self, other):
+        if not isinstance(other, CompoundTerm):
+            return False
+        elif self is other:
+            return True
+        else:
+            return self.coefficient == other.coefficient and \
+                   self.simple_terms == other.simple_terms
+
 
 class MultiParameterTerm(Term):
 
@@ -162,3 +190,12 @@ class MultiParameterTerm(Term):
 
     def __repr__(self):
         return f"MPTerm({self.to_string()})"
+
+    def __eq__(self, other):
+        if not isinstance(other, MultiParameterTerm):
+            return False
+        elif self is other:
+            return True
+        else:
+            return self.parameter_term_pairs == other.parameter_term_pairs and \
+                   self.coefficient == other.coefficient

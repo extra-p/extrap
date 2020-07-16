@@ -388,7 +388,7 @@ class SingleParameterModeler(LegacyModeler):
 
         # compute cost of the constant model
         constant_hypothesis.compute_cost(measurements)
-        constant_cost = constant_hypothesis.get_RSS()
+        constant_cost = constant_hypothesis.RSS
         logging.debug("Constant model cost: " + str(constant_cost))
 
         # use constat model when cost is 0

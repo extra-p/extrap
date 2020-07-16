@@ -20,6 +20,7 @@ class _FractionExtension(Fraction):
     This class is used to represent the exponent of a simple term as a fraction.
     It is used in the single parameter function modeler in order to iteratively refine the exponents.
     """
+
     @deprecated
     def compute_extended_euclidean(self, a, b):
         """
@@ -81,16 +82,20 @@ class _FractionExtension(Fraction):
         Returns the fractional part of this fraction, equivalent to a modulo operation of numerator and denominator.
         Note that for negative numbers this differs from the usual definition.
         """
-        return Fraction(self.numerator % self.denominator, self.denominator)
+        numerator = self.numerator % self.denominator
+        if self.numerator < 0 and numerator != 0:
+            numerator = numerator - self.denominator
+        return Fraction(numerator, self.denominator)
 
     def get_integral_part(self):
         """
         Returns the integral (integer) part of this fraction, essentially equivalent to a round-towards-zero operation.
         Note that for negative numbers this differs from the usual definition.
         """
-        return self.numerator // self.denominator
+        return int(self.numerator / self.denominator)  # do not use // because rounding to zero is needed
 
-    def approximate(self, x0, accuracy=1e-10):
+    @staticmethod
+    def approximate(x0, accuracy=1e-10):
         """
         Converts a floating point value to a fraction.
         This implementation is based on a paper by John Kennedy, "Algorithm To Convert A Decimal To A Fraction"
@@ -104,7 +109,7 @@ class _FractionExtension(Fraction):
         counter = 0
 
         while counter < 1e6:
-            z = 1.0 / (z-floor(z))
+            z = 1.0 / (z - floor(z))
             tmp = denom
             denom = denom * int(z) + prev_denom
             prev_denom = tmp
@@ -116,7 +121,8 @@ class _FractionExtension(Fraction):
         # when the algorithm fails to find a fraction
         return None
 
-    def approximate_farey(self, x0, max_denominator):
+    @staticmethod
+    def approximate_farey(x0, max_denominator):
         """
         Converts a floating point value to a fraction.
         This implementation uses the Farey sequence in order to approximate the floating point value to a fraction.

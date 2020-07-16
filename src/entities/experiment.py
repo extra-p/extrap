@@ -84,7 +84,7 @@ class Experiment:
     def metric_exists(self, metric_name):
         return Metric(metric_name) in self.metrics
 
-    def add_parameter(self, parameter):
+    def add_parameter(self, parameter: Parameter):
         self.parameters.append(parameter)
 
     @deprecated("Use property directly.")
@@ -138,7 +138,7 @@ class Experiment:
     def get_len_coordinates(self):
         return len(self.coordinates)
 
-    def add_callpath(self, callpath):
+    def add_callpath(self, callpath: Callpath):
         self.callpaths.append(callpath)
 
     @deprecated("Use property directly.")
@@ -184,7 +184,7 @@ class Experiment:
                 return measurement
         return None
 
-    def add_measurement(self, measurement):
+    def add_measurement(self, measurement: Measurement):
         key = (measurement.callpath,
                measurement.metric)
         if key in self.measurements:

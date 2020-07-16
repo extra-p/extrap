@@ -21,7 +21,7 @@ class Measurement:
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
 
-    def __init__(self, coordinate: Coordinate, callpath, metric, values):
+    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values):
         """
         Initialize the Measurement object.
         """
@@ -88,3 +88,15 @@ class Measurement:
 
     def __repr__(self):
         return f"Measurement({self.coordinate}: {self.mean:0.6} median={self.median:0.6})"
+
+    def __eq__(self, other):
+        if not isinstance(other, Measurement):
+            return False
+        elif self is other:
+            return True
+        else:
+            return self.coordinate == other.coordinate and \
+                   self.metric == other.metric and \
+                   self.callpath == other.callpath and \
+                   self.mean == other.mean and \
+                   self.median == other.median
