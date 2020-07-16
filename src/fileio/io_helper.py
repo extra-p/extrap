@@ -126,7 +126,7 @@ def format_all(experiment):
             text += "\t\tModel: " + function_string + "\n"
             text += "\t\tRSS: {:.2E}\n".format(rss)
             text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
-    return text      
+    return text
 
 
 def format_output(experiment, printtype):
@@ -145,7 +145,7 @@ def format_output(experiment, printtype):
     elif printtype == "FUNCTIONS":
         text = format_functions(experiment)
     return text
-    
+
 
 def save_output(text, path):
     """
@@ -163,11 +163,11 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
     repetitions, just one mean and one median value per coordinate.  
     """
     logging.info("Computing measurement repetitions...")
-    
-    #TODO: this progress bar should be only active when using the command line tool
+
+    # TODO: this progress bar should be only active when using the command line tool
     # create a progress bar for computing the repetitions
     pbar = tqdm(total=100)
-    
+
     # create a container for computing the mean or median values of the measurements for each coordinate
     progress_bar_counter = 0
     update_interval = int(experiment.get_len_coordinates() / 25)
@@ -179,7 +179,7 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             for callpath_id in range(experiment.get_len_callpaths()):
                 measurement = Measurement(coordinate_id, callpath_id, metric_id, [], None)
                 computed_measurements.append(measurement)
-        
+
         # update progress bar
         if counter == update_interval:
             pbar.update(1)
@@ -187,7 +187,7 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             counter = 0
         else:
             counter += 1
-    
+
     # iterate over all previously read measurements 
     measurements = experiment.get_measurements()
     update_interval = int(len(measurements) / 25)
@@ -200,7 +200,7 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
         metric_id = measurement.get_metric_id()
         value = measurement.get_value_mean()
         computed_measurement_id = -1
-        
+
         # search the coordinate, metric, callpath that fits to the measurement and remember the id
         for computed_measurements_list_id in range(len(computed_measurements)):
             computed_measurement = computed_measurements[computed_measurements_list_id]
@@ -210,42 +210,12 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             if computed_coordinate_id == coordinate_id and computed_callpath_id == callpath_id and computed_metric_id == metric_id:
                 computed_measurement_id = computed_measurements_list_id
                 break
-        
+
         # add the value of the measurement to the container object and the list inside (one list per coordinate*callpath*metric)
         # the field value_mean serves as a temporary storage for the real measured value, before the median and mean of the repetitions are computed
         # after theses value have been computed, they are written to the measurement object and the original measured value is overwritten
         computed_measurements[computed_measurement_id].value_mean.append(value)
-        
-        # update progress bar
-        if counter == update_interval:
-            pbar.update(1)
-            progress_bar_counter += 1
-            counter = 0
-        else:
-            counter += 1    
-    
-    # calculate mean and median values of measurements
-    update_interval = int(len(computed_measurements) / 25)
-    update_interval += 1
-    counter = 0
-    for measurement_id in range(len(computed_measurements)):
-        computed_measurement = computed_measurements[measurement_id]
-        values = computed_measurement.get_value_mean()
-        
-        # if there exists at least one measurement for this coordinate, metric, callpath calculate the value
-        if len(values) != 0:
-            median_value = numpy.median(values)
-            mean_value = numpy.mean(values)
-        
-        # if not set value to empty value
-        else:
-            median_value = None
-            mean_value = None
-        
-        computed_measurement.set_value_median(median_value)
-        computed_measurement.set_value_mean(mean_value)
-        computed_measurements[measurement_id] = computed_measurement
-        
+
         # update progress bar
         if counter == update_interval:
             pbar.update(1)
@@ -253,19 +223,49 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             counter = 0
         else:
             counter += 1
-        
+
+            # calculate mean and median values of measurements
+    update_interval = int(len(computed_measurements) / 25)
+    update_interval += 1
+    counter = 0
+    for measurement_id in range(len(computed_measurements)):
+        computed_measurement = computed_measurements[measurement_id]
+        values = computed_measurement.get_value_mean()
+
+        # if there exists at least one measurement for this coordinate, metric, callpath calculate the value
+        if len(values) != 0:
+            median_value = numpy.median(values)
+            mean_value = numpy.mean(values)
+
+        # if not set value to empty value
+        else:
+            median_value = None
+            mean_value = None
+
+        computed_measurement.set_value_median(median_value)
+        computed_measurement.set_value_mean(mean_value)
+        computed_measurements[measurement_id] = computed_measurement
+
+        # update progress bar
+        if counter == update_interval:
+            pbar.update(1)
+            progress_bar_counter += 1
+            counter = 0
+        else:
+            counter += 1
+
     # remove the old measurement objects from the experiment
     experiment.clear_measurements()
-    
+
     # add the new measurement objects to the experiment with the computed mean and median values
-    #update_interval = int(25 / len(computed_measurements))
-    
+    # update_interval = int(25 / len(computed_measurements))
+
     update_interval = int(len(computed_measurements) / 25)
     update_interval += 1
     counter = 0
     for measurement_id in range(len(computed_measurements)):
         measurement = computed_measurements[measurement_id]
-        
+
         # ignore a coordinate, metric, callpath if no measurement are available for it
         if measurement.get_value_mean() != None and measurement.get_value_median() != None:
             experiment.add_measurement(measurement)
@@ -283,11 +283,11 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             counter = 0
         else:
             counter += 1
-    
+
     difference = 100 - progress_bar_counter
     pbar.update(difference)
     pbar.close()
-    
+
     return experiment
 
 
@@ -417,11 +417,18 @@ def validate_experiment(experiment: Experiment):
         if not cond:
             raise InvalidExperimentError(message)
 
-    require(len(experiment.parameters) > 0, "Parameters are missing.")
-    require(len(experiment.coordinates) > 0, "Coordinates are missing.")
+    length_parameters = len(experiment.parameters)
+    require(length_parameters > 0, "Parameters are missing.")
+    length_coordinates = len(experiment.coordinates)
+    require(length_coordinates > 0, "Coordinates are missing.")
     require(len(experiment.metrics) > 0, "Metrics are missing.")
     require(len(experiment.callpaths) > 0, "Callpaths are missing.")
     require(len(experiment.call_tree.nodes) > 0, "Calltree is missing.")
+    for c in experiment.coordinates:
+        require(len(c) == length_parameters,
+                f'The number of coordinate units of {c} does not match the number of '
+                f'parameters ({length_parameters}).')
     for k, m in experiment.measurements.items():
-        require(len(m) == len(experiment.coordinates),
-                f'The number of measurements for {k} does not match the number of coordinates.')
+        require(len(m) == length_coordinates,
+                f'The number of measurements ({len(m)}) for {k} does not match the number of coordinates '
+                f'({length_coordinates}).')
