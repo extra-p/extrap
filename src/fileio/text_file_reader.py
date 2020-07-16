@@ -30,10 +30,10 @@ def read_text_file(path, progress_event=lambda _: _):
         lines = file.readlines()
 
     # remove empty lines
-    lines = [l for l in lines if not l.isspace()]
+    lines_no_space = [l for l in lines if not l.isspace()]
 
     # remove line breaks
-    lines = [l.replace("\n", "") for l in lines]
+    lines_no_space = [l.replace("\n", "") for l in lines_no_space]
 
     # create an experiment object to save the date loaded from the text file
     experiment = Experiment()
@@ -44,13 +44,13 @@ def read_text_file(path, progress_event=lambda _: _):
     last_callpath = Callpath("")
     coordinate_id = 0
 
-    if len(lines) == 0:
+    if len(lines_no_space) == 0:
         raise FileFormatError(f'File contains no data: "{path}"')
 
     # parse text to extrap objects
     for i, line in enumerate(lines):
         progress_event(i / len(lines))
-        if line.startswith('#'):
+        if line.isspace() or line.startswith('#'):
             continue  # allow comments
         line = re_whitespace.sub(' ', line)
         # get field name
@@ -90,14 +90,19 @@ def read_text_file(path, progress_event=lambda _: _):
             values = [float(d) for d in data_list]
             if number_parameters >= 1 and number_parameters <= 4:
                 # create one measurement per repetition
+
+                if coordinate_id >= len(experiment.coordinates):
+                    raise FileFormatError(
+                        f'To many DATA lines ({coordinate_id}) for the number of POINTS '
+                        f'({len(experiment.coordinates)}) in line {i}.')
                 measurement = Measurement(
                     experiment.coordinates[coordinate_id], last_callpath, last_metric, values)
                 experiment.add_measurement(measurement)
-
                 coordinate_id += 1
+            elif number_parameters >= 5:
+                raise FileFormatError("This input format supports a maximum of 4 parameters.")
             else:
-                logging.warning(
-                    "This input format supports a maximum of 4 parameters.")
+                raise FileFormatError("This file has no parameters.")
 
         elif field_name == "PARAMETER":
             # create a new parameter
@@ -119,15 +124,16 @@ def read_text_file(path, progress_event=lambda _: _):
                 coordinates = [Coordinate([(parameter, float(c))])
                                for c in coordinate_strings]
                 experiment.coordinates.extend(coordinates)
-            elif number_parameters > 1 and number_parameters < 5:
+            elif 1 < number_parameters < 5:
                 for coordinate_string in coordinate_strings:
                     coordinate_string = coordinate_string.strip()
                     values = coordinate_string.split(" ")
                     coordinate = Coordinate(float(v) for v in values)
                     experiment.coordinates.append(coordinate)
+            elif number_parameters >= 5:
+                raise FileFormatError("This input format supports a maximum of 4 parameters.")
             else:
-                logging.warning(
-                    "This input format supports a maximum of 4 parameters.")
+                raise FileFormatError("This file has no parameters.")
         else:
             raise FileFormatError(f'Encountered wrong field: "{field_name}" in line {i}: {line}')
 
