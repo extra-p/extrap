@@ -184,6 +184,15 @@ class Hypothesis:
         return f"Hypothesis({self.function}, RSS:{self._RSS:5f}, SMAPE:{self._SMAPE:5f})"
 
 
+MAX_HYPOTHESIS = Hypothesis(Function(), False)
+MAX_HYPOTHESIS._RSS = float('inf')
+MAX_HYPOTHESIS._rRSS = float('inf')
+MAX_HYPOTHESIS._SMAPE = float('inf')
+MAX_HYPOTHESIS._AR2 = float('inf')
+MAX_HYPOTHESIS._RE = float('inf')
+MAX_HYPOTHESIS._costs_are_calculated = True
+
+
 class ConstantHypothesis(Hypothesis):
     """
     This class represents a constant hypothesis, it is used to represent a performance

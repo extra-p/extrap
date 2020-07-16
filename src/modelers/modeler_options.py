@@ -41,8 +41,8 @@ class ModelerOptionsGroup:
 
 class _ModelerOptionsClass:
     def __call__(self, original_class: AbstractModeler) -> AbstractModeler:
-        if hasattr(super(original_class), 'OPTIONS'):
-            original_class.OPTIONS = dict(getattr(super(original_class), 'OPTIONS'))
+        if hasattr(original_class, 'OPTIONS'):
+            original_class.OPTIONS = dict(getattr(original_class, 'OPTIONS'))
         else:
             original_class.OPTIONS = {}
 

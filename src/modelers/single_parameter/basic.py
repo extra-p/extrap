@@ -15,20 +15,19 @@ import logging
 import warnings
 from typing import List
 
-from entities.terms import CompoundTerm
-from entities.functions import ConstantFunction, SingleParameterFunction
-from entities.hypotheses import ConstantHypothesis, SingleParameterHypothesis
+from entities.functions import SingleParameterFunction
+from entities.hypotheses import SingleParameterHypothesis
+from entities.measurement import Measurement
 from entities.model import Model
 from entities.parameter import Parameter
-from entities.measurement import Measurement
-from entities.coordinate import Coordinate
+from entities.terms import CompoundTerm
 from modelers.abstract_modeler import LegacyModeler
-from entities.model import Model
 from modelers.modeler_options import modeler_options
+from modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 
 
 @modeler_options
-class SingleParameterModeler(LegacyModeler):
+class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
     """
     This class represents the modeler for single parameter functions.
     In order to create a model measurements at least 5 points are needed.
@@ -36,8 +35,6 @@ class SingleParameterModeler(LegacyModeler):
     """
 
     NAME = 'Basic'
-    allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
-    use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
 
     poly_exponents = modeler_options.add('', str, 'Set of polynomial exponents. Use comma separated list.',
                                          name='Polynomial', on_change=lambda self, v: self._exponents_changed())
@@ -61,10 +58,8 @@ class SingleParameterModeler(LegacyModeler):
         super().__init__(use_median=False)
 
         # value for the minimum term contribution
-        self.epsilon = 0.0005
 
         # minimum allowed value for a constant coefficient befor it is set to 0
-        self.phi = 1e-3
 
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
@@ -250,121 +245,19 @@ class SingleParameterModeler(LegacyModeler):
 
         return [CompoundTerm.create(*e) for e in exponents]
 
-    def create_constant_model(self, measurements):
-        """
-        Creates a constant model that fits the data using a ConstantFunction.
-        """
-
-        # compute the constant coefficient
-        mean_model = sum(m.value(self.use_median) / len(measurements)
-                         for m in measurements)
-
-        # create a constant function
-        return ConstantFunction(mean_model)
-
-    def build_hypothesis(self, compound_term):
+    def build_hypotheses(self, measurements):
         """
         Builds the next hypothesis that should be analysed based on the given compound term.
         """
-
-        # create single parameter function
-        return SingleParameterFunction(copy.copy(compound_term))
-
-    def compare_hypotheses(self, old, new, measurements):
-        """
-        Compares the best with the new hypothesis and decides which one is a better fit for the data.
-        If the new hypothesis is better than the best one it becomes the best hypothesis.
-        The choice is made based on the RSS, since this is the metric optimised by the Regression.
-        """
-
-        # get the compound terms of the new hypothesis
-        compound_terms = new.function.compound_terms
-
-        # for all compound terms check if they are smaller than minimum allowed contribution
-        for term in compound_terms:
-
-            # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
-            if term.coefficient == 0 or new.calc_term_contribution(term, measurements) < self.epsilon:
-                return False
-
-        # print smapes in debug mode
-        logging.debug("next hypothesis SMAPE: " + str(new.SMAPE) + ' RSS:' + str(new.RSS))
-        logging.debug("best hypothesis SMAPE: " + str(old.SMAPE) + ' RSS:' + str(old.RSS))
-
-        return new.SMAPE < old.SMAPE
-
-    def find_best_hypothesis(self, constant_hypothesis, constant_cost, measurements):
-        """
-        Searches for the best single parameter hypothesis and returns it.
-        """
-
-        # currently the constant hypothesis is the best hypothesis
-        best_hypothesis = constant_hypothesis
-
         hypotheses_building_blocks = self.get_matching_hypotheses(measurements)
 
         # search for the best hypothesis over all functions that can be build with the basic building blocks using leave one out crossvalidation
         for i, compound_term in enumerate(hypotheses_building_blocks):
-            compound_term = copy.copy(compound_term)
-
             # create next function that will be analyzed
-            next_function = self.build_hypothesis(compound_term)
+            next_function = SingleParameterFunction(copy.copy(compound_term))
 
             # create single parameter hypothesis from function
-            next_hypothesis = SingleParameterHypothesis(
-                next_function, self.use_median)
-
-            if self.use_crossvalidation:
-                # cycle through points and leave one out per iteration
-                for element_id in range(len(measurements)):
-                    # copy measurements to create the training sets
-                    training_measurements = copy.copy(measurements)
-
-                    # remove one element the set
-                    training_measurements.pop(element_id)
-
-                    # validation set
-                    validation_measurement = measurements[element_id]
-
-                    # compute the model coefficients based on the training data
-                    next_hypothesis.compute_coefficients(training_measurements)
-
-                    # check if the constant coefficient should actually be 0
-                    next_hypothesis.clean_constant_coefficient(self.phi, training_measurements)
-
-                    # compute the cost of the single parameter model for the validation data
-                    next_hypothesis.compute_cost(
-                        training_measurements, validation_measurement)
-
-                # compute the model coefficients using all data
-                next_hypothesis.compute_coefficients(measurements)
-                logging.debug(
-                    f"Single parameter model {i}: " + next_hypothesis.function.to_string(Parameter('p')))
-            else:
-                # compute the model coefficients based on the training data
-                next_hypothesis.compute_coefficients(measurements)
-
-                # check if the constant coefficient should actually be 0
-                next_hypothesis.clean_constant_coefficient(
-                    self.phi, measurements)
-
-                # compute the cost of the single parameter model for the validation data
-                next_hypothesis.compute_cost_all_points(measurements)
-
-            # compute the AR2 for the hypothesis
-            next_hypothesis.compute_adjusted_rsquared(
-                constant_cost, measurements)
-
-            # check if hypothesis is valid
-            if not next_hypothesis.is_valid():
-                logging.info(
-                    "Numeric imprecision found. Model is invalid and will be ignored.")
-
-            # compare the new hypothesis with the best hypothesis
-            elif self.compare_hypotheses(best_hypothesis, next_hypothesis, measurements):
-                best_hypothesis = next_hypothesis
-
-        return best_hypothesis
+            yield SingleParameterHypothesis(next_function, self.use_median)
 
     def create_model(self, measurements: List[Measurement]):
         """
@@ -377,18 +270,9 @@ class SingleParameterModeler(LegacyModeler):
                 "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
             # return None
 
-        # create a constant function
-        constant_function = self.create_constant_model(measurements)
-
-        # create a constant hypothesis from the constant function
-        constant_hypothesis = ConstantHypothesis(
-            constant_function, self.use_median)
-        logging.debug("Constant model: " +
-                      constant_hypothesis.function.to_string())
-
-        # compute cost of the constant model
-        constant_hypothesis.compute_cost(measurements)
-        constant_cost = constant_hypothesis.RSS
+        # create a constant model
+        constant_hypothesis, constant_cost = self.create_constant_model(measurements)
+        logging.debug("Constant model: " + constant_hypothesis.function.to_string())
         logging.debug("Constant model cost: " + str(constant_cost))
 
         # use constat model when cost is 0
@@ -399,8 +283,8 @@ class SingleParameterModeler(LegacyModeler):
         # otherwise start searching for the best hypothesis based on the pmnf
         else:
             logging.debug("Searching for a single parameter model.")
-
             # search for the best single parmater hypothesis
-            best_hypothesis = self.find_best_hypothesis(
-                constant_hypothesis, constant_cost, measurements)
+            hypotheses_generator = self.build_hypotheses(measurements)
+            best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, measurements,
+                                                        constant_hypothesis)
             return Model(best_hypothesis)
