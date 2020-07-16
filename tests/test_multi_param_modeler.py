@@ -1,12 +1,13 @@
 import unittest
-from fileio.text_file_reader import read_text_file
-from modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
-from entities.coordinate import Coordinate
-from entities.hypotheses import SingleParameterHypothesis
-from entities.experiment import Experiment
-from entities.callpath import Callpath
-from entities.metric import Metric
 from random import shuffle
+
+from entities.callpath import Callpath
+from entities.coordinate import Coordinate
+from entities.metric import Metric
+from fileio.jsonlines_file_reader import read_jsonlines_file
+from fileio.text_file_reader import read_text_file
+from modelers.model_generator import ModelGenerator
+from modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 
 
 class TestFindFirstMeasurements(unittest.TestCase):
@@ -71,20 +72,10 @@ class TestFindFirstMeasurements(unittest.TestCase):
             f_msm = modeler.find_first_measurement_points(measurements)
 
             self.assertEqual(len(f_msm), 2)
-            self.assertSetEqual(set(m.coordinate for m in f_msm[0]), set([
-                Coordinate((20)),
-                Coordinate((30)),
-                Coordinate((40)),
-                Coordinate((50)),
-                Coordinate((60))
-            ]))
-            self.assertSetEqual(set(m.coordinate for m in f_msm[1]), set([
-                Coordinate((1)),
-                Coordinate((2)),
-                Coordinate((3)),
-                Coordinate((4)),
-                Coordinate((5))
-            ]))
+            self.assertSetEqual(set(m.coordinate for m in f_msm[0]),
+                                {Coordinate(20), Coordinate(30), Coordinate(40), Coordinate(50), Coordinate(60)})
+            self.assertSetEqual(set(m.coordinate for m in f_msm[1]),
+                                {Coordinate(1), Coordinate(2), Coordinate(3), Coordinate(4), Coordinate(5)})
 
     def test_3parameters_basic(self):
         experiment = read_text_file('data/text/three_parameter_1.txt')
@@ -159,24 +150,33 @@ class TestFindFirstMeasurements(unittest.TestCase):
             f_msm = modeler.find_first_measurement_points(measurements)
 
             self.assertEqual(len(f_msm), 3)
-            self.assertSetEqual(set(m.coordinate for m in f_msm[0]), set([
+            self.assertSetEqual(set(m.coordinate for m in f_msm[0]), {
                 Coordinate(20),
                 Coordinate(30),
                 Coordinate(40),
                 Coordinate(50),
                 Coordinate(60)
-            ]))
-            self.assertSetEqual(set(m.coordinate for m in f_msm[1]), set([
+            })
+            self.assertSetEqual(set(m.coordinate for m in f_msm[1]), {
                 Coordinate(1),
                 Coordinate(2),
                 Coordinate(3),
                 Coordinate(4),
                 Coordinate(5)
-            ]))
-            self.assertSetEqual(set(m.coordinate for m in f_msm[2]), set([
+            })
+            self.assertSetEqual(set(m.coordinate for m in f_msm[2]), {
                 Coordinate(100),
                 Coordinate(200),
                 Coordinate(300),
                 Coordinate(400),
                 Coordinate(500)
-            ]))
+            })
+
+
+class TestSparseModeling(unittest.TestCase):
+    def test_1(self):
+        experiment = read_jsonlines_file('data/sparsemodeler/test1.jsonl')
+        # initialize model generator
+        model_generator = ModelGenerator(experiment)
+        # create models from data
+        model_generator.model_all()

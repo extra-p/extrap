@@ -5,13 +5,13 @@ from fileio.text_file_reader import read_text_file
 from entities.callpath import Callpath
 from entities.parameter import Parameter
 from entities.coordinate import Coordinate
-from util.exceptions import FileFormatError
+from util.exceptions import FileFormatError, InvalidExperimentError
 from entities.experiment import Experiment
 from entities.measurement import Measurement
 
 
 # noinspection DuplicatedCode
-class Test_TestOneParameterFiles(unittest.TestCase):
+class TestOneParameterFiles(unittest.TestCase):
     def test_read_1(self):
         experiment = read_text_file("data/text/one_parameter_1.txt")
         self.assertEqual(len(experiment.parameters), 1)
@@ -100,9 +100,15 @@ class Test_TestOneParameterFiles(unittest.TestCase):
         self.assertListEqual([Measurement(c, callpath, metric, v) for c, v in zip(coordinates, data_points)],
                              experiment.measurements[callpath, metric])
 
+    def test_errors(self):
+        self.assertRaises(FileFormatError, read_text_file, "data/input/experiments_SP/experiment_neg.txt")
+        read_text_file("data/input/experiments_SP/experiment2.txt")
+        self.assertRaises(InvalidExperimentError, read_text_file, "data/input/experiments_SP/experiment3_neg.txt")
+        read_text_file("data/input/experiments_SP/experiment4.txt")
+
 
 # noinspection DuplicatedCode
-class Test_TestTwoParameterFiles(unittest.TestCase):
+class TestTwoParameterFiles(unittest.TestCase):
 
     def test_read_1(self):
         experiment = read_text_file("data/text/two_parameter_1.txt")
@@ -170,6 +176,11 @@ class Test_TestTwoParameterFiles(unittest.TestCase):
                         (Parameter('q'), 80)]),
             Coordinate([(Parameter('p'), 16000),
                         (Parameter('q'), 160)])])
+
+    def test_errors(self):
+        read_text_file("data/input/experiments_MP/experiment_MP.txt")
+        self.assertRaises(InvalidExperimentError, read_text_file, "data/input/experiments_MP/experiment_MP_neg1.txt")
+        self.assertRaises(FileFormatError, read_text_file, "data/input/experiments_MP/experiment_MP_neg2.txt")
 
     def testOpenTextIntegrityMultiParam(self):
         callpath = Callpath("reg")
@@ -249,7 +260,7 @@ class Test_TestTwoParameterFiles(unittest.TestCase):
                              experiment.measurements[callpath, metric])
 
 
-class Test_TestThreeParameterFiles(unittest.TestCase):
+class TestThreeParameterFiles(unittest.TestCase):
 
     def test_read_1(self):
         experiment = read_text_file("data/text/three_parameter_1.txt")

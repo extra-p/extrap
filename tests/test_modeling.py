@@ -8,9 +8,9 @@ from entities.callpath import Callpath
 from entities.metric import Metric
 
 
-class Test_TestModeling(unittest.TestCase):
+class TestModeling(unittest.TestCase):
 
-    def test_basic_single_parameter_modeling(self):
+    def test_default_single_parameter_modeling(self):
         experiment = read_text_file('data/text/one_parameter_6.txt')
 
         # initialize model generator
@@ -25,27 +25,27 @@ class Test_TestModeling(unittest.TestCase):
         self.assertAlmostEqual(models[cp0].hypothesis.function.constant_coefficient, 4.068)
 
         cp1 = Callpath('met2'), Metric('')
-        self.assertIsInstance(models[cp1].hypothesis,  SingleParameterHypothesis)
+        self.assertIsInstance(models[cp1].hypothesis, SingleParameterHypothesis)
         self.assertEqual(len(models[cp1].hypothesis.function.compound_terms), 1)
         self.assertEqual(len(models[cp1].hypothesis.function.compound_terms[0].simple_terms), 1)
         self.assertEqual(models[cp1].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
         self.assertAlmostEqual(models[cp1].hypothesis.function.compound_terms[0].simple_terms[0].exponent, 2.0)
 
         cp2 = Callpath('met3'), Metric('')
-        self.assertIsInstance(models[cp2].hypothesis,  SingleParameterHypothesis)
+        self.assertIsInstance(models[cp2].hypothesis, SingleParameterHypothesis)
         self.assertEqual(len(models[cp2].hypothesis.function.compound_terms), 1)
         self.assertEqual(len(models[cp2].hypothesis.function.compound_terms[0].simple_terms), 1)
         self.assertEqual(models[cp2].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
         self.assertAlmostEqual(models[cp2].hypothesis.function.compound_terms[0].simple_terms[0].exponent, 2.0)
 
         cp3 = Callpath('met4'), Metric('')
-        self.assertIsInstance(models[cp3].hypothesis,  SingleParameterHypothesis)
+        self.assertIsInstance(models[cp3].hypothesis, SingleParameterHypothesis)
         self.assertEqual(len(models[cp3].hypothesis.function.compound_terms), 1)
         self.assertEqual(len(models[cp3].hypothesis.function.compound_terms[0].simple_terms), 1)
         self.assertEqual(models[cp3].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
         self.assertAlmostEqual(models[cp3].hypothesis.function.compound_terms[0].simple_terms[0].exponent, 2.0)
 
-    def test_basic_multi_parameter_modeling(self):
+    def test_default_multi_parameter_modeling(self):
         import logging
         logging.basicConfig(level=logging.DEBUG)
         files = ['data/text/two_parameter_1.txt',
