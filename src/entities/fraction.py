@@ -9,13 +9,13 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from fractions import Fraction
+from fractions import Fraction as _PyFraction
 from math import floor, fabs
 from util.deprecation import deprecated
 import inspect
 
 
-class _FractionExtension(Fraction):
+class Fraction(_PyFraction):
     """
     This class is used to represent the exponent of a simple term as a fraction.
     It is used in the single parameter function modeler in order to iteratively refine the exponents.
@@ -169,7 +169,14 @@ class _FractionExtension(Fraction):
         """
         return Fraction(self.numerator + other.numerator, self.denominator + other.denominator)
 
+    def mediant(self, other):
+        """
+        Computes the mediant of this fraction and another fraction and returns a new fraction.
+        """
+        return Fraction(self.numerator + other.numerator, self.denominator + other.denominator)
+    
 
-for n, f in inspect.getmembers(_FractionExtension, predicate=inspect.isfunction):
-    if not hasattr(Fraction, n):
-        setattr(Fraction, n, f)
+# extend python fraction type
+for n, f in inspect.getmembers(Fraction, predicate=inspect.isfunction):
+    if not hasattr(_PyFraction, n):
+        setattr(_PyFraction, n, f)
