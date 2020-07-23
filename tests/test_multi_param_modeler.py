@@ -180,3 +180,35 @@ class TestSparseModeling(unittest.TestCase):
         model_generator = ModelGenerator(experiment)
         # create models from data
         model_generator.model_all()
+
+    def test_2(self):
+        experiment = read_jsonlines_file('data/sparsemodeler/test2.jsonl')
+        # initialize model generator
+        model_generator = ModelGenerator(experiment)
+        # create models from data
+        model_generator.model_all()
+
+    def test_input_1(self):
+        experiment = read_jsonlines_file('data/sparsemodeler/input_1.jsonl')
+        # initialize model generator
+        model_generator = ModelGenerator(experiment)
+        # create models from data
+        model_generator.model_all()
+
+    def test_complete_matrix_2p(self):
+        experiment = read_jsonlines_file('data/sparsemodeler/complete_matrix_2p.jsonl')
+        modeler = MultiParameterModeler()
+        modeler.single_parameter_point_selection = 'all'
+        # initialize model generator
+        model_generator = ModelGenerator(experiment)
+        # create models from data
+        model_generator.model_all()
+
+    def test_cross_matrix_2p(self):
+        experiment = read_jsonlines_file('data/sparsemodeler/cross_matrix_2p.jsonl')
+        modeler = MultiParameterModeler()
+        modeler.single_parameter_point_selection = 'all'
+        # initialize model generator
+        model_generator = ModelGenerator(experiment)
+        # create models from data
+        self.assertWarns(UserWarning, model_generator.model_all)

@@ -13,7 +13,7 @@ import copy
 import itertools
 import logging
 import warnings
-from typing import List
+from typing import List, Sequence
 
 from entities.functions import SingleParameterFunction
 from entities.hypotheses import SingleParameterHypothesis
@@ -85,7 +85,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
         else:
             self.hypotheses_building_blocks = self.create_default_building_blocks(self.allow_log_terms)
 
-    def get_matching_hypotheses(self, measurements: List[Measurement]):
+    def get_matching_hypotheses(self, measurements: Sequence[Measurement]):
         """
         Checkes if the parameter values are smaller than 1.
         In this case log terms are not allowed.
@@ -259,7 +259,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
             # create single parameter hypothesis from function
             yield SingleParameterHypothesis(next_function, self.use_median)
 
-    def create_model(self, measurements: List[Measurement]):
+    def create_model(self, measurements: Sequence[Measurement]):
         """
         Create a model for the given callpath and metric using the given data.
         """

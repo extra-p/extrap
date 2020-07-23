@@ -15,7 +15,7 @@ from util.deprecation import deprecated
 from .functions import Function, MultiParameterFunction
 from .measurement import Measurement
 from .coordinate import Coordinate
-from typing import List
+from typing import List, Sequence
 import math
 
 
@@ -211,7 +211,7 @@ class ConstantHypothesis(Hypothesis):
     def AR2(self):
         return 1
 
-    def compute_cost(self, measurements: List[Measurement]):
+    def compute_cost(self, measurements: Sequence[Measurement]):
         """
         Computes the cost of the constant hypothesis using all data points.
         """
@@ -251,7 +251,7 @@ class SingleParameterHypothesis(Hypothesis):
         """
         super().__init__(function, use_median)
 
-    def compute_cost(self, training_measurements: List[Measurement], validation_measurement: Measurement):
+    def compute_cost(self, training_measurements: Sequence[Measurement], validation_measurement: Measurement):
         """
         Compute the cost for the single parameter model using leave one out crossvalidation.
         """
@@ -269,7 +269,7 @@ class SingleParameterHypothesis(Hypothesis):
                            len(training_measurements) * 100
         self._costs_are_calculated = True
 
-    def compute_cost_all_points(self, measurements: List[Measurement]):
+    def compute_cost_all_points(self, measurements: Sequence[Measurement]):
         points = numpy.array([m.coordinate[0] for m in measurements])
         predicted = self.function.evaluate(points)
         actual = numpy.array([m.value(self._use_median)
@@ -302,7 +302,7 @@ class SingleParameterHypothesis(Hypothesis):
         self._AR2 = (1.0 - (1.0 - adjR) *
                      (len(measurements) - 1.0) / degrees_freedom)
 
-    def compute_coefficients(self, measurements: List[Measurement]):
+    def compute_coefficients(self, measurements: Sequence[Measurement]):
         """
         Computes the coefficients of the function using the least squares solution.
         """
@@ -334,7 +334,7 @@ class SingleParameterHypothesis(Hypothesis):
         for i, compound_term in enumerate(self.function.compound_terms):
             compound_term.coefficient = X[0][i + 1]
 
-    def calc_term_contribution(self, term, measurements: List[Measurement]):
+    def calc_term_contribution(self, term, measurements: Sequence[Measurement]):
         """
         Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
         """

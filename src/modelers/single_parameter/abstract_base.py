@@ -10,7 +10,8 @@ directory for details.
 """
 import copy
 import logging
-from typing import Iterable, List, TypeVar, Union, Tuple
+from abc import ABC
+from typing import Iterable, List, TypeVar, Union, Tuple, Sequence
 
 from entities.functions import ConstantFunction
 from entities.hypotheses import Hypothesis, SingleParameterHypothesis, MAX_HYPOTHESIS, ConstantHypothesis
@@ -26,7 +27,7 @@ H = Union[_H, Hypothesis]
 
 
 @modeler_options
-class AbstractSingleParameterModeler(AbstractModeler):
+class AbstractSingleParameterModeler(AbstractModeler, ABC):
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
     use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
 
@@ -35,7 +36,7 @@ class AbstractSingleParameterModeler(AbstractModeler):
         self.phi = 1e-3
         self.epsilon = 0.0005
 
-    def compare_hypotheses(self, old, new, measurements):
+    def compare_hypotheses(self, old: Hypothesis, new: SingleParameterHypothesis, measurements: Sequence[Measurement]):
         """
         Compares the best with the new hypothesis and decides which one is a better fit for the data.
         If the new hypothesis is better than the best one it becomes the best hypothesis.
@@ -58,7 +59,7 @@ class AbstractSingleParameterModeler(AbstractModeler):
 
         return new.SMAPE < old.SMAPE
 
-    def create_constant_model(self, measurements) -> Tuple[ConstantHypothesis, float]:
+    def create_constant_model(self, measurements: Sequence[Measurement]) -> Tuple[ConstantHypothesis, float]:
         """
         Creates a constant model that fits the data using a ConstantFunction.
         """
@@ -76,7 +77,7 @@ class AbstractSingleParameterModeler(AbstractModeler):
         return constant_hypothesis, constant_cost
 
     def find_best_hypothesis(self, candidate_hypotheses: Iterable[SH], constant_cost: float,
-                             measurements: List[Measurement], current_best: H = MAX_HYPOTHESIS) -> Union[SH, H]:
+                             measurements: Sequence[Measurement], current_best: H = MAX_HYPOTHESIS) -> Union[SH, H]:
         """
         Searches for the best single parameter hypothesis and returns it.
         """

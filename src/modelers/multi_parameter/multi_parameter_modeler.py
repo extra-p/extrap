@@ -12,7 +12,7 @@ directory for details.
 import copy
 import logging
 import warnings
-from typing import List
+from typing import List, Sequence
 
 import numpy as np
 
@@ -76,7 +76,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         parameter_value_list.append(float(value))
         return parameter_value_list
 
-    def find_all_measurement_points(self, measurements: List[Measurement]):
+    def find_all_measurement_points(self, measurements: Sequence[Measurement]):
 
         if len(measurements) < self.min_measurement_points ** 2:
             return None
@@ -109,7 +109,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                 if any(coordinate_except(m, pg) not in coord_set for m in ms):
                     return None
 
-        def make_measurement(c, ms: List[Measurement]):
+        def make_measurement(c, ms: Sequence[Measurement]):
             values = mean = [m.mean for m in ms]
             if self.use_median:
                 values = [m.median for m in ms]
@@ -127,7 +127,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         return combined_measurements
 
-    def find_first_measurement_points(self, measurements: List[Measurement]):
+    def find_first_measurement_points(self, measurements: Sequence[Measurement]):
         """
         This method returns the measurements that should be used for creating
         the single parameter models.
@@ -164,7 +164,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         return candidate_list
 
-    def create_model(self, measurements: List[Measurement]):
+    def create_model(self, measurements: Sequence[Measurement]):
         """
         Create a model for the given callpath and metric using the given data.
         """
@@ -234,8 +234,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             # constant_coefficient = functions[param].get_constant_coefficient()
             # multi_parameter_function.set_constant_coefficient(constant_coefficient)
             multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_median)
-            multi_parameter_hypothesis.compute_coefficients(measurements, coordinates)
-            multi_parameter_hypothesis.compute_cost(measurements, coordinates)
+            multi_parameter_hypothesis.compute_coefficients(measurements)
+            multi_parameter_hypothesis.compute_cost(measurements)
             return Model(multi_parameter_hypothesis)
 
         hypotheses = []

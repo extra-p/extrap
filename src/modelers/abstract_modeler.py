@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Sequence
 from entities.measurement import Measurement
 from entities.model import Model
 
@@ -18,7 +18,7 @@ class AbstractModeler(ABC):
         self._use_median = value
 
     @abstractmethod
-    def model(self, measurements: List[List[Measurement]]) -> List[Model]:
+    def model(self, measurements: Sequence[Sequence[Measurement]]) -> Sequence[Model]:
         raise NotImplementedError
 
     @classmethod
@@ -29,11 +29,11 @@ class AbstractModeler(ABC):
 
 
 class LegacyModeler(AbstractModeler, ABC):
-    def model(self, measurements: List[List[Measurement]]) -> List[Model]:
+    def model(self, measurements: Sequence[Sequence[Measurement]]) -> Sequence[Model]:
         return [self.create_model(m) for m in measurements]
 
     @abstractmethod
-    def create_model(self, measurments: List[Measurement]):
+    def create_model(self, measurements: Sequence[Measurement]):
         raise NotImplementedError
 
 
