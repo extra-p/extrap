@@ -9,12 +9,11 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 from matplotlib.figure import Figure
 
 import numpy as np
 import matplotlib.patches as mpatches
-from gui.AdvancedPlotWidget import GraphDisplayWindow
+from gui.plots.BaseGraphWidget import GraphDisplayWindow, BaseContourGraph
 
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -22,10 +21,11 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+
 #####################################################################
 
 
-class IsolinesDisplay(GraphDisplayWindow):
+class IsolinesDisplay(BaseContourGraph):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
         super().__init__(graphWidget, main_widget, width, height, dpi)
 
@@ -35,73 +35,20 @@ class IsolinesDisplay(GraphDisplayWindow):
         """
 
         # Get data
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths:
+        model_list, selected_callpaths = self.get_selected_models()
+        if model_list is None:
             return
-        model_set = self.main_widget.getCurrentModel().models
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            model = model_set[selected_callpath.path, selected_metric]
-            if model != None:
-                model_list.append(model)
-
-        # Get font size for legend
-        fontSize = self.graphWidget.getFontSize()
 
         # Get max x and max y value as a initial default value or a value provided by user
-        maxX = self.graphWidget.getMaxX()
-        maxY = self.graphWidget.getMaxY()
+        maxX, maxY = self.get_max()
 
-        # define min x and min y value
-        lower_max = 2.0  # since we are drawing the plots with minimum axis value of 1 to avoid nan values , so the first max-value of parameter could be 2 to calcualte number of subdivisions
-        if maxX < lower_max:
-            maxX = lower_max
-        if maxY < lower_max:
-            maxY = lower_max
-
-        # define grid parameters based on max x and max y value
-        if maxX <= 1000:
-            numberOfPixels_x = 100
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX > 1000 and maxX <= 1000000000:
-            numberOfPixels_x = 75
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        else:
-            numberOfPixels_x = 50
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-
-        if maxY <= 1000:
-            numberOfPixels_y = 100
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY > 1000 and maxY <= 1000000000:
-            numberOfPixels_y = 75
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        else:
-            numberOfPixels_y = 50
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-
-        # Get the grid of the x and y values
-        x = np.arange(1.0, maxX, pixelGap_x)
-        y = np.arange(1.0, maxY, pixelGap_y)
-        X, Y = np.meshgrid(x, y)
-
-        # Get the z value for the x and y value
-        Z_List = list()
-        z_List = list()
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = np.array([self.calculate_z(x, y, function)
-                           for x, y in zip(np.ravel(X), np.ravel(Y))])
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
+        X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
         dict_callpath_color = self.main_widget.get_callpath_color_map()
         number_of_subplots = 1
-        if(len(Z_List) > 1):
-            number_of_subplots = len(Z_List)+1
+        if (len(Z_List) > 1):
+            number_of_subplots = len(Z_List) + 1
 
         # Adjusting subplots in order to avoid overlapping of labels
         # Reference : https://stackoverflow.com/questions/2418125/matplotlib-subplots-adjust-hspace-so-titles-and-xlabels-dont-overlap
@@ -135,7 +82,10 @@ class IsolinesDisplay(GraphDisplayWindow):
 
         # Draw isolines
         for i in range(len(Z_List)):
-            ax = self.fig.add_subplot(1, number_of_subplots, i+1)
+            if i == 0:
+                ax = ax_all
+            else:
+                ax = self.fig.add_subplot(1, number_of_subplots, i + 1)
             ax.xaxis.major.formatter._useMathText = True
             ax.yaxis.major.formatter._useMathText = True
             try:
@@ -147,9 +97,9 @@ class IsolinesDisplay(GraphDisplayWindow):
             ax.set_xlabel('\n' + x_label)
             ax.set_ylabel('\n' + y_label)
 
-            #ax.set_title ('function'+ str(i+1))
+            # ax.set_title ('function'+ str(i+1))
             # ax.set_title(functions[i])
-            if(len(Z_List) > 1):
+            if (len(Z_List) > 1):
                 try:
                     cs_all = ax_all.contour(
                         X, Y, Z_List[i], colors=dict_callpath_color[selected_callpaths[i]])
@@ -161,20 +111,9 @@ class IsolinesDisplay(GraphDisplayWindow):
                 left=left, bottom=bottom, right=right, top=top, wspace=wspace, hspace=hspace)
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
                 item.set_fontsize(10)
-            #self.fig.colorbar(CS, ax=ax)
-            #cax = ax.imshow(Z_List[i], interpolation='nearest', cmap=cm.coolwarm)
+            # self.fig.colorbar(CS, ax=ax)
+            # cax = ax.imshow(Z_List[i], interpolation='nearest', cmap=cm.coolwarm)
             # self.fig.colorbar(cax)
 
         # draw legend
-        patches = list()
-        for key, value in dict_callpath_color.items():
-            labelName = str(key.name)
-            if labelName.startswith("_"):
-                labelName = labelName[1:]
-            patch = mpatches.Patch(color=value, label=labelName)
-            patches.append(patch)
-
-        leg = ax_all.legend(handles=patches, fontsize=fontSize,
-                            loc="upper right", bbox_to_anchor=(1, 1))
-        if leg:
-            leg.set_draggable(True)
+        self.draw_legend(ax_all, dict_callpath_color)

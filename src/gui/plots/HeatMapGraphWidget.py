@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 import sys
 import random
 from matplotlib.figure import Figure
@@ -18,7 +17,7 @@ import numpy as np
 import matplotlib.patches as mpatches
 from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap
-from gui.AdvancedPlotWidget import GraphDisplayWindow
+from gui.plots.BaseGraphWidget import GraphDisplayWindow, BaseContourGraph
 
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -26,10 +25,11 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+
 #####################################################################
 
 
-class HeatMapGraph(GraphDisplayWindow):
+class HeatMapGraph(BaseContourGraph):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
         try:
             self.colormap = cm.get_cmap('viridis')
@@ -49,67 +49,14 @@ class HeatMapGraph(GraphDisplayWindow):
           This function draws the graph
         """
         # Get data
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths:
+        model_list, selected_callpaths = self.get_selected_models()
+        if model_list is None:
             return
-        model_set = self.main_widget.getCurrentModel().models
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            model = model_set[selected_callpath.path, selected_metric]
-            if model != None:
-                model_list.append(model)
-
-        # Get font size for legend
-        fontSize = self.graphWidget.getFontSize()
 
         # Get max x and max y value as a initial default value or a value provided by user
-        maxX = self.graphWidget.getMaxX()
-        maxY = self.graphWidget.getMaxY()
+        maxX, maxY = self.get_max()
 
-        # define min x and min y value
-        lower_max = 2.0  # since we are drawing the plots with minimum axis value of 1 to avoid nan values , so the first max-value of parameter could be 2 to calcualte number of subdivisions
-        if maxX < lower_max:
-            maxX = lower_max
-        if maxY < lower_max:
-            maxY = lower_max
-
-        # define grid parameters based on max x and max y value
-        if maxX <= 1000:
-            numberOfPixels_x = 100
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX > 1000 and maxX <= 1000000000:
-            numberOfPixels_x = 75
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        else:
-            numberOfPixels_x = 50
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-
-        if maxY <= 1000:
-            numberOfPixels_y = 100
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY > 1000 and maxY <= 1000000000:
-            numberOfPixels_y = 75
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        else:
-            numberOfPixels_y = 50
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-
-        # Get the grid of the x and y values
-        x = np.arange(1.0, maxX, pixelGap_x)
-        y = np.arange(1.0, maxY, pixelGap_y)
-        X, Y = np.meshgrid(x, y)
-
-        # Get the z value for the x and y value
-        Z_List = list()
-        z_List = list()
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = np.array([self.calculate_z(x, y, function)
-                           for x, y in zip(np.ravel(X), np.ravel(Y))])
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
+        X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
         dict_callpath_color = self.main_widget.get_callpath_color_map()
@@ -128,7 +75,7 @@ class HeatMapGraph(GraphDisplayWindow):
         for i in range(len(z_List[0])):
             max_z_val = z_List[0][i]
             for j in range(len(model_list)):
-                if(z_List[j][i] > max_z_val):
+                if (z_List[j][i] > max_z_val):
                     max_z_val = z_List[j][i]
                     func_with_max_z = model_list[j]
                     color_for_max_z = dict_callpath_color[selected_callpaths[j]]
@@ -137,18 +84,18 @@ class HeatMapGraph(GraphDisplayWindow):
             max_color_list.append(color_for_max_z)
 
         # get the indices of the dominating model functions
-        #indicesList = list()
+        # indicesList = list()
         function_indices_map = {}
         for i in range(len(model_list)):
             indices = self.get_dominating_function_indices(
                 model_list[i], max_function_list)
             if indices:
                 function_indices_map[selected_callpaths[i]] = indices
-                #function_indices_map[model_list[i]] = indices
+                # function_indices_map[model_list[i]] = indices
 
         # reshape the Max Z and corresponding color to give plot as input
         max_Z_List = np.array(max_z_list).reshape(X.shape)
-        #max_Color_List = np.array(max_color_list).reshape(X.shape)
+        # max_Color_List = np.array(max_color_list).reshape(X.shape)
 
         # Set the x_label and y_label based on parameter selected.
         x_label = self.main_widget.data_display.getAxisParameter(0).name
@@ -183,24 +130,14 @@ class HeatMapGraph(GraphDisplayWindow):
             x_y_indices = list(zip(x_indices, y_indices))
             boundaryPoints = self.findBoundaryPoints(x_y_indices)
             i = 0
-            while i < len(boundaryPoints)-1:
-                ax.plot([boundaryPoints[i][0], boundaryPoints[i+1][0]], [boundaryPoints[i]
-                                                                         [1], boundaryPoints[i+1][1]], color=dict_callpath_color[function])
+            while i < len(boundaryPoints) - 1:
+                ax.plot([boundaryPoints[i][0], boundaryPoints[i + 1][0]], [boundaryPoints[i]
+                                                                           [1], boundaryPoints[i + 1][1]],
+                        color=dict_callpath_color[function])
                 i = i + 1
 
         # Step 3: Draw legend
-        patches = list()
-        for key, value in dict_callpath_color.items():
-            labelName = str(key.name)
-            if labelName.startswith("_"):
-                labelName = labelName[1:]
-            patch = mpatches.Patch(color=value, label=labelName)
-            patches.append(patch)
-
-        leg = ax.legend(handles=patches, fontsize=fontSize,
-                        loc="upper right", bbox_to_anchor=(1, 1))
-        if leg:
-            leg.set_draggable(True)
+        self.draw_legend(ax, dict_callpath_color)
 
     def getColorMap(self):
         """ 
@@ -221,7 +158,7 @@ class HeatMapGraph(GraphDisplayWindow):
         functionIndex = -1
         while True:
             try:
-                functionIndex = functionList.index(function, functionIndex+1)
+                functionIndex = functionList.index(function, functionIndex + 1)
                 functionIndexList.append(functionIndex)
             except ValueError:
                 break
@@ -244,7 +181,9 @@ class HeatMapGraph(GraphDisplayWindow):
             for point in points:
                 first = (point2[0] - point1[0], point2[1] - point1[1])
                 second = (point[0] - point2[0], point[1] - point2[1])
-                if (point != point2 and (self.findRelativePosition(first, second) == self.isRight or (self.findRelativePosition(first, second) == self.isInSameLine and self.isOnSamePlane(first, second)))):
+                if (point != point2 and (self.findRelativePosition(first, second) == self.isRight or (
+                        self.findRelativePosition(first, second) == self.isInSameLine and self.isOnSamePlane(first,
+                                                                                                             second)))):
                     point2 = point
             point1 = point2
             points.remove(point1)

@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 import numpy as np
 import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap
-from gui.AdvancedPlotWidget import GraphDisplayWindow
+from gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport

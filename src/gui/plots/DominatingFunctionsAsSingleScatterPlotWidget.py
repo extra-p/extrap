@@ -13,7 +13,7 @@ from matplotlib.figure import Figure
 
 import numpy as np
 import matplotlib.patches as mpatches
-from gui.AdvancedPlotWidget import GraphDisplayWindow
+from gui.plots.BaseGraphWidget import GraphDisplayWindow
 # This class was developed as a first approach to show dominating models in heatmap
 # not used any more
 # HeatMapGraphWidget in used for that purpose
@@ -39,49 +39,14 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
           This function draws the graph
         """
         # Get data
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths:
+        model_list, selected_callpaths = self.get_selected_models()
+        if model_list is None:
             return
-        model_set = self.main_widget.getCurrentModel().models
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            model = model_set[selected_callpath.path, selected_metric]
-            if model != None:
-                model_list.append(model)
-
-        # Get font size for legend
-        fontSize = self.graphWidget.getFontSize()
 
         # Get max x and max y value as a initial default value or a value provided by user
-        maxX = self.graphWidget.getMaxX()
-        maxY = self.graphWidget.getMaxY()
+        maxX, maxY = self.get_max()
 
-        # define min x and min y value
-        lower_max = 2.0  # since we are drawing the plots with minimum axis value of 1 to avoid nan values , so the first max-value of parameter could be 2 to calcualte number of subdivisions
-        if maxX < lower_max:
-            maxX = lower_max
-        if maxY < lower_max:
-            maxY = lower_max
-
-        # define grid parameters based on max x and max y value
-        pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
-
-        # Get the grid of the x and y values
-        x = np.arange(1.0, maxX, pixelGap_x)
-        y = np.arange(1.0, maxY, pixelGap_y)
-        X, Y = np.meshgrid(x, y)
-
-        # Get the z value for the x and y value
-        Z_List = list()
-        z_List = list()
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = np.array([self.calculate_z(x, y, function)
-                           for x, y in zip(np.ravel(X), np.ravel(Y))])
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
+        X, Y, Z_list, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
         dict_callpath_color = self.main_widget.get_callpath_color_map()
@@ -115,8 +80,7 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
 
         # Draw the graph showing the max z value
         number_of_subplots = 1
-        ax = self.fig.add_subplot(
-            1, number_of_subplots, number_of_subplots, projection='3d')
+        ax = self.fig.add_subplot(1, number_of_subplots, number_of_subplots, projection='3d')
         ax.mouse_init()
         ax.xaxis.major.formatter._useMathText = True
         ax.yaxis.major.formatter._useMathText = True
@@ -130,16 +94,4 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
             '\n' + self.main_widget.getSelectedMetric().name, linespacing=3.1)
         ax.set_title(r'Dominating Functions')
 
-        # draw legend
-        patches = list()
-        for key, value in dict_callpath_color.items():
-            labelName = str(key.name)
-            if labelName.startswith("_"):
-                labelName = labelName[1:]
-            patch = mpatches.Patch(color=value, label=labelName)
-            patches.append(patch)
-
-        leg = ax.legend(handles=patches, fontsize=fontSize,
-                        loc="upper right", bbox_to_anchor=(1, 1))
-        if leg:
-            leg.set_draggable(True)
+        self.draw_legend(ax, dict_callpath_color)

@@ -9,17 +9,10 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from matplotlib.figure import Figure
 import matplotlib.ticker as ticker
 import numpy as np
 from matplotlib import cm
-from gui.AdvancedPlotWidget import GraphDisplayWindow
-
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 
 #####################################################################
@@ -40,46 +33,14 @@ class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
         """
 
         # Get data
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths:
+        model_list, selected_callpaths = self.get_selected_models()
+        if model_list is None:
             return
-        model_set = self.main_widget.getCurrentModel().models
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            model = model_set[selected_callpath.path, selected_metric]
-            if model != None:
-                model_list.append(model)
 
-        # Get max x and max y value as a initial default value or a value provided by user
-        maxX = self.graphWidget.getMaxX()
-        maxY = self.graphWidget.getMaxY()
+            # Get max x and max y value as a initial default value or a value provided by user
+        maxX, maxY = self.get_max()
 
-        # define min x and min y value
-        lower_max = 2.0  # since we are drawing the plots with minimum axis value of 1 to avoid nan values , so the first max-value of parameter could be 2 to calcualte number of subdivisions
-        if maxX < lower_max:
-            maxX = lower_max
-        if maxY < lower_max:
-            maxY = lower_max
-
-        # define grid parameters based on max x and max y value
-        pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
-
-        # Get the grid of the x and y values
-        x = np.arange(1, maxX, pixelGap_x)
-        y = np.arange(1, maxY, pixelGap_y)
-        X, Y = np.meshgrid(x, y)
-
-        # Get the z value for the x and y value
-        z_List = list()
-        Z_List = list()
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = np.array([self.calculate_z(x, y, function)
-                           for x, y in zip(np.ravel(X), np.ravel(Y))])
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
+        X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # calculate max_z value
         max_Z_List = list()

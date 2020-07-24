@@ -8,20 +8,22 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+from collections import defaultdict
 
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from entities.coordinate import Coordinate
 from gui.GraphWidget import GraphWidget
-from gui.HeatMapGraphWidget import HeatMapGraph
-from gui.IsolinesDisplayWidget import IsolinesDisplay
-from gui.InterpolatedContourDisplayWidget import InterpolatedContourDisplay
-from gui.MeasurementPointsPlotWidget import MeasurementPointsPlot
-from gui.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
-from gui.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
-from gui.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
-from gui.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
+from gui.plots.HeatMapGraphWidget import HeatMapGraph
+from gui.plots.IsolinesDisplayWidget import IsolinesDisplay
+from gui.plots.InterpolatedContourDisplayWidget import InterpolatedContourDisplay
+from gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
+from gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
+from gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
+from gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
+from gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from gui.AdvancedPlotWidget import AdvancedPlotWidget
 from entities.parameter import Parameter
 
@@ -70,8 +72,8 @@ class AxisSelection(QWidget):
         label2 = QLabel("max.")
         label2.setMinimumWidth(40)
         label2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.max_edit = QSpinBox()
-        self.max_edit.setMinimum(1)
+        self.max_edit = QDoubleSpinBox()
+        self.max_edit.setMinimum(0.01)
         self.max_edit.setMinimumHeight(25)
         self.max_edit.setMaximum(10000000)
         if self.index <= 2:
@@ -94,7 +96,7 @@ class AxisSelection(QWidget):
 
     def updateDisplay(self):
         display = self.manager.display_widget.currentWidget()
-        display.setMax(self.index, float(self.max_edit.text()))
+        display.setMax(self.index, self.max_edit.value())
 
     def max_changed(self):
         ''' This function should only be called from the connected event
@@ -115,12 +117,15 @@ class AxisSelection(QWidget):
             Use this function from external calls to avoid multiple redraws
             of the graph.
         '''
+        if self.max_edit.value() == 0:
+            self.max_edit.setValue(self.max_edit.minimum())
+            return
         display = self.manager.display_widget.currentWidget()
 
         if self.index <= 2:
-            AxisSelection.max_values[self.index] = float(self.max_edit.text())
+            AxisSelection.max_values[self.index] = self.max_edit.value()
 
-        display.setMax(self.index, float(self.max_edit.text()))
+        display.setMax(self.index, self.max_edit.value())
 
     def clearAxisLayout(self):
         if self.grid is not None:
@@ -150,7 +155,7 @@ class AxisSelection(QWidget):
         self.old_name = new_name
 
     def getValue(self):
-        return float(self.max_edit.text())
+        return self.max_edit.value()
 
     def switchParameter(self, newParam):
         i = self.combo_box.findText(newParam, Qt.MatchExactly)
@@ -166,6 +171,7 @@ class ValueSelection(QWidget):
     '''
 
     #####################################################################
+    default_values = defaultdict(lambda: 10)
 
     def __init__(self, manager, parent, param_id, parameter_name):
         super(ValueSelection, self).__init__(parent)
@@ -188,11 +194,12 @@ class ValueSelection(QWidget):
         label2.setMinimumWidth(40)
         label2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        self.value_edit = QSpinBox()
-        self.value_edit.setMinimum(1)
+        self.value_edit = QDoubleSpinBox()
+        self.value_edit.setMinimum(0.01)
         self.value_edit.setMaximum(10000000)
-        self.value_edit.setValue(10)
+        self.value_edit.setValue(self.default_values[self.parameter])
         self.value_edit.setMinimumHeight(25)
+        self.value_edit.valueChanged.connect(self._value_changed)
 
         self.grid.addWidget(label0, 0, 0)
         self.grid.addWidget(self.parameter_label, 0, 1)
@@ -203,10 +210,23 @@ class ValueSelection(QWidget):
         self.setMaximumHeight(30)
 
     def getValue(self):
-        return float(self.value_edit.text())
+        return self.value_edit.value()
 
     def setValue(self, value):
         self.value_edit.setValue(value)
+
+    @Slot(float)
+    def _value_changed(self, value):
+        if value == 0:
+            self.value_edit.setValue(self.value_edit.minimum())
+            return
+        self.default_values[self.parameter] = value
+        display = self.manager.display_widget.currentWidget()
+        if isinstance(display, GraphWidget):
+            display.update()
+        else:
+            display.drawGraph()
+            display.update()
 
     def setName(self, parameter):
         self.parameter = parameter.id
@@ -248,6 +268,7 @@ class DataDisplayManager(QWidget):
         self.axis_selections = list()
         self.value_selections = list()
         self._experiment = None
+        self.parameters = []
         self.initUI()
 
     def initUI(self):
@@ -351,11 +372,13 @@ class DataDisplayManager(QWidget):
         if self._experiment is None or self._experiment != experiment:
             self._experiment = experiment
             max_coordinate = max(experiment.coordinates)
-            for i in range(min(len(max_coordinate), 3)):
-                AxisSelection.max_values[i] = max_coordinate[i] * 1.2
+            for i, pos in enumerate(max_coordinate):
+                if i < 3:
+                    AxisSelection.max_values[i] = pos * 1.2
+                ValueSelection.default_values[i] = pos
 
-        parameters = experiment.get_parameters()
-        self.generateSelections(parameters)
+        self.parameters = experiment.get_parameters()
+        self.generateSelections(self.parameters)
         self.updateWidget()
 
     def setMaxValue(self, index, value):

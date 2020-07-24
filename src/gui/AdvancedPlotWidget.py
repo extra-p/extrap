@@ -9,16 +9,7 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from matplotlib.figure import Figure
-
-import numpy as np
-import matplotlib.patches as mpatches
-from abc import abstractmethod
-
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 
@@ -124,69 +115,6 @@ class AdvancedPlotWidget(QWidget):
           This function returns the number of axis. If its a 2-paramter model, it returns 2
         """
         return 2
-
-
-class GraphDisplayWindow(FigureCanvas):
-    def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
-        self.graphWidget = graphWidget
-        self.main_widget = main_widget
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        super().__init__(self.fig)
-        super().setSizePolicy(QSizePolicy.Expanding,
-                              QSizePolicy.Expanding)
-        super().updateGeometry()
-        self.draw_figure()
-        self.fig.tight_layout()
-
-    @abstractmethod
-    def draw_figure(self):
-        ...
-
-    def _calculate_grid_parameters(self, maxX, maxY):
-        if (maxX < 10):
-            numberOfPixels_x = 45
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX >= 10 and maxX <= 1000:
-            numberOfPixels_x = 40
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        elif maxX > 1000 and maxX <= 1000000000:
-            numberOfPixels_x = 15
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        else:
-            numberOfPixels_x = 5
-            pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
-        if (maxY < 10):
-            numberOfPixels_y = 45
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY >= 10 and maxY <= 1000:
-            numberOfPixels_y = 40
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        elif maxY > 1000 and maxY <= 1000000000:
-            numberOfPixels_y = 15
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        else:
-            numberOfPixels_y = 5
-            pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
-        return pixelGap_x, pixelGap_y
-
-    def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
-        """ 
-           This function calculate the gap in pixels based on number of pixels and max value 
-        """
-        pixelGap = (upperlimit - lowerlimit) / numberOfPixels
-        return pixelGap
-
-    def calculate_z(self, x, y, function):
-        """ 
-           This function evaluates the function passed to it. 
-        """
-        parameter_value_list = self.main_widget.data_display.getValues()
-        param1 = self.main_widget.data_display.getAxisParameter(0).id
-        param2 = self.main_widget.data_display.getAxisParameter(1).id
-        parameter_value_list[param1] = x
-        parameter_value_list[param2] = y
-        z_value = function.evaluate(parameter_value_list)
-        return z_value
 
 
 class MyCustomToolbar(NavigationToolbar):

@@ -1,23 +1,45 @@
-# import logging
 import logging
 import sys
-import warnings
+import threading
 import traceback
+import warnings
 
-from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtGui import QPalette, QColor
 from PySide2.QtCore import Qt
-from gui.MainWidget import MainWidget
-from fileio.text_file_reader import read_text_file
+from PySide2.QtGui import QPalette, QColor
+from PySide2.QtWidgets import QApplication, QMessageBox
+from matplotlib import font_manager
+
 from fileio.json_file_reader import read_json_file
+from fileio.text_file_reader import read_text_file
+from gui.MainWidget import MainWidget
 from util.exceptions import RecoverableError
 
 
-def main():
-    # TODO: add logging to the gui application
+def _preload_common_fonts():
+    common_fonts = [
+        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0'),
+        'STIXGeneral', 'STIXGeneral:italic', 'STIXGeneral:weight=bold',
+        'STIXNonUnicode', 'STIXNonUnicode:italic', 'STIXNonUnicode:weight=bold',
+        'STIXSizeOneSym', 'STIXSizeTwoSym', 'STIXSizeThreeSym', 'STIXSizeFourSym', 'STIXSizeFiveSym',
+        'cmsy10', 'cmr10', 'cmtt10', 'cmmi10', 'cmb10', 'cmss10', 'cmex10',
+        'DejaVu Sans', 'DejaVu Sans:italic', 'DejaVu Sans:weight=bold', 'DejaVu Sans Mono', 'DejaVu Sans Display',
+        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0'),
+        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=6.0')
+    ]
 
-    logging.basicConfig(
-        format="%(levelname)s: %(message)s", level=logging.DEBUG)
+    def _thread(fonts):
+        for f in fonts:
+            font_manager.findfont(f)
+
+    threading.Thread(target=_thread, args=(common_fonts,), daemon=True).start()
+
+
+def main():
+    # preload fonts for matplotlib
+    _preload_common_fonts()
+
+    # TODO: add logging to the gui application
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
