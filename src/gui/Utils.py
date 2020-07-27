@@ -118,9 +118,9 @@ def formatFormula(formula):
         formula = replace_substr(formula, begin, end, base)
 
     # Make exponents
-    end = 0
-    while formula.find('^', end) != -1:
-        begin = formula.find('^', end)
+    begin = 0
+    while formula.find('^', begin) != -1:
+        begin = formula.find('^', begin)
         offset = 1
         end_offset = 0
         end = begin + offset
@@ -136,8 +136,8 @@ def formatFormula(formula):
 
         exponent = formula[begin + offset:end]
         # Skip exponent 1
-        if exponent == '1':
-            exponent = exponent.replace('1', '')
+        if exponent == '1' or exponent == '1.0':
+            exponent = ''
         else:
             exponent = makeExponent(exponent)
         formula = replace_substr(formula, begin, end + end_offset, exponent)

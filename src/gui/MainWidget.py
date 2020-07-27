@@ -8,6 +8,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from gui.ProgressWindow import ProgressWindow
 from modelers.model_generator import ModelGenerator
 from enum import Enum
@@ -121,6 +122,10 @@ class MainWidget(QMainWindow):
         open_talpas_file_action.setStatusTip(self.tr('Open talpas input file'))
         open_talpas_file_action.triggered.connect(self.open_talpas_file)
 
+        open_extrap3_file_action = QAction(self.tr('Open Extra-P 3 Experiment'), self)
+        open_extrap3_file_action.setStatusTip(self.tr('Opens legacy experiment file'))
+        open_extrap3_file_action.triggered.connect(self.open_extrap3_file)
+
         cube_file_action = QAction(self.tr('Open set of CUBE files'), self)
         cube_file_action.setStatusTip(self.tr(
             'Open a set of CUBE files for single parameter models and generate data points for a new experiment from them'))
@@ -172,6 +177,7 @@ class MainWidget(QMainWindow):
         file_menu.addAction(open_text_file_action)
         file_menu.addAction(open_json_file_action)
         file_menu.addAction(open_talpas_file_action)
+        file_menu.addAction(open_extrap3_file_action)
         file_menu.addAction(screenshot_action)
         file_menu.addAction(exit_action)
 
@@ -347,6 +353,16 @@ class MainWidget(QMainWindow):
                 experiment = read_talpas_file(file_name, pw.progress_event)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
+
+    def open_extrap3_file(self):
+        file_name = QFileDialog.getOpenFileName(
+            self, 'Open an Extra-P 3 Experiment file')
+        file_name = self.get_file_name(file_name)
+        if file_name:
+            with ProgressWindow(self, "Loading file", "") as pw:
+                experiment = read_extrap3_experiment(file_name, pw.progress_event)
+                # call the modeler and create a function model
+                self.setExperiment(experiment)
 
     def open_cube_file(self):
         dir_name = QFileDialog.getExistingDirectory(

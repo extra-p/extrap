@@ -9,6 +9,7 @@ from PySide2.QtGui import QPalette, QColor
 from PySide2.QtWidgets import QApplication, QMessageBox
 from matplotlib import font_manager
 
+from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.json_file_reader import read_json_file
 from fileio.text_file_reader import read_text_file
 from gui.MainWidget import MainWidget
@@ -94,14 +95,18 @@ def main():
 
     window.show()
 
-    if len(sys.argv) == 3 and '--text' == sys.argv[1]:
+    if len(sys.argv) >= 3 and '--text' == sys.argv[1]:
         experiment = read_text_file(sys.argv[2])
         # call the modeler and create a function model
         window.model_experiment(experiment)
-    elif len(sys.argv) == 3 and '--json' == sys.argv[1]:
+    elif len(sys.argv) >= 3 and '--json' == sys.argv[1]:
         experiment = read_json_file(sys.argv[2])
         # call the modeler and create a function model
         window.model_experiment(experiment)
+    elif len(sys.argv) >= 3 and '--extra-p-3' == sys.argv[1]:
+        experiment = read_extrap3_experiment(sys.argv[2])
+        # call the modeler and create a function model
+        window.setExperiment(experiment)
 
     app.exec_()
 

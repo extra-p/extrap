@@ -28,6 +28,8 @@ class Measurement:
         self.coordinate: Coordinate = coordinate
         self.callpath: Callpath = callpath
         self.metric: Metric = metric
+        if values is None:
+            return
         self.median: float = np.median(values)
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
