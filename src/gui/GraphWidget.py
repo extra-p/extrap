@@ -741,6 +741,9 @@ class GraphWidget(QWidget):
 
         y_list = function.evaluate(x_list).reshape(-1)
 
+        y_list[y_list == math.inf] = numpy.max(y_list[y_list != math.inf])
+        y_list[y_list == -math.inf] = numpy.min(y_list[y_list != -math.inf])
+
         cord_list_before_filtering = zip(x_values, y_list)
         cord_list = [(x, y)
                      for x, y in cord_list_before_filtering

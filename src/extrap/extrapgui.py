@@ -32,15 +32,20 @@ def _preload_common_fonts():
         for f in fonts:
             font_manager.findfont(f)
 
-    threading.Thread(target=_thread, args=(common_fonts,), daemon=True).start()
+    thread = threading.Thread(target=_thread, args=(common_fonts,))
+    thread.start()
+    return thread
 
 
 def main():
     # preload fonts for matplotlib
-    _preload_common_fonts()
+    font_preloader = _preload_common_fonts()
 
     # TODO: add logging to the gui application
-    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+    if '--debug' in sys.argv:
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+    else:
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
@@ -87,8 +92,9 @@ def main():
             _old_exception_handler(type, value, traceback_)
             msgBox.open()
         else:
-            msgBox.open()
-            return _old_exception_handler(type, value, traceback_)
+            _old_exception_handler(type, value, traceback_)
+            msgBox.exec_()  # ensures waiting
+            exit(1)
 
     warnings.showwarning = _warnings_handler
     sys.excepthook = _exception_handler
@@ -109,6 +115,7 @@ def main():
         window.setExperiment(experiment)
 
     app.exec_()
+    font_preloader.join()
 
 
 if __name__ == "__main__":
