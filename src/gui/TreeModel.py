@@ -8,9 +8,12 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-
+from typing import Optional
 
 from PySide2.QtCore import *  # @UnusedWildImport
+
+from entities import calltree
+from entities.model import Model
 from gui.Utils import formatFormula
 from gui.Utils import formatNumber
 
@@ -26,8 +29,9 @@ class TreeModel(QAbstractItemModel):
             call_tree = experiment.get_call_tree()
             nodes = call_tree.get_nodes()
             self.setupModelData(nodes, self.root_item)
+            self.root_item.call_tree_node = call_tree
 
-    def removeRows(self, position=0, count=1,  parent=QModelIndex()):
+    def removeRows(self, position=0, count=1, parent=QModelIndex()):
         node = self.nodeFromIndex(parent)
         self.beginRemoveRows(parent, position, position + count - 1)
         node.childItems.pop(position)
@@ -55,20 +59,21 @@ class TreeModel(QAbstractItemModel):
             return None
 
         call_tree_node = index.internalPointer().data()
-
         if call_tree_node is None:
             return "Invalid"
+
         callpath = call_tree_node.path
         if callpath is None:
             return "Invalid"
+
+        model = self.getSelectedModel(callpath)
+        if model is None:
+            return None
+
         if getDecorationBoxes:
             delta = self.main_widget.max_value - self.main_widget.min_value
             if delta == 0:
                 return None  # can't divide by zero
-
-            model = self.getSelectedModel(callpath)
-            if model == None:
-                return None
 
             # code commented for single-parameter model
             '''
@@ -92,56 +97,38 @@ class TreeModel(QAbstractItemModel):
         if index.column() == 0:
             return call_tree_node.name
         elif index.column() == 2:
-            model = self.getSelectedModel(callpath)
-            if model == None:
-                return None
             # if len(model.getComments()) > 0:
             #     return len(model.getComments())
-            else:
-                return None
+            return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
-            if not experiment == None:
-                metric = self.selector_widget.getSelectedMetric()
-                model = self.selector_widget.getCurrentModel()
-                if model == None:
-                    return None
-                formula = model.models[(callpath, metric)].hypothesis.function
-                if self.selector_widget.asymptoticCheckBox.isChecked():
-                    parameters = tuple(experiment.parameters)
-                    return formatFormula(formula.to_string(*parameters))
-                else:
-                    parameters = self.selector_widget.getParameterValues()
-                    return formatNumber(str(formula.evaluate(parameters)))
+            formula = model.hypothesis.function
+            if self.selector_widget.asymptoticCheckBox.isChecked():
+                parameters = tuple(experiment.parameters)
+                return formatFormula(formula.to_string(*parameters))
+            else:
+                parameters = self.selector_widget.getParameterValues()
+                return formatNumber(str(formula.evaluate(parameters)))
         elif index.column() == 4:
-            model = self.getSelectedModel(callpath).hypothesis
-            if model == None:
-                return None
-            return formatNumber(str(model.get_RSS()))
+            return formatNumber(str(model.hypothesis.RSS))
         elif index.column() == 5:
-            model = self.getSelectedModel(callpath).hypothesis
-            if model == None:
-                return None
-            return formatNumber(str(model.get_AR2()))
+            return formatNumber(str(model.hypothesis.AR2))
         elif index.column() == 6:
-            model = self.getSelectedModel(callpath).hypothesis
-            if model == None:
-                return None
-            return formatNumber(str(model.get_SMAPE()))
+            return formatNumber(str(model.hypothesis.SMAPE))
         elif index.column() == 7:
-            model = self.getSelectedModel(callpath).hypothesis
-            if model == None:
-                return None
-            return formatNumber(str(model.get_RE()))
+            return formatNumber(str(model.hypothesis.RE))
         return None
 
-    def getSelectedModel(self, callpath):
+    def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
         if model is None or metric is None:
             return None
-
-        return model.models[(callpath, metric)]  # might be None
+        key = (callpath, metric)
+        if key in model.models:
+            return model.models[key]  # might be None
+        else:
+            return None
 
     def flags(self, index):
         if not index.isValid():
@@ -234,9 +221,9 @@ class TreeModel(QAbstractItemModel):
 
 
 class TreeItem(object):
-    def __init__(self, callpath, parent=None):
+    def __init__(self, call_tree_node, parent=None):
         self.parent_item = parent
-        self.callpath = callpath
+        self.call_tree_node: calltree.Node = call_tree_node
         self.child_items = []
 
     def appendChild(self, item):
@@ -246,7 +233,7 @@ class TreeItem(object):
         return self.child_items[row]
 
     def data(self):
-        return self.callpath
+        return self.call_tree_node
 
     def parent(self):
         return self.parent_item
