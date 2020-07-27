@@ -1,7 +1,11 @@
-from entities.hypotheses import Hypothesis
-from util.deprecation import deprecated
-from util.caching import cached_property
+from typing import Optional, List
+
 import numpy
+
+from entities.hypotheses import Hypothesis
+from entities.measurement import Measurement
+from util.caching import cached_property
+from util.deprecation import deprecated
 
 
 class Model:
@@ -10,7 +14,7 @@ class Model:
         self.hypothesis: Hypothesis = hypothesis
         self.callpath = callpath
         self.metric = metric
-        self.measurements = []
+        self.measurements: Optional[List[Measurement]] = None
 
     @deprecated("Use property directly.")
     def get_hypothesis(self):

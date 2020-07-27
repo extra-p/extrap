@@ -16,7 +16,7 @@ import logging
 class Experiment:
 
     def __init__(self):
-        self.callpaths = UniqueList()
+        self.callpaths: List[Callpath] = UniqueList()
         self.metrics: List[Metric] = UniqueList()
         self.parameters: List[Parameter] = UniqueList()
         self.coordinates: List[Coordinate] = UniqueList()

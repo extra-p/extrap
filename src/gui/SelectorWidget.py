@@ -196,6 +196,7 @@ class SelectorWidget(QWidget):
 
     def metric_index_changed(self):
         self.main_widget.metricIndexChanged()
+        self.main_widget.selector_widget.tree_model.valuesChanged()
 
     def getParameterValues(self):
         ''' This functions returns the parameter value list with the
@@ -214,9 +215,9 @@ class SelectorWidget(QWidget):
         '''
         value_list = list()
         for callpath in callpaths:
-            model = self.getCurrentModel().models[(callpath.path, metric)]
+            model = self.getCurrentModel().models.get((callpath.path, metric))
             if model == None:
-                return value_list
+                continue
 
             formula = model.hypothesis.function
             value = formula.evaluate(paramValueList)

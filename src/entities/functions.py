@@ -8,6 +8,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+import warnings
 from typing import List, Mapping
 
 from entities.parameter import Parameter
@@ -67,6 +68,7 @@ class Function:
         """
         Evalute the function according to the given value and return the result.
         """
+
         if isinstance(parameter_value, numpy.ndarray):
             shape = parameter_value.shape
             if len(shape) == 2:
@@ -75,7 +77,9 @@ class Function:
         else:
             function_value = self.constant_coefficient
         for t in self.compound_terms:
-            function_value += t.evaluate(parameter_value)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                function_value += t.evaluate(parameter_value)
         return function_value
 
     def to_string(self, *parameters):
