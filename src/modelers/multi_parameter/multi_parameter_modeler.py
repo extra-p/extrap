@@ -44,7 +44,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                                                            description="Sets the point selection method for creating "
                                                                        "the single-parameter models.")
     allow_combinations_of_sums_and_products = modeler_options.add(True, bool,
-                                                                  description="Allows models that consist of combinations of sums and products.")
+                                                                  description="Allows models that consist of "
+                                                                              "combinations of sums and products.")
+    compare_with_RSS = modeler_options.add(False, bool)
 
     def __init__(self):
         """
@@ -116,9 +118,14 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, values)
             measurement.median = measurement.mean
-            measurement.maximum = np.mean([m.maximum / m.mean for m in ms]) * measurement.mean
-            measurement.minimum = np.mean([m.minimum / m.mean for m in ms]) * measurement.mean
-            measurement.std = np.mean([m.std / m.mean for m in ms]) * measurement.mean
+            if measurement.mean == 0:
+                measurement.maximum = np.mean([m.maximum for m in ms])
+                measurement.minimum = np.mean([m.minimum for m in ms])
+                measurement.std = np.mean([m.std for m in ms])
+            else:
+                measurement.maximum = np.mean([m.maximum / m.mean for m in ms]) * measurement.mean
+                measurement.minimum = np.mean([m.minimum / m.mean for m in ms]) * measurement.mean
+                measurement.std = np.mean([m.std / m.mean for m in ms]) * measurement.mean
 
             return measurement
 
@@ -183,7 +190,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         # print(coordinates_list)
 
         # model all single parmaeter experiments using only the selected points from the step before
-        parameters = list(range(measurements[0].coordinate.dimensions))
+        # parameters = list(range(measurements[0].coordinate.dimensions))
 
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
@@ -247,7 +254,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         add = [MultiParameterTerm(ctp) for ctp in compound_term_pairs]
 
         # add Hypotheses for 2 parameter models
-        if len(parameters) == 2:
+        if len(compound_term_pairs) == 2:
             # create multi parameter functions
             mp_functions = [
                 # create f1 function a*b
@@ -271,7 +278,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             hypotheses.extend(mph)
 
         # add Hypotheses for 3 parameter models
-        if len(parameters) == 3:
+        if len(compound_term_pairs) == 3:
             # create multiplicative multi parameter terms
             # x*y
             mult_x_y = MultiParameterTerm(compound_term_pairs[0], compound_term_pairs[1])
@@ -352,10 +359,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         best_hypothesis.compute_cost(measurements)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-        logging.info("hypothesis 0 : " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
-            best_hypothesis.get_SMAPE()) + " --- ar2: " + str(best_hypothesis.get_AR2()) +
-                     " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
-            best_hypothesis.get_rRSS()) + " --- re: " + str(best_hypothesis.get_RE()))
+        logging.info(f"hypothesis 0: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
+                     f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
+                     f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
 
         # find the best hypothesis
         for i in range(1, len(hypotheses)):
@@ -363,21 +369,20 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             hypotheses[i].compute_cost(measurements)
             hypotheses[i].compute_adjusted_rsquared(constantCost, measurements)
 
-            logging.info(
-                "hypothesis " + str(i) + " : " + str(hypotheses[i].get_function().to_string()) + " --- smape: " + str(
-                    hypotheses[i].get_SMAPE()) + " --- ar2: " +
-                str(hypotheses[i].get_AR2()) + " --- rss: " + str(hypotheses[i].get_RSS()) + " --- rrss: " + str(
-                    hypotheses[i].get_rRSS()) + " --- re: " + str(hypotheses[i].get_RE()))
-
-            if hypotheses[i].get_SMAPE() < best_hypothesis.get_SMAPE():
+            logging.info(f"hypothesis {i}: {hypotheses[i].function} --- smape: {hypotheses[i].SMAPE} "
+                         f"--- ar2: {hypotheses[i].AR2} --- rss: {hypotheses[i].RSS} "
+                         f"--- rrss: {hypotheses[i].rRSS} --- re: {hypotheses[i].RE}")
+            if self.compare_with_RSS:
+                if hypotheses[i].RSS < best_hypothesis.RSS:
+                    best_hypothesis = copy.deepcopy(hypotheses[i])
+            elif hypotheses[i].get_SMAPE() < best_hypothesis.get_SMAPE():
                 best_hypothesis = copy.deepcopy(hypotheses[i])
 
         # add the best found hypothesis to the model list
         model = Model(best_hypothesis)
 
-        logging.info("best hypothesis: " + str(best_hypothesis.get_function().to_string()) + " --- smape: " + str(
-            best_hypothesis.get_SMAPE()) + " --- ar2: " + str(best_hypothesis.get_AR2()) +
-                     " --- rss: " + str(best_hypothesis.get_RSS()) + " --- rrss: " + str(
-            best_hypothesis.get_rRSS()) + " --- re: " + str(best_hypothesis.get_RE()))
+        logging.info(f"best hypothesis: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
+                     f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
+                     f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
 
         return model

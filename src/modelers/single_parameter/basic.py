@@ -57,10 +57,6 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
         """
         super().__init__(use_median=False)
 
-        # value for the minimum term contribution
-
-        # minimum allowed value for a constant coefficient befor it is set to 0
-
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
 

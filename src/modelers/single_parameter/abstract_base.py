@@ -30,10 +30,13 @@ H = Union[_H, Hypothesis]
 class AbstractSingleParameterModeler(AbstractModeler, ABC):
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
     use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
+    compare_with_RSS = modeler_options.add(False, bool)
 
     def __init__(self, use_median: bool):
         super().__init__(use_median)
+        # value for the minimum term contribution
         self.phi = 1e-3
+        # minimum allowed value for a constant coefficient befor it is set to 0
         self.epsilon = 0.0005
 
     def compare_hypotheses(self, old: Hypothesis, new: SingleParameterHypothesis, measurements: Sequence[Measurement]):
@@ -56,7 +59,8 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         # print smapes in debug mode
         logging.debug("next hypothesis SMAPE: " + str(new.SMAPE) + ' RSS:' + str(new.RSS))
         logging.debug("best hypothesis SMAPE: " + str(old.SMAPE) + ' RSS:' + str(old.RSS))
-
+        if self.compare_with_RSS:
+            return new.RSS < old.RSS
         return new.SMAPE < old.SMAPE
 
     def create_constant_model(self, measurements: Sequence[Measurement]) -> Tuple[ConstantHypothesis, float]:
@@ -94,7 +98,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                 # cycle through points and leave one out per iteration
                 for element_id in range(len(measurements)):
                     # copy measurements to create the training sets
-                    training_measurements = copy.copy(measurements)
+                    training_measurements = list(measurements)
 
                     # remove one element the set
                     training_measurements.pop(element_id)
