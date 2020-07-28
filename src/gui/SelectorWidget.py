@@ -80,10 +80,11 @@ class SelectorWidget(QWidget):
         self.tree_view.setModel(self.tree_model)
         # increase width of "Callpath" and "Value" columns
         self.tree_view.setColumnWidth(0, 150)
-        self.tree_view.setColumnWidth(1, 25)
-        self.tree_view.setColumnWidth(2, 25)
         self.tree_view.setColumnWidth(3, 150)
         self.tree_view.header().swapSections(0, 1)
+        self.tree_view.header().setMinimumSectionSize(23)
+        self.tree_view.header().resizeSection(1, 23)
+        self.tree_view.header().resizeSection(2, 23)
         selectionModel = self.tree_view.selectionModel()
         selectionModel.selectionChanged.connect(
             self.callpath_selection_changed)
@@ -172,7 +173,7 @@ class SelectorWidget(QWidget):
 
     def model_delete(self):
         reply = QMessageBox.question(self,
-                                     self.tr('Quit'),
+                                     self.tr('Delete current model'),
                                      self.tr(
                                          "Are you sure to delete the model?"),
                                      QMessageBox.Yes | QMessageBox.No,
@@ -184,10 +185,10 @@ class SelectorWidget(QWidget):
                 return
 
             self.model_selector.removeItem(index)
-            experiment.deleteModel(index)
+            del experiment.modelers[index]
 
     def get_all_models(self, experiment):
-        if experiment == None:
+        if experiment is None:
             return None
         models = experiment.modelers
         if len(models) == 0:
@@ -216,7 +217,7 @@ class SelectorWidget(QWidget):
         value_list = list()
         for callpath in callpaths:
             model = self.getCurrentModel().models.get((callpath.path, metric))
-            if model == None:
+            if model is None:
                 continue
 
             formula = model.hypothesis.function

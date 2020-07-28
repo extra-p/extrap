@@ -82,7 +82,6 @@ class IoHelper:
         if pattern in self.cached_structs:
             compiled_struct = self.cached_structs[pattern]
         else:
-            print(pattern)
             compiled_struct = struct.Struct(self.byte_order + pattern)
             self.cached_structs[pattern] = compiled_struct
         return self.read_struct(compiled_struct)
@@ -506,7 +505,7 @@ def read_extrap3_experiment(path, progress_event=lambda _: _):
         prefix = ioHelper.readString()
         while (prefix):
             progress_event(file.tell() / file_size)
-            logging.debug("Deserialize " + str(prefix))
+            # logging.debug("Deserialize " + str(prefix))
             if prefix == 'Parameter':
                 p = deserialize_parameter(parameter_mapping, ioHelper)
                 exp.add_parameter(p)

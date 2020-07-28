@@ -42,10 +42,14 @@ class TreeView(QTreeView):
                     lambda: self.showDataPoints(selectedModel))
                 copyModel = menu.addAction("Copy Model")
                 copyModel.triggered.connect(
-                    lambda: QGuiApplication.clipboard().setText(selectedModel.hypothesis.function.to_string(
-                        self.model().main_widget.getExperiment().parameters))
+                    lambda: self.copy_model_to_clipboard(selectedModel)
                 )
                 menu.exec_(self.mapToGlobal(event.pos()))
+
+    def copy_model_to_clipboard(self, selectedModel):
+        parameters = self.model().main_widget.getExperiment().parameters
+        function_string = selectedModel.hypothesis.function.to_string(parameters)
+        QGuiApplication.clipboard().setText(function_string)
 
     def showComments(self, model):
         msg = QMessageBox()

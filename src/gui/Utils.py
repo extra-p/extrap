@@ -22,7 +22,7 @@ def makeExponent(exponent):
     exponent = exponent.replace('8', '⁸')
     exponent = exponent.replace('9', '⁹')
     exponent = exponent.replace('-', '⁻')
-    exponent = exponent.replace('.', '̇ ')
+    exponent = exponent.replace('.', ' ̇ ')
     exponent = exponent.replace('/', '⸍')
     return exponent
 
@@ -135,6 +135,8 @@ def formatFormula(formula):
             end_offset += 1
 
         exponent = formula[begin + offset:end]
+        if len(exponent) > 5:
+            exponent = '{:.3f}'.format(float(exponent))
         # Skip exponent 1
         if exponent == '1' or exponent == '1.0':
             exponent = ''

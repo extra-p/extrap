@@ -225,11 +225,12 @@ class MainWidget(QMainWindow):
         self.selector_widget.fillMetricList()
         self.selector_widget.createParameterSliders()
         self.selector_widget.fillCalltree()
-        self.updateMinMaxValue()
+
         self.selector_widget.tree_model.valuesChanged()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
         self.experiment_change = False
+        self.updateMinMaxValue()
         self.update()
 
     def updateAllWidget(self):

@@ -228,8 +228,9 @@ class ConstantHypothesis(Hypothesis):
             # actual = measurements[element_id].get_value()
             difference = predicted - actual
             self._RSS += difference * difference
-            relative_difference = difference / actual
-            self._rRSS += relative_difference * relative_difference
+            if actual != 0:
+                relative_difference = difference / actual
+                self._rRSS += relative_difference * relative_difference
             abssum = abs(actual) + abs(predicted)
             if abssum != 0:
                 smape += abs(difference) / abssum * 2

@@ -274,8 +274,12 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
             coordinate_id = measurement.get_coordinate_id()
             value_mean = measurement.get_value_mean()
             value_median = measurement.get_value_median()
-            logging.debug("Measurement: "+experiment.get_metric(metric_id).get_name()+", "+experiment.get_callpath(callpath_id).get_name()+", "+experiment.get_coordinate(coordinate_id).get_as_string()+": "+str(value_mean)+" (mean), "+str(value_median)+" (median)")
-    
+            logging.debug(
+                "Measurement: " + experiment.get_metric(metric_id).get_name() + ", " + experiment.get_callpath(
+                    callpath_id).get_name() + ", " + experiment.get_coordinate(
+                    coordinate_id).get_as_string() + ": " + str(value_mean) + " (mean), " + str(
+                    value_median) + " (median)")
+
         # update progress bar
         if counter == update_interval:
             pbar.update(1)
@@ -423,7 +427,7 @@ def validate_experiment(experiment: Experiment):
     require(length_coordinates > 0, "Coordinates are missing.")
     require(len(experiment.metrics) > 0, "Metrics are missing.")
     require(len(experiment.callpaths) > 0, "Callpaths are missing.")
-    require(len(experiment.call_tree.nodes) > 0, "Calltree is missing.")
+    require(len(experiment.call_tree.childs) > 0, "Calltree is missing.")
     for c in experiment.coordinates:
         require(len(c) == length_parameters,
                 f'The number of coordinate units of {c} does not match the number of '
