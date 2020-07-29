@@ -202,7 +202,7 @@ def deserialize_SimpleTerm(ioHelper):
 
 
 def deserialize_SingleParameterSimpleModelGenerator(exp, ioHelper):
-    deserialize_SingleParameterModelGenerator(exp, ioHelper)
+    model_generator = deserialize_SingleParameterModelGenerator(exp, ioHelper)
 
     # Read CompoundTerms
     length = ioHelper.readInt()
@@ -214,6 +214,7 @@ def deserialize_SingleParameterSimpleModelGenerator(exp, ioHelper):
 
     # Read MaxTermCount
     maxTermCount = ioHelper.readInt()
+    return model_generator
 
 
 def deserialize_SingleParameterModelGenerator(exp, ioHelper):
@@ -232,16 +233,16 @@ def deserialize_SingleParameterModelGenerator(exp, ioHelper):
     else:
         logging.error("Invalid Crossvalidation Method found in File. Defaulting to No crossvalidation.")
     eps = ioHelper.readValue()
+
     # read the options
     generate_strategy = ioHelper.readString()
     # convert generate model options to enum
     if generate_strategy == "GENERATE_MODEL_MEAN":
-        pass
-
+        use_median = False
     elif generate_strategy == "GENERATE_MODEL_MEDIAN":
-        pass
-
+        use_median = True
     else:
+        use_median = False
         logging.error("Invalid ModelOptions found in File.")
 
     with ioHelper.begin_transaction():
@@ -276,6 +277,8 @@ def deserialize_SingleParameterModelGenerator(exp, ioHelper):
         else:
             logging.error("Invalid ModelOptions found in File.")
             raise AbortTransaction
+
+    return ModelGenerator(exp, MultiParameterModeler(), userName, use_median)
 
 
 def deserialize_MultiParameterModelGenerator(exp, ioHelper):
