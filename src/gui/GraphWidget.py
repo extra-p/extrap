@@ -31,6 +31,7 @@ class GraphWidget(QWidget):
 
     def __init__(self, main_widget, parent):
         super(GraphWidget, self).__init__(parent)
+
         self.main_widget = main_widget
         self.initUI()
         self.set_initial_value()
@@ -59,60 +60,11 @@ class GraphWidget(QWidget):
         """
         return self.max_x
 
-    def setMaxY(self, maxY):
-        """ This function sets the highest value of Y that is being shown on x axis.
-        """
-        self.max_y = maxY
-
     def getMaxY(self):
         """
            This function returns the highest value of Y that is being shown on x axis.
         """
         return self.max_y
-
-    def setTopMargin(self, topMargin):
-        """ This function sets the top margin value of the graph.
-        """
-        self.top_margin = topMargin
-
-    def getTopMargin(self):
-        """
-           This function returns the top margin value of the graph..
-        """
-        return self.top_margin
-
-    def setBottomMargin(self, bottomMargin):
-        """ This function sets the bottom margin value of the graph.
-        """
-        self.bottom_margin = bottomMargin
-
-    def getBottomMargin(self):
-        """
-           This function returns the bottom margin value of the graph..
-        """
-        return self.bottom_margin
-
-    def setLeftMargin(self, leftMargin):
-        """ This function sets the left margin value of the graph.
-        """
-        self.left_margin = leftMargin
-
-    def getLeftMargin(self):
-        """
-           This function returns the left margin value of the graph..
-        """
-        return self.left_margin
-
-    def setRightMargin(self, rightMargin):
-        """ This function sets the right margin value of the graph.
-        """
-        self.right_margin = rightMargin
-
-    def getRightMargin(self):
-        """
-           This function returns the right margin value of the graph..
-        """
-        return self.right_margin
 
     def logicalXtoPixel(self, lValue):
         """
@@ -145,46 +97,49 @@ class GraphWidget(QWidget):
         self.drawGraph(paint)
         paint.end()
 
+    # noinspection PyAttributeOutsideInit
     def set_initial_value(self):
         """
           This function sets the initial value for different parameters required for graph.
         """
         # Basic geometry constants
         self.max_x = 40
-        self.setLeftMargin(80)
-        self.setBottomMargin(80)
-        self.setTopMargin(20)
-        self.setRightMargin(20)
+        self.left_margin = 80
+        self.bottom_margin = 80
+        self.top_margin = 20
+        self.right_margin = 20
         self.legend_x = 100  # X-coordinate of the upper left corner of the legend
         self.legend_y = 20  # Y-coordinate of the upper left corner of the legend
 
         # the actual value for below 3 variables will be set later in the code
-        self.setMaxY(0)
+        self.max_y = 0
         self.graph_height = 0
         self.graph_width = 0
         self.legend_width = 0
         self.legend_height = 0
 
-        # obsolete stuff
+        # colors
+        self.BACKGROUND_COLOR = QColor("white")
+        self.TEXT_COLOR = QColor("black")
+        self.AXES_COLOR = QColor("black")
+        self.AGGREGATE_MODEL_COLOR = QColor(self.main_widget.graph_color_list[0])
+        self.DATA_POINT_COLOR = QColor(self.main_widget.graph_color_list[0]).darker(200)
+        self.DATA_RANGE_COLOR = QColor(self.main_widget.graph_color_list[0]).darker(150)
+
         self.minimum_number_points_marked = 2
-
-        # initial visibility for datapoint inside context menu
-        self.hide_action_status = False
-        # self.show_action_status=True
-        self.show_mean_action_status = True
-        self.show_min_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-        self.combine_action_status = True
-        self.show_all_action_status = False
-
-        self.show_datapoints = False
-        self.combine_all_callpath = False
+        self.aggregate_callpath = False
         self.datapoints_type = ""
+
         self.datapointType_Int_Map = {
             'min': 1, 'mean': 2, 'max': 3, 'median': 4, 'standardDeviation': 5, 'outlier': 6}
+
+    @property
+    def show_datapoints(self):
+        return not self.combine_all_callpath and self.datapoints_type != ''
+
+    @property
+    def combine_all_callpath(self):
+        return self.aggregate_callpath and len(self.main_widget.getSelectedCallpath()) > 1
 
     @Slot(QPoint)
     def showContextMenu(self, point):
@@ -199,169 +154,64 @@ class GraphWidget(QWidget):
             return
 
         menu = QMenu()
-        # To show data points for mean values
-        showMeanAction = menu.addAction("Show Mean Points")
-        showMeanAction.setEnabled(self.show_mean_action_status)
-        showMeanAction.triggered.connect(self.showMeanDataPoints)
+        points_group = QActionGroup(self)
+        points_group.setEnabled(not self.combine_all_callpath)
 
-        # To show data points for min values
-        showMinValueAction = menu.addAction("Show Minimum Points")
-        showMinValueAction.setEnabled(self.show_min_action_status)
-        showMinValueAction.triggered.connect(self.showMinDataPoints)
-
-        # To show data points for max values
-        showMaxValueAction = menu.addAction("Show Maximum Points")
-        showMaxValueAction.setEnabled(self.show_max_action_status)
-        showMaxValueAction.triggered.connect(self.showMaxDataPoints)
-
-        # To show data points for median values
-        showMedianValueAction = menu.addAction("Show Median Points")
-        showMedianValueAction.setEnabled(self.show_median_action_status)
-        showMedianValueAction.triggered.connect(self.showMedianDataPoints)
-
-        # To show data points for standard deviation values
-        showStandardDeviationValueAction = menu.addAction(
-            "Show Standard Deviation Points")
-        showStandardDeviationValueAction.setEnabled(
-            self.show_std_dev_action_status)
-        showStandardDeviationValueAction.triggered.connect(
-            self.showStandardDeviationDataPoints)
-
-        # To show outlier points
-        showOutlierPointsAction = menu.addAction("Show all data points")
-        showOutlierPointsAction.setEnabled(self.show_outlier_action_status)
-        showOutlierPointsAction.triggered.connect(self.showOutlierDataPoints)
-
-        # Hiding any datapoints
-        hideAction = menu.addAction("Hide Points")
-        hideAction.setEnabled(self.hide_action_status)
-        hideAction.triggered.connect(self.hideDataPoints)
+        data_point_selection = [
+            # To show data points for mean values
+            ("Show Mean Points", 'mean'),
+            # To show data points for min values
+            ("Show Minimum Points", 'min'),
+            # To show data points for max values
+            ("Show Maximum Points", 'max'),
+            # To show data points for median values
+            ("Show Median Points", 'median'),
+            # To show data points for standard deviation values
+            ("Show Standard Deviation Points", 'standardDeviation'),
+            # To show outlier points
+            ("Show all data points", 'outlier'),
+            # Hiding any datapoints
+            ("Hide Points", ''),
+        ]
+        for name, type in data_point_selection:
+            action = points_group.addAction(name)
+            action.setCheckable(True)
+            action.setData(type)
+            action.setChecked(self.datapoints_type == type)
+            action.triggered.connect(self.selectDataPoints)
+            menu.addAction(action)
 
         # Combining and disjoing Multiple callpaths
-        if len(selected_callpaths) > 1:
-            combineCallpathAction = menu.addAction("Combine callpaths")
-            combineCallpathAction.setEnabled(self.combine_action_status)
-            combineCallpathAction.triggered.connect(self.combineCallPaths)
-            showAllCallpathAction = menu.addAction("Show all callpaths")
-            showAllCallpathAction.setEnabled(self.show_all_action_status)
-            showAllCallpathAction.triggered.connect(self.showAllCallPaths)
+        menu.addSeparator()
+        group = QActionGroup(self)
+        group.setEnabled(len(selected_callpaths) > 1)
+        group.setExclusive(True)
+
+        action = group.addAction("Combine callpaths")
+        action.setCheckable(True)
+        action.setChecked(self.aggregate_callpath)
+        action.triggered.connect(self.combineCallPaths)
+        menu.addAction(action)
+
+        action1 = group.addAction("Show all callpaths")
+        action1.setCheckable(True)
+        action1.setChecked(not self.aggregate_callpath)
+        action1.triggered.connect(self.showAllCallPaths)
+        menu.addAction(action1)
 
         # Export
+        menu.addSeparator()
         exportDataAction = menu.addAction("Export Data")
         exportDataAction.triggered.connect(self.exportData)
 
         menu.exec_(self.mapToGlobal(point))
 
     @Slot()
-    def showMeanDataPoints(self):
-        """
-          This function shows mean data points on the graph.
-        """
-        self.hide_action_status = True
-        self.show_mean_action_status = False
-        self.show_min_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-        self.show_datapoints = True
-        self.datapoints_type = "mean"
-        self.update()
-
-    @Slot()
-    def showMinDataPoints(self):
-        """
-          This function shows minimum data points on the graph.
-        """
-        self.hide_action_status = True
-        self.show_min_action_status = False
-        self.show_mean_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-        self.show_datapoints = True
-        self.datapoints_type = "min"
-        self.update()
-
-    @Slot()
-    def showMaxDataPoints(self):
-        """
-          This function shows maximum data points on the graph
-        """
-        self.hide_action_status = True
-        self.show_max_action_status = False
-        self.show_min_action_status = True
-        self.show_mean_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-        self.show_datapoints = True
-        self.datapoints_type = "max"
-        self.update()
-
-    @Slot()
-    def showMedianDataPoints(self):
-        """
-          This function shows median data points on the graph.
-        """
-        self.hide_action_status = True
-        self.show_median_action_status = False
-        self.show_min_action_status = True
-        self.show_mean_action_status = True
-        self.show_max_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-        self.show_datapoints = True
-        self.datapoints_type = "median"
-        self.update()
-
-    @Slot()
-    def showStandardDeviationDataPoints(self):
-        """
-          This function shows standard deviation data points on the graph.
-        """
-        self.hide_action_status = True
-        self.show_std_dev_action_status = False
-        self.show_min_action_status = True
-        self.show_mean_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_outlier_action_status = True
-        self.show_datapoints = True
-        self.datapoints_type = "standardDeviation"
-        self.update()
-
-    @Slot()
-    def showOutlierDataPoints(self):
-        self.hide_action_status = True
-        self.show_outlier_action_status = False
-        self.show_min_action_status = True
-        self.show_mean_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_datapoints = True
-        self.datapoints_type = "outlier"
-        self.update()
-
-    @Slot()
-    def hideDataPoints(self):
+    def selectDataPoints(self):
         """
           This function hides all the datapoints that is being shown on graph.
         """
-        self.hide_action_status = False
-        self.show_action_status = True
-
-        self.show_mean_action_status = True
-        self.show_min_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-
-        self.show_datapoints = False
-        self.datapoints_type = ""
+        self.datapoints_type = QObject.sender(self).data()
         self.update()
 
     @Slot()
@@ -369,18 +219,7 @@ class GraphWidget(QWidget):
         """
           This function combine all callpathe shown on graph.
         """
-        self.combine_action_status = False
-        self.show_all_action_status = True
-
-        self.hide_action_status = False
-        self.show_mean_action_status = False
-        self.show_min_action_status = False
-        self.show_max_action_status = False
-        self.show_median_action_status = False
-        self.show_std_dev_action_status = False
-        self.show_outlier_action_status = False
-        self.show_datapoints = False
-        self.combine_all_callpath = True
+        self.aggregate_callpath = True
         self.update()
 
     @Slot()
@@ -388,19 +227,7 @@ class GraphWidget(QWidget):
         """
           This function shows all callpaths.
         """
-        self.show_all_action_status = False
-        self.combine_action_status = True
-
-        self.hide_action_status = False
-        self.show_mean_action_status = True
-        self.show_min_action_status = True
-        self.show_max_action_status = True
-        self.show_median_action_status = True
-        self.show_std_dev_action_status = True
-        self.show_outlier_action_status = True
-
-        self.combine_all_callpath = False
-
+        self.aggregate_callpath = False
         self.update()
 
     @Slot()
@@ -468,18 +295,17 @@ class GraphWidget(QWidget):
                 model_list.append(model)
 
         # Calculate geometry constraints
-        self.graph_width = self.frameGeometry().width() - self.left_margin - \
-                           self.right_margin
-        self.graph_height = self.frameGeometry().height() - self.top_margin - \
-                            self.bottom_margin
-        self.setMaxY(self.calculateMaxY(model_list) * 1.2)
+        self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
+        self.graph_height = self.frameGeometry().height() - self.top_margin - self.bottom_margin
+        y = self.calculateMaxY(model_list) * 1.2
+        self.max_y = y
 
         # Draw coordinate system
         self.drawAxis(paint, selected_metric)
 
         # Draw functions
         index_indicator = 0
-        if self.combine_all_callpath is False:
+        if not self.combine_all_callpath:
             for model in model_list:
                 color = self.main_widget.getColorForCallPath(
                     selected_callpaths[index_indicator])
@@ -497,7 +323,7 @@ class GraphWidget(QWidget):
 
     def drawDataPoints(self, paint, selectedMetric, selectedCallpaths):
         if self.show_datapoints is True:
-            pen = QPen(QColor("blue"))
+            pen = QPen(self.DATA_POINT_COLOR)
             pen.setWidth(4)
             paint.setPen(pen)
             # data_points_list = list()
@@ -510,7 +336,7 @@ class GraphWidget(QWidget):
                     data_points = self.calculateDataPoints(
                         selectedMetric, selected_callpath)
                     self.plotPointsOnGraph(
-                        paint, data_points, selected_callpath)
+                        paint, data_points)
 
     def drawLegend(self, paint):
 
@@ -520,8 +346,8 @@ class GraphWidget(QWidget):
         dict_size = len(callpath_color_dict)
         font_size = int(self.main_widget.getFontSize())
         paint.setFont(QFont('Decorative', font_size))
-        paint.setBrush(QColor("white"))
-        pen = QPen(QColor("black"))
+        paint.setBrush(self.BACKGROUND_COLOR)
+        pen = QPen(self.TEXT_COLOR)
         pen.setWidth(1)
         paint.setPen(pen)
         counter_increment = font_size + 3
@@ -546,7 +372,7 @@ class GraphWidget(QWidget):
                                self.legend_y + px_between + counter,
                                self.legend_x + 35,
                                self.legend_y + px_between + counter)
-                paint.setPen(QColor("black"))
+                paint.setPen(self.TEXT_COLOR)
                 paint.drawText(self.legend_x + 45,
                                self.legend_y + px_between + counter,
                                callpath.name)
@@ -569,14 +395,14 @@ class GraphWidget(QWidget):
                            self.legend_y,
                            self.legend_width,
                            self.legend_height)
-            pen = QPen(QColor("red"))
+            pen = QPen(self.AGGREGATE_MODEL_COLOR)
             pen.setWidth(2)
             paint.setPen(pen)
             paint.drawLine(self.legend_x + 5,
                            self.legend_y + px_between,
                            self.legend_x + 35,
                            self.legend_y + px_between)
-            paint.setPen(QColor("black"))
+            paint.setPen(self.TEXT_COLOR)
             paint.drawText(self.legend_x + 45,
                            self.legend_y + px_between,
                            aggregated_callpath_name)
@@ -591,11 +417,10 @@ class GraphWidget(QWidget):
         pen.setWidth(2)
         paint.setPen(pen)
 
-        for (x0, y0, x1, y1) in self.draw_line(cord_list):
-            paint.drawLine(int(self.logicalXtoPixel(x0)),
-                           int(self.logicalYtoPixel(y0)),
-                           int(self.logicalXtoPixel(x1)),
-                           int(self.logicalYtoPixel(y1)))
+        points = [
+            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+        ]
+        paint.drawPolyline(points)
 
     def drawAggregratedModel(self, paint, model_list):
         functions = list()
@@ -604,15 +429,13 @@ class GraphWidget(QWidget):
             functions.append(function)
         cord_list = self.calculate_aggregate_callpath_function(
             functions, self.graph_width)
-        pen = QPen(QColor("red"))
+        pen = QPen(self.AGGREGATE_MODEL_COLOR)
         pen.setWidth(2)
         paint.setPen(pen)
-
-        for (x0, y0, x1, y1) in self.draw_line(cord_list):
-            paint.drawLine(int(self.logicalXtoPixel(x0)),
-                           int(self.logicalYtoPixel(y0)),
-                           int(self.logicalXtoPixel(x1)),
-                           int(self.logicalYtoPixel(y1)))
+        points = [
+            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+        ]
+        paint.drawPolyline(points)
 
     def drawAxis(self, paint, selectedMetric):
         # Determing the number of divisions to be marked on x axis such that there is a minimum distance of 100 pixels
@@ -646,11 +469,11 @@ class GraphWidget(QWidget):
         number_of_intermediate_points_on_y = 4
 
         # drawing the rectangular region that would contain the graph
-        paint.setPen(QColor("white"))
-        paint.setBrush(QColor("white"))
+        paint.setPen(self.BACKGROUND_COLOR)
+        paint.setBrush(self.BACKGROUND_COLOR)
         paint.drawRect(self.frameGeometry())
         # drawing x axis and y axis
-        paint.setPen(QColor("black"))
+        paint.setPen(self.AXES_COLOR)
         paint.drawLine(x_origin, y_origin, x_other_end, y_origin)
         paint.drawLine(x_origin, y_other_end, x_origin, y_origin)
 
@@ -692,7 +515,7 @@ class GraphWidget(QWidget):
         # marking divions and subdivisons on y axis
         x = self.left_margin
 
-        if (y_to_mark[0] != 0):
+        if y_to_mark[0] != 0:
             intermediate_y_offset = y_offset / \
                                     (number_of_intermediate_points_on_y + 1)
             intermediate_y = y_origin - intermediate_y_offset
@@ -728,8 +551,44 @@ class GraphWidget(QWidget):
         """
 
         # m_x_lower_bound = 1
-        number_of_x_points = int(length_x_axis / 2)
+        number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
 
+        y_list = function.evaluate(x_list).reshape(-1)
+
+        cord_list = self._create_drawing_iterator(x_values, y_list)
+
+        return cord_list
+
+    def calculate_aggregate_callpath_function(self, functions, length_x_axis):
+        """
+        This function calculates the x values, based on the range that were provided & then it uses
+        ExtraP_Function_Generic to calculate and aggregate the corresponding y value for all the model functions
+        """
+        number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
+
+        y_list = numpy.zeros(number_of_x_points)
+
+        previous = numpy.seterr(invalid='ignore')
+        for function in functions:
+            y_list += function.evaluate(x_list).reshape(-1)
+        numpy.seterr(**previous)
+
+        cord_list = self._create_drawing_iterator(x_values, y_list)
+
+        return cord_list
+
+    @staticmethod
+    def _create_drawing_iterator(x_values, y_list):
+        y_list[y_list == math.inf] = numpy.max(y_list[y_list != math.inf])
+        y_list[y_list == -math.inf] = numpy.min(y_list[y_list != -math.inf])
+        cord_list_before_filtering = zip(x_values, y_list)
+        cord_list = ((x, y)
+                     for x, y in cord_list_before_filtering
+                     if not math.isnan(y) and y >= 0)
+        return cord_list
+
+    def _calculate_evaluation_points(self, length_x_axis):
+        number_of_x_points = int(length_x_axis / 2)
         x_values = numpy.linspace(0, self.max_x, number_of_x_points)
         x_list = numpy.ndarray((len(self.main_widget.experiment.parameters), number_of_x_points))
         param = self.main_widget.data_display.getAxisParameter(0).id
@@ -737,60 +596,7 @@ class GraphWidget(QWidget):
         for i, val in parameter_value_list.items():
             x_list[i] = numpy.repeat(val, number_of_x_points)
         x_list[param] = x_values
-
-        y_list = function.evaluate(x_list).reshape(-1)
-
-        y_list[y_list == math.inf] = numpy.max(y_list[y_list != math.inf])
-        y_list[y_list == -math.inf] = numpy.min(y_list[y_list != -math.inf])
-
-        cord_list_before_filtering = zip(x_values, y_list)
-        cord_list = [(x, y)
-                     for x, y in cord_list_before_filtering
-                     if not math.isnan(y) and y >= 0]
-
-        return cord_list
-
-    def calculate_aggregate_callpath_function(self, functions, length_x_axis):
-        """
-        This function calculates the x values,
-        based on the range that were provided &
-        then it uses ExtraP_Function_Generic to
-        calculate and aggreagate the correspoding y value for all the model functios
-       """
-        m_x_lower_bound = 1
-        number_of_x_points = int(length_x_axis / 2)
-        width_between_x = float(
-            (float(self.max_x - m_x_lower_bound)) / number_of_x_points)
-        x_list = list()
-        y_list = list()
-        x_temp = float(m_x_lower_bound)
-
-        for _ in range(0, int((number_of_x_points) + 1)):
-            x_list.append(x_temp)
-            x_temp = x_temp + width_between_x
-
-        # TODO: fix this
-        parameter_value_list = EXTRAP.ParameterValueList()
-        parameters = self.main_widget.experiment.get_parameters()
-        param = parameters[0]
-
-        for x_value in x_list:
-            parameter_value_list[param] = x_value
-            y_value = 0
-            for function in functions:
-                value = function.evaluate(parameter_value_list)
-                y_value = y_value + value
-                # print ("function and y", function, y_value )
-            y_list.append(y_value)
-
-        cord_list_before_filtering = list(zip(x_list, y_list))
-        cord_list = [(x, y)
-                     for x, y in cord_list_before_filtering if not math.isnan(y)]
-        cord_list = [(x, y) for x, y in cord_list if y >= 0]
-
-        # cord_list = self.calculate_function( functions[0], length_x_axis)
-
-        return cord_list
+        return number_of_x_points, x_list, x_values
 
     @staticmethod
     def get_axis_mark_list(max_val, number_of_points):
@@ -827,22 +633,6 @@ class GraphWidget(QWidget):
                 cur_pixel = self.logicalYtoPixel(cord)
                 absolute_position_list.append(cur_pixel)
         return absolute_position_list
-
-    # function to join all the points plotted in order to draw the graph
-    @staticmethod
-    def draw_line(list_of_cordinates):
-        """ This function connects all the line plotted on the graph.
-        """
-        is_first_point = True
-        x_origin = y_origin = 0
-        for (x_cordinate, y_cordinate) in list_of_cordinates:
-            if is_first_point:
-                x_origin = x_cordinate
-                y_origin = y_cordinate
-                is_first_point = False
-            else:
-                yield x_origin, y_origin, x_cordinate, y_cordinate
-                x_origin, y_origin = x_cordinate, y_cordinate
 
     # function to format the numbers to be marked on the graph
     @staticmethod
@@ -939,7 +729,13 @@ class GraphWidget(QWidget):
             for model in modelList:
                 function = model.hypothesis.function
                 y_agg = y_agg + function.evaluate(pv_list)
+            y_max = max(y_agg, y_max)
 
+            pv_list[param] = 1
+            y_agg = 0
+            for model in modelList:
+                function = model.hypothesis.function
+                y_agg = y_agg + function.evaluate(pv_list)
             y_max = max(y_agg, y_max)
 
         # Check the value at the end of the displayed interval
@@ -977,9 +773,6 @@ class GraphWidget(QWidget):
 
     def plotOutliers(self, paint, x_value, y_min_value, y_mean_value, y_median_value, y_max_value):
 
-        pen = QPen(QColor("black"))
-        pen.setWidth(2)
-        paint.setPen(pen)
         # create cordinates and merge them to list
         x_list = [x_value, x_value, x_value, x_value]
         y_list = [y_min_value, y_median_value, y_mean_value, y_max_value]
@@ -994,16 +787,20 @@ class GraphWidget(QWidget):
         min_y = min(outlier_y_absolute_pos_list)
         x = max(outlier_x_absolute_pos_list)
 
+        pen = QPen(self.DATA_RANGE_COLOR)
+        pen.setWidth(2)
+        paint.setPen(pen)
+        paint.drawLine(x, min_y, x, max_y)
+
+        pen = QPen(self.DATA_POINT_COLOR)
+        pen.setWidth(2)
+        paint.setPen(pen)
         outlier_on_graph_list = list(
             zip(outlier_x_absolute_pos_list, outlier_y_absolute_pos_list))
         for (x_cordinate, y_cordinate) in outlier_on_graph_list:
             # paint.drawPoint(x_cordinate, y_cordinate)
             paint.drawLine(x_cordinate - 2, y_cordinate,
                            x_cordinate + 2, y_cordinate)
-        pen = QPen(QColor("blue"))
-        pen.setWidth(2)
-        paint.setPen(pen)
-        paint.drawLine(x, min_y, x, max_y)
 
     @staticmethod
     def plotPointsOnGraph(paint, dataPoints):
