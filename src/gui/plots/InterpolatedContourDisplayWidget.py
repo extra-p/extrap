@@ -26,7 +26,7 @@ class InterpolatedContourDisplay(BaseContourGraph):
 
         try:
             self.colormap = cm.get_cmap('viridis')
-        except:
+        except ValueError:
             self.colormap = cm.get_cmap('spectral')
         super().__init__(graphWidget, main_widget, width, height, dpi)
 
@@ -51,7 +51,7 @@ class InterpolatedContourDisplay(BaseContourGraph):
 
         # define the number of subplots
         number_of_subplots = 1
-        if (len(Z_List) > 1):
+        if len(Z_List) > 1:
             number_of_subplots = len(Z_List)
 
         # Adjusting subplots in order to avoid overlapping of labels
@@ -104,7 +104,8 @@ class InterpolatedContourDisplay(BaseContourGraph):
             for item in ([ax.title]):
                 item.set_fontsize(fontSize)
 
-    def getColorMap(self):
+    @staticmethod
+    def getColorMap():
         colors = [(0, 0, 1), (0, 1, 0), (1, 0, 0)]
         n_bin = 100
         cmap_name = 'my_list'

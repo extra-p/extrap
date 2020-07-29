@@ -26,7 +26,7 @@ class Callpath:
         Initialize callpath object.
         """
         self.name = name
-        self.id = next(__class__.ID_COUNTER)
+        self.id = next(Callpath.ID_COUNTER)
 
     @deprecated("Use property directly.")
     def get_name(self):
@@ -39,8 +39,8 @@ class Callpath:
         return hash(self.name)
 
     def __eq__(self, other):
-        if not isinstance(other, __class__):
-            return False
+        if not isinstance(other, Callpath):
+            return NotImplemented
         return self is other or self.name == other.name
 
     def __str__(self):

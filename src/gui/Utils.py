@@ -56,7 +56,7 @@ def formatNumber(value_str, precision=3):
     # try to convert long 0.00000 prefixes to 10^-x
     if value_str.find('.') != -1 and value_str.find('e') == -1:
         splitted_value = value_str.split('.')
-        if (splitted_value[0] == '0'):
+        if splitted_value[0] == '0':
             zero_count = 0
             while len(splitted_value[1]) > zero_count:
                 if splitted_value[1][zero_count] == '0':
@@ -68,7 +68,7 @@ def formatNumber(value_str, precision=3):
                     splitted_value[1][zero_count:]) - 1)
                 value_str = value_str.replace("+", "")
 
-        elif (len(splitted_value[0]) > 4):
+        elif len(splitted_value[0]) > 4:
             count_digits_before_decimal = len(splitted_value[0]) - 1
             while splitted_value[0][count_digits_before_decimal] == '0':
                 count_digits_before_decimal = count_digits_before_decimal - 1
@@ -98,7 +98,7 @@ def formatNumber(value_str, precision=3):
     if value_str.find('^') != -1:
         split_value_str = value_str.split('^')
         value_after = makeExponent(split_value_str[1])
-        value_str = split_value_str[0] + (value_after)
+        value_str = split_value_str[0] + value_after
     return value_str
 
 

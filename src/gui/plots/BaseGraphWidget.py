@@ -1,4 +1,4 @@
-from abc import abstractmethod, ABC, ABCMeta
+from abc import abstractmethod
 
 import numpy as np
 from PySide2.QtWidgets import QSizePolicy
@@ -47,7 +47,8 @@ class GraphDisplayWindow(FigureCanvas):
         pixel_gap_y = self.getPixelGap(0, maxY, number_of_pixels_y)
         return pixel_gap_x, pixel_gap_y
 
-    def getPixelGap(self, lowerlimit, upperlimit, numberOfPixels):
+    @staticmethod
+    def getPixelGap(lowerlimit, upperlimit, numberOfPixels):
         """
            This function calculate the gap in pixels based on number of pixels and max value
         """
@@ -99,7 +100,7 @@ class GraphDisplayWindow(FigureCanvas):
         model_list = list()
         for selected_callpath in selected_callpaths:
             model = model_set[selected_callpath.path, selected_metric]
-            if model != None:
+            if model is not None:
                 model_list.append(model)
         return model_list, selected_callpaths
 
@@ -132,6 +133,9 @@ class GraphDisplayWindow(FigureCanvas):
 
 
 class BaseContourGraph(GraphDisplayWindow):
+    def draw_figure(self):
+        pass
+
     def _calculate_grid_parameters(self, maxX, maxY):
         # define grid parameters based on max x and max y value
         if maxX <= 1000:

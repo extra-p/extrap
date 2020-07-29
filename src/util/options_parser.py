@@ -95,7 +95,8 @@ class ModelerOptionsAction(Action):
     def __init__(self, option_strings: Sequence[Text], dest: Text, help, **kwargs) -> None:
         super().__init__(option_strings, dest, **kwargs)
 
-    def _all_spo_parser(self):
+    @staticmethod
+    def _all_spo_parser():
         modeler = single_parameter.Default()
         if not hasattr(modeler, 'OPTIONS'):
             modeler.OPTIONS = {}

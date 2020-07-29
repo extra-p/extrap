@@ -110,10 +110,8 @@ def format_all(experiment):
                 coordinate_text += ")"
                 measurement = experiment.get_measurement(coordinate_id, callpath_id, metric_id)
                 value_mean = measurement.get_value_mean()
-                value_mean_string = "{:.2E}".format(value_mean)
-                value_median = measurement.get_value_median()
-                value_median_string = "{:.2E}".format(value_median)
-                text += "\t\t" + coordinate_text + " Mean: " + value_mean_string + " Median: " + value_median_string + "\n"
+                value_median = measurement.median
+                text += f"\t\t{coordinate_text} Mean: {value_mean:.2E} Median: {value_median:.2E}\n"
             model = modeler.get_model(callpath_id, metric_id)
             hypothesis = model.get_hypothesis()
             function = hypothesis.get_function()
@@ -267,7 +265,7 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
         measurement = computed_measurements[measurement_id]
 
         # ignore a coordinate, metric, callpath if no measurement are available for it
-        if measurement.get_value_mean() != None and measurement.get_value_median() != None:
+        if measurement.get_value_mean() is not None and measurement.get_value_median() is not None:
             experiment.add_measurement(measurement)
             metric_id = measurement.get_metric_id()
             callpath_id = measurement.get_callpath_id()
@@ -338,7 +336,7 @@ def create_call_tree(callpaths):
 
                     # check if that node is already existing
                     # if no 
-                    if tree.node_exist(callpath_string) == False:
+                    if not tree.node_exist(callpath_string):
 
                         # add a new rootles node to the tree
                         node = Node(callpath_string, Callpath(callpath_string))
@@ -358,7 +356,7 @@ def create_call_tree(callpaths):
 
                     # check if that child node is already existing
                     # if no 
-                    if root_node.child_exists(callpath_string) == False:
+                    if not root_node.child_exists(callpath_string):
 
                         # add a new child node to the root node
                         child_node = Node(callpath_string, callpaths[j])

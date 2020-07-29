@@ -35,6 +35,7 @@ class ModelerWidget(QWidget):
         self._model_button = QPushButton(self)
         self.initUI()
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
         self.setLayout(grid)
@@ -113,9 +114,9 @@ class ModelerWidget(QWidget):
 
     def remodel(self):
         # set the modeler options
-        if (self.model_mean_radio.isChecked()):
+        if self.model_mean_radio.isChecked():
             use_median = False
-        elif (self.model_median_radio.isChecked()):
+        elif self.model_median_radio.isChecked():
             use_median = True
 
         # initialize model generator

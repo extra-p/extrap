@@ -1,8 +1,11 @@
-from typing import T, Sequence, Iterable
+from typing import Sequence, Iterable, TypeVar
+
+T = TypeVar('T')
 
 
 class UniqueList(list, Sequence[T]):
     def __init__(self, iterable=...):
+        super().__init__()
         self._set = set()
         if isinstance(iterable, Iterable):
             self.extend(iterable)

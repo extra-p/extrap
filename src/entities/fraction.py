@@ -15,6 +15,7 @@ from util.deprecation import deprecated
 import inspect
 
 
+# noinspection PyAbstractClass
 class Fraction(_PyFraction):
     """
     This class is used to represent the exponent of a simple term as a fraction.
@@ -174,7 +175,7 @@ class Fraction(_PyFraction):
         Computes the mediant of this fraction and another fraction and returns a new fraction.
         """
         return Fraction(self.numerator + other.numerator, self.denominator + other.denominator)
-    
+
 
 # extend python fraction type
 for n, f in inspect.getmembers(Fraction, predicate=inspect.isfunction):

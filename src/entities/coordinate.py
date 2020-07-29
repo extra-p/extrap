@@ -39,7 +39,7 @@ class Coordinate:
         else:
             self._values = parts
 
-        self.id = next(__class__.ID_COUNTER)
+        self.id = next(Coordinate.ID_COUNTER)
 
     @property
     def dimensions(self):
@@ -103,8 +103,8 @@ class Coordinate:
         return hash(self._values)
 
     def __eq__(self, other):
-        if not isinstance(other, __class__):
-            return False
+        if not isinstance(other, Coordinate):
+            return NotImplemented
         return self is other or self._values == other._values
 
     def __iter__(self):
@@ -114,6 +114,8 @@ class Coordinate:
         return len(self._values)
 
     def __lt__(self, other):
+        if not isinstance(other, Coordinate):
+            return NotImplemented
         return self._values < other._values
 
     def as_tuple(self):

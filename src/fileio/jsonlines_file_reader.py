@@ -9,6 +9,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
+import os
 from json import JSONDecodeError
 
 from entities.parameter import Parameter
@@ -34,9 +35,14 @@ def read_jsonlines_file(path, progress_event=lambda _: _):
     parameters = None
     callpath = Callpath('<root>')
 
+    file_size = os.path.getsize(path)
+
     # read jsonlines file into complete_data
     with open(path) as file:
+        progress = 0
         for ln, line in enumerate(file):
+            progress += len(line)
+            progress_event(progress / file_size * 0.5)
             if line.isspace():
                 continue
 
@@ -61,8 +67,10 @@ def read_jsonlines_file(path, progress_event=lambda _: _):
             except KeyError as error:
                 raise FileFormatError(f'Missing property in line {ln}: {str(error)}. Line: "{line}"')
 
+    total_data = len(complete_data)
     # create experiment
-    for metric in complete_data:
+    for mi, metric in enumerate(complete_data):
+        progress_event(mi / total_data * 0.5 + 0.5)
         measurementset = complete_data[key]
         experiment.add_callpath(callpath)
         experiment.add_metric(metric)

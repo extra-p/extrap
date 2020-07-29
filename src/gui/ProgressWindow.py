@@ -12,6 +12,7 @@ from PySide2.QtCore import QCoreApplication
 from PySide2.QtWidgets import QProgressDialog
 import threading
 
+
 class ProgressWindow(QProgressDialog):
     def __init__(self, parent, title, label):
         super().__init__(parent)
@@ -27,7 +28,6 @@ class ProgressWindow(QProgressDialog):
         else:
             self.setValue(int(progress * 1000))
         QCoreApplication.processEvents()
-
 
     def __enter__(self):
         return self

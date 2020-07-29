@@ -25,7 +25,7 @@ class TreeModel(QAbstractItemModel):
         self.selector_widget = selectorWidget
         self.root_item = TreeItem(None)
         experiment = self.main_widget.getExperiment()
-        if not experiment == None:
+        if experiment is not None:
             call_tree = experiment.get_call_tree()
             nodes = call_tree.get_nodes()
             self.setupModelData(nodes, self.root_item)
@@ -43,9 +43,10 @@ class TreeModel(QAbstractItemModel):
         else:
             return self.root_item
 
+    # noinspection PyMethodMayBeStatic
     def getValue(self, index):
         item = index.internalPointer()
-        if item == None:
+        if item is None:
             return None
         return item.data()
 
@@ -184,7 +185,7 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
         childItem = index.internalPointer()
-        if childItem == None:
+        if childItem is None:
             return QModelIndex()
         parentItem = childItem.parent()
 

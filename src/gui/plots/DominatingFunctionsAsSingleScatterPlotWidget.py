@@ -9,21 +9,15 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from matplotlib.figure import Figure
-
 import numpy as np
-import matplotlib.patches as mpatches
+
 from gui.plots.BaseGraphWidget import GraphDisplayWindow
+
+
 # This class was developed as a first approach to show dominating models in heatmap
 # not used any more
 # HeatMapGraphWidget in used for that purpose
 # but still keeping it since it has a different approach implemented
-
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 
 #####################################################################
@@ -52,7 +46,6 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
         dict_callpath_color = self.main_widget.get_callpath_color_map()
 
         # calculate max_z value
-        max_z_val = z_List[0][0]
         color_for_max_z = dict_callpath_color[selected_callpaths[0]]
         max_z_list = list()
         max_color_list = list()
@@ -60,7 +53,7 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
         for i in range(len(z_List[0])):
             max_z_val = z_List[0][i]
             for j in range(len(model_list)):
-                if (z_List[j][i] > max_z_val):
+                if z_List[j][i] > max_z_val:
                     max_z_val = z_List[j][i]
                     # func_with_max_z = model_list[j]
                     color_for_max_z = dict_callpath_color[selected_callpaths[j]]

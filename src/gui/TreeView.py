@@ -51,7 +51,8 @@ class TreeView(QTreeView):
         function_string = selectedModel.hypothesis.function.to_string(parameters)
         QGuiApplication.clipboard().setText(function_string)
 
-    def showComments(self, model):
+    @staticmethod
+    def showComments(model):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText(
@@ -65,7 +66,8 @@ class TreeView(QTreeView):
         msg.exec_()
 
     # print the data points used in compute cost
-    def showDataPoints(self, model):
+    @staticmethod
+    def showDataPoints(model):
         msgBox = QDialog()
         msgBox.setWindowTitle("Data Points")
         msgBox.setFixedSize(600, 400)

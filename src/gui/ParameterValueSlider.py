@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 import math
 
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -25,6 +24,7 @@ class ParameterValueSlider(QWidget):
         self.slider_update = True
         self.initUI()
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self):
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)

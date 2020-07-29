@@ -103,7 +103,8 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
                            for t in compound_term.simple_terms)
                 ]
 
-    def create_default_building_blocks(self, allow_log_terms):
+    @staticmethod
+    def create_default_building_blocks(allow_log_terms):
         """
         Creates the default building blocks for the single parameter hypothesis
         that will be used during the search for the best hypothesis.
@@ -230,7 +231,8 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
 
         return hypotheses_building_blocks
 
-    def generate_building_blocks(self, poly_exponents, log_exponents, force_combination=False):
+    @staticmethod
+    def generate_building_blocks(poly_exponents, log_exponents, force_combination=False):
         if force_combination:
             exponents = itertools.product(poly_exponents, log_exponents)
         else:
@@ -247,7 +249,8 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
         """
         hypotheses_building_blocks = self.get_matching_hypotheses(measurements)
 
-        # search for the best hypothesis over all functions that can be build with the basic building blocks using leave one out crossvalidation
+        # search for the best hypothesis over all functions that can be build with the basic building blocks
+        # using leave one out crossvalidation
         for i, compound_term in enumerate(hypotheses_building_blocks):
             # create next function that will be analyzed
             next_function = SingleParameterFunction(copy.copy(compound_term))

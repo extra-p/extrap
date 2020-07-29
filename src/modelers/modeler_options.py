@@ -76,13 +76,15 @@ class _ModelerOptionsClass:
 
         return original_class
 
-    def add(self, value: T, type: Type = str, description: str = None, name: str = None,
+    @staticmethod
+    def add(value: T, type: Type = str, description: str = None, name: str = None,
             range: Union[Mapping[AnyStr, T], range] = None,
             on_change: Callable[[Any, T], None] = None) -> T:
         return ModelerOption(value=value, type=type, description=description, name=name, range=range,
                              on_change=on_change)
 
-    def group(self, name: str, *options: ModelerOption, description: str = None) -> ModelerOptionsGroup:
+    @staticmethod
+    def group(name: str, *options: ModelerOption, description: str = None) -> ModelerOptionsGroup:
         group = ModelerOptionsGroup(name=name, description=description, options=options)
         for o in options:
             o.group = group

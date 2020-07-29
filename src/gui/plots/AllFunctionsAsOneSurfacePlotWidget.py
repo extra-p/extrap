@@ -9,17 +9,7 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from matplotlib.figure import Figure
-
-import numpy as np
-import matplotlib.patches as mpatches
 from gui.plots.BaseGraphWidget import GraphDisplayWindow
-
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 
 #####################################################################

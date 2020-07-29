@@ -10,13 +10,12 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
+from math import pow, log
+import random
 
 """
 This program can be used to generate synthetic data inputs to test the multiparameter model creator of ExtraP.
 """
-
-from math import pow, log
-import random
 
 JITTER = 0.02  # 2% noise
 
@@ -99,8 +98,8 @@ for z in z_range:
         outfile.write("\n")
     outfile.write("\n")
 
-outfile.write("REGION reg\n");
-outfile.write("METRIC metr\n");
+outfile.write("REGION reg\n")
+outfile.write("METRIC metr\n")
 
 f = Function.getFunc(nparams)
 

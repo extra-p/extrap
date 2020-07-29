@@ -47,7 +47,7 @@ class IsolinesDisplay(BaseContourGraph):
         # Get the callpath color map
         dict_callpath_color = self.main_widget.get_callpath_color_map()
         number_of_subplots = 1
-        if (len(Z_List) > 1):
+        if len(Z_List) > 1:
             number_of_subplots = len(Z_List) + 1
 
         # Adjusting subplots in order to avoid overlapping of labels
@@ -99,7 +99,7 @@ class IsolinesDisplay(BaseContourGraph):
 
             # ax.set_title ('function'+ str(i+1))
             # ax.set_title(functions[i])
-            if (len(Z_List) > 1):
+            if len(Z_List) > 1:
                 try:
                     cs_all = ax_all.contour(
                         X, Y, Z_List[i], colors=dict_callpath_color[selected_callpaths[i]])

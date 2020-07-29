@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
@@ -26,18 +25,15 @@ class PlotTypeSelector(QDialog):
         self.setWindowTitle("Select the Plots")
         self.setFixedWidth(350)
 
-        self.plotTypes = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots', 'Dominating models in a 3D Scatter plot',
-                          'Max z as a single surface plot', 'Dominating models and max z as heat map', ' Selected models in contour plot', 'Selected models in interpolated contour plots', 'Measurement points']
+        plotTypes = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots',
+                     'Dominating models in a 3D Scatter plot', 'Max z as a single surface plot',
+                     'Dominating models and max z as heat map', ' Selected models in contour plot',
+                     'Selected models in interpolated contour plots', 'Measurement points']
 
-        self.checkBoxes = list()
+        checkBoxes = [QCheckBox(plotType, self) for plotType in plotTypes]
 
-        for plotType in self.plotTypes:
-            self.checkBoxes.append(QCheckBox(plotType, self))
-            #a = a + 1;
-
-        #index = 0
         y_cord = 10
-        for checkBox in self.checkBoxes:
+        for checkBox in checkBoxes:
             checkBox.move(10, y_cord)
             y_cord = y_cord + 30
 

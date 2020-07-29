@@ -30,9 +30,7 @@ from util.options_parser import ModelerOptionsAction, ModelerHelpAction
 from util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_OPTIONS_KEY
 
 
-
 def main():
-
     # argparse
     programname = "Extra-P"
     modelers_list = list(set(
@@ -73,7 +71,7 @@ def main():
     arguments = parser.parse_args()
 
     # set log level
-    if not arguments.log_level is None:
+    if arguments.log_level is not None:
         loglevel = arguments.log_level.upper()
         if loglevel == "DEBUG":
             loglevel = logging.DEBUG
@@ -109,9 +107,8 @@ def main():
     use_median = arguments.median
 
     # save modeler output to file?
-    print_output = False
     print_path = None
-    if not arguments.out is None:
+    if arguments.out is not None:
         print_output = True
         print_path = arguments.out
     else:
@@ -131,7 +128,7 @@ def main():
                     pbar.update(val - previous_progress)
                     previous_progress = val
 
-            if arguments.cube == True:
+            if arguments.cube:
                 # load data from cube files
                 if os.path.isdir(arguments.path):
                     experiment = read_cube_file(arguments.path, scaling_type)
@@ -139,13 +136,13 @@ def main():
                     logging.error("The given file path is not valid.")
                     return 1
             elif os.path.isfile(arguments.path):
-                if arguments.text == True:
+                if arguments.text:
                     # load data from text files
                     experiment = read_text_file(arguments.path, progress_bar_event)
-                elif arguments.talpas == True:
+                elif arguments.talpas:
                     # load data from talpas format
                     experiment = read_talpas_file(arguments.path, progress_bar_event)
-                elif arguments.json == True:
+                elif arguments.json:
                     # load data from json file
                     experiment = read_json_file(arguments.path, progress_bar_event)
                 else:
@@ -190,7 +187,7 @@ def main():
         print(text)
 
         # save formatted output to text file
-        if print_output == True:
+        if print_output:
             save_output(text, print_path)
 
     else:

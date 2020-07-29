@@ -8,10 +8,9 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-import copy
 import logging
 from abc import ABC
-from typing import Iterable, List, TypeVar, Union, Tuple, Sequence
+from typing import Iterable, TypeVar, Union, Tuple, Sequence
 
 from entities.functions import ConstantFunction
 from entities.hypotheses import Hypothesis, SingleParameterHypothesis, MAX_HYPOTHESIS, ConstantHypothesis

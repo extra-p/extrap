@@ -43,7 +43,7 @@ class ModelerOptionsWidget(QWidget):
     def _create_options(self, layout, options):
         for name, option in options:
             if isinstance(option, ModelerOption):
-                layout.addRow(self._determine_label(option), self._determine_field(name, option))
+                layout.addRow(self._determine_label(option), self._determine_field(option))
             elif isinstance(option, ModelerOptionsGroup):
                 group = QGroupBox(name)
                 group.setToolTip(option.description)
@@ -87,7 +87,8 @@ class ModelerOptionsWidget(QWidget):
         value = option.type(value)
         setattr(self._modeler, option.field, value)
 
-    def _determine_label(self, option):
+    @staticmethod
+    def _determine_label(option):
         if option.name is not None:
             name = option.name
         else:
@@ -96,7 +97,7 @@ class ModelerOptionsWidget(QWidget):
         label.setToolTip(option.description)
         return label
 
-    def _determine_field(self, name, option):
+    def _determine_field(self, option):
         def slot(value):
             self.check_and_apply(option, value)
 

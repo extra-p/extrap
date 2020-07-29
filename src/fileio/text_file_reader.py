@@ -61,7 +61,7 @@ def read_text_file(path, progress_event=lambda _: _):
         if field_name == "METRIC":
             # create a new metric if not already exists
             metric_name = field_value
-            if experiment.metric_exists(metric_name) == False:
+            if not experiment.metric_exists(metric_name):
                 metric = Metric(metric_name)
                 experiment.add_metric(metric)
                 last_metric = metric
@@ -88,7 +88,7 @@ def read_text_file(path, progress_event=lambda _: _):
             data_string = field_value
             data_list = data_string.split(" ")
             values = [float(d) for d in data_list]
-            if number_parameters >= 1 and number_parameters <= 4:
+            if 1 <= number_parameters <= 4:
                 # create one measurement per repetition
 
                 if coordinate_id >= len(experiment.coordinates):

@@ -25,15 +25,19 @@ class AdvancedPlotWidget(QWidget):
 
     def __init__(self, main_widget, parent, graphDisplayWindowClass):
         super(AdvancedPlotWidget, self).__init__(parent)
+        self.grid = QGridLayout(self)
         self.main_widget = main_widget
         self.initUI()
-        self.set_initial_value()
+        # Basic geometry constants
+        self.max_x = 10
+        self.max_y = 10
+        self.font_size = 6
         self.setMouseTracking(True)
         self.graphDisplayWindowClass = graphDisplayWindowClass
         self.graphDisplayWindow = None
+        self.toolbar = None
 
     def initUI(self):
-        self.grid = QGridLayout(self)
         self.setLayout(self.grid)
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setSpacing(0)
@@ -110,7 +114,8 @@ class AdvancedPlotWidget(QWidget):
         self.grid.addWidget(self.graphDisplayWindow)
         self.grid.addWidget(self.toolbar)
 
-    def getNumAxis(self):
+    @staticmethod
+    def getNumAxis():
         """ 
           This function returns the number of axis. If its a 2-paramter model, it returns 2
         """

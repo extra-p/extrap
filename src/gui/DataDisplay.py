@@ -10,22 +10,21 @@ directory for details.
 """
 from collections import defaultdict
 
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from entities.coordinate import Coordinate
-from gui.GraphWidget import GraphWidget
-from gui.plots.HeatMapGraphWidget import HeatMapGraph
-from gui.plots.IsolinesDisplayWidget import IsolinesDisplay
-from gui.plots.InterpolatedContourDisplayWidget import InterpolatedContourDisplay
-from gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
-from gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
-from gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
-from gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
-from gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
-from gui.AdvancedPlotWidget import AdvancedPlotWidget
 from entities.parameter import Parameter
+from gui.AdvancedPlotWidget import AdvancedPlotWidget
+from gui.GraphWidget import GraphWidget
+from gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
+from gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
+from gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
+from gui.plots.HeatMapGraphWidget import HeatMapGraph
+from gui.plots.InterpolatedContourDisplayWidget import InterpolatedContourDisplay
+from gui.plots.IsolinesDisplayWidget import IsolinesDisplay
+from gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
+from gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
 
 
 #####################################################################
@@ -45,7 +44,9 @@ class AxisSelection(QWidget):
         self.index: int = index
         self.initUI(parameters)
         self.updateDisplay()
+        self.old_name = self.getParameter()
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self, parameters):
         self.grid = QGridLayout(self)
         self.grid.setColumnStretch(1, 1)
@@ -66,7 +67,7 @@ class AxisSelection(QWidget):
         for i in range(0, len(parameters)):
             self.combo_box.addItem(parameters[i].get_name())
         self.combo_box.setCurrentIndex(self.index)
-        self.old_name = self.getParameter()
+
         self.combo_box.currentIndexChanged.connect(self.parameter_selected)
 
         label2 = QLabel("max.")
@@ -181,6 +182,7 @@ class ValueSelection(QWidget):
         self.initUI()
         self.show()
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self):
         self.grid = QGridLayout(self)
         self.grid.setColumnStretch(1, 1)
@@ -271,6 +273,7 @@ class DataDisplayManager(QWidget):
         self.parameters = []
         self.initUI()
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
         splitter = QSplitter(Qt.Vertical, self)
@@ -296,8 +299,8 @@ class DataDisplayManager(QWidget):
     def ifTabAlreadyOpened(self, text):
         tabStatus = False
         tabCount = self.display_widget.count()
-        for index in range(0, (tabCount)):
-            if (text == self.display_widget.tabText(index)):
+        for index in range(0, tabCount):
+            if text == self.display_widget.tabText(index):
                 tabStatus = True
 
         return tabStatus
@@ -312,7 +315,7 @@ class DataDisplayManager(QWidget):
         # 6: IsolinesDisplayWidget
         # 7: InterpolatedContourDisplayWidget
         # 8: Measurement Points
-        if (0 in selectedCheckBoxesIndex):
+        if 0 in selectedCheckBoxesIndex:
             labelText = "Line graph"
             tabStatus = self.ifTabAlreadyOpened(labelText)
             if tabStatus is False:
@@ -367,7 +370,7 @@ class DataDisplayManager(QWidget):
 
     def experimentChange(self):
         experiment = self.main_widget.getExperiment()
-        if experiment == None:
+        if experiment is None:
             return
         if self._experiment is None or self._experiment != experiment:
             self._experiment = experiment

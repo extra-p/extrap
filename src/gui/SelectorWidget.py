@@ -28,6 +28,7 @@ class SelectorWidget(QWidget):
         self.parameter_sliders = list()
         self.initUI()
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self):
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)
@@ -149,10 +150,11 @@ class SelectorWidget(QWidget):
         # self.update()
 
     def model_changed(self):
-        index = self.model_selector.currentIndex()
-        text = str(self.model_selector.currentText())
+        # index = self.model_selector.currentIndex()
+        # text = str(self.model_selector.currentText())
 
-        # Introduced " and text != "No models to load" " as a second guard since always when the text would be "No models to load" the gui would crash.
+        # Introduced " and text != "No models to load" " as a second guard since always when the text would be
+        # "No models to load" the gui would crash.
         # if model != None and text != "No models to load":
         #     generator = model._modeler
         self.main_widget.selector_widget.tree_model.valuesChanged()
@@ -166,7 +168,7 @@ class SelectorWidget(QWidget):
             return
         result = QInputDialog.getText(self,
                                       self.tr('Rename current model'),
-                                      self.tr('Enter new name'))
+                                      self.tr('Enter new name'), QLineEdit.EchoMode.Normal)
         new_name = result[0]
         if result[1] and new_name:
             self.renameCurrentModel(new_name)
@@ -187,7 +189,8 @@ class SelectorWidget(QWidget):
             self.model_selector.removeItem(index)
             del experiment.modelers[index]
 
-    def get_all_models(self, experiment):
+    @staticmethod
+    def get_all_models(experiment):
         if experiment is None:
             return None
         models = experiment.modelers
@@ -235,11 +238,11 @@ class SelectorWidget(QWidget):
         '''
         value_list = list()
         experiment = self.main_widget.getExperiment()
-        if experiment == None:
+        if experiment is None:
             value_list.append(1)
             return value_list
         selectedMetric = self.getSelectedMetric()
-        if selectedMetric == None:
+        if selectedMetric is None:
             value_list.append(1)
             return value_list
         param_value_list = self.getParameterValues()

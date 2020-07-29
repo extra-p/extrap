@@ -8,18 +8,17 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-from PySide2.QtCore import QMargins
 
+from PySide2.QtCore import *
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
-from PySide2.QtCore import *
 
 from gui.Utils import formatNumber
 
 
 class ColorWidget(QWidget):
 
-    def __init__(self, parent):
+    def __init__(self):
         super(ColorWidget, self).__init__()
 
         self.max_label = QLabel()
@@ -31,8 +30,6 @@ class ColorWidget(QWidget):
         self.setMinimumHeight(40)
         self.setMinimumWidth(200)
         self.setWindowTitle('Colours')
-        self.rect_width = 0
-        self.rect_height = 0
         self.setContentsMargins(10, 10, 10, 10)
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
@@ -54,7 +51,8 @@ class ColorWidget(QWidget):
         self.drawColors(paint)
         paint.end()
 
-    def getColor(self, value):
+    @staticmethod
+    def getColor(value):
         value = max(0.0, min(value, 1.0))  # prevent out of bounds
         # takes a value between 0 and 1 and returns a QColor
         if value < 0.25:
@@ -76,16 +74,16 @@ class ColorWidget(QWidget):
 
     def drawColors(self, paint):
 
-        self.rect_width = self.frameGeometry().width()
-        self.rect_height = self.frameGeometry().height()
+        rect_width = self.frameGeometry().width()
+        rect_height = self.frameGeometry().height()
         (mleft, mtop, mright, mbottom) = self.getContentsMargins()
 
-        for position in range(mleft, self.rect_width - mright):
-            ratio = float(position) / self.rect_width
+        for position in range(mleft, rect_width - mright):
+            ratio = float(position) / rect_width
             color = self.getColor(ratio)
             paint.setPen(color)
             paint.setBrush(color)
-            paint.drawRect(position, mtop, 1, self.rect_height - mbottom - mtop)
+            paint.drawRect(position, mtop, 1, rect_height - mbottom - mtop)
 
     def update_min_max(self, min_value, max_value):
         self.min_label.setText(formatNumber(str(min_value)))

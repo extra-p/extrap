@@ -11,11 +11,10 @@ directory for details.
 import warnings
 from typing import List, Mapping
 
-from entities.parameter import Parameter
+import numpy
+
 from entities.terms import CompoundTerm, MultiParameterTerm
 from util.deprecation import deprecated
-import collections
-import numpy
 
 
 class Function:

@@ -63,6 +63,7 @@ class MainWidget(QMainWindow):
         # is used when loading the data from a file and then modeling directly
         self.median = 0
 
+    # noinspection PyAttributeOutsideInit
     def initUI(self):
         """
         Initializes the User Interface of the main widget. E.g. the menus.
@@ -92,7 +93,7 @@ class MainWidget(QMainWindow):
 
         # bottom widget
         dock = QDockWidget(self.tr("Color Info"), self)
-        self.color_widget = ColorWidget(self)
+        self.color_widget = ColorWidget()
         self.color_widget.update_min_max(self.min_value, self.max_value)
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
@@ -127,8 +128,8 @@ class MainWidget(QMainWindow):
         open_extrap3_file_action.triggered.connect(self.open_extrap3_file)
 
         cube_file_action = QAction(self.tr('Open set of CUBE files'), self)
-        cube_file_action.setStatusTip(self.tr(
-            'Open a set of CUBE files for single parameter models and generate data points for a new experiment from them'))
+        cube_file_action.setStatusTip(self.tr('Open a set of CUBE files for single parameter models and generate '
+                                              'data points for a new experiment from them'))
         cube_file_action.triggered.connect(self.open_cube_file)
 
         # View menu
@@ -206,7 +207,8 @@ class MainWidget(QMainWindow):
         self.experiment_change = False
         self.show()
 
-    def get_file_name(self, fileName):
+    @staticmethod
+    def get_file_name(fileName):
         """
         Extracts the file name of the return value of the
         QFileDialog functions getOpenFileName and getSaveFileName.
@@ -275,7 +277,7 @@ class MainWidget(QMainWindow):
 
         fontSize, ok = QInputDialog.getItem(
             self, "Font Size", "Select the font Size:", fontSizeItems, 0, False)
-        if (ok):
+        if ok:
             self.font_size = fontSize
             self.data_display.updateWidget()
             self.update()
@@ -394,7 +396,7 @@ class MainWidget(QMainWindow):
         size_of_color_list = len(self.graph_color_list)
         self.dict_callpath_color = {}
         for callpath in callpaths:
-            if (current_index < size_of_color_list):
+            if current_index < size_of_color_list:
                 self.dict_callpath_color[callpath] = self.graph_color_list[current_index]
             else:
                 offset = (current_index - size_of_color_list) % size_of_color_list

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Any, Dict, Sequence
+from typing import Sequence
+
 from entities.measurement import Measurement
 from entities.model import Model
 

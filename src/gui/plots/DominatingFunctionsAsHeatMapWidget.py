@@ -10,17 +10,14 @@ directory for details.
 """
 
 import sys
-from matplotlib.figure import Figure
-import numpy as np
-import matplotlib.patches as mpatches
-from matplotlib.colors import LinearSegmentedColormap
-from gui.plots.BaseGraphWidget import GraphDisplayWindow
 
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
+import matplotlib.patches as mpatches
+import numpy as np
 from PySide2.QtWidgets import *  # @UnusedWildImport
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.figure import Figure
+
+from gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 
 #####################################################################
@@ -55,14 +52,14 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         # 100, 75, 50
         if maxX <= 1000:
             numberOfPixels_x = 100
-        elif maxX > 1000 and maxX <= 1000000000:
+        elif 1000 < maxX <= 1000000000:
             numberOfPixels_x = 75
         else:
             numberOfPixels_x = 50
 
         if maxY <= 1000:
             numberOfPixels_y = 100
-        elif maxY > 1000 and maxY <= 1000000000:
+        elif 1000 < maxY <= 1000000000:
             numberOfPixels_y = 75
         else:
             numberOfPixels_y = 50
@@ -113,7 +110,7 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
 
         for i in range(len(z_List[0])):
             for j in range(len(functions)):
-                if (z_List[j][i] > max_z_val):
+                if z_List[j][i] > max_z_val:
                     max_z_val = z_List[j][i]
                     func_with_max_z = functions[j]
                     color_for_max_z = dict_callpath_color[func_with_max_z]
@@ -158,10 +155,12 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         if leg:
             leg.set_draggable(True)
 
-    def calculate_z(self, x, y, functiontoEvaluate):
+    @staticmethod
+    def calculate_z(x, y, functiontoEvaluate):
         return functiontoEvaluate
 
-    def populateCallPathColorMap(self, callpaths, colors):
+    @staticmethod
+    def populateCallPathColorMap(callpaths, colors):
         dict_callpath_color = {}
         current_index = 0
         for callpath in callpaths:
@@ -172,7 +171,8 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
     def getColorForCallPath(self, callpath):
         return self.dict_callpath_color[callpath]
 
-    def getColorMap(self):
+    @staticmethod
+    def getColorMap():
         colors = [(0, 0, 1), (0, 1, 0), (1, 0, 0)]
         n_bin = 100
         cmap_name = 'my_list'
@@ -183,7 +183,8 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
     def get_callpath_color_map(self):
         return self.dict_callpath_color
 
-    def get_dominating_function_indices(self, function, functionList):
+    @staticmethod
+    def get_dominating_function_indices(function, functionList):
         functionIndexList = list()
         functionIndex = -1
         while True:

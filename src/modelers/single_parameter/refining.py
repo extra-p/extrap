@@ -68,7 +68,7 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
         coordinates = [m.coordinate for m in measurements]
 
         # initialize current term count
-        self.current_term_count = 0
+        # self.current_term_count = 0
 
         # compute a constant model
         constant_hypothesis, constant_cost = self.create_constant_model(measurements)
@@ -78,7 +78,6 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
             return Model(constant_hypothesis)
 
         # otherwise start searching for the best hypothesis based on the pmnf
-        best_hypotheses = [constant_hypothesis]
 
         # determine all exponents
         # TODO could be set via options
@@ -110,7 +109,8 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
 
         return Model(best_hypothesis)
 
-    def _determine_initial_state(self, hypotheses, slices):
+    @staticmethod
+    def _determine_initial_state(hypotheses, slices):
         state_per_slice = []
         for hypothesis, slice in zip(hypotheses, slices):
             i = hypothesis.partition_index

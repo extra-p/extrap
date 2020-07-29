@@ -56,7 +56,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
 
-    def compare_parameter_values(self, parameter_value_list1, parameter_value_list2):
+    @staticmethod
+    def compare_parameter_values(parameter_value_list1, parameter_value_list2):
         """
         This method compares the parameter values of two coordinates with each other
         to see if they are equal and returns a True or False.
@@ -68,7 +69,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                 return False
         return True
 
-    def get_parameter_values(self, coordinate, parameter_id):
+    @staticmethod
+    def get_parameter_values(coordinate, parameter_id):
         """
         This method returns the parameter values from the coordinate.
         But only the ones necessary for the compare_parameter_values() method.
@@ -112,9 +114,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                     return None
 
         def make_measurement(c, ms: Sequence[Measurement]):
-            values = mean = [m.mean for m in ms]
             if self.use_median:
                 values = [m.median for m in ms]
+            else:
+                values = [m.mean for m in ms]
 
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, values)
             measurement.median = measurement.mean
@@ -134,7 +137,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         return combined_measurements
 
-    def find_first_measurement_points(self, measurements: Sequence[Measurement]):
+    @staticmethod
+    def find_first_measurement_points(measurements: Sequence[Measurement]):
         """
         This method returns the measurements that should be used for creating
         the single parameter models.
@@ -197,12 +201,12 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn(
-                "Number of measurements for each parameter needs to be at least 5 in order to create a performance model.")
+            warnings.warn("Number of measurements for each parameter needs to be at least 5"
+                          " in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling
-        coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
+        # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
         # use all available additional points for modeling the multi parameter models
         constantCost = 0

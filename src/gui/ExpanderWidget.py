@@ -9,7 +9,7 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QToolButton, QSizePolicy, QWidget, QGroupBox, QVBoxLayout, QPushButton
+from PySide2.QtWidgets import QToolButton, QSizePolicy, QWidget, QGroupBox, QVBoxLayout
 
 
 class ExpanderWidget(QGroupBox):

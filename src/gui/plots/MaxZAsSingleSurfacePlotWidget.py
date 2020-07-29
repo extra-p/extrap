@@ -22,7 +22,7 @@ class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
         try:
             self.colormap = cm.get_cmap('viridis')
-        except:
+        except ValueError:
             self.colormap = cm.get_cmap('spectral')
 
         super().__init__(graphWidget, main_widget, width, height, dpi)
@@ -43,18 +43,16 @@ class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # calculate max_z value
-        max_Z_List = list()
         if len(model_list) == 1:
             max_Z_List = Z_List[0]
 
         else:
             # for each x,y value , calculate max z for all function
-            max_z_val = z_List[0][0]
             max_z_list = list()
             for i in range(len(z_List[0])):
                 max_z_val = z_List[0][i]
                 for j in range(len(model_list)):
-                    if (z_List[j][i] > max_z_val):
+                    if z_List[j][i] > max_z_val:
                         max_z_val = z_List[j][i]
                 max_z_list.append(max_z_val)
 

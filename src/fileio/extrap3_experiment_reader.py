@@ -187,7 +187,7 @@ def deserialize_CompoundTerm(ioHelper):
     length = ioHelper.readInt()
     for i in range(length):
         prefix = ioHelper.readString()
-        assert (prefix == 'SimpleTerm');
+        assert (prefix == 'SimpleTerm')
         term = deserialize_SimpleTerm(ioHelper)
         compoundTerm.add_simple_term(term)
 
@@ -503,9 +503,10 @@ def read_extrap3_experiment(path, progress_event=lambda _: _):
         parameter_mapping = {}
         versionNumber = ioHelper.readString()
         prefix = ioHelper.readString()
-        while (prefix):
+        while prefix:
             progress_event(file.tell() / file_size)
             # logging.debug("Deserialize " + str(prefix))
+            # noinspection PyNoneFunctionAssignment
             if prefix == 'Parameter':
                 p = deserialize_parameter(parameter_mapping, ioHelper)
                 exp.add_parameter(p)
@@ -529,7 +530,7 @@ def read_extrap3_experiment(path, progress_event=lambda _: _):
                 exp.add_coordinate(c)
 
             elif prefix == 'ModelComment':
-                comment = deserialize_modelcomment(ioHelper)
+                deserialize_modelcomment(ioHelper)
                 # SAFE_RETURN_None(comment)
                 # exp.addModelComment(comment)
 

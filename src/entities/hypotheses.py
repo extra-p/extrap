@@ -221,7 +221,7 @@ class ConstantHypothesis(Hypothesis):
             # _, value = coordinates[element_id].get_parameter_value(0)
             # predicted = self.function.evaluate(value)
             predicted = self.function.constant_coefficient
-            if self._use_median == True:
+            if self._use_median:
                 actual = measurement.median
             else:
                 actual = measurement.mean
@@ -313,8 +313,7 @@ class SingleParameterHypothesis(Hypothesis):
         b_list = []
         for measurement in measurements:
             value = measurement.value(self._use_median)
-            list_element = []
-            list_element.append(1)  # for constant coefficient
+            list_element = [1]
             for compound_term in self.function.compound_terms:
                 parameter_value = measurement.coordinate[0]
                 compound_term.coefficient = 1
@@ -401,8 +400,9 @@ class MultiParameterHypothesis(Hypothesis):
             self._rRSS += relativeDifference * relativeDifference
 
             if abssum != 0.0:
-                # This `if` condition prevents a division by zero, but it is correct: if sum is 0, both `actual` and `predicted`
-                # must have been 0, and in that case the error at this point is 0, so we don't need to add anything.
+                # This `if` condition prevents a division by zero, but it is correct: if sum is 0,
+                # both `actual` and `predicted` must have been 0, and in that case the error at this point is 0,
+                # so we don't need to add anything.
                 smape += abs(difference) / abssum * 2
 
         # times 100 for percentage error

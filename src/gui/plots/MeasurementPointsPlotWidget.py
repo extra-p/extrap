@@ -71,7 +71,6 @@ class MeasurementPointsPlot(GraphDisplayWindow):
                                 rstride=1, cstride=1, antialiased=False, alpha=0.1)
 
         # Gat base data for drawing points
-        experiment = self.main_widget.getExperiment()
         parameter_x = self.main_widget.data_display.getAxisParameter(0)
         parameter_y = self.main_widget.data_display.getAxisParameter(1)
 

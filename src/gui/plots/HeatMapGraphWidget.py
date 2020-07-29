@@ -33,7 +33,7 @@ class HeatMapGraph(BaseContourGraph):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
         try:
             self.colormap = cm.get_cmap('viridis')
-        except:
+        except ValueError:
             self.colormap = cm.get_cmap('spectral')
 
         # initializing value to be used later in finding boundary points
@@ -65,7 +65,6 @@ class HeatMapGraph(BaseContourGraph):
         # get the associated model functions for which z is highest.
         # Also store the the associated z value.
 
-        max_z_val = z_List[0][0]
         color_for_max_z = dict_callpath_color[selected_callpaths[0]]
         max_z_list = list()
         max_color_list = list()
@@ -75,7 +74,7 @@ class HeatMapGraph(BaseContourGraph):
         for i in range(len(z_List[0])):
             max_z_val = z_List[0][i]
             for j in range(len(model_list)):
-                if (z_List[j][i] > max_z_val):
+                if z_List[j][i] > max_z_val:
                     max_z_val = z_List[j][i]
                     func_with_max_z = model_list[j]
                     color_for_max_z = dict_callpath_color[selected_callpaths[j]]
@@ -120,9 +119,8 @@ class HeatMapGraph(BaseContourGraph):
                           pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
 
         # Step 2 : Mark the dominating functions by drawing boundary lines
-        x_y_indices = list()
-        # For each domiating function, extract the (x, y)pair in which they dominate using the indices we got in function_indices_map
-        # and then find the boundary of these points and plot on the graph
+        # For each dominating function, extract the (x, y)pair in which they dominate using the indices we got in
+        # function_indices_map and then find the boundary of these points and plot on the graph
         for function in function_indices_map:
             indices_per_function = function_indices_map[function]
             x_indices = [X.ravel()[index] for index in indices_per_function]
@@ -139,7 +137,8 @@ class HeatMapGraph(BaseContourGraph):
         # Step 3: Draw legend
         self.draw_legend(ax, dict_callpath_color)
 
-    def getColorMap(self):
+    @staticmethod
+    def getColorMap():
         """ 
            This function creates a color map and return it.
         """
@@ -150,7 +149,8 @@ class HeatMapGraph(BaseContourGraph):
             cmap_name, colors, N=n_bin)
         return colorMap
 
-    def get_dominating_function_indices(self, function, functionList):
+    @staticmethod
+    def get_dominating_function_indices(function, functionList):
         """ 
            This function filters the functions which are in the functionList and return their indices. 
         """

@@ -12,9 +12,9 @@ directory for details.
 import os
 import re
 
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
+
 from fileio.cube_file_reader2 import read_cube_file
 
 
@@ -185,7 +185,7 @@ class CubeFileReader(QDialog):
 
         # print("matched directoty list with given pattern: ", dir_matches)
 
-        if (len(dir_matches) == 0):
+        if len(dir_matches) == 0:
             return
 
         # get prefix from first match
