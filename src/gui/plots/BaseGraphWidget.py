@@ -1,3 +1,4 @@
+import warnings
 from abc import abstractmethod
 
 import numpy as np
@@ -5,6 +6,7 @@ from PySide2.QtWidgets import QSizePolicy
 from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d import Axes3D
 
 
 class GraphDisplayWindow(FigureCanvas):
@@ -17,7 +19,27 @@ class GraphDisplayWindow(FigureCanvas):
                               QSizePolicy.Expanding)
         super().updateGeometry()
         self.draw_figure()
-        self.fig.tight_layout()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.fig.tight_layout()
+
+    def redraw(self):
+        rotation = self._save_rotation()
+        self.fig.clear()
+        self.draw_figure()
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.fig.tight_layout()
+        self._restore_rotation(rotation)
+        self.fig.canvas.draw_idle()
+
+    def _save_rotation(self):
+        return [(ax.elev, ax.azim) if isinstance(ax, Axes3D) else (None, None) for ax in self.fig.axes]
+
+    def _restore_rotation(self, rotations):
+        for ax, (elev, azim) in zip(self.fig.axes, rotations):
+            if isinstance(ax, Axes3D):
+                ax.view_init(elev, azim)
 
     @abstractmethod
     def draw_figure(self):
@@ -121,7 +143,7 @@ class GraphDisplayWindow(FigureCanvas):
 
     def get_max(self, lower_max=2.0):
         # since we are drawing the plots with minimum axis value of 1 to avoid nan values,
-        # so the first max-value of parameter could be 2 to calcualte number of subdivisions
+        # so the first max-value of parameter could be 2 to calculate number of subdivisions
         maxX = self.graphWidget.getMaxX()
         maxY = self.graphWidget.getMaxY()
         # define min x and min y value
@@ -133,8 +155,9 @@ class GraphDisplayWindow(FigureCanvas):
 
 
 class BaseContourGraph(GraphDisplayWindow):
+    @abstractmethod
     def draw_figure(self):
-        pass
+        ...
 
     def _calculate_grid_parameters(self, maxX, maxY):
         # define grid parameters based on max x and max y value

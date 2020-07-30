@@ -106,6 +106,8 @@ class GraphWidget(QWidget):
         self.graph_width = 0
         self.legend_width = 0
         self.legend_height = 0
+        self.clicked_x_pos = None
+        self.clicked_y_pos = None
 
         # colors
         self.BACKGROUND_COLOR = QColor("white")
@@ -485,6 +487,8 @@ class GraphWidget(QWidget):
 
         for i in range(len(x_to_mark)):
             x = self.logicalXtoPixel(x_to_mark_cal[i])
+            if i == len(x_to_mark) - 1:
+                x = round(x)
 
             if i == (int(len(x_to_mark) / 2)):
                 paint.drawText(x, y + 50, x_label)
@@ -801,35 +805,47 @@ class GraphWidget(QWidget):
             # paint.drawText((x_cordinate-20), y_cordinate, displayString)
         # paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.name)
 
-    def mousePressEvent(self, QMouseEvent):
+    def mousePressEvent(self, event):
+        if event.buttons() & ~Qt.LeftButton:
+            return
+        x = int(event.x())
+        y = int(event.y())
+        if (0 <= x - self.legend_x <= self.legend_width) and (0 <= y - self.legend_y <= self.legend_height) or \
+                (0 <= x - self.left_margin <= self.graph_width) and (0 <= y - self.top_margin <= self.graph_height):
+            self.clicked_x_pos = x
+            self.clicked_y_pos = y
+            # print ("clicked_x_pos, clicked_y_pos", self.clicked_x_pos, self.clicked_y_pos)
 
-        self.clicked_x_pos = int(QMouseEvent.x())
-        self.clicked_y_pos = int(QMouseEvent.y())
-        # print ("clicked_x_pos, clicked_y_pos", self.clicked_x_pos, self.clicked_y_pos)
-
-    def mouseReleaseEvent(self, releaseEvent):
-
-        release_x_pos = int(releaseEvent.x())
-        release_y_pos = int(releaseEvent.y())
-        # print ("mouse release event release_x_pos", release_x_pos)
+    def mouseMoveEvent(self, event):
+        if (event.buttons() & ~Qt.LeftButton):
+            return
+        if self.clicked_x_pos is None or self.clicked_y_pos is None:
+            return
+        x_pos = int(event.x())
+        y_pos = int(event.y())
+        # print ("mouse release event x_pos", x_pos)
 
         # move legend id clicked on legend
         if (0 <= self.clicked_x_pos - self.legend_x <= self.legend_width) and (
                 0 <= self.clicked_y_pos - self.legend_y <= self.legend_height):
-            self.legend_x = self.legend_x + release_x_pos - self.clicked_x_pos
-            self.legend_y = self.legend_y + release_y_pos - self.clicked_y_pos
+            self.legend_x = self.legend_x + x_pos - self.clicked_x_pos
+            self.legend_y = self.legend_y + y_pos - self.clicked_y_pos
             self.legend_x = max(0, self.legend_x)
             self.legend_y = max(0, self.legend_y)
             self.update()
 
         # scale graph
         else:
-            release_x_pos = release_x_pos - self.left_margin
-            clicked_x_pos = self.clicked_x_pos - self.left_margin
+            relative_x = (self.clicked_x_pos - x_pos) * 2
+            self.setMax(0, (self.graph_width + relative_x) / self.graph_width * self.max_x)
+            self.update()
 
-            if clicked_x_pos > 0 and release_x_pos > 0:
-                self.setMax(0, clicked_x_pos / release_x_pos * self.max_x)
-                self.update()
+        self.clicked_x_pos = x_pos
+        self.clicked_y_pos = y_pos
+
+    def mouseReleaseEvent(self, event):
+        self.clicked_x_pos = None
+        self.clicked_y_pos = None
 
     @staticmethod
     def getNumAxis():

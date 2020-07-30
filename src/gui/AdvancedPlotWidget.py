@@ -56,7 +56,7 @@ class AdvancedPlotWidget(QWidget):
             self.max_y = maxValue
 
         else:
-            print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
+            print("[EXTRA-P:] Error: Set maximum for axis other than X-axis.")
 
     def getMaxX(self):
         """ 
@@ -102,22 +102,19 @@ class AdvancedPlotWidget(QWidget):
         # Get the font size as selected by the user and set it
         self.font_size = int(self.main_widget.getFontSize())
         # Call the 3D function display window
-        if self.graphDisplayWindow is not None:
-            self.grid.removeWidget(self.graphDisplayWindow)
-            self.grid.removeWidget(self.toolbar)
-            self.graphDisplayWindow.deleteLater()
-            self.toolbar.deleteLater()
-
-        self.graphDisplayWindow = self.graphDisplayWindowClass(
-            self, self.main_widget, width=5, height=4, dpi=100)
-        self.toolbar = MyCustomToolbar(self.graphDisplayWindow, self)
-        self.grid.addWidget(self.graphDisplayWindow)
-        self.grid.addWidget(self.toolbar)
+        if self.graphDisplayWindow is None:
+            self.graphDisplayWindow = self.graphDisplayWindowClass(
+                self, self.main_widget, width=5, height=4, dpi=100)
+            self.toolbar = MyCustomToolbar(self.graphDisplayWindow, self)
+            self.grid.addWidget(self.graphDisplayWindow)
+            self.grid.addWidget(self.toolbar)
+        else:
+            self.graphDisplayWindow.redraw()
 
     @staticmethod
     def getNumAxis():
-        """ 
-          This function returns the number of axis. If its a 2-paramter model, it returns 2
+        """
+          This function returns the number of axis. If its a 2-parameter model, it returns 2
         """
         return 2
 

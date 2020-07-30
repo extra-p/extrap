@@ -8,18 +8,9 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+import warnings
 
-from matplotlib.figure import Figure
-
-import numpy as np
-import matplotlib.patches as mpatches
-from gui.plots.BaseGraphWidget import GraphDisplayWindow, BaseContourGraph
-
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from gui.plots.BaseGraphWidget import BaseContourGraph
 
 
 #####################################################################
@@ -89,9 +80,10 @@ class IsolinesDisplay(BaseContourGraph):
             ax.xaxis.major.formatter._useMathText = True
             ax.yaxis.major.formatter._useMathText = True
             try:
-                cs = ax.contour(
-                    X, Y, Z_List[i], colors=dict_callpath_color[selected_callpaths[i]])
-                ax.clabel(cs, cs.levels[::2], inline=True, fontsize=7)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', 'No contour levels were found within the data range.')
+                    cs = ax.contour(X, Y, Z_List[i], colors=dict_callpath_color[selected_callpaths[i]])
+                    ax.clabel(cs, cs.levels[::2], inline=True, fontsize=7)
             except ValueError:  # raised if function selected is constant
                 pass
             ax.set_xlabel('\n' + x_label)

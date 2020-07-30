@@ -8,13 +8,11 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+import warnings
 
 import matplotlib.ticker as ticker
-
 import numpy as np
-
 from matplotlib import cm
-
 from matplotlib.colors import LinearSegmentedColormap
 
 #####################################################################
@@ -80,6 +78,7 @@ class InterpolatedContourDisplay(BaseContourGraph):
 
         for i in range(len(Z_List)):
             maxZ = max([max(row) for row in Z_List[i]])
+            maxZ = maxZ or 1
             levels = np.arange(0, maxZ, (1 / float(numOfCurves)) * maxZ)
             ax = self.fig.add_subplot(1, number_of_subplots, i + 1)
             ax.xaxis.major.formatter._useMathText = True
@@ -88,8 +87,10 @@ class InterpolatedContourDisplay(BaseContourGraph):
             self.fig.colorbar(CM, ax=ax, orientation="horizontal",
                               pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
             try:
-                CS = ax.contour(X, Y, Z_List[i], colors="white", levels=levels)
-                ax.clabel(CS, CS.levels[::1], inline=True, fontsize=8)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings('ignore', 'No contour levels were found within the data range.')
+                    CS = ax.contour(X, Y, Z_List[i], colors="white", levels=levels)
+                    ax.clabel(CS, CS.levels[::1], inline=True, fontsize=8)
             except ValueError:  # raised if function selected is constant
                 pass
             ax.set_xlabel('\n' + x_label)
