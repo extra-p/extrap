@@ -271,26 +271,23 @@ class DataDisplayManager(QWidget):
         self.value_selections = list()
         self._experiment = None
         self.parameters = []
+        self.limits_widget = None
         self.initUI()
 
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
-        splitter = QSplitter(Qt.Vertical, self)
-        grid.addWidget(splitter, 0, 0)
-        self.display_widget = QTabWidget(splitter)
+
+        self.display_widget = QTabWidget(self)
         self.display_widget.setMovable(True)
         self.display_widget.setTabsClosable(True)
         self.display_widget.tabCloseRequested.connect(self.closeTab)
-
+        grid.addWidget(self.display_widget, 0, 0)
         # loading this tab as default view (Line graph)
         self.reloadTabs([0])
 
         self.display_widget.tabsClosable()
         self.display_widget.currentChanged.connect(self.experimentChange)
-        widget = QWidget(splitter)
-        self.grid = QGridLayout(widget)
-        splitter.setSizes([1000, 40])
         self.show()
 
     def closeTab(self, currentIndex):
@@ -343,31 +340,6 @@ class DataDisplayManager(QWidget):
                 self.display_widget.addTab(
                     advance_plot_widget, labelText)
 
-    def generateSelections(self, parameters):
-
-        if not self.display_widget.currentWidget():
-            return
-
-        num_axis = self.display_widget.currentWidget().getNumAxis()
-        for axis in self.axis_selections:
-            axis.clearAxisLayout()
-        del self.axis_selections[:]
-
-        for v in self.value_selections:
-            v.clearRowLayout()
-        del self.value_selections[:]
-
-        for i in range(0, num_axis):
-            axis_selection = AxisSelection(self, self, i, parameters)
-            self.axis_selections.append(axis_selection)
-            self.grid.addWidget(axis_selection, i, 0)
-        num_param = len(parameters)
-        for i in range(num_axis, num_param):
-            value_selection = ValueSelection(self, self, i,
-                                             parameters[i].name)
-            self.value_selections.append(value_selection)
-            self.grid.addWidget(value_selection, i, 0)
-
     def experimentChange(self):
         experiment = self.main_widget.getExperiment()
         if experiment is None:
@@ -381,7 +353,7 @@ class DataDisplayManager(QWidget):
                 ValueSelection.default_values[i] = pos
 
         self.parameters = experiment.get_parameters()
-        self.generateSelections(self.parameters)
+        self.limits_widget.generateSelections(self.parameters)
         self.updateWidget()
 
     def setMaxValue(self, index, value):
@@ -426,3 +398,52 @@ class DataDisplayManager(QWidget):
             display.update()
         else:
             display.drawGraph()
+
+
+class GraphLimitsWidget(QWidget):
+    def __init__(self, parent, data_display: DataDisplayManager):
+        super().__init__(parent)
+        self.data_display = data_display
+        self.display_widget = data_display.display_widget
+        self.axis_selections = data_display.axis_selections
+        self.value_selections = data_display.value_selections
+        self.data_display.limits_widget = self
+
+        self.grid = QGridLayout(self)
+        self.grid.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
+
+        self._placeholder = AxisSelection(self, None, 0, [])
+        self._placeholder.setEnabled(False)
+        self.grid.addWidget(self._placeholder)
+
+        self.setLayout(self.grid)
+
+    def generateSelections(self, parameters):
+
+        if not self.display_widget.currentWidget():
+            return
+
+        if self._placeholder is not None:
+            self._placeholder.hide()
+            self._placeholder.deleteLater()
+            self._placeholder = None
+
+        num_axis = self.display_widget.currentWidget().getNumAxis()
+        for axis in self.axis_selections:
+            axis.clearAxisLayout()
+        del self.axis_selections[:]
+
+        for v in self.value_selections:
+            v.clearRowLayout()
+        del self.value_selections[:]
+
+        for i in range(0, num_axis):
+            axis_selection = AxisSelection(self, self.data_display, i, parameters)
+            self.axis_selections.append(axis_selection)
+            self.grid.addWidget(axis_selection, i, 0)
+        num_param = len(parameters)
+        for i in range(num_axis, num_param):
+            value_selection = ValueSelection(self, self.data_display, i,
+                                             parameters[i].name)
+            self.value_selections.append(value_selection)
+            self.grid.addWidget(value_selection, i, 0)

@@ -21,7 +21,7 @@ from fileio.talpas_file_reader import read_talpas_file
 from fileio.text_file_reader import read_text_file
 from gui.ColorWidget import ColorWidget
 from gui.CubeFileReader import CubeFileReader
-from gui.DataDisplay import DataDisplayManager
+from gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from gui.ModelerWidget import ModelerWidget
 from gui.PlotTypeSelector import PlotTypeSelector
 from gui.ProgressWindow import ProgressWindow
@@ -73,6 +73,9 @@ class MainWidget(QMainWindow):
         # self.statusBar()
 
         # Main splitter
+        self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
+        self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
+        self.setDockNestingEnabled(True)
 
         # Left side: Callpath and metric selection
         dock = QDockWidget(self.tr("Selection"), self)
@@ -97,6 +100,11 @@ class MainWidget(QMainWindow):
         self.color_widget.update_min_max(self.min_value, self.max_value)
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+
+        dock = QDockWidget(self.tr("Graph Limits"), self)
+        self.graph_limits_widget = GraphLimitsWidget(self, self.data_display)
+        dock.setWidget(self.graph_limits_widget)
+        self.addDockWidget(Qt.BottomDockWidgetArea, dock, Qt.Horizontal)
 
         # Menu creation
 
