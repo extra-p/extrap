@@ -8,25 +8,25 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-from fileio.extrap3_experiment_reader import read_extrap3_experiment
-from gui.ProgressWindow import ProgressWindow
-from modelers.model_generator import ModelGenerator
+import signal
 from enum import Enum
+
+from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtWidgets import *  # @UnusedWildImport
+
+from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.json_file_reader import read_json_file
 from fileio.talpas_file_reader import read_talpas_file
 from fileio.text_file_reader import read_text_file
-from gui.Utils import formatNumber
-from gui.SelectorWidget import SelectorWidget
-from gui.PlotTypeSelector import PlotTypeSelector
-from gui.ModelerWidget import ModelerWidget
-from gui.DataDisplay import DataDisplayManager
-from gui.CubeFileReader import CubeFileReader
 from gui.ColorWidget import ColorWidget
-import signal
-
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from gui.CubeFileReader import CubeFileReader
+from gui.DataDisplay import DataDisplayManager
+from gui.ModelerWidget import ModelerWidget
+from gui.PlotTypeSelector import PlotTypeSelector
+from gui.ProgressWindow import ProgressWindow
+from gui.SelectorWidget import SelectorWidget
+from modelers.model_generator import ModelGenerator
 
 pyqt_version = 5
 
@@ -333,8 +333,8 @@ class MainWidget(QMainWindow):
         file_name = QFileDialog.getOpenFileName(self, 'Open a text input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self, "Loading file", "") as pw:
-                experiment = read_text_file(file_name, pw.progress_event)
+            with ProgressWindow(self, "Loading file") as pw:
+                experiment = read_text_file(file_name, pw)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
 
@@ -342,8 +342,8 @@ class MainWidget(QMainWindow):
         file_name = QFileDialog.getOpenFileName(self, 'Open a json input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self, "Loading file", "") as pw:
-                experiment = read_json_file(file_name, pw.progress_event)
+            with ProgressWindow(self, "Loading file") as pw:
+                experiment = read_json_file(file_name, pw)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
 
@@ -352,8 +352,8 @@ class MainWidget(QMainWindow):
             self, 'Open a talpas input file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self, "Loading file", "") as pw:
-                experiment = read_talpas_file(file_name, pw.progress_event)
+            with ProgressWindow(self, "Loading file") as pw:
+                experiment = read_talpas_file(file_name, pw)
                 # call the modeler and create a function model
                 self.model_experiment(experiment)
 
@@ -362,8 +362,8 @@ class MainWidget(QMainWindow):
             self, 'Open an Extra-P 3 Experiment file')
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self, "Loading file", "") as pw:
-                experiment = read_extrap3_experiment(file_name, pw.progress_event)
+            with ProgressWindow(self, "Loading file") as pw:
+                experiment = read_extrap3_experiment(file_name, pw)
                 # call the modeler and create a function model
                 self.setExperiment(experiment)
 

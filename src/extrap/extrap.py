@@ -14,8 +14,6 @@ import logging
 import os
 from itertools import chain
 
-from tqdm import tqdm
-
 from fileio.cube_file_reader2 import read_cube_file
 from fileio.io_helper import format_output
 from fileio.io_helper import save_output
@@ -28,6 +26,7 @@ from modelers.abstract_modeler import MultiParameterModeler
 from modelers.model_generator import ModelGenerator
 from util.options_parser import ModelerOptionsAction, ModelerHelpAction
 from util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_OPTIONS_KEY
+from util.progress_bar import ProgressBar
 
 
 def main():
@@ -115,19 +114,7 @@ def main():
         print_output = False
 
     if arguments.path is not None:
-        with tqdm(total=100, unit='%') as pbar:
-            previous_progress = 0
-
-            def progress_bar_event(x):
-                nonlocal previous_progress
-                if x is None:
-                    pbar.update(100 - previous_progress)
-                    pbar.close()
-                else:
-                    val = x * 100
-                    pbar.update(val - previous_progress)
-                    previous_progress = val
-
+        with ProgressBar(desc='Loading file') as pbar:
             if arguments.cube:
                 # load data from cube files
                 if os.path.isdir(arguments.path):
@@ -138,13 +125,13 @@ def main():
             elif os.path.isfile(arguments.path):
                 if arguments.text:
                     # load data from text files
-                    experiment = read_text_file(arguments.path, progress_bar_event)
+                    experiment = read_text_file(arguments.path, pbar)
                 elif arguments.talpas:
                     # load data from talpas format
-                    experiment = read_talpas_file(arguments.path, progress_bar_event)
+                    experiment = read_talpas_file(arguments.path, pbar)
                 elif arguments.json:
                     # load data from json file
-                    experiment = read_json_file(arguments.path, progress_bar_event)
+                    experiment = read_json_file(arguments.path, pbar)
                 else:
                     logging.error(
                         "The file format specifier is missing.")
@@ -177,8 +164,9 @@ def main():
             if value is not None:
                 setattr(modeler, name, value)
 
-        # create models from data
-        model_generator.model_all()
+        with ProgressBar(desc='Generating models') as pbar:
+            # create models from data
+            model_generator.model_all(pbar)
 
         # format modeler output into text
         text = format_output(experiment, printtype)

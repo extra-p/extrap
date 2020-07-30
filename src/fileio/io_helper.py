@@ -9,16 +9,18 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-from entities.experiment import Experiment
-from entities.measurement import Measurement
+
+import logging
+
+import numpy
+
 from entities.calltree import CallTree
 from entities.calltree import Node
-import logging
-from tqdm import tqdm
-import numpy
-from entities.callpath import Callpath
+from entities.experiment import Experiment
+from entities.measurement import Measurement
 from util.deprecation import deprecated
 from util.exceptions import InvalidExperimentError
+from util.progress_bar import DUMMY_PROGRESS
 
 
 def format_callpaths(experiment):
@@ -154,7 +156,7 @@ def save_output(text, path):
 
 
 @deprecated("Handle accumulation as part of file reader")
-def compute_repetitions(experiment, progress_event=lambda x: ()):
+def compute_repetitions(experiment, progress_bar=DUMMY_PROGRESS):
     """
     This method takes an experiment and computes the mean and median values of the measurements
     over all repetitions per coordinate. The return is the experiment without any measurement
@@ -164,7 +166,7 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
 
     # TODO: this progress bar should be only active when using the command line tool
     # create a progress bar for computing the repetitions
-    pbar = tqdm(total=100)
+    pbar = progress_bar
 
     # create a container for computing the mean or median values of the measurements for each coordinate
     progress_bar_counter = 0
@@ -293,7 +295,7 @@ def compute_repetitions(experiment, progress_event=lambda x: ()):
     return experiment
 
 
-def create_call_tree(callpaths):
+def create_call_tree(callpaths, progress_bar=DUMMY_PROGRESS, progress_total_added=False, progress_scale=1):
     """
     This method creates the call tree object from the callpaths read.
     It builds a structure with a root node and child nodes.
@@ -302,71 +304,54 @@ def create_call_tree(callpaths):
     the correct order, as they would appear in the real program.
     """
     tree = CallTree()
-
+    progress_bar.step('Creating calltree')
     # create a two dimensional array of the callpath elements as strings
     callpaths2 = []
     max_length = 0
 
-    for i in range(len(callpaths)):
-        callpath = callpaths[i]
-        callpath_string = callpath.get_name()
+    if not progress_total_added:
+        progress_bar.total += len(callpaths) * progress_scale
+
+    for splitted_callpath in callpaths:
+        callpath_string = splitted_callpath.get_name()
         elems = callpath_string.split("->")
         callpaths2.append(elems)
+        progress_bar.total += len(elems) * progress_scale
+        progress_bar.update(progress_scale)
         if len(elems) > max_length:
             max_length = len(elems)
 
-            # iterate over the elements of one call path
+    # iterate over the elements of one call path
+
     for i in range(max_length):
-
         # iterate over all callpaths
-        for j in range(len(callpaths2)):
-
+        len_callpaths2 = len(callpaths2)
+        for callpath, splitted_callpath in zip(callpaths, callpaths2):
             # check that we do not try to access an element that does not exist
-            length = len(callpaths2[j])
-            length = length - 1
-
-            if i > length:
-                pass
+            if i >= len(splitted_callpath):
+                continue
             # if the element does exist
+            progress_bar.update(progress_scale)
+            callpath_string = splitted_callpath[i]
+
+            # when at root level
+            if i == 0:
+                # check if that node is already existing
+                if not tree.node_exist(callpath_string):
+                    # add a new rootles node to the tree
+                    node = Node(callpath_string, callpath)
+                    tree.add_node(node)
+
+            # when not at root level the root node of the elements have to be checked
             else:
-                callpath_string = callpaths2[j][i]
+                # find the root node of the element that we want to add currently
+                root_node = find_root_node(splitted_callpath, tree, i)
 
-                # when at root level
-                if i == 0:
-
-                    # check if that node is already existing
-                    # if no 
-                    if not tree.node_exist(callpath_string):
-
-                        # add a new rootles node to the tree
-                        node = Node(callpath_string, Callpath(callpath_string))
-
-                        tree.add_node(node)
-
-                    # if yes
-                    else:
-                        # do nothing
-                        pass
-
-                # when not at root level the root node of the elements have to be checked
-                else:
-
-                    # find the root node of the element that we want to add currently
-                    root_node = find_root_node(callpaths2[j], tree, i)
-
-                    # check if that child node is already existing
-                    # if no 
-                    if not root_node.child_exists(callpath_string):
-
-                        # add a new child node to the root node
-                        child_node = Node(callpath_string, callpaths[j])
-
-                        root_node.add_child_node(child_node)
-
-                    # if yes
-                    else:
-                        # do nothing
-                        pass
+                # check if that child node is already existing
+                if not root_node.child_exists(callpath_string):
+                    # add a new child node to the root node
+                    child_node = Node(callpath_string, callpath)
+                    root_node.add_child_node(child_node)
 
     return tree
 
@@ -414,10 +399,12 @@ def find_child_node(root_node, level, callpath_elements, loop_id):
                 return find_child_node(new_root_node, level, callpath_elements, loop_id)
 
 
-def validate_experiment(experiment: Experiment):
+def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
     def require(cond, message):
         if not cond:
             raise InvalidExperimentError(message)
+
+    progress_bar.step('Validating experiment')
 
     length_parameters = len(experiment.parameters)
     require(length_parameters > 0, "Parameters are missing.")
@@ -430,7 +417,8 @@ def validate_experiment(experiment: Experiment):
         require(len(c) == length_parameters,
                 f'The number of coordinate units of {c} does not match the number of '
                 f'parameters ({length_parameters}).')
-    for k, m in experiment.measurements.items():
+
+    for k, m in progress_bar(experiment.measurements.items(), len(experiment.measurements)):
         require(len(m) == length_coordinates,
                 f'The number of measurements ({len(m)}) for {k} does not match the number of coordinates '
                 f'({length_coordinates}).')

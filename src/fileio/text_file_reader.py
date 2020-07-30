@@ -10,7 +10,7 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 import re
-import logging
+
 from entities.callpath import Callpath
 from entities.coordinate import Coordinate
 from entities.experiment import Experiment
@@ -20,11 +20,12 @@ from entities.parameter import Parameter
 from fileio import io_helper
 from fileio.io_helper import create_call_tree
 from util.exceptions import FileFormatError
+from util.progress_bar import DUMMY_PROGRESS
 
 re_whitespace = re.compile(r'\s+')
 
 
-def read_text_file(path, progress_event=lambda _: _):
+def read_text_file(path, progress_bar=DUMMY_PROGRESS):
     # read text file into list
     with open(path) as file:
         lines = file.readlines()
@@ -48,8 +49,7 @@ def read_text_file(path, progress_event=lambda _: _):
         raise FileFormatError(f'File contains no data: "{path}"')
 
     # parse text to extrap objects
-    for i, line in enumerate(lines):
-        progress_event(i / len(lines))
+    for i, line in enumerate(progress_bar(lines)):
         if line.isspace() or line.startswith('#'):
             continue  # allow comments
         line = re_whitespace.sub(' ', line)
@@ -143,10 +143,9 @@ def read_text_file(path, progress_event=lambda _: _):
         experiment.callpaths.append(last_callpath)
     # create the call tree and add it to the experiment
     callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths)
+    call_tree = create_call_tree(callpaths, progress_bar, progress_scale=10)
     experiment.add_call_tree(call_tree)
 
-    io_helper.validate_experiment(experiment)
+    io_helper.validate_experiment(experiment, progress_bar)
 
-    progress_event(None)
     return experiment

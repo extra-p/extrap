@@ -29,6 +29,7 @@ from fileio import io_helper
 from modelers.model_generator import ModelGenerator
 from modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 from util.exceptions import FileFormatError
+from util.progress_bar import DUMMY_PROGRESS
 
 
 class IoTransaction:
@@ -493,8 +494,8 @@ def SAFE_RETURN_None(x):
         raise FileFormatError()
 
 
-def read_extrap3_experiment(path, progress_event=lambda _: _):
-    file_size = os.path.getsize(path)
+def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
+    progress_bar.total += os.path.getsize(path)
     with open(path, "rb") as file:
         ioHelper = IoHelper(file)
         qualifier = ioHelper.readString()
@@ -506,8 +507,12 @@ def read_extrap3_experiment(path, progress_event=lambda _: _):
         parameter_mapping = {}
         versionNumber = ioHelper.readString()
         prefix = ioHelper.readString()
+        progress_bar.step('Load Extra-P 3 experiment')
+        last_pos = 0
         while prefix:
-            progress_event(file.tell() / file_size)
+            pos = file.tell()
+            progress_bar.update(pos - last_pos)
+            last_pos = pos
             # logging.debug("Deserialize " + str(prefix))
             # noinspection PyNoneFunctionAssignment
             if prefix == 'Parameter':
@@ -526,6 +531,7 @@ def read_extrap3_experiment(path, progress_event=lambda _: _):
                 c = deserialize_callpath(region_mapping, callpath_mapping, ioHelper)
                 SAFE_RETURN_None(c)
                 exp.add_callpath(c)
+                progress_bar.total += 100
 
             elif prefix == 'Coordinate':
                 c = deserialize_coordinate(exp, ioHelper)
@@ -577,10 +583,9 @@ def read_extrap3_experiment(path, progress_event=lambda _: _):
                 model.measurements = exp.measurements.get(key)
 
         callpaths = exp.callpaths
-        call_tree = io_helper.create_call_tree(callpaths)
+        call_tree = io_helper.create_call_tree(callpaths, progress_bar, True, progress_scale=100)
         exp.add_call_tree(call_tree)
 
-        io_helper.validate_experiment(exp)
-        progress_event(None)
+        io_helper.validate_experiment(exp, progress_bar)
         # new code
         return exp

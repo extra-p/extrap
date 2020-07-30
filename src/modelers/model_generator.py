@@ -20,6 +20,7 @@ from modelers import multi_parameter
 from modelers import single_parameter
 from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
 from util.deprecation import deprecated
+from util.progress_bar import DUMMY_PROGRESS
 
 
 class ModelGenerator:
@@ -69,9 +70,8 @@ class ModelGenerator:
                 raise ValueError("Modeler must use one parameter.")
         return result_modeler
 
-    def model_all(self):
-        models = self._modeler.model(
-            list(self.experiment.measurements.values()))
+    def model_all(self, progress_bar=DUMMY_PROGRESS):
+        models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
         self.models = {
             k: m for k, m in zip(self.experiment.measurements.keys(), models)
         }

@@ -3,6 +3,7 @@ from typing import Sequence
 
 from entities.measurement import Measurement
 from entities.model import Model
+from util.progress_bar import DUMMY_PROGRESS
 
 
 class AbstractModeler(ABC):
@@ -19,7 +20,7 @@ class AbstractModeler(ABC):
         self._use_median = value
 
     @abstractmethod
-    def model(self, measurements: Sequence[Sequence[Measurement]]) -> Sequence[Model]:
+    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
         raise NotImplementedError
 
     @classmethod
@@ -30,8 +31,8 @@ class AbstractModeler(ABC):
 
 
 class LegacyModeler(AbstractModeler, ABC):
-    def model(self, measurements: Sequence[Sequence[Measurement]]) -> Sequence[Model]:
-        return [self.create_model(m) for m in measurements]
+    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
+        return [self.create_model(m) for m in progress_bar(measurements)]
 
     @abstractmethod
     def create_model(self, measurements: Sequence[Measurement]):
