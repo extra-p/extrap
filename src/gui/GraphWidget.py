@@ -10,11 +10,12 @@ directory for details.
 """
 
 import math
-import numpy
 
-from PySide2.QtGui import *  # @UnusedWildImport
+import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
+
 from gui.Utils import formatFormula
 from gui.Utils import formatNumber
 
@@ -53,18 +54,6 @@ class GraphWidget(QWidget):
 
         else:
             print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
-
-    def getMaxX(self):
-        """
-           This function returns the highest value of x that is being shown on x axis.
-        """
-        return self.max_x
-
-    def getMaxY(self):
-        """
-           This function returns the highest value of Y that is being shown on x axis.
-        """
-        return self.max_y
 
     def logicalXtoPixel(self, lValue):
         """
@@ -839,7 +828,7 @@ class GraphWidget(QWidget):
             clicked_x_pos = self.clicked_x_pos - self.left_margin
 
             if clicked_x_pos > 0 and release_x_pos > 0:
-                self.setMax(0, clicked_x_pos / release_x_pos * self.getMaxX())
+                self.setMax(0, clicked_x_pos / release_x_pos * self.max_x)
                 self.update()
 
     @staticmethod

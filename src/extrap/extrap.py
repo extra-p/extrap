@@ -15,6 +15,7 @@ import os
 from itertools import chain
 
 from fileio.cube_file_reader2 import read_cube_file
+from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.io_helper import format_output
 from fileio.io_helper import save_output
 from fileio.json_file_reader import read_json_file
@@ -48,6 +49,8 @@ def main():
     group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
                        help="load data from talpas data format")
     group.add_argument("--json", action="store_true", default=False, dest="json", help="load data from json file")
+    group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
+                       help="load data from Extra-P 3 experiment")
 
     parser.add_argument("--modeler", action="store", dest="modeler", default='Default',
                         choices=modelers_list, )
@@ -132,6 +135,9 @@ def main():
                 elif arguments.json:
                     # load data from json file
                     experiment = read_json_file(arguments.path, pbar)
+                elif arguments.extrap3:
+                    # load data from Extra-P 3 file
+                    experiment = read_extrap3_experiment(arguments.path, pbar)
                 else:
                     logging.error(
                         "The file format specifier is missing.")

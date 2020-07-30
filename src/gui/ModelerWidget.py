@@ -8,17 +8,16 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-from PySide2.QtCore import Slot
-from PySide2.QtGui import *  # @UnusedWildImport
+from PySide2.QtCore import Slot, QCoreApplication
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-import modelers
 from gui.ExpanderWidget import ExpanderWidget
 from gui.ModelerOptionsWidget import ModelerOptionsWidget
+from gui.ProgressWindow import ProgressWindow
+from modelers import multi_parameter
+from modelers import single_parameter
 from modelers.abstract_modeler import AbstractModeler
 from modelers.model_generator import ModelGenerator
-from modelers import single_parameter
-from modelers import multi_parameter
 
 
 class ModelerWidget(QWidget):
@@ -66,7 +65,7 @@ class ModelerWidget(QWidget):
         self._options_container.setEnabled(False)
 
         self._model_button.setText("Generate Models")
-        self._model_button.pressed.connect(self.remodel)
+        self._model_button.clicked.connect(self.remodel)
         self._model_button.setEnabled(False)
 
         grid.addWidget(QWidget(), 2, 0, 1, 2)
@@ -112,6 +111,7 @@ class ModelerWidget(QWidget):
         self._model_selector.setEnabled(True)
         self._model_button.setEnabled(True)
 
+    @Slot()
     def remodel(self):
         # set the modeler options
         if self.model_mean_radio.isChecked():
@@ -127,14 +127,15 @@ class ModelerWidget(QWidget):
         model_generator = ModelGenerator(experiment, use_median=use_median, modeler=self._modeler)
 
         model_generator.set_name(self.model_name_edit.text())
+        print(QCoreApplication.hasPendingEvents())
+        with ProgressWindow(self.main_widget, 'Generating models') as pbar:
+            # create models from data
+            model_generator.model_all(pbar)
 
-        # create models from data
-        model_generator.model_all()
+            self.main_widget.selector_widget.updateModelList()
+            self.main_widget.selector_widget.selectLastModel()
+            self.main_widget.updateMinMaxValue()
 
-        self.main_widget.selector_widget.updateModelList()
-        self.main_widget.selector_widget.selectLastModel()
-        self.main_widget.updateMinMaxValue()
-
-        # must happen before 'valuesChanged' to update the color boxes
-        self.main_widget.selector_widget.tree_model.valuesChanged()
-        self.main_widget.update()
+            # must happen before 'valuesChanged' to update the color boxes
+            self.main_widget.selector_widget.tree_model.valuesChanged()
+            self.main_widget.update()

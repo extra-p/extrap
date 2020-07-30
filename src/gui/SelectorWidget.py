@@ -9,15 +9,15 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
+
+from entities.metric import Metric
+from gui.ParameterValueSlider import ParameterValueSlider
 from gui.TreeModel import TreeModel
 from gui.TreeView import TreeView
-from gui.ParameterValueSlider import ParameterValueSlider
 from modelers.model_generator import ModelGenerator
-from entities.metric import Metric
-from typing import List
 
 
 class SelectorWidget(QWidget):
@@ -27,6 +27,7 @@ class SelectorWidget(QWidget):
         self.tree_model = TreeModel(self)
         self.parameter_sliders = list()
         self.initUI()
+        self._sections_switched = False
 
     # noinspection PyAttributeOutsideInit
     def initUI(self):
@@ -82,7 +83,9 @@ class SelectorWidget(QWidget):
         # increase width of "Callpath" and "Value" columns
         self.tree_view.setColumnWidth(0, 150)
         self.tree_view.setColumnWidth(3, 150)
-        self.tree_view.header().swapSections(0, 1)
+        if not self._sections_switched:
+            self.tree_view.header().swapSections(0, 1)
+            self._sections_switched = True
         self.tree_view.header().setMinimumSectionSize(23)
         self.tree_view.header().resizeSection(1, 23)
         self.tree_view.header().resizeSection(2, 23)
