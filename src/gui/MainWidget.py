@@ -306,7 +306,7 @@ class MainWidget(QMainWindow):
             pixmap = QPixmap.grabWidget(self)
         else:
             pixmap = self.grab()
-            image = pixmap.toImage()
+        image = pixmap.toImage()
 
         initial_path = QDir.currentPath() + "/extrap.png"
         filetype = 'png'

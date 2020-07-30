@@ -35,7 +35,7 @@ class ModelGenerator:
                  use_median: bool = False):
         self.experiment = experiment
         self.name = name
-        self.id = next(__class__.ID_COUNTER)
+        self.id = next(ModelGenerator.ID_COUNTER)
         # choose the modeler based on the input data
         self._modeler: AbstractModeler = self._choose_modeler(modeler, use_median)
         # all models modeled with this model generator

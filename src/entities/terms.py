@@ -1,14 +1,13 @@
 import warnings
-
-from util.deprecation import deprecated
 from abc import ABC, abstractmethod
-from entities.fraction import Fraction
-from typing import Tuple, List, Dict, Union, Mapping
+from typing import Tuple, List, Union, Mapping
 
 import numpy as np
 
 from entities.coordinate import Coordinate
+from entities.fraction import Fraction
 from entities.parameter import Parameter
+from util.deprecation import deprecated
 
 
 class Term(ABC):
@@ -121,7 +120,7 @@ class CompoundTerm(SingleParameterTerm):
             function_string = str(self.coefficient) + ' * ' + function_string
         return function_string
 
-    def __imul__(self, term: SingleParameterTerm):
+    def __imul__(self, term: SimpleTerm):
         self.simple_terms.append(term)
         return self
 
@@ -184,7 +183,7 @@ class MultiParameterTerm(Term):
             function_string += term.to_string(parameters[param])
         return function_string
 
-    def __imul__(self, parameter_term_pair: Tuple[Parameter, SingleParameterTerm]):
+    def __imul__(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
         self.parameter_term_pairs.append(parameter_term_pair)
         return self
 

@@ -99,7 +99,7 @@ class ModelerWidget(QWidget):
             return
 
         self._model_selector.clear()
-        self._model_selector.setCurrentText(None)
+        self._model_selector.setCurrentText('')
         if len(experiment.parameters) == 1:
             for name, modeler in single_parameter.all_modelers.items():
                 self._model_selector.addItem(name, modeler)

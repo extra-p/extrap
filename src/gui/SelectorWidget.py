@@ -35,7 +35,7 @@ class SelectorWidget(QWidget):
         self.setLayout(self.grid)
 
         # Model selection
-        model_label = QLabel("Model :", self)
+        model_label = QLabel("Model:", self)
         self.model_selector = QComboBox(self)
         self.model_selector.currentIndexChanged.connect(self.model_changed)
 
@@ -43,7 +43,7 @@ class SelectorWidget(QWidget):
         self.updateModelList()
 
         # Metric selection
-        metric_label = QLabel("Metric :", self)
+        metric_label = QLabel("Metric:", self)
         self.metric_selector = QComboBox(self)
         self.metric_selector.currentIndexChanged.connect(
             self.metric_index_changed)
@@ -64,6 +64,7 @@ class SelectorWidget(QWidget):
         self.grid.addWidget(self.metric_selector, 1, 1)
         self.grid.addWidget(self.tree_view, 2, 0, 1, 2)
         self.grid.addWidget(self.asymptoticCheckBox, 3, 1, Qt.AlignRight)
+        self.grid.setColumnStretch(1, 1)
 
     def createParameterSliders(self):
         for param in self.parameter_sliders:

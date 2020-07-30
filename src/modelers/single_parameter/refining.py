@@ -1,16 +1,13 @@
 import copy
-import logging
 import warnings
 from collections import namedtuple
-from itertools import product
 from typing import List, Tuple, Sequence
 
-from entities.model import Model
-from entities.terms import CompoundTerm
 from entities.fraction import Fraction
 from entities.functions import SingleParameterFunction
 from entities.hypotheses import SingleParameterHypothesis
-
+from entities.model import Model
+from entities.terms import CompoundTerm
 from modelers.abstract_modeler import LegacyModeler
 from modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 

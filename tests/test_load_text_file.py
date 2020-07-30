@@ -1,13 +1,12 @@
 import unittest
 
-from entities.metric import Metric
-from fileio.text_file_reader import read_text_file
 from entities.callpath import Callpath
-from entities.parameter import Parameter
 from entities.coordinate import Coordinate
-from util.exceptions import FileFormatError, InvalidExperimentError
-from entities.experiment import Experiment
 from entities.measurement import Measurement
+from entities.metric import Metric
+from entities.parameter import Parameter
+from fileio.text_file_reader import read_text_file
+from util.exceptions import FileFormatError, InvalidExperimentError
 
 
 # noinspection DuplicatedCode

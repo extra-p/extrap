@@ -325,7 +325,6 @@ def create_call_tree(callpaths, progress_bar=DUMMY_PROGRESS, progress_total_adde
 
     for i in range(max_length):
         # iterate over all callpaths
-        len_callpaths2 = len(callpaths2)
         for callpath, splitted_callpath in zip(callpaths, callpaths2):
             # check that we do not try to access an element that does not exist
             if i >= len(splitted_callpath):

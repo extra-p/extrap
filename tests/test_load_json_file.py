@@ -1,15 +1,15 @@
 import itertools
 import unittest
-from fileio.json_file_reader import read_json_file
+
 from entities.callpath import Callpath
-from entities.parameter import Parameter
 from entities.coordinate import Coordinate
 from entities.metric import Metric
-import timeit
-
+from entities.parameter import Parameter
+from fileio.json_file_reader import read_json_file
 from util.exceptions import InvalidExperimentError
 
 
+# noinspection PyUnusedLocal
 class TestJsonFiles(unittest.TestCase):
 
     def test_read_1(self):

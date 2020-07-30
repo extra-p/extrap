@@ -10,12 +10,13 @@ directory for details.
 """
 
 from typing import Mapping, Collection
-from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
-    QComboBox, QVBoxLayout, QLabel, QSizePolicy, QGridLayout
 
+from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
+    QComboBox, QVBoxLayout, QLabel
+
+from modelers import single_parameter
 from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
 from modelers.modeler_options import ModelerOption, ModelerOptionsGroup
-from modelers import single_parameter
 
 
 class ModelerOptionsWidget(QWidget):

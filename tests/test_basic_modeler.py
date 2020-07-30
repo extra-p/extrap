@@ -1,13 +1,9 @@
 import unittest
 
 from entities.coordinate import Coordinate
-from entities.functions import SingleParameterFunction
 from entities.measurement import Measurement
 from entities.terms import CompoundTerm
 from modelers.single_parameter.basic import SingleParameterModeler
-from random import randint
-
-import numpy as np
 
 
 class TestBasicModeler(unittest.TestCase):

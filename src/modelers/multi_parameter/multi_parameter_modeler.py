@@ -12,7 +12,7 @@ directory for details.
 import copy
 import logging
 import warnings
-from typing import List, Sequence
+from typing import Sequence
 
 import numpy as np
 

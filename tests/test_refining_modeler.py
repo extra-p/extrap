@@ -1,18 +1,10 @@
-import copy
 import unittest
-from typing import Dict
 
 from entities.callpath import Callpath
-from entities.experiment import Experiment
-from entities.functions import SingleParameterFunction
 from entities.hypotheses import ConstantHypothesis, SingleParameterHypothesis
 from entities.metric import Metric
-from entities.model import Model
-from entities.parameter import Parameter
-from entities.terms import SimpleTerm, CompoundTerm
 from fileio.text_file_reader import read_text_file
 from modelers.model_generator import ModelGenerator
-from modelers.single_parameter.basic import SingleParameterModeler
 from modelers.single_parameter.refining import RefiningModeler
 
 

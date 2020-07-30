@@ -18,7 +18,7 @@ if sys.version_info >= (3, 8):
 else:
     class cached_property(object):
         """
-        A property that is cached for later retrival.
+        A property that is cached for later retrieval.
         """
 
         def __init__(self, func):

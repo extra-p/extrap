@@ -9,14 +9,13 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-import logging
+from typing import Sequence
+
 import numpy
+
 from util.deprecation import deprecated
 from .functions import Function, MultiParameterFunction
 from .measurement import Measurement
-from .coordinate import Coordinate
-from typing import List, Sequence
-import math
 
 
 class Hypothesis:

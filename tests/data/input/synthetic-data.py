@@ -10,8 +10,8 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-from math import pow, log
 import random
+from math import log
 
 """
 This program can be used to generate synthetic data inputs to test the multiparameter model creator of ExtraP.

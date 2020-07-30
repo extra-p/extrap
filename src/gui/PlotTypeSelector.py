@@ -9,7 +9,6 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 
@@ -30,10 +29,10 @@ class PlotTypeSelector(QDialog):
                      'Dominating models and max z as heat map', ' Selected models in contour plot',
                      'Selected models in interpolated contour plots', 'Measurement points']
 
-        checkBoxes = [QCheckBox(plotType, self) for plotType in plotTypes]
+        self.checkBoxes = [QCheckBox(plotType, self) for plotType in plotTypes]
 
         y_cord = 10
-        for checkBox in checkBoxes:
+        for checkBox in self.checkBoxes:
             checkBox.move(10, y_cord)
             y_cord = y_cord + 30
 

@@ -1,9 +1,9 @@
-from util.deprecation import deprecated
 import itertools
+
+from util.deprecation import deprecated
 
 
 class Parameter:
-
     """
     Counter for global parameter ids
     """
@@ -11,7 +11,7 @@ class Parameter:
 
     def __init__(self, name):
         self.name = name
-        self.id = next(__class__.ID_COUNTER)
+        self.id = next(Parameter.ID_COUNTER)
 
     @deprecated("Use property directly.")
     def set_name(self, name):
@@ -25,8 +25,8 @@ class Parameter:
         return hash(self.name)
 
     def __eq__(self, other):
-        if not isinstance(other, __class__):
-            return False
+        if not isinstance(other, Parameter):
+            return NotImplemented
         return self is other or self.name == other.name
 
     def __str__(self):

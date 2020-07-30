@@ -83,7 +83,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
 
     def get_matching_hypotheses(self, measurements: Sequence[Measurement]):
         """
-        Checkes if the parameter values are smaller than 1.
+        Checks if the parameter values are smaller than 1.
         In this case log terms are not allowed.
         These are removed from the returned hypotheses_building_blocks.
         """
@@ -263,7 +263,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
         Create a model for the given callpath and metric using the given data.
         """
 
-        # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
+        # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
             warnings.warn(
                 "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
@@ -274,15 +274,15 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
         logging.debug("Constant model: " + constant_hypothesis.function.to_string())
         logging.debug("Constant model cost: " + str(constant_cost))
 
-        # use constat model when cost is 0
+        # use constant model when cost is 0
         if constant_cost == 0:
             logging.debug("Using constant model.")
             return Model(constant_hypothesis)
 
-        # otherwise start searching for the best hypothesis based on the pmnf
+        # otherwise start searching for the best hypothesis based on the PMNF
         else:
             logging.debug("Searching for a single parameter model.")
-            # search for the best single parmater hypothesis
+            # search for the best single parameter hypothesis
             hypotheses_generator = self.build_hypotheses(measurements)
             best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, measurements,
                                                         constant_hypothesis)

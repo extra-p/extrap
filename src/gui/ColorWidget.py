@@ -58,19 +58,19 @@ class ColorWidget(QWidget):
         if value < 0.25:
             # interpolate between blue (0,0,255) and light blue (0,255,255)
             interpolate = value * 4
-            return QColor(0, interpolate * 255, 255)
+            return QColor(0, int(interpolate * 255), 255)
         elif value < 0.5:
             # interpolate between light blue (0,255,255) and green (0,255,0)
             interpolate = (value - 0.25) * 4
-            return QColor(0, 255, 255 - interpolate * 255)
+            return QColor(0, 255, int(255 - interpolate * 255))
         elif value < 0.75:
             # interpolate between green (0,255,0) and yellow (255,255,0)
             interpolate = (value - 0.5) * 4
-            return QColor(interpolate * 255, 255, 0)
+            return QColor(int(interpolate * 255), 255, 0)
         else:
             # interpolate between yellow (255,255,0) and red (255,0,0)
             interpolate = (value - 0.75) * 4
-            return QColor(255, 255 - interpolate * 255, 0)
+            return QColor(255, int(255 - interpolate * 255), 0)
 
     def drawColors(self, paint):
 

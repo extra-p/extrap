@@ -8,9 +8,8 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import TypeVar, Generic, Sequence, Type, Collection, AnyStr, Mapping, Union, Callable, Any
+from typing import TypeVar, Generic, Sequence, Type, AnyStr, Mapping, Union, Callable, Any
 
 from modelers.abstract_modeler import AbstractModeler
 

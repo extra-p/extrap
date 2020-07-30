@@ -41,14 +41,11 @@ class Node:
 
 
 class CallTree(Node):
-    '''
-    classdocs
-    '''
+    """
+    Represents a calltree with nodes containing the corresponding callpaths
+    """
 
     def __init__(self):
-        '''
-        Constructor
-        '''
         super().__init__('', '')
 
     def add_node(self, node):

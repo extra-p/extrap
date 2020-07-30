@@ -9,6 +9,7 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 import itertools
+
 from util.deprecation import deprecated
 
 
@@ -26,7 +27,7 @@ class Metric:
         Initializes the metric object.
         """
         self.name = name
-        self.id = next(__class__.ID_COUNTER)
+        self.id = next(Metric.ID_COUNTER)
 
     @deprecated("Use property directly.")
     def get_name(self):
@@ -39,8 +40,8 @@ class Metric:
         return hash(self.name)
 
     def __eq__(self, other):
-        if not isinstance(other, __class__):
-            return False
+        if not isinstance(other, Metric):
+            return NotImplemented
         return self is other or self.name == other.name
 
     def __str__(self):
