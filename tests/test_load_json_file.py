@@ -13,6 +13,7 @@ from util.exceptions import InvalidExperimentError
 class TestJsonFiles(unittest.TestCase):
 
     def test_read_1(self):
+        Parameter.ID_COUNTER = itertools.count()
         experiment = read_json_file("data/json/input_1.JSON")
         x = Parameter('x')
         self.assertListEqual(experiment.parameters, [x])

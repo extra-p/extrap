@@ -155,6 +155,47 @@ def save_output(text, path):
         out.write(text)
 
 
+def append_to_repetition_dict(complete_data, key, coordinate, value, progress_bar=DUMMY_PROGRESS):
+    if isinstance(value, list):
+        if key in complete_data:
+            if coordinate in complete_data[key]:
+                complete_data[key][coordinate].extend(value)
+            else:
+                complete_data[key][coordinate] = value
+                progress_bar.total += 1
+        else:
+            complete_data[key] = {
+                coordinate: value
+            }
+            progress_bar.total += 1
+    else:
+        if key in complete_data:
+            if coordinate in complete_data[key]:
+                complete_data[key][coordinate].append(value)
+            else:
+                complete_data[key][coordinate] = [value]
+                progress_bar.total += 1
+        else:
+            complete_data[key] = {
+                coordinate: [value]
+            }
+            progress_bar.total += 1
+
+
+def repetition_dict_to_experiment(complete_data, experiment, progress_bar=DUMMY_PROGRESS):
+    progress_bar.step('Creating experiment')
+    for mi, key in enumerate(complete_data):
+        progress_bar.update()
+        callpath, metric = key
+        measurementset = complete_data[key]
+        experiment.add_callpath(callpath)
+        experiment.add_metric(metric)
+        for coordinate in measurementset:
+            values = measurementset[coordinate]
+            experiment.add_coordinate(coordinate)
+            experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
+
+
 @deprecated("Handle accumulation as part of file reader")
 def compute_repetitions(experiment, progress_bar=DUMMY_PROGRESS):
     """

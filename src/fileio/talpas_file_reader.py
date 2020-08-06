@@ -16,7 +16,6 @@ from json import JSONDecodeError
 from entities.callpath import Callpath
 from entities.coordinate import Coordinate
 from entities.experiment import Experiment
-from entities.measurement import Measurement
 from entities.metric import Metric
 from entities.parameter import Parameter
 from fileio import io_helper
@@ -52,33 +51,12 @@ def read_talpas_file(path, progress_bar=DUMMY_PROGRESS):
                 if parameters is None:
                     parameters = [Parameter(p) for p in data['parameters'].keys()]
                 coordinate = Coordinate(data['parameters'][p.name] for p in parameters)
-                if key in complete_data:
-                    if coordinate in complete_data[key]:
-                        complete_data[key][coordinate].append(data['value'])
-                    else:
-                        complete_data[key][coordinate] = [data['value']]
-                        progress_bar.total += 1
-                else:
-                    complete_data[key] = {
-                        coordinate: [data['value']]
-                    }
-                    progress_bar.total += 1
+                io_helper.append_to_repetition_dict(complete_data, key, coordinate, data['value'], progress_bar)
             except KeyError as error:
                 raise FileFormatError(f'Missing property in line {ln}: {str(error)}. Line: "{line}"')
 
     # create experiment
-    progress_bar.step('Creating experiment')
-    for mi, key in enumerate(complete_data):
-        progress_bar.update()
-        callpath, metric = key
-        measurementset = complete_data[key]
-        experiment.add_callpath(callpath)
-        experiment.add_metric(metric)
-        for coordinate in measurementset:
-            values = measurementset[coordinate]
-            experiment.add_coordinate(coordinate)
-            experiment.add_measurement(
-                Measurement(coordinate, callpath, metric, values))
+    io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar)
 
     for p in parameters:
         experiment.add_parameter(p)
