@@ -28,6 +28,7 @@ from entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm
 from fileio import io_helper
 from modelers.model_generator import ModelGenerator
 from modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
+from modelers.single_parameter.basic import SingleParameterModeler
 from util.exceptions import FileFormatError
 from util.progress_bar import DUMMY_PROGRESS
 
@@ -52,10 +53,12 @@ class IoTransaction:
             return True
         else:
             self.rollback()
-        return isinstance(exc_val, AbortTransaction)
+            logging.debug(exc_val)
+            logging.debug(exc_tb)
+            return True
 
 
-class AbortTransaction(RuntimeError):
+class AbortTransaction(Exception):
     pass
 
 
@@ -138,11 +141,16 @@ def deserialize_metric(ioHelper):
     return Metric(name)
 
 
-def deserialize_region(region_mapping, ioHelper):
+def deserialize_region(region_mapping, region_set, ioHelper):
     id = ioHelper.readId()
     name = ioHelper.readString()
     sourceFileName = ioHelper.readString()
     sourceFileBeginLine = ioHelper.readInt()
+    if name in region_set:
+        region_set[name] += 1
+        name = f'{name} #{region_set[name]}'
+    else:
+        region_set[name] = 0
     region_mapping[id] = name
 
 
@@ -202,8 +210,8 @@ def deserialize_SimpleTerm(ioHelper):
     return SimpleTerm(functionType, exponent)
 
 
-def deserialize_SingleParameterSimpleModelGenerator(exp, ioHelper):
-    model_generator = deserialize_SingleParameterModelGenerator(exp, ioHelper)
+def deserialize_SingleParameterSimpleModelGenerator(exp, supports_sparse, ioHelper):
+    model_generator = deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper)
 
     # Read CompoundTerms
     length = ioHelper.readInt()
@@ -218,7 +226,7 @@ def deserialize_SingleParameterSimpleModelGenerator(exp, ioHelper):
     return model_generator
 
 
-def deserialize_SingleParameterModelGenerator(exp, ioHelper):
+def deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper):
     userName = ioHelper.readString()
     cvMethod = ioHelper.readString()
     if cvMethod == "CROSSVALIDATION_NONE":
@@ -278,11 +286,12 @@ def deserialize_SingleParameterModelGenerator(exp, ioHelper):
         else:
             logging.error("Invalid ModelOptions found in File.")
             raise AbortTransaction
+        supports_sparse.__ = True
 
-    return ModelGenerator(exp, MultiParameterModeler(), userName, use_median)
+    return ModelGenerator(exp, SingleParameterModeler(), userName, use_median)
 
 
-def deserialize_MultiParameterModelGenerator(exp, ioHelper):
+def deserialize_MultiParameterModelGenerator(exp, supports_sparse, ioHelper):
     userName = ioHelper.readString()
 
     # read the options
@@ -327,6 +336,7 @@ def deserialize_MultiParameterModelGenerator(exp, ioHelper):
         else:
             logging.info("New ModelOptions not found in File.")
             raise AbortTransaction
+        supports_sparse.__ = True
 
     return ModelGenerator(exp, MultiParameterModeler(), userName, use_median)
 
@@ -364,7 +374,7 @@ def deserialize_ExperimentPoint(experiment, callpath_mapping, ioHelper):
     return point
 
 
-def deserialize_Model(experiment, parameter_mapping, callpath_mapping, ioHelper):
+def deserialize_Model(experiment, parameter_mapping, callpath_mapping, supports_sparse, ioHelper):
     metricId = ioHelper.readId()
     callpathId = ioHelper.readId()
     metric = experiment.get_metric(metricId)
@@ -398,7 +408,8 @@ def deserialize_Model(experiment, parameter_mapping, callpath_mapping, ioHelper)
     RSS = ioHelper.readValue()
     AR2 = ioHelper.readValue()
     SMAPE = ioHelper.readValue()
-    RE = ioHelper.readValue()
+    if supports_sparse.__:
+        RE = ioHelper.readValue()
 
     length = ioHelper.readInt()
     for i in range(0, length):
@@ -408,7 +419,8 @@ def deserialize_Model(experiment, parameter_mapping, callpath_mapping, ioHelper)
     hypothesis._RSS = RSS
     hypothesis._AR2 = AR2
     hypothesis._SMAPE = SMAPE
-    hypothesis._RE = RE
+    if supports_sparse.__:
+        hypothesis._RE = RE
     hypothesis._costs_are_calculated = True
     model = Model(hypothesis, callpath, metric)
 
@@ -494,6 +506,11 @@ def SAFE_RETURN_None(x):
         raise FileFormatError()
 
 
+class __Ref:
+    def __init__(self, _):
+        self.__ = _
+
+
 def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
     progress_bar.total += os.path.getsize(path)
     with open(path, "rb") as file:
@@ -503,12 +520,15 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
             raise FileFormatError("This is not an Extra-P 3 Experiment File. Qualifier was " + str(qualifier))
         exp = Experiment()
         region_mapping = {}
+        region_set = {}
         callpath_mapping = {}
         parameter_mapping = {}
         versionNumber = ioHelper.readString()
         prefix = ioHelper.readString()
         progress_bar.step('Load Extra-P 3 experiment')
         last_pos = 0
+
+        is_sparse = __Ref(False)
         while prefix:
             pos = file.tell()
             progress_bar.update(pos - last_pos)
@@ -525,7 +545,7 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
                 exp.add_metric(m)
 
             elif prefix == 'Region':
-                deserialize_region(region_mapping, ioHelper)
+                deserialize_region(region_mapping, region_set, ioHelper)
 
             elif prefix == 'Callpath':
                 c = deserialize_callpath(region_mapping, callpath_mapping, ioHelper)
@@ -544,22 +564,22 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
                 # exp.addModelComment(comment)
 
             elif prefix == 'SingleParameterSimpleModelGenerator':
-                generator = deserialize_SingleParameterSimpleModelGenerator(exp, ioHelper)
+                generator = deserialize_SingleParameterSimpleModelGenerator(exp, is_sparse, ioHelper)
                 SAFE_RETURN_None(generator)
                 exp.add_modeler(generator)
 
             elif prefix == 'SingleParameterRefiningModelGenerator':
-                generator = deserialize_SingleParameterModelGenerator(exp, ioHelper)
+                generator = deserialize_SingleParameterModelGenerator(exp, is_sparse, ioHelper)
                 SAFE_RETURN_None(generator)
                 exp.add_modeler(generator)
 
             elif prefix == 'MultiParameterSimpleModelGenerator':
-                generator = deserialize_MultiParameterModelGenerator(exp, ioHelper)
+                generator = deserialize_MultiParameterModelGenerator(exp, is_sparse, ioHelper)
                 SAFE_RETURN_None(generator)
                 exp.add_modeler(generator)
 
             elif prefix == 'MultiParameterSparseModelGenerator':
-                generator = deserialize_MultiParameterModelGenerator(exp, ioHelper)
+                generator = deserialize_MultiParameterModelGenerator(exp, is_sparse, ioHelper)
                 SAFE_RETURN_None(generator)
                 exp.add_modeler(generator)
 
@@ -569,7 +589,7 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
                 exp.add_measurement(point)
 
             elif prefix == 'Model':
-                model, generator_id = deserialize_Model(exp, parameter_mapping, callpath_mapping, ioHelper)
+                model, generator_id = deserialize_Model(exp, parameter_mapping, callpath_mapping, is_sparse, ioHelper)
                 SAFE_RETURN_None(model)
                 exp.modelers[generator_id].models[(model.callpath, model.metric)] = model
 
