@@ -92,7 +92,8 @@ class ModelerHelpAction(Action):
 
 
 class ModelerOptionsAction(Action):
-    def __init__(self, option_strings: Sequence[Text], dest: Text, _help, **kwargs) -> None:
+    # noinspection PyShadowingBuiltins, PyUnusedLocal
+    def __init__(self, option_strings: Sequence[Text], dest: Text, help, **kwargs) -> None:
         super().__init__(option_strings, dest, **kwargs)
 
     @staticmethod

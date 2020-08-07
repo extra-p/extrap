@@ -12,6 +12,7 @@ directory for details.
 import argparse
 import logging
 import os
+import sys
 from itertools import chain
 
 from fileio.cube_file_reader2 import read_cube_file
@@ -30,7 +31,7 @@ from util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_O
 from util.progress_bar import ProgressBar
 
 
-def main():
+def main(args=None):
     # argparse
     programname = "Extra-P"
     modelers_list = list(set(
@@ -70,7 +71,7 @@ def main():
 
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store",
                         help="specify a file path for Extra-P to work with")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
 
     # set log level
     if arguments.log_level is not None:
@@ -124,7 +125,7 @@ def main():
                     experiment = read_cube_file(arguments.path, scaling_type)
                 else:
                     logging.error("The given file path is not valid.")
-                    return 1
+                    sys.exit(1)
             elif os.path.isfile(arguments.path):
                 if arguments.text:
                     # load data from text files
@@ -139,12 +140,11 @@ def main():
                     # load data from Extra-P 3 file
                     experiment = read_extrap3_experiment(arguments.path, pbar)
                 else:
-                    logging.error(
-                        "The file format specifier is missing.")
-                    return 1
+                    logging.error("The file format specifier is missing.")
+                    sys.exit(1)
             else:
                 logging.error("The given file path is not valid.")
-                return 1
+                sys.exit(1)
 
         # TODO: debug code
         experiment.debug()
@@ -186,7 +186,7 @@ def main():
 
     else:
         logging.error("No file path given to load files.")
-        return 1
+        sys.exit(1)
 
 
 if __name__ == "__main__":
