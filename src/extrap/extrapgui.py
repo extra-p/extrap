@@ -37,7 +37,7 @@ def _preload_common_fonts():
     return thread
 
 
-def main():
+def main(*, test=False):
     # preload fonts for matplotlib
     font_preloader = _preload_common_fonts()
 
@@ -47,7 +47,7 @@ def main():
     else:
         logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
-    app = QApplication(sys.argv)
+    app = QApplication(sys.argv) if not test else QApplication.instance()
     app.setStyle('Fusion')
     # app.setStyleSheet('QWidget{background:#333;color:#eee}')
     palette = QPalette()
@@ -114,8 +114,12 @@ def main():
         # call the modeler and create a function model
         window.setExperiment(experiment)
 
-    app.exec_()
-    font_preloader.join()
+    if not test:
+        app.exec_()
+        font_preloader.join()
+    else:
+        font_preloader.join()
+        return window, app
 
 
 if __name__ == "__main__":

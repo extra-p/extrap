@@ -451,7 +451,12 @@ class MultiParameterHypothesis(Hypothesis):
         # solving the lgs for X to get the coefficients
         A = numpy.array(a_list)
         B = numpy.array(b_list)
-        X = numpy.linalg.lstsq(A, B, None)
+        try:
+            X = numpy.linalg.lstsq(A, B, None)
+        except numpy.linalg.LinAlgError as e:
+            # sometimes first try does not work
+            X = numpy.linalg.lstsq(A, B, None)
+
         # print("Coefficients:"+str(X[0]))
         # logging.debug("Coefficients:"+str(X[0]))
 
