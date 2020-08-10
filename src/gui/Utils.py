@@ -53,6 +53,9 @@ def replace_substr(formula, begin, end, substr):
 
 
 def formatNumber(value_str, precision=3):
+    if value_str in ('nan', '-inf', 'inf'):
+        return value_str
+
     # try to convert long 0.00000 prefixes to 10^-x
     if value_str.find('.') != -1 and value_str.find('e') == -1:
         splitted_value = value_str.split('.')

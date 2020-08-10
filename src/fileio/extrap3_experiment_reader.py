@@ -127,10 +127,10 @@ class IoHelper:
         return IoTransaction(self.m_input_stream)
 
 
-def deserialize_parameter(parameter_mapping, ioHelper):
+def deserialize_parameter(id_mappings, ioHelper):
     id = ioHelper.readId()
     paramName = ioHelper.readString()
-    parameter_mapping[paramName] = id
+    id_mappings.parameter_mapping[paramName] = id
     return Parameter(paramName)
 
 
@@ -141,7 +141,9 @@ def deserialize_metric(ioHelper):
     return Metric(name)
 
 
-def deserialize_region(region_mapping, region_set, ioHelper):
+def deserialize_region(id_mappings, ioHelper):
+    region_mapping = id_mappings.region_mapping
+    region_set = id_mappings.region_mapping
     id = ioHelper.readId()
     name = ioHelper.readString()
     sourceFileName = ioHelper.readString()
@@ -154,34 +156,36 @@ def deserialize_region(region_mapping, region_set, ioHelper):
     region_mapping[id] = name
 
 
-def deserialize_callpath(region_mapping, callpath_mapping, ioHelper):
+def deserialize_callpath(id_mappings, ioHelper):
     id = ioHelper.readId()
     region_id = ioHelper.readId()
     parent_id = ioHelper.readId()
 
-    region_name = region_mapping[region_id]
+    region_name = id_mappings.region_mapping[region_id]
     if parent_id != -1:
-        parent = callpath_mapping[parent_id]
+        parent = id_mappings.callpath_mapping[parent_id]
         callpath = Callpath(parent.name + '->' + region_name)
     else:
         callpath = Callpath(region_name)
 
-    callpath_mapping[id] = callpath
+    id_mappings.callpath_mapping[id] = callpath
     return callpath
 
 
-def deserialize_coordinate(exp, ioHelper):
+def deserialize_coordinate(exp, id_mapping, ioHelper):
     id = ioHelper.readId()
     length = ioHelper.readInt()
 
-    coordinate = [None] * length
+    coordinate_parts = [None] * length
     for i in range(length):
         param = Parameter(ioHelper.readString())
         paramIdx = exp.parameters.index(param)
         val = ioHelper.readValue()
-        coordinate[paramIdx] = val
+        coordinate_parts[paramIdx] = val
 
-    return Coordinate(*coordinate)
+    coordinate = Coordinate(*coordinate_parts)
+    id_mapping.coordinate_mapping[id] = coordinate
+    return coordinate
 
 
 def deserialize_modelcomment(ioHelper):
@@ -341,7 +345,7 @@ def deserialize_MultiParameterModelGenerator(exp, supports_sparse, ioHelper):
     return ModelGenerator(exp, MultiParameterModeler(), userName, use_median)
 
 
-def deserialize_ExperimentPoint(experiment, callpath_mapping, ioHelper):
+def deserialize_ExperimentPoint(experiment, id_mappings, ioHelper):
     # coordinate_id = ioHelper.readId()
     # sampleCount = ioHelper.readInt()
     # mean = ioHelper.readValue()
@@ -361,9 +365,9 @@ def deserialize_ExperimentPoint(experiment, callpath_mapping, ioHelper):
     median, medianCI_start, medianCI_end, \
     minimum, maximum, metricId, callpathId = ioHelper.read_pattern('qqdddddddddqq')
 
-    coordinate = experiment.get_coordinate(coordinate_id)
+    coordinate = id_mappings.coordinate_mapping[coordinate_id]
     metric = experiment.get_metric(metricId)
-    callpath = callpath_mapping[callpathId]
+    callpath = id_mappings.callpath_mapping[callpathId]
 
     point = Measurement(coordinate, callpath, metric, None)
     point.minimum = minimum
@@ -374,35 +378,35 @@ def deserialize_ExperimentPoint(experiment, callpath_mapping, ioHelper):
     return point
 
 
-def deserialize_Model(experiment, parameter_mapping, callpath_mapping, supports_sparse, ioHelper):
+def deserialize_Model(experiment, id_mappings, supports_sparse, ioHelper):
     metricId = ioHelper.readId()
     callpathId = ioHelper.readId()
     metric = experiment.get_metric(metricId)
-    callpath = callpath_mapping[callpathId]
+    callpath = id_mappings.callpath_mapping[callpathId]
     generator_id = ioHelper.readId()
 
     prefix = ioHelper.readString()
-    model_function = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    model_function = deserialize_Function(ioHelper, id_mappings, prefix)
 
     prefix = ioHelper.readString()
-    confidence_interval_upper = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    confidence_interval_upper = deserialize_Function(ioHelper, id_mappings, prefix)
     SAFE_RETURN_None(confidence_interval_upper)
     prefix = ioHelper.readString()
-    confidence_interval_lower = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    confidence_interval_lower = deserialize_Function(ioHelper, id_mappings, prefix)
     SAFE_RETURN_None(confidence_interval_lower)
 
     prefix = ioHelper.readString()
-    error_cone_interval_upper = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    error_cone_interval_upper = deserialize_Function(ioHelper, id_mappings, prefix)
     SAFE_RETURN_None(error_cone_interval_upper)
     prefix = ioHelper.readString()
-    error_cone_interval_lower = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    error_cone_interval_lower = deserialize_Function(ioHelper, id_mappings, prefix)
     SAFE_RETURN_None(error_cone_interval_lower)
 
     prefix = ioHelper.readString()
-    noise_error_interval_upper = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    noise_error_interval_upper = deserialize_Function(ioHelper, id_mappings, prefix)
     SAFE_RETURN_None(noise_error_interval_upper)
     prefix = ioHelper.readString()
-    noise_error_interval_lower = deserialize_Function(ioHelper, parameter_mapping, prefix)
+    noise_error_interval_lower = deserialize_Function(ioHelper, id_mappings, prefix)
     SAFE_RETURN_None(noise_error_interval_lower)
 
     RSS = ioHelper.readValue()
@@ -435,14 +439,14 @@ def deserialize_Model(experiment, parameter_mapping, callpath_mapping, supports_
     return model, generator_id
 
 
-def deserialize_Function(ioHelper, parameter_mapping, prefix):
+def deserialize_Function(ioHelper, id_mappings, prefix):
     if prefix == 'SingleParameterFunction':
         # Read a SingleParameterFunction
         f = deserialize_SingleParameterFunction(ioHelper)
         return copy.deepcopy(f)
     elif prefix == 'MultiParameterFunction':
         # Read a MultiParameterFunction
-        f = deserialize_MultiParameterFunction(parameter_mapping, ioHelper)
+        f = deserialize_MultiParameterFunction(id_mappings, ioHelper)
         return f
     elif prefix == 'SimpleTerm':
         # Read a SimpleTerm
@@ -474,13 +478,13 @@ def deserialize_SingleParameterFunction(ioHelper):
     return function
 
 
-def deserialize_MultiParameterTerm(parameter_mapping, ioHelper):
+def deserialize_MultiParameterTerm(id_mappings, ioHelper):
     new_term = MultiParameterTerm()
     new_term.coefficient = ioHelper.readValue()
     size = ioHelper.readInt()
     for i in range(size):
         name = ioHelper.readString()
-        p = parameter_mapping[name]
+        p = id_mappings.parameter_mapping[name]
         prefix = ioHelper.readString()
         assert (prefix == 'CompoundTerm')
         term = deserialize_CompoundTerm(ioHelper)
@@ -489,13 +493,13 @@ def deserialize_MultiParameterTerm(parameter_mapping, ioHelper):
     return new_term
 
 
-def deserialize_MultiParameterFunction(parameter_mapping, ioHelper):
+def deserialize_MultiParameterFunction(id_mappings, ioHelper):
     function = MultiParameterFunction()
 
     function.constant_coefficient = ioHelper.readValue()
     size = ioHelper.readInt()
     for i in range(0, size):
-        term = deserialize_MultiParameterTerm(parameter_mapping, ioHelper)
+        term = deserialize_MultiParameterTerm(id_mappings, ioHelper)
         function.add_multi_parameter_term(term)
 
     return function
@@ -511,6 +515,14 @@ class __Ref:
         self.__ = _
 
 
+class _Mappings:
+    region_mapping = {}
+    region_set = {}
+    callpath_mapping = {}
+    parameter_mapping = {}
+    coordinate_mapping = {}
+
+
 def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
     progress_bar.total += os.path.getsize(path)
     with open(path, "rb") as file:
@@ -519,10 +531,7 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
         if qualifier != "EXTRAP_EXPERIMENT":
             raise FileFormatError("This is not an Extra-P 3 Experiment File. Qualifier was " + str(qualifier))
         exp = Experiment()
-        region_mapping = {}
-        region_set = {}
-        callpath_mapping = {}
-        parameter_mapping = {}
+        id_mappings = _Mappings()
         versionNumber = ioHelper.readString()
         prefix = ioHelper.readString()
         progress_bar.step('Load Extra-P 3 experiment')
@@ -536,7 +545,7 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
             # logging.debug("Deserialize " + str(prefix))
             # noinspection PyNoneFunctionAssignment
             if prefix == 'Parameter':
-                p = deserialize_parameter(parameter_mapping, ioHelper)
+                p = deserialize_parameter(id_mappings, ioHelper)
                 exp.add_parameter(p)
 
             elif prefix == 'Metric':
@@ -545,16 +554,16 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
                 exp.add_metric(m)
 
             elif prefix == 'Region':
-                deserialize_region(region_mapping, region_set, ioHelper)
+                deserialize_region(id_mappings, ioHelper)
 
             elif prefix == 'Callpath':
-                c = deserialize_callpath(region_mapping, callpath_mapping, ioHelper)
+                c = deserialize_callpath(id_mappings, ioHelper)
                 SAFE_RETURN_None(c)
                 exp.add_callpath(c)
                 progress_bar.total += 100
 
             elif prefix == 'Coordinate':
-                c = deserialize_coordinate(exp, ioHelper)
+                c = deserialize_coordinate(exp, id_mappings, ioHelper)
                 SAFE_RETURN_None(c)
                 exp.add_coordinate(c)
 
@@ -584,12 +593,12 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
                 exp.add_modeler(generator)
 
             elif prefix == 'ExperimentPoint':
-                point = deserialize_ExperimentPoint(exp, callpath_mapping, ioHelper)
+                point = deserialize_ExperimentPoint(exp, id_mappings, ioHelper)
                 SAFE_RETURN_None(point)
                 exp.add_measurement(point)
 
             elif prefix == 'Model':
-                model, generator_id = deserialize_Model(exp, parameter_mapping, callpath_mapping, is_sparse, ioHelper)
+                model, generator_id = deserialize_Model(exp, id_mappings, is_sparse, ioHelper)
                 SAFE_RETURN_None(model)
                 exp.modelers[generator_id].models[(model.callpath, model.metric)] = model
 
@@ -598,6 +607,9 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
 
             prefix = ioHelper.readString()
 
+        # remove empty modelers
+        exp.modelers = [m for m in exp.modelers if len(m.models) > 0]
+        # add measurements to model
         for modeler in exp.modelers:
             for key, model in modeler.models.items():
                 model.measurements = exp.measurements.get(key)
