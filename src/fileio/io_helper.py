@@ -9,18 +9,22 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
+from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy
 
 from entities.calltree import CallTree
 from entities.calltree import Node
-from entities.experiment import Experiment
 from entities.measurement import Measurement
 from util.deprecation import deprecated
 from util.exceptions import InvalidExperimentError
 from util.progress_bar import DUMMY_PROGRESS
+
+if TYPE_CHECKING:
+    from entities.experiment import Experiment
 
 
 def format_callpaths(experiment):

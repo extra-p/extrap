@@ -12,9 +12,11 @@ import warnings
 from typing import List, Mapping
 
 import numpy
+from marshmallow import fields
 
-from entities.terms import CompoundTerm, MultiParameterTerm
+from entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
 from util.deprecation import deprecated
+from util.serialization_schema import BaseSchema, NumberField
 
 
 class Function:
@@ -103,6 +105,14 @@ class Function:
     def __str__(self):
         return self.to_string()
 
+    def __eq__(self, other):
+        if not isinstance(other, Function):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.__dict__ == other.__dict__
+
 
 class ConstantFunction(Function):
     """
@@ -151,3 +161,27 @@ class MultiParameterFunction(Function):
 
     def __repr__(self):
         return f"MultiParameterFunction({self.to_string()})"
+
+
+class FunctionSchema(BaseSchema):
+    constant_coefficient = NumberField()
+    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(CompoundTermSchema))
+
+
+class ConstantFunctionSchema(FunctionSchema):
+    compound_terms = fields.Constant(None, load_only=True)
+
+    def create_object(self):
+        return ConstantFunction()
+
+
+class SingleParameterFunctionSchema(FunctionSchema):
+    def create_object(self):
+        return SingleParameterFunction()
+
+
+class MultiParameterFunctionSchema(FunctionSchema):
+    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(MultiParameterTermSchema))
+
+    def create_object(self):
+        return MultiParameterFunction()

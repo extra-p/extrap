@@ -1,13 +1,16 @@
 import warnings
 from abc import ABC, abstractmethod
+from numbers import Number
 from typing import Tuple, List, Union, Mapping
 
 import numpy as np
+from marshmallow import fields, validate
 
 from entities.coordinate import Coordinate
 from entities.fraction import Fraction
 from entities.parameter import Parameter
 from util.deprecation import deprecated
+from util.serialization_schema import Schema, NumberField
 
 
 class Term(ABC):
@@ -54,7 +57,7 @@ class SingleParameterTerm(Term, ABC):
 
 class SimpleTerm(SingleParameterTerm):
 
-    def __init__(self, term_type, exponent):
+    def __init__(self, term_type, exponent: Number):
         super().__init__()
         del self.coefficient
         self.term_type = term_type
@@ -198,3 +201,39 @@ class MultiParameterTerm(Term):
         else:
             return self.parameter_term_pairs == other.parameter_term_pairs and \
                    self.coefficient == other.coefficient
+
+
+class TermSchema(Schema):
+    coefficient = NumberField()
+
+
+class SimpleTermSchema(TermSchema):
+    coefficient = None
+    term_type = fields.String(validate=validate.OneOf(['polynomial', 'logarithm']))
+    exponent = NumberField()
+
+    def create_object(self):
+        return SimpleTerm(None, None)
+
+
+class CompoundTermSchema(TermSchema):
+    simple_terms = fields.List(fields.Nested(SimpleTermSchema))
+
+    def create_object(self):
+        return CompoundTerm()
+
+
+class ListOfPairs(fields.Dict):
+    def _serialize(self, value, attr, obj, **kwargs):
+        return super(ListOfPairs, self)._serialize(dict(value), attr, obj, **kwargs)
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        dict_ = super(ListOfPairs, self)._deserialize(value, attr, data, **kwargs)
+        return list(dict_.items())
+
+
+class MultiParameterTermSchema(TermSchema):
+    parameter_term_pairs = ListOfPairs(keys=fields.Int(), values=fields.Nested(CompoundTermSchema))
+
+    def create_object(self):
+        return MultiParameterTerm()

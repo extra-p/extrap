@@ -11,6 +11,7 @@ directory for details.
 import itertools
 
 from util.deprecation import deprecated
+from util.serialization_schema import make_value_schema
 
 
 class Metric:
@@ -49,3 +50,6 @@ class Metric:
 
     def __repr__(self):
         return f"Metric({self.name})"
+
+
+MetricSchema = make_value_schema(Metric, 'name')

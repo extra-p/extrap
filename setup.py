@@ -1,16 +1,20 @@
-from setuptools import setup, find_namespace_packages, find_packages
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+info = {}
+with open("src/__info__.py") as fp:
+    exec(fp.read(), info)
+
 setup(
     name="extrap",
-    version="0.0.18",
+    version=info['__version__'],
     package_dir={"": "src"},
     packages=find_packages("src"),
     author="Extra-P project",
     author_email="extra-p@lists.parallel.informatik.tu-darmstadt.de",
-    description="Extra-P, automated empirical performance modeling for HPC and scientific applications",
+    description=info['__description__'],
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/extra-p/extrap",
@@ -30,5 +34,5 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
-    install_requires=["pyside2", "numpy", "matplotlib", "tqdm", "pycubexr"],
+    install_requires=["pyside2", "numpy", "matplotlib", "tqdm", "pycubexr", "marshmallow"],
 )

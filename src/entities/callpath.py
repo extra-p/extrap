@@ -9,7 +9,9 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 import itertools
+
 from util.deprecation import deprecated
+from util.serialization_schema import make_value_schema
 
 
 class Callpath:
@@ -48,3 +50,6 @@ class Callpath:
 
     def __repr__(self):
         return f"Callpath({self.name})"
+
+
+CallpathSchema = make_value_schema(Callpath, 'name')

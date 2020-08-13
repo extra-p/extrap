@@ -9,6 +9,7 @@ from PySide2.QtGui import QPalette, QColor
 from PySide2.QtWidgets import QApplication, QMessageBox
 from matplotlib import font_manager
 
+import __info__
 from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.json_file_reader import read_json_file
 from fileio.text_file_reader import read_text_file
@@ -81,7 +82,7 @@ def main(*, test=False):
     def _exception_handler(type, value, traceback_):
         msgBox = QMessageBox(window)
         if hasattr(value, 'NAME'):
-            msgBox.setWindowTitle(value.NAME)
+            msgBox.setWindowTitle(__info__.__title__)
         else:
             msgBox.setWindowTitle('Error')
         msgBox.setIcon(QMessageBox.Icon.Critical)

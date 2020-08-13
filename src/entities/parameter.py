@@ -1,6 +1,7 @@
 import itertools
 
 from util.deprecation import deprecated
+from util.serialization_schema import make_value_schema
 
 
 class Parameter:
@@ -34,3 +35,6 @@ class Parameter:
 
     def __repr__(self):
         return f"Parameter({self.name})"
+
+
+ParameterSchema = make_value_schema(Parameter, 'name')

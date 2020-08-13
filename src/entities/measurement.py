@@ -8,12 +8,14 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
-from util.deprecation import deprecated
-
 import numpy as np
-from entities.coordinate import Coordinate
-from entities.metric import Metric
-from entities.callpath import Callpath
+from marshmallow import fields
+
+from entities.callpath import Callpath, CallpathSchema
+from entities.coordinate import Coordinate, CoordinateSchema
+from entities.metric import Metric, MetricSchema
+from util.deprecation import deprecated
+from util.serialization_schema import Schema, NumberField
 
 
 class Measurement:
@@ -102,3 +104,17 @@ class Measurement:
                    self.callpath == other.callpath and \
                    self.mean == other.mean and \
                    self.median == other.median
+
+
+class MeasurementSchema(Schema):
+    coordinate = fields.Nested(CoordinateSchema)
+    metric = fields.Nested(MetricSchema)
+    callpath = fields.Nested(CallpathSchema)
+    median = NumberField()
+    mean = NumberField()
+    minimum = NumberField()
+    maximum = NumberField()
+    std = NumberField()
+
+    def create_object(self):
+        return Measurement(None, None, None, None)

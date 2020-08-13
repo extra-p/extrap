@@ -8,13 +8,14 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-
 from typing import Sequence
 
 import numpy
+from marshmallow import fields
 
 from util.deprecation import deprecated
-from .functions import Function, MultiParameterFunction
+from util.serialization_schema import BaseSchema, NumberField
+from .functions import Function, MultiParameterFunction, FunctionSchema
 from .measurement import Measurement
 
 
@@ -181,6 +182,14 @@ class Hypothesis:
 
     def __repr__(self):
         return f"Hypothesis({self.function}, RSS:{self._RSS:5f}, SMAPE:{self._SMAPE:5f})"
+
+    def __eq__(self, other):
+        if not isinstance(other, Hypothesis):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.__dict__ == other.__dict__
 
 
 MAX_HYPOTHESIS = Hypothesis(Function(), False)
@@ -486,3 +495,36 @@ class MultiParameterHypothesis(Hypothesis):
             if contribution > maximum_term_contribution:
                 maximum_term_contribution = contribution
         return maximum_term_contribution
+
+
+class HypothesisSchema(BaseSchema):
+    function = fields.Nested(FunctionSchema)
+    _RSS = NumberField(data_key='RSS')
+    _rRSS = NumberField(data_key='rRSS')
+    _SMAPE = NumberField(data_key='SMAPE')
+    _AR2 = NumberField(data_key='AR2')
+    _RE = NumberField(data_key='RE')
+    _use_median = fields.Bool()
+    _costs_are_calculated = fields.Bool()
+
+
+class DefaultHypothesisSchema(HypothesisSchema):
+    def create_object(self):
+        return Hypothesis(None, None)
+
+
+class ConstantHypothesisSchema(HypothesisSchema):
+    _AR2 = fields.Constant(1, data_key='AR2', load_only=True)
+
+    def create_object(self):
+        return ConstantHypothesis(None, None)
+
+
+class SingleParameterHypothesisSchema(HypothesisSchema):
+    def create_object(self):
+        return SingleParameterHypothesis(None, None)
+
+
+class MultiParameterHypothesisSchema(HypothesisSchema):
+    def create_object(self):
+        return MultiParameterHypothesis(None, None)

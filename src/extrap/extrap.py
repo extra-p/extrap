@@ -15,6 +15,7 @@ import os
 import sys
 from itertools import chain
 
+import __info__
 from fileio.cube_file_reader2 import read_cube_file
 from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.io_helper import format_output
@@ -33,14 +34,13 @@ from util.progress_bar import ProgressBar
 
 def main(args=None):
     # argparse
-    programname = "Extra-P"
     modelers_list = list(set(
         chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
-    parser = argparse.ArgumentParser(description=programname)
+    parser = argparse.ArgumentParser(description=__info__.__description__)
 
     parser.add_argument("--log", action="store", dest="log_level",
                         help="set program's log level [INFO (default), DEBUG]")
-    parser.add_argument("--version", action="version", version=programname + " 4.0")
+    parser.add_argument("--version", action="version", version=__info__.__title__ + " " + __info__.__version__)
     parser.add_argument("--help-options", choices=modelers_list, help="shows help for modeler options",
                         action=ModelerHelpAction)
 

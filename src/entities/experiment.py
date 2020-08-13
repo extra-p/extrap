@@ -1,16 +1,21 @@
+import logging
+from itertools import chain
 from typing import List, Dict, Tuple
 
-from entities.calltree import CallTree
-from entities.metric import Metric
-from entities.measurement import Measurement
-from entities.coordinate import Coordinate
-from entities.parameter import Parameter
-from entities.callpath import Callpath
+from marshmallow import fields, validate
 
+import __info__
+from entities.callpath import Callpath, CallpathSchema
+from entities.calltree import CallTree
+from entities.coordinate import Coordinate
+from entities.measurement import Measurement, MeasurementSchema
+from entities.metric import Metric, MetricSchema
+from entities.parameter import Parameter, ParameterSchema
+from fileio import io_helper
+from modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from util.deprecation import deprecated
+from util.serialization_schema import Schema, TupleKeyDict
 from util.unique_list import UniqueList
-from itertools import chain
-import logging
 
 
 class Experiment:
@@ -23,7 +28,7 @@ class Experiment:
         self.measurements: Dict[Tuple[Callpath,
                                       Metric], List[Measurement]] = {}
         self.call_tree: CallTree = None
-        self.modelers = []
+        self.modelers: List[ModelGenerator] = []
         self.scaling = None
 
     @property
@@ -225,3 +230,31 @@ class Experiment:
             value_median = measurement.get_value_median()
             logging.debug(
                 f"Measurement {i}: {metric}, {callpath}, {coordinate}: {value_mean} (mean), {value_median} (median)")
+
+
+class ExperimentSchema(Schema):
+    _version_ = fields.Constant(__info__.__version__, data_key=__info__.__title__)
+    scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf(['strong', 'weak']))
+    parameters = fields.List(fields.Nested(ParameterSchema))
+    measurements = TupleKeyDict(keys=(fields.Nested(CallpathSchema), fields.Nested(MetricSchema)),
+                                values=fields.List(fields.Nested(MeasurementSchema, exclude=('callpath', 'metric'))))
+
+    modelers = fields.List(fields.Nested(ModelGeneratorSchema), default=[], required=False)
+
+    def create_object(self):
+        return Experiment()
+
+    def postprocess_object(self, obj: Experiment):
+        for (callpath, metric), measurement in obj.measurements.items():
+            obj.add_callpath(callpath)
+            obj.add_metric(metric)
+            for m in measurement:
+                obj.add_coordinate(m.coordinate)
+                m.callpath = callpath
+                m.metric = metric
+        obj.call_tree = io_helper.create_call_tree(obj.callpaths)
+        for modeler in obj.modelers:
+            for key, model in modeler.models.items():
+                model.measurements = obj.measurements[key]
+
+        return obj

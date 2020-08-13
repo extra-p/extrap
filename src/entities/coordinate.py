@@ -9,9 +9,11 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 import itertools
-from util.deprecation import deprecated
 from typing import Union, List, Tuple, Iterable
+
 from entities.parameter import Parameter
+from util.deprecation import deprecated
+from util.serialization_schema import make_value_schema
 
 
 class Coordinate:
@@ -120,3 +122,6 @@ class Coordinate:
 
     def as_tuple(self):
         return self._values
+
+
+CoordinateSchema = make_value_schema(Coordinate, '_values')

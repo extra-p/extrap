@@ -39,6 +39,17 @@ class Node:
     def __iter__(self):
         return iter(self.childs)
 
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.name == other.name and self.path == other.path and self.childs == other.childs
+
+    def __hash__(self):
+        return hash((self.name, self.path))
+
 
 class CallTree(Node):
     """

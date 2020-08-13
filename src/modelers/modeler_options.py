@@ -9,6 +9,7 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 from dataclasses import dataclass
+from dataclasses import field as d_field
 from typing import TypeVar, Generic, Sequence, Type, AnyStr, Mapping, Union, Callable, Any
 
 from modelers.abstract_modeler import AbstractModeler
@@ -25,7 +26,7 @@ class ModelerOption(Generic[T]):
     range: Union[Mapping[AnyStr, T], range] = None
     group = None
     field: str = None
-    on_change: Callable[[Any, T], None] = None
+    on_change: Callable[[Any, T], None] = d_field(default=None, compare=False, hash=False)
 
 
 @dataclass
@@ -88,6 +89,34 @@ class _ModelerOptionsClass:
         for o in options:
             o.group = group
         return group
+
+    @staticmethod
+    def equal(self: AbstractModeler, other: AbstractModeler) -> bool:
+        if not isinstance(other, AbstractModeler):
+            return NotImplemented
+        elif self is other:
+            return True
+        elif hasattr(self, 'OPTIONS') != hasattr(other, 'OPTIONS'):
+            return False
+        elif not hasattr(self, 'OPTIONS'):
+            return True
+        elif self.OPTIONS != other.OPTIONS:
+            return False
+        for o in modeler_options.iter(self):
+            if getattr(self, o.field) != getattr(other, o.field):
+                return False
+        return True
+
+    @staticmethod
+    def iter(modeler):
+        if not hasattr(modeler, 'OPTIONS'):
+            return
+        for o in getattr(modeler, 'OPTIONS').values():
+            if isinstance(o, ModelerOptionsGroup):
+                for go in o.options:
+                    yield go
+            else:
+                yield o
 
 
 modeler_options = _ModelerOptionsClass()

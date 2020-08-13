@@ -8,19 +8,26 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
+from __future__ import annotations
 
 import itertools
-from typing import Dict, Union, Tuple
+from typing import Dict, Union, Tuple, TYPE_CHECKING
 
-from entities.callpath import Callpath
-from entities.experiment import Experiment
-from entities.metric import Metric
-from entities.model import Model
+from marshmallow import fields
+
+from entities.callpath import Callpath, CallpathSchema
+from entities.metric import Metric, MetricSchema
+from entities.model import Model, ModelSchema
 from modelers import multi_parameter
 from modelers import single_parameter
-from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
+from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
+from modelers.modeler_options import modeler_options
 from util.deprecation import deprecated
 from util.progress_bar import DUMMY_PROGRESS
+from util.serialization_schema import Schema, TupleKeyDict
+
+if TYPE_CHECKING:
+    from entities.experiment import Experiment
 
 
 class ModelGenerator:
@@ -58,6 +65,8 @@ class ModelGenerator:
             except KeyError:
                 raise ValueError(
                     f'Modeler with name "{modeler}" does not exist.')
+        elif modeler is NotImplemented:
+            return NotImplemented
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
                 # single parameter model generator init here...
@@ -99,3 +108,30 @@ class ModelGenerator:
         callpath = self.experiment.callpaths[callpath_id]
         metric = self.experiment.metrics[metric_id]
         return self.models[(callpath, metric)]
+
+    def __eq__(self, other):
+        if not isinstance(other, ModelGenerator):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.models == other.models and \
+                   self._modeler.NAME == other._modeler.NAME and \
+                   self._modeler.use_median == other._modeler.use_median and \
+                   modeler_options.equal(self._modeler, other._modeler)
+
+
+class ModelGeneratorSchema(Schema):
+    name = fields.Str()
+    _modeler = fields.Nested(ModelerSchema, data_key='modeler')
+    models = TupleKeyDict(keys=(fields.Nested(CallpathSchema), fields.Nested(MetricSchema)),
+                          values=fields.Nested(ModelSchema, exclude=('callpath', 'metric')))
+
+    def create_object(self):
+        return ModelGenerator(None, NotImplemented)
+
+    def postprocess_object(self, obj: ModelGenerator):
+        for (callpath, metric), m in obj.models.items():
+            m.callpath = callpath
+            m.metric = metric
+        return obj

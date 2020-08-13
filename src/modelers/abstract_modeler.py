@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
+from marshmallow import fields
+
 from entities.measurement import Measurement
 from entities.model import Model
 from util.progress_bar import DUMMY_PROGRESS
+from util.serialization_schema import BaseSchema
 
 
 class AbstractModeler(ABC):
@@ -50,3 +53,10 @@ class MultiParameterModeler(AbstractModeler, ABC):
     def use_median(self, value):
         self._use_median = value
         self.single_parameter_modeler.use_median = value
+
+
+class ModelerSchema(BaseSchema):
+    use_median = fields.Bool()
+
+    def create_object(self):
+        raise NotImplementedError()
