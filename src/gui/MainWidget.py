@@ -10,11 +10,13 @@ directory for details.
 """
 import signal
 from enum import Enum
+from functools import partial
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from fileio.experiment_io import read_experiment, write_experiment
 from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.json_file_reader import read_json_file
 from fileio.talpas_file_reader import read_talpas_file
@@ -61,7 +63,7 @@ class MainWidget(QMainWindow):
 
         # switch for using mean or median measurement values for modeling
         # is used when loading the data from a file and then modeling directly
-        self.median = 0
+        self.median = False
 
     # noinspection PyAttributeOutsideInit
     def initUI(self):
@@ -119,26 +121,27 @@ class MainWidget(QMainWindow):
         exit_action.setStatusTip(self.tr('Exit application'))
         exit_action.triggered.connect(self.close)
 
-        open_text_file_action = QAction(self.tr('Open text input'), self)
-        open_text_file_action.setStatusTip(self.tr('Open text input file'))
-        open_text_file_action.triggered.connect(self.open_text_file)
+        file_imports = [
+            ('Open set of CUBE files', 'Open a set of CUBE files for single parameter models and generate data points '
+                                       'for a new experiment from them', self.open_cube_file),
+            ('Open text input', 'Open text input file',
+             self._make_import_func('Open a text input file', read_text_file, filter="Text (*.txt);;All Files (*)")),
+            ('Open json input', 'Open json input file',
+             self._make_import_func('Open a json input file', read_json_file, filter="JSON (*.json);;All Files (*)")),
+            ('Open talpas input', 'Open talpas input file',
+             self._make_import_func('Open a talpas input file', read_talpas_file,
+                                    filter="Talpas (*.txt);;All Files (*)")),
+            ('Open Extra-P 3 experiment', 'Opens legacy experiment file',
+             self._make_import_func('Open an Extra-P 3 experiment file', read_extrap3_experiment, model=False))
+        ]
 
-        open_json_file_action = QAction(self.tr('Open json input'), self)
-        open_json_file_action.setStatusTip(self.tr('Open json input file'))
-        open_json_file_action.triggered.connect(self.open_json_file)
+        open_experiment_action = QAction(self.tr('Open experiment'), self)
+        open_experiment_action.setStatusTip(self.tr('Opens experiment file'))
+        open_experiment_action.triggered.connect(self.open_experiment)
 
-        open_talpas_file_action = QAction(self.tr('Open talpas input'), self)
-        open_talpas_file_action.setStatusTip(self.tr('Open talpas input file'))
-        open_talpas_file_action.triggered.connect(self.open_talpas_file)
-
-        open_extrap3_file_action = QAction(self.tr('Open Extra-P 3 Experiment'), self)
-        open_extrap3_file_action.setStatusTip(self.tr('Opens legacy experiment file'))
-        open_extrap3_file_action.triggered.connect(self.open_extrap3_file)
-
-        cube_file_action = QAction(self.tr('Open set of CUBE files'), self)
-        cube_file_action.setStatusTip(self.tr('Open a set of CUBE files for single parameter models and generate '
-                                              'data points for a new experiment from them'))
-        cube_file_action.triggered.connect(self.open_cube_file)
+        save_experiment_action = QAction(self.tr('Save experiment'), self)
+        save_experiment_action.setStatusTip(self.tr('Saves experiment file'))
+        save_experiment_action.triggered.connect(self.save_experiment)
 
         # View menu
         change_font_action = QAction(self.tr('Legend font size'), self)
@@ -182,12 +185,17 @@ class MainWidget(QMainWindow):
         menubar.setNativeMenuBar(False)
 
         file_menu = menubar.addMenu(self.tr('&File'))
-        file_menu.addAction(cube_file_action)
-        file_menu.addAction(open_text_file_action)
-        file_menu.addAction(open_json_file_action)
-        file_menu.addAction(open_talpas_file_action)
-        file_menu.addAction(open_extrap3_file_action)
+        for name, tooltip, command in file_imports:
+            action = QAction(self.tr(name), self)
+            action.setStatusTip(self.tr(tooltip))
+            action.triggered.connect(command)
+            file_menu.addAction(action)
+        file_menu.addSeparator()
+        file_menu.addAction(open_experiment_action)
+        file_menu.addAction(save_experiment_action)
+        file_menu.addSeparator()
         file_menu.addAction(screenshot_action)
+        file_menu.addSeparator()
         file_menu.addAction(exit_action)
 
         view_menu = menubar.addMenu(self.tr('View'))
@@ -337,43 +345,34 @@ class MainWidget(QMainWindow):
         # self.selector_widget.selectLastModel()
         # self.selector_widget.renameCurrentModel("Default Model")
 
-    def open_text_file(self):
-        file_name = QFileDialog.getOpenFileName(self, 'Open a text input file')
-        file_name = self.get_file_name(file_name)
-        if file_name:
-            with ProgressWindow(self, "Loading file") as pw:
-                experiment = read_text_file(file_name, pw)
-                # call the modeler and create a function model
-                self.model_experiment(experiment)
+    def _make_import_func(self, title, reader_func, **kwargs):
+        return partial(self.import_file, title, reader_func, **kwargs)
 
-    def open_json_file(self):
-        file_name = QFileDialog.getOpenFileName(self, 'Open a json input file')
+    def import_file(self, title, reader_func, filter='', model=True, progress_text="Loading file"):
+        file_name = QFileDialog.getOpenFileName(self, title, filter=filter)
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self, "Loading file") as pw:
-                experiment = read_json_file(file_name, pw)
+            with ProgressWindow(self, progress_text) as pw:
+                experiment = reader_func(file_name, pw)
                 # call the modeler and create a function model
-                self.model_experiment(experiment)
+                if model:
+                    self.model_experiment(experiment)
+                else:
+                    self.setExperiment(experiment)
 
-    def open_talpas_file(self):
-        file_name = QFileDialog.getOpenFileName(
-            self, 'Open a talpas input file')
-        file_name = self.get_file_name(file_name)
-        if file_name:
-            with ProgressWindow(self, "Loading file") as pw:
-                experiment = read_talpas_file(file_name, pw)
-                # call the modeler and create a function model
-                self.model_experiment(experiment)
+    def open_experiment(self):
+        self.import_file('Open experiment', read_experiment,
+                         filter='Experiment (*.extra-p)',
+                         model=False,
+                         progress_text="Loading experiment")
 
-    def open_extrap3_file(self):
-        file_name = QFileDialog.getOpenFileName(
-            self, 'Open an Extra-P 3 Experiment file')
+    def save_experiment(self):
+        file_name = QFileDialog.getSaveFileName(
+            self, 'Save experiment', filter='Experiment (*.extra-p)')
         file_name = self.get_file_name(file_name)
         if file_name:
-            with ProgressWindow(self, "Loading file") as pw:
-                experiment = read_extrap3_experiment(file_name, pw)
-                # call the modeler and create a function model
-                self.setExperiment(experiment)
+            with ProgressWindow(self, "Saving experiment") as pw:
+                write_experiment(self.getExperiment(), file_name, pw)
 
     def open_cube_file(self):
         dir_name = QFileDialog.getExistingDirectory(

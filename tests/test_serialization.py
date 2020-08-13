@@ -17,6 +17,9 @@ class TestSingleParameter(unittest.TestCase):
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
+    def test_setup(self):
+        self.setUpClass()
+
     def test_parameters(self):
         self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
 
@@ -50,11 +53,10 @@ class TestSingleParameterAfterModeling(unittest.TestCase):
         schema = ExperimentSchema()
         print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
-        try:
-            cls.reconstructed: Experiment = schema.loads(exp_str)
-        except AttributeError as e:
-            print(e)
-        pass
+        cls.reconstructed: Experiment = schema.loads(exp_str)
+
+    def test_setup(self):
+        self.setUpClass()
 
     def test_parameters(self):
         self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
@@ -127,6 +129,9 @@ class TestMultiParameter(unittest.TestCase):
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
+    def test_setup(self):
+        self.setUpClass()
+
     def test_parameters(self):
         self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
 
@@ -160,11 +165,10 @@ class TestMultiParameterAfterModeling(unittest.TestCase):
         schema = ExperimentSchema()
         print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
-        try:
-            cls.reconstructed: Experiment = schema.loads(exp_str)
-        except AttributeError as e:
-            print(e)
-        pass
+        cls.reconstructed: Experiment = schema.loads(exp_str)
+
+    def test_setup(self):
+        self.setUpClass()
 
     def test_parameters(self):
         self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
