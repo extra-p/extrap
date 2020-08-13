@@ -66,5 +66,5 @@ def create_schema(cls):
     attribute_fields = {'create_object': lambda self: cls()}
     for o in modeler_options.iter(cls):
         attribute_fields[o.field] = _determine_field(o)
-    cls_schema = type(cls.__title__ + 'Schema', (ModelerSchema,), attribute_fields)
+    cls_schema = type(cls.__name__ + 'Schema', (ModelerSchema,), attribute_fields)
     globals()[cls_schema.__name__] = cls_schema

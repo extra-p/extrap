@@ -76,7 +76,8 @@ def main(*, test=False):
         msgBox.setWindowTitle('Warning')
         msgBox.setIcon(QMessageBox.Icon.Warning)
         msgBox.setText(str(message))
-        msgBox.open()
+        if not test:
+            msgBox.open()
         return _old_warnings_handler(message, category, filename, lineno, file, line)
 
     def _exception_handler(type, value, traceback_):
@@ -89,6 +90,8 @@ def main(*, test=False):
         msgBox.setText(str(value))
         traceback_lines = traceback.extract_tb(traceback_).format()
         msgBox.setDetailedText(''.join(traceback_lines))
+        if test:
+            return _old_exception_handler(type, value, traceback_)
         if issubclass(type, RecoverableError):
             _old_exception_handler(type, value, traceback_)
             msgBox.open()

@@ -35,8 +35,8 @@ def _create_parser(modeler, name=None, description=None, nested_sp=False):
 
 def _modeler_option_bool(o):
     if isinstance(o, str):
-        o = o.lower()
-        if any(t in o for t in ['false', 'off', 'no', '0']):
+        o = o.strip().lower()
+        if o in ['false', 'off', 'no', '0']:
             return False
     return bool(o)
 

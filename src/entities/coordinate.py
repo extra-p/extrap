@@ -93,7 +93,11 @@ class Coordinate:
         """
         if isinstance(param, int):
             return self._values[param]
-        return self._values[self._parameters.index(param)]
+        try:
+            return self._values[self._parameters.index(param)]
+        except ValueError as v_err:
+            # required for correct validation of schema
+            raise KeyError(str(v_err)) from v_err
 
     def __repr__(self):
         """

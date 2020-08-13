@@ -13,13 +13,16 @@ from gui.MainWidget import MainWidget, QCoreApplication
 
 APP = QApplication()
 APP.setStyle('Fusion')
-appthread = Thread(target=APP.exec_)
-appthread.start()
+app_thread = Thread(target=APP.exec_)
 
 
 class TestGuiCommon(unittest.TestCase):
 
     def setUp(self) -> None:
+        global app_thread
+        if not app_thread.is_alive():
+            app_thread = Thread(target=APP.exec_)
+            app_thread.start()
         self.window = MainWidget()
         self.window.hide()
 

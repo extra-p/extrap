@@ -47,7 +47,7 @@ class BaseSchema(Schema):
 
     def __init_subclass__(cls, **kwargs):
         if not cls.__is_direct_subclass(cls, BaseSchema):
-            cls._subclasses[type(cls().create_object()).__title__] = cls
+            cls._subclasses[type(cls().create_object()).__name__] = cls
         else:
             cls._subclasses = {}
         super().__init_subclass__(**kwargs)
@@ -70,10 +70,10 @@ class BaseSchema(Schema):
 
     def dump(self, obj, **kwargs):
         if self.__is_direct_subclass(type(self), BaseSchema):
-            return self._subclasses[type(obj).__title__]().dump(obj, **kwargs)
+            return self._subclasses[type(obj).__name__]().dump(obj, **kwargs)
         else:
             result = super(BaseSchema, self).dump(obj, **kwargs)
-            result[self.type_field] = type(obj).__title__
+            result[self.type_field] = type(obj).__name__
             return result
 
 
