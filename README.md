@@ -17,37 +17,46 @@ Put project description here.
 
 ### Requirements
 
-* Python 3
-* PyQt 5 (only if using GUI)
+* Python 3.7
+* PySide2 (only if using GUI)
 * maplotlib
 * numpy
+* pycubexr
 
 ### Usage
 
-* `extrap --text --path C:\Users\Admin\git\Extra-P\data\text\one_parameter_1.txt` Text files.
-* `extrap --json --path C:\Users\Admin\git\Extra-P\data\json\input_1.JSON` JSON files.
-* `extrap --talpas --path C:\Users\Admin\git\Extra-P\data\talpas\talpas_1.txt` Talpas files.
-* `extrap --text --path C:\Users\Admin\git\Extra-P\data\text\one_parameter_1.txt --out C:\Users\Admin\Desktop\test.txt` Create model and save it to text file at the given path.
-* ``
-* ``
+* `extrap --text C:\Users\Admin\git\Extra-P\data\text\one_parameter_1.txt` Text files.
+* `extrap --json C:\Users\Admin\git\Extra-P\data\json\input_1.JSON` JSON files.
+* `extrap --talpas C:\Users\Admin\git\Extra-P\data\talpas\talpas_1.txt` Talpas files.
+* `extrap --out C:\Users\Admin\Desktop\test.txt --text C:\Users\Admin\git\Extra-P\data\text\one_parameter_1.txt` Create model and save it to text file at the given path.
 
-Extra-P
 
-optional arguments:
+extrap.py OPTIONS (--cube | --text | --talpas | --json | --extra-p-3) FILEPATH
+        
+OPTIONS:
 
-* `-h, --help` show this help message and exit
-* `--log LOG_LEVEL` set program's log level [INFO (default), DEBUG]
-* `--version` show program's version number and exit
-* `--path PATH` specify a file path for Extra-P to work with
-* `--scaling SCALING` set weak or strong scaling when loading data from cube files [WEAK (default), STRONG]
-* `--cube` load data from cube files
-* `--median` use median values for computation instead of mean values
-* `--text` load data from text files
-* `--talpas` load data from talpas data format
-* `--json` load data from json file
-* `--out OUT` specify the output path for Extra-P results
-* `--print PRINT_TYPE` set which information should be displayed after modeling [ALL (default), CALLPATHS, METRICS, PARAMETERS, FUNCTIONS]
-
+*  `-h, --help`            show this help message and exit
+*  `--log LOG_LEVEL`       set program's log level [INFO (default), DEBUG]
+*  `--version`             show program's version number and exit
+*  `--help-options {Basic,Refining,Multi-Parameter,Default}`
+                        shows help for modeler options
+*  `--cube`                load data from cube files
+*  `--text`                load data from text files
+*  `--talpas`              load data from talpas data format
+*  `--json`                load data from json file
+*  `--extra-p-3`           load data from Extra-P 3 experiment
+*  `--modeler {Basic,Refining,Multi-Parameter,Default}` selects a modeler
+*  `--options KEY=VALUE [KEY=VALUE ...]` sets options for the selected modeler
+*  `--scaling {weak,strong}`
+                        set weak or strong scaling when loading data from cube
+                        files [weak (default), strong]
+*  `--median`              use median values for computation instead of mean
+                        values
+*  `--out OUT`             specify the output path for Extra-P results
+*  `--print {all,callpaths,metrics,parameters,functions}`
+                        set which information should be displayed after
+                        modeling [all (default), callpaths, metrics,
+                        parameters, functions]
 ### Notes
 
 One reason why the gui is not showing can be missing python packages!
@@ -81,9 +90,9 @@ This command only works in windows shell...
 * python -m pip install --user --upgrade twine
 * python -m pip install --user --upgrade setuptools wheel
 * `pip install -e C:\Users\Admin\git\extrap\`
-* `extrap --text --path C:\Users\Admin\git\Extra-P\data\text\two_parameter_1.txt`
-* `extrap --cube --path C:\Users\Admin\git\Extra-P\data\cube\kripke\`
-* `extrap --cube --path C:\Users\Admin\git\Extra-P\data\cube\blast\`
+* `extrap --text C:\Users\Admin\git\Extra-P\data\text\two_parameter_1.txt`
+* `extrap --cube C:\Users\Admin\git\Extra-P\data\cube\kripke\`
+* `extrap --cube C:\Users\Admin\git\Extra-P\data\cube\blast\`
 
 #### C++ shared libraries
 
@@ -93,7 +102,7 @@ In order to create a C++ shared library and use it the relevant source code need
 
 #### Python commands for testing
 
-`python3 extrap.py --cube --path /home/marcus/GitLab/extrap/testdata/cube/blast`
+`python3 extrap.py --cube /home/marcus/GitLab/extrap/testdata/cube/blast`
 
 #### Compile the test example for the shared extrap library
 
