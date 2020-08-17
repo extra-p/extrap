@@ -1,6 +1,9 @@
 ### Extra-P
 
 ![Python package](https://github.com/MeaParvitas/Extra-P/workflows/Python%20package/badge.svg?branch=master)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
+[![PyPI version](https://badge.fury.io/py/extrap.png)](https://badge.fury.io/py/extrap)
+[![PyPI - License](https://img.shields.io/pypi/l/extrap?style=plastic)](https://badge.fury.io/py/extrap)
 
 Put project description here.
 
