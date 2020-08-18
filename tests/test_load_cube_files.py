@@ -34,20 +34,23 @@ class TestCubeFileLoader(unittest.TestCase):
         self.assertRaises(FileFormatError, read_cube_file, 'data/cubeset', 'strong')
 
     def test_strong_scaling_warning(self):
-        self.assertWarns(UserWarning, read_cube_file, 'data/cubeset/multi_parameter', 'strong')
+        self.assertWarnsRegex(UserWarning, 'Strong scaling', read_cube_file, 'data/cubeset/multi_parameter', 'strong')
 
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter('ignore', DeprecationWarning)
+            warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
             read_cube_file('data/cubeset/single_parameter', 'strong')
         self.assertFalse(record)
 
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter('ignore', DeprecationWarning)
+            warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
             read_cube_file('data/cubeset/single_parameter', 'weak')
         self.assertFalse(record)
 
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter('ignore', DeprecationWarning)
+            warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
             read_cube_file('data/cubeset/multi_parameter', 'weak')
         self.assertFalse(record)
 

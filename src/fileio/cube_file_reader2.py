@@ -61,7 +61,10 @@ def fix_call_tree(calltree):
 
 def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
     # read the paths of the cube files in the given directory with dir_name
-    cubex_files = list(Path(dir_name).glob('*/*.cubex'))
+    path = Path(dir_name)
+    if not path.is_dir():
+        raise FileFormatError(f'Cube file path must point to a directory: {dir_name}')
+    cubex_files = list(path.glob('*/*.cubex'))
     if not cubex_files:
         raise FileFormatError(f'No cube files were found in: {dir_name}')
     pbar.total += 2 * len(cubex_files)
@@ -117,6 +120,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
 
     pbar.step("Reading cube files")
     show_warning_no_strong_scaling = False
+    show_warning_skipped_metrics = False
     complete_data = {}
     # create a progress bar for reading the cube files
     for path_id, (path, parameter_value) in enumerate(zip(cubex_files, parameter_values)):
@@ -158,13 +162,12 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
             # NOTE: here we could choose which metrics to extract
             # iterate over all metrics
             for cube_metric in parsed.get_metrics():
-
-                # create the metrics
-                metric = Metric(cube_metric.name)
-                experiment.add_metric(metric)
-
                 try:
                     metric_values = parsed.get_metric_values(metric=cube_metric)
+                    # create the metrics
+                    metric = Metric(cube_metric.name)
+                    experiment.add_metric(metric)
+
                     for cnode_id in metric_values.cnode_indices:
                         cnode = parsed.get_cnode(cnode_id)
                         callpath = callpaths[cnode_id]
@@ -191,13 +194,15 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
 
                 # Take care of missing metrics
                 except MissingMetricError as e:  # @UnusedVariable
-                    logging.info(str(e))
+                    show_warning_skipped_metrics = True
+                    logging.info(f'The cubex file does not contain data for the metric "{e.metric.name}"')
 
     io_helper.repetition_dict_to_experiment(complete_data, experiment, pbar)
 
     if show_warning_no_strong_scaling:
         warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
-
+    if show_warning_skipped_metrics:
+        warnings.warn("Some metrics were skipped because they contained no data. For details see log.")
     # take care of the repetitions of the measurements
     # experiment = compute_repetitions(experiment)
     io_helper.validate_experiment(experiment)

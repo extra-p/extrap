@@ -26,6 +26,7 @@ from fileio.text_file_reader import read_text_file
 from gui.ColorWidget import ColorWidget
 from gui.CubeFileReader import CubeFileReader
 from gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
+from gui.LogWidget import LogWidget
 from gui.ModelerWidget import ModelerWidget
 from gui.PlotTypeSelector import PlotTypeSelector
 from gui.ProgressWindow import ProgressWindow
@@ -110,6 +111,11 @@ class MainWidget(QMainWindow):
         dock.setWidget(self.graph_limits_widget)
         self.addDockWidget(Qt.BottomDockWidgetArea, dock, Qt.Horizontal)
 
+        dock2 = QDockWidget(self.tr("Log"), self)
+        self.log_widget = LogWidget(self)
+        dock2.setWidget(self.log_widget)
+        self.tabifyDockWidget(dock, dock2)
+        dock2.hide()
         # Menu creation
 
         # File menu
@@ -341,36 +347,37 @@ class MainWidget(QMainWindow):
     def model_experiment(self, experiment):
         # initialize model generator
         model_generator = ModelGenerator(experiment, use_median=self.median)
-        # create models from data
-        model_generator.model_all()
+        with ProgressWindow(self, 'Modeling') as pbar:
+            # create models from data
+            model_generator.model_all(pbar)
         self.setExperiment(experiment)
-        # self.selector_widget.selectLastModel()
-        # self.selector_widget.renameCurrentModel("Default Model")
 
     def _make_import_func(self, title, reader_func, **kwargs):
-        return partial(self.import_file, title, reader_func, **kwargs)
+        return partial(self.import_file, reader_func, title, **kwargs)
 
-    def import_file(self, title, reader_func, filter='', model=True, progress_text="Loading file"):
-        file_name = QFileDialog.getOpenFileName(self, title, filter=filter)
-        file_name = self.get_file_name(file_name)
+    def import_file(self, reader_func, title='Open file', filter='', model=True, progress_text="Loading file",
+                    file_name=None):
+        if not file_name:
+            file_name = QFileDialog.getOpenFileName(self, title, filter=filter)
+            file_name = self.get_file_name(file_name)
         if file_name:
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
-                # call the modeler and create a function model
-                if model:
-                    self.model_experiment(experiment)
-                else:
-                    self.setExperiment(experiment)
-                self.set_opened_file_name(file_name)
+                self._set_opened_file_name(file_name)
+            # call the modeler and create a function model
+            if model:
+                self.model_experiment(experiment)
+            else:
+                self.setExperiment(experiment)
 
-    def set_opened_file_name(self, file_name):
+    def _set_opened_file_name(self, file_name):
         if file_name:
             self.setWindowTitle(__info__.__title__ + " - " + Path(file_name).name)
         else:
             self.setWindowTitle(__info__.__title__)
 
     def open_experiment(self):
-        self.import_file('Open experiment', read_experiment,
+        self.import_file(read_experiment, 'Open experiment',
                          filter='Experiment (*.extra-p)',
                          model=False,
                          progress_text="Loading experiment")
@@ -391,11 +398,8 @@ class MainWidget(QMainWindow):
         dialog = CubeFileReader(self, dir_name)
         dialog.exec_()
         if dialog.valid:
-            self.setExperiment(dialog.experiment)
-            self.selector_widget.selectLastModel()
-            self.modeler_widget.remodel()
-            self.selector_widget.renameCurrentModel("Default Model")
-            self.set_opened_file_name(dir_name)
+            self._set_opened_file_name(dir_name)
+            self.model_experiment(dialog.experiment)
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
