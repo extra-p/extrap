@@ -66,7 +66,6 @@ class ModelerOptionsWidget(QWidget):
                 g_layout = QFormLayout()
                 g_layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
                 self._create_options(g_layout, option.items())
-                self.gui_fields.append(group)
                 group.setLayout(g_layout)
                 layout.addRow(group)
 

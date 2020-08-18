@@ -176,9 +176,12 @@ class Hypothesis:
             minimum = min(m.median for m in training_measurements)
         else:
             minimum = min(m.mean for m in training_measurements)
-
-        if abs(self.function.constant_coefficient / minimum) < phi:
-            self.function.constant_coefficient = 0
+        if minimum == 0:
+            if abs(self.function.constant_coefficient - minimum) < phi:
+                self.function.constant_coefficient = 0
+        else:
+            if abs(self.function.constant_coefficient / minimum) < phi:
+                self.function.constant_coefficient = 0
 
     def __repr__(self):
         return f"Hypothesis({self.function}, RSS:{self._RSS:5f}, SMAPE:{self._SMAPE:5f})"
@@ -270,8 +273,9 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS += difference * difference
-        relative_difference = difference / actual
-        self._rRSS += relative_difference * relative_difference
+        if actual != 0:
+            relative_difference = difference / actual
+            self._rRSS += relative_difference * relative_difference
         abssum = abs(actual) + abs(predicted)
         if abssum != 0:
             self._SMAPE += (abs(difference) / abssum * 2) / \
@@ -349,7 +353,10 @@ class SingleParameterHypothesis(Hypothesis):
         maximum_term_contribution = 0
         for measurement in measurements:
             parameter_value = measurement.coordinate[0]
-            contribution = abs(term.evaluate(parameter_value) / measurement.value(self._use_median))
+            actual = measurement.value(self._use_median)
+            if actual == 0:
+                continue
+            contribution = abs(term.evaluate(parameter_value) / actual)
             if contribution > maximum_term_contribution:
                 maximum_term_contribution = contribution
         return maximum_term_contribution

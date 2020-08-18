@@ -412,7 +412,7 @@ class GraphLimitsWidget(QWidget):
         self.grid = QGridLayout(self)
         self.grid.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
 
-        self._placeholder = AxisSelection(self, None, 0, [])
+        self._placeholder = AxisSelection(self, self, 0, [])
         self._placeholder.setEnabled(False)
         self.grid.addWidget(self._placeholder)
 

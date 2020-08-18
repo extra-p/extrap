@@ -193,7 +193,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
             measurements_sp = self.find_first_measurement_points(measurements)
         # print(coordinates_list)
 
-        # model all single parmaeter experiments using only the selected points from the step before
+        # model all single parameter experiments using only the selected points from the step before
         # parameters = list(range(measurements[0].coordinate.dimensions))
 
         models = self.single_parameter_modeler.model(measurements_sp)
@@ -217,7 +217,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         for m in measurements:
             constantCost += (m.value(self.use_median) - meanModel) * (m.value(self.use_median) - meanModel)
 
-        # find out which parameters should be deleted
+        # find out which parameters should be kept
         compound_term_pairs = []
 
         for i, function in enumerate(functions):
@@ -251,7 +251,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
 
         hypotheses = []
 
-        # create multiplicative multi parameter terms
+        # create multiplicative multi parameter term
         mult = MultiParameterTerm(*compound_term_pairs)
 
         # create additive multi parameter terms
