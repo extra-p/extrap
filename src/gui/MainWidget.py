@@ -11,11 +11,13 @@ directory for details.
 import signal
 from enum import Enum
 from functools import partial
+from pathlib import Path
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+import __info__
 from fileio.experiment_io import read_experiment, write_experiment
 from fileio.extrap3_experiment_reader import read_extrap3_experiment
 from fileio.json_file_reader import read_json_file
@@ -70,7 +72,7 @@ class MainWidget(QMainWindow):
         """
         Initializes the User Interface of the main widget. E.g. the menus.
         """
-        self.setWindowTitle('Extra-P')
+        self.setWindowTitle(__info__.__title__)
         # Status bar
         # self.statusBar()
 
@@ -359,6 +361,13 @@ class MainWidget(QMainWindow):
                     self.model_experiment(experiment)
                 else:
                     self.setExperiment(experiment)
+                self.set_opened_file_name(file_name)
+
+    def set_opened_file_name(self, file_name):
+        if file_name:
+            self.setWindowTitle(__info__.__title__ + " - " + Path(file_name).name)
+        else:
+            self.setWindowTitle(__info__.__title__)
 
     def open_experiment(self):
         self.import_file('Open experiment', read_experiment,
@@ -386,6 +395,7 @@ class MainWidget(QMainWindow):
             self.selector_widget.selectLastModel()
             self.modeler_widget.remodel()
             self.selector_widget.renameCurrentModel("Default Model")
+            self.set_opened_file_name(dir_name)
 
     def updateMinMaxValue(self):
         if not self.experiment_change:

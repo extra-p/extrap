@@ -9,37 +9,52 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 
-from typing import Mapping, Collection
+from typing import Mapping, Collection, cast
 
 from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
-    QComboBox, QVBoxLayout, QLabel
+    QComboBox, QVBoxLayout, QLabel, QPushButton
 
 from modelers import single_parameter
 from modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
-from modelers.modeler_options import ModelerOption, ModelerOptionsGroup
+from modelers.modeler_options import ModelerOption, ModelerOptionsGroup, modeler_options
 
 
 class ModelerOptionsWidget(QWidget):
-    def __init__(self, parent, modeler: AbstractModeler, keep_parent_enabled=False):
+    def __init__(self, parent, modeler: AbstractModeler, has_parent_options=False):
         super().__init__(parent)
         self._modeler = modeler
         self._single_parameter_modeler_widget = None
-        self.initUI(keep_parent_enabled)
-
-    def initUI(self, keep_parent_enabled):
         layout = QFormLayout()
+        self.initUI(layout, has_parent_options)
+
+    def initUI(self, layout, has_parent_options):
         layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
         self.setLayout(layout)
-        self.parent().setEnabled(keep_parent_enabled)
+        self.parent().setEnabled(has_parent_options)
 
         if hasattr(self._modeler, 'OPTIONS'):
             self.parent().setEnabled(True)
+            if not has_parent_options:
+                reset_button = QPushButton('Reset options to defaults', self)
+                reset_button.clicked.connect(self._reset_options)
+                layout.addRow(reset_button)
             self._create_options(layout, getattr(self._modeler, 'OPTIONS').items())
 
         if isinstance(self._modeler, MultiParameterModeler) and self._modeler.single_parameter_modeler is not None:
             group = self._create_single_parameter_selection()
             layout.addRow(group)
             self.parent().setEnabled(True)
+
+    def _reset_options(self):
+        for option in modeler_options.iter(self._modeler):
+            setattr(self._modeler, option.field, option.value)
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(cast(QWidget, None))
+        if isinstance(self._modeler, MultiParameterModeler):
+            self._modeler.reset_single_parameter_modeler()
+        self.initUI(cast(QFormLayout, layout), False)
+        self.update()
 
     def _create_options(self, layout, options):
         for name, option in options:
@@ -51,6 +66,7 @@ class ModelerOptionsWidget(QWidget):
                 g_layout = QFormLayout()
                 g_layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
                 self._create_options(g_layout, option.items())
+                self.gui_fields.append(group)
                 group.setLayout(g_layout)
                 layout.addRow(group)
 
@@ -65,18 +81,19 @@ class ModelerOptionsWidget(QWidget):
         def selection_changed():
             modeler = modeler_selection.currentData()
             self._modeler.single_parameter_modeler = modeler()
-            options = ModelerOptionsWidget(self, self._modeler.single_parameter_modeler, keep_parent_enabled=True)
+            options = ModelerOptionsWidget(self, self._modeler.single_parameter_modeler, has_parent_options=True)
             g_layout.replaceWidget(self._single_parameter_modeler_widget, options)
             self._single_parameter_modeler_widget.deleteLater()
             self._single_parameter_modeler_widget = options
 
         for name, modeler in single_parameter.all_modelers.items():
             modeler_selection.addItem(name, modeler)
-            if modeler == self._modeler.single_parameter_modeler:
+            if isinstance(self._modeler.single_parameter_modeler, modeler):
                 modeler_selection.setCurrentText(name)
         modeler_selection.currentIndexChanged.connect(selection_changed)
 
-        self._single_parameter_modeler_widget = ModelerOptionsWidget(self, self._modeler.single_parameter_modeler)
+        self._single_parameter_modeler_widget = ModelerOptionsWidget(self, self._modeler.single_parameter_modeler,
+                                                                     has_parent_options=True)
 
         g_layout.addWidget(modeler_selection)
         g_layout.addWidget(self._single_parameter_modeler_widget)

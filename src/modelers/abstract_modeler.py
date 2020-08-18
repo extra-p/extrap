@@ -1,3 +1,4 @@
+import copy
 from abc import ABC, abstractmethod
 from typing import Sequence
 
@@ -47,7 +48,11 @@ class MultiParameterModeler(AbstractModeler, ABC):
     def __init__(self, use_median, single_parameter_modeler):
         super().__init__(use_median)
         single_parameter_modeler.use_median = use_median
-        self.single_parameter_modeler = single_parameter_modeler
+        self._default_single_parameter_modeler = single_parameter_modeler
+        self.single_parameter_modeler = copy.copy(single_parameter_modeler)
+
+    def reset_single_parameter_modeler(self):
+        self.single_parameter_modeler = copy.copy(self._default_single_parameter_modeler)
 
     @AbstractModeler.use_median.setter
     def use_median(self, value):

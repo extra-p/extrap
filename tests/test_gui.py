@@ -4,7 +4,7 @@ import warnings
 from threading import Thread
 
 from PySide2.QtCore import QRect, QItemSelectionModel
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
 
 from extrap import extrapgui
 from fileio.text_file_reader import read_text_file
@@ -90,6 +90,34 @@ class TestGuiExperimentLoaded(TestGuiCommon):
                     p.drawGraph()
                     self.assertIsNotNone(p.graphDisplayWindow)
                     QCoreApplication.processEvents()
+
+    def test_modeler_options_reset(self):
+        modeler_widget = self.window.modeler_widget
+        modeler_widget._options_container.toggle(False)
+        QCoreApplication.processEvents()
+        checkbox = None
+        reset_button = None
+        for child in modeler_widget._options_container.children():
+            QCoreApplication.processEvents()
+            if not reset_button and isinstance(child, QPushButton):
+                reset_button = child
+            elif not checkbox and isinstance(child, QCheckBox):
+                checkbox = child
+            elif reset_button and checkbox:
+                break
+        if checkbox:
+            old_state = checkbox.isChecked()
+            checkbox.toggle()
+            QCoreApplication.processEvents()
+            self.assertNotEqual(old_state, checkbox.isChecked())
+            reset_button.click()
+            for child in modeler_widget._options_container.children():
+                QCoreApplication.processEvents()
+                if isinstance(child, QCheckBox):
+                    checkbox = child
+                    break
+
+            self.assertEqual(old_state, checkbox.isChecked())
 
 
 class TestGuiLoadExperiment(unittest.TestCase):
