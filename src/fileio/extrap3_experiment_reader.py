@@ -278,7 +278,7 @@ def deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper):
             pass
 
         else:
-            logging.error("Invalid ModelOptions found in File.")
+            logging.info("New ModelOptions not found in File.")
             raise AbortTransaction
         # convert multi parameter strategy to enum
         if multi_strategy == "INCREASING_COST":
@@ -288,7 +288,7 @@ def deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper):
             pass
 
         else:
-            logging.error("Invalid ModelOptions found in File.")
+            logging.info("New ModelOptions not found in File.")
             raise AbortTransaction
         supports_sparse.__ = True
 

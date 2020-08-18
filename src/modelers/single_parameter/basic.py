@@ -35,7 +35,8 @@ class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
     """
 
     NAME = 'Basic'
-
+    allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms',
+                                          on_change=lambda self, v: self._exponents_changed())
     poly_exponents = modeler_options.add('', str, 'Set of polynomial exponents. Use comma separated list.',
                                          name='Polynomial', on_change=lambda self, v: self._exponents_changed())
     log_exponents = modeler_options.add('', str, 'Set of logarithmic exponents. Use comma separated list.',

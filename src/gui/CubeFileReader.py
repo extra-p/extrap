@@ -214,7 +214,7 @@ class CubeFileReader(QDialog):
         self.postfix = self.postfix_edit.text()
         self.filename = self.filename_edit.text()
         self.repetitions = self.spin_box.value()
-        self.scaling_type = self.scaling_choice.currentIndex()
+        self.scaling_type = self.scaling_choice.currentText()
 
         # read the cube files
         self.experiment = read_cube_file(self.dir_name, self.scaling_type)
