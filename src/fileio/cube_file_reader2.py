@@ -1,9 +1,8 @@
 import logging
 import re
 import warnings
+from collections import defaultdict
 from pathlib import Path
-
-import numpy
 
 from entities.callpath import Callpath
 from entities.coordinate import Coordinate
@@ -65,20 +64,18 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
     cubex_files = list(Path(dir_name).glob('*/*.cubex'))
     if not cubex_files:
         raise FileFormatError(f'No cube files were found in: {dir_name}')
-
+    pbar.total += 2 * len(cubex_files)
     # iterate over all folders and read the cube profiles in them
     experiment = Experiment()
 
     pbar.step("Reading cube files")
-
-    # TODO: the progress bar should be only active when using the command line tool, since gui dont use it.
-    # create a progress bar for reading the cube files
-    show_warning_no_strong_scaling = False
-    complete_data = {}
     parameter_names_initial = []
-    for path_id, path in enumerate(pbar(cubex_files)):
+    parameter_names = []
+    parameter_values = []
+    parameter_dict = defaultdict(set)
+    for path_id, path in enumerate(cubex_files):
+        pbar.update()
         folder_name = path.parent.name
-        # TODO debug
         logging.debug(f"Cube file: {path} Folder: {folder_name}")
 
         # create the parameters
@@ -104,20 +101,34 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
         # check if parameter already exists
         if path_id == 0:
             parameter_names_initial = parameter_names
-            for p in parameter_names:
-                experiment.add_parameter(Parameter(p))
         elif parameter_names != parameter_names_initial:
             raise FileFormatError(
                 f"Parameters must be the same and in the same order: {parameter_names} is not {parameter_names_initial}.")
 
-        # create coordinate
-        coordinate = Coordinate(parameter_value)
+        for n, v in zip(parameter_names, parameter_value):
+            parameter_dict[n].add(v)
+        parameter_values.append(parameter_value)
 
-        # check if the coordinate already exists
-        if not experiment.coordinate_exists(coordinate):
-            experiment.add_coordinate(coordinate)
+    parameter_selection_mask = []
+    for i, p in enumerate(parameter_names):
+        if len(parameter_dict[p]) > 1:
+            experiment.add_parameter(Parameter(p))
+            parameter_selection_mask.append(i)
 
-        with CubexParser(path) as parsed:
+    pbar.step("Reading cube files")
+    show_warning_no_strong_scaling = False
+    complete_data = {}
+    # create a progress bar for reading the cube files
+    for path_id, (path, parameter_value) in enumerate(zip(cubex_files, parameter_values)):
+        pbar.update()
+        with CubexParser(str(path)) as parsed:
+
+            # create coordinate
+            coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
+
+            # check if the coordinate already exists
+            if not experiment.coordinate_exists(coordinate):
+                experiment.add_coordinate(coordinate)
 
             # get call tree
             if path_id == 0:
@@ -141,7 +152,6 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
             #         for cnode_id in metric_values.cnode_indices:
             #             cnode = parsed.get_cnode(cnode_id)
             #             region = parsed.get_region(cnode)
-            #             # TODO debug
             #             print(region)
             #         break
 
@@ -161,27 +171,27 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
 
                         # NOTE: here we can use clustering algorithm to select only certain node level values
                         # create the measurements
-                        cnode_values = metric_values.cnode_values(cnode)
+                        cnode_values = metric_values.cnode_values(cnode, convert_to_exclusive=True)
 
                         # in case of weak scaling calculate mean and median over all mpi process values
                         if scaling_type == "weak":
-                            values = cnode_values
+                            values = [float(v) for v in cnode_values]
 
-                        # in case of strong scaling calculate the sum over all mpi process values
+                            # in case of strong scaling calculate the sum over all mpi process values
                         elif scaling_type == "strong":
                             # check number of parameters, if > 1 use weak scaling instead
                             # since sum values for strong scaling does not work for more than 1 parameter
                             if len(experiment.get_parameters()) > 1:
-                                values = cnode_values
+                                values = [float(v) for v in cnode_values]
                                 show_warning_no_strong_scaling = True
                             else:
-                                values = float(numpy.sum(cnode_values))
+                                values = float(sum(cnode_values))
 
                         io_helper.append_to_repetition_dict(complete_data, (callpath, metric), coordinate, values, pbar)
 
                 # Take care of missing metrics
                 except MissingMetricError as e:  # @UnusedVariable
-                    logging.error(str(e))
+                    logging.info(str(e))
 
     io_helper.repetition_dict_to_experiment(complete_data, experiment, pbar)
 
