@@ -1,6 +1,9 @@
 ### Extra-P
 
 ![Python package](https://github.com/MeaParvitas/Extra-P/workflows/Python%20package/badge.svg?branch=master)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
+[![PyPI version](https://badge.fury.io/py/extrap.png)](https://badge.fury.io/py/extrap)
+[![PyPI - License](https://img.shields.io/pypi/l/extrap?style=plastic)](https://badge.fury.io/py/extrap)
 
 Put project description here.
 
@@ -25,6 +28,7 @@ Put project description here.
 
 ### Usage
 
+<<<<<<< HEAD
 * `extrap --text C:\Users\Admin\git\Extra-P\data\text\one_parameter_1.txt` Text files.
 * `extrap --json C:\Users\Admin\git\Extra-P\data\json\input_1.JSON` JSON files.
 * `extrap --talpas C:\Users\Admin\git\Extra-P\data\talpas\talpas_1.txt` Talpas files.
@@ -57,10 +61,6 @@ OPTIONS:
                         set which information should be displayed after
                         modeling [all (default), callpaths, metrics,
                         parameters, functions]
-### Notes
-
-One reason why the gui is not showing can be missing python packages!
-
 
 ### Build Extra-P package
 
@@ -94,36 +94,6 @@ This command only works in windows shell...
 * `extrap --cube C:\Users\Admin\git\Extra-P\data\cube\kripke\`
 * `extrap --cube C:\Users\Admin\git\Extra-P\data\cube\blast\`
 
-#### C++ shared libraries
-
-In order to create a C++ shared library and use it the relevant source code needs to be compiled with the following command `g++ -Wall -O3 -fPIC -I/home/username/Cube/Cubelib/include/cubelib -shared CubeInterface.cc -o CubeInterface.so`. It is important to specify the correct path to the Cube library that is installed on the system, as the Cube Interface requires this library. The path shown here `/home/user/Cube/Cubelib/include/cubelib` is just an example and can vary depending on where you installed Cube on your system. Furthermore, to find the `#includes` all C++ files need to be mentioned when compiling the shared library like so `g++ -Wall -O3 -fPIC -I/home/marcus/Cube/Cubelib/include/cubelib -shared HelperClass.cc MainClass.cc -o MainClass.so`.
-
-### Commands
-
-#### Python commands for testing
-
-`python3 extrap.py --cube /home/marcus/GitLab/extrap/testdata/cube/blast`
-
-#### Compile the test example for the shared extrap library
-
-`g++ -Wall -O3 -fPIC -shared -I/home/marcus/Cube/Cubelib/include/cubelib MessageStream.cc IoHelper.cc Utilities.cc Parameter.cc Printer.cc Test.cc -o Test.so -L/home/marcus/Cube/Cubelib/lib -lcube4`
-
-#### Compile the `CubeInterface.dll` C++ shared library
-
-`g++ -Wall -O3 -fPIC -I/home/marcus/Cube/Cubelib/include/cubelib -shared Types.h Callpath.cc CompoundTerm.cc Coordinate.cc CubeMapping.cc DataPoint.cc Experiment.cc ExperimentPoint.cc Fraction.cc Function.cc IncrementalPoint.cc IoHelper.cc MessageStream.cc Metric.cc Model.cc ModelComment.cc ModelGenerator.cc ModelGeneratorOptions.cc MultiParameterFunction.cc MultiParameterFunctionModeler.cc MultiParameterHypothesis.cc MultiParameterModelGenerator.cc MultiParameterSimpleFunctionModeler.cc MultiParameterSimpleModelGenerator.cc MultiParameterSparseFunctionModeler.cc MultiParameterSparseModelGenerator.cc MultiParameterTerm.cc Parameter.cc Region.cc SimpleTerm.cc SingleParameterExhaustiveFunctionModeler.cc SingleParameterExhaustiveModelGenerator.cc SingleParameterFunction.cc SingleParameterFunctionModeler.cc SingleParameterHypothesis.cc SingleParameterModelGenerator.cc SingleParameterRefiningFunctionModeler.cc SingleParameterRefiningModelGenerator.cc SingleParameterSimpleFunctionModeler.cc SingleParameterSimpleModelGenerator.cc Utilities.cc CubeInterface.cc -o CubeInterface.dll -L/home/marcus/Cube/Cubelib/lib -lcube4 -w`
-
-#### Compile the `CubeInterface.so` C++ shared library
-
-`g++ -Wall -O3 -fPIC -I/home/marcus/Cube/Cubelib/include/cubelib -shared Types.h Callpath.cc CompoundTerm.cc Coordinate.cc CubeMapping.cc DataPoint.cc Experiment.cc ExperimentPoint.cc Fraction.cc Function.cc IncrementalPoint.cc IoHelper.cc MessageStream.cc Metric.cc Model.cc ModelComment.cc ModelGenerator.cc ModelGeneratorOptions.cc MultiParameterFunction.cc MultiParameterFunctionModeler.cc MultiParameterHypothesis.cc MultiParameterModelGenerator.cc MultiParameterSimpleFunctionModeler.cc MultiParameterSimpleModelGenerator.cc MultiParameterSparseFunctionModeler.cc MultiParameterSparseModelGenerator.cc MultiParameterTerm.cc Parameter.cc Region.cc SimpleTerm.cc SingleParameterExhaustiveFunctionModeler.cc SingleParameterExhaustiveModelGenerator.cc SingleParameterFunction.cc SingleParameterFunctionModeler.cc SingleParameterHypothesis.cc SingleParameterModelGenerator.cc SingleParameterRefiningFunctionModeler.cc SingleParameterRefiningModelGenerator.cc SingleParameterSimpleFunctionModeler.cc SingleParameterSimpleModelGenerator.cc Utilities.cc CubeInterface.cc -o CubeInterface.so -L/home/marcus/Cube/Cubelib/lib -lcube4 -w`
-
-The `-w` flag an be used to disable the warnings of the compiler.
-
-### Notes
-
-* The current cube interface implementation only supports 3 parameters
-* Float values in the cube files are automatically detected but they need to be formatted like this "p4.s1000.t0,1.r1"
-
----------------------------------------------------------
 
 ### License
 
