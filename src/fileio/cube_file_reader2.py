@@ -205,5 +205,5 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
         warnings.warn("Some metrics were skipped because they contained no data. For details see log.")
     # take care of the repetitions of the measurements
     # experiment = compute_repetitions(experiment)
-    io_helper.validate_experiment(experiment)
+    io_helper.validate_experiment(experiment, pbar)
     return experiment

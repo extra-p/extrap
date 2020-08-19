@@ -607,6 +607,9 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
 
             prefix = ioHelper.readString()
 
+        pos = file.tell()
+        progress_bar.update(pos - last_pos)
+
         # remove empty modelers
         exp.modelers = [m for m in exp.modelers if len(m.models) > 0]
         # add measurements to model

@@ -22,7 +22,7 @@ SINGLE_PARAMETER_OPTIONS_KEY = '#single_parameter_options'
 def _create_parser(modeler, name=None, description=None, nested_sp=False):
     name = name or modeler.NAME
     if nested_sp:
-        prog = f'--options #spo'
+        prog = '--options #spo'
     else:
         prog = f'--modeler {name} --options'
     sub_parser = argparse.ArgumentParser(prog=prog,

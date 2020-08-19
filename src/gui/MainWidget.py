@@ -183,10 +183,10 @@ class MainWidget(QMainWindow):
         model_rename_action.triggered.connect(self.selector_widget.model_rename)
 
         # Filter menu
-        filter_callpath_action = QAction(self.tr('Filter Callpaths'), self)
-        filter_callpath_action.setShortcut('Ctrl+F')
-        filter_callpath_action.setStatusTip(self.tr('Select the callpath you want to hide'))
-        filter_callpath_action.triggered.connect(self.hide_callpath_dialog_box)
+        # filter_callpath_action = QAction(self.tr('Filter Callpaths'), self)
+        # filter_callpath_action.setShortcut('Ctrl+F')
+        # filter_callpath_action.setStatusTip(self.tr('Select the callpath you want to hide'))
+        # filter_callpath_action.triggered.connect(self.hide_callpath_dialog_box)
 
         # Main menu bar
         menubar = self.menuBar()
@@ -222,8 +222,8 @@ class MainWidget(QMainWindow):
         model_menu.addAction(model_delete_action)
         model_menu.addAction(model_rename_action)
 
-        filter_menu = menubar.addMenu(self.tr('Filter'))
-        filter_menu.addAction(filter_callpath_action)
+        # filter_menu = menubar.addMenu(self.tr('Filter'))
+        # filter_menu.addAction(filter_callpath_action)
 
         # Main window
         self.resize(1200, 800)
@@ -308,14 +308,15 @@ class MainWidget(QMainWindow):
 
     def open_select_plots_dialog_box(self):
         dialog = PlotTypeSelector(self, self.data_display)
-        dialog.exec_()
+        dialog.setModal(True)
+        dialog.open()
 
-    def hide_callpath_dialog_box(self):
-        callpathList = list()
-        for callpath in CallPathEnum:
-            callpathList.append(callpath.value)
-        _, _ = QInputDialog.getItem(
-            self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
+    # def hide_callpath_dialog_box(self):
+    #     callpathList = list()
+    #     for callpath in CallPathEnum:
+    #         callpathList.append(callpath.value)
+    #     answer,ok = QInputDialog.getItem(
+    #         self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
 
     def getFontSize(self):
         return self.font_size
@@ -396,7 +397,8 @@ class MainWidget(QMainWindow):
         if not dir_name:
             return
         dialog = CubeFileReader(self, dir_name)
-        dialog.exec_()
+        dialog.setModal(True)
+        dialog.open()
         if dialog.valid:
             self._set_opened_file_name(dir_name)
             self.model_experiment(dialog.experiment)

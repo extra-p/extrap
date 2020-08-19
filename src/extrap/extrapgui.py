@@ -1,10 +1,10 @@
 import argparse
 import logging
-import sys
 import threading
 import traceback
 import warnings
 
+import sys
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QPalette, QColor
 from PySide2.QtWidgets import QApplication, QMessageBox
@@ -19,6 +19,9 @@ from fileio.talpas_file_reader import read_talpas_file
 from fileio.text_file_reader import read_text_file
 from gui.MainWidget import MainWidget
 from util.exceptions import RecoverableError
+
+TRACEBACK = logging.DEBUG - 1
+logging.addLevelName(TRACEBACK, 'TRACEBACK')
 
 
 def _preload_common_fonts():
@@ -47,7 +50,13 @@ def main(*, test=False):
     font_preloader = _preload_common_fonts()
     arguments = parse_arguments()
 
-    logging.basicConfig(format="%(levelname)s: %(message)s", level=arguments.log_level)
+    # configure logging
+    log_level = min(logging.getLevelName(arguments.log_level), logging.INFO)
+    if arguments.log_file:
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level, filename=arguments.log_file)
+    else:
+        logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
+    logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level))
 
     app = QApplication(sys.argv) if not test else QApplication.instance()
     app.setStyle('Fusion')
@@ -55,24 +64,24 @@ def main(*, test=False):
 
     window = MainWidget()
 
+    _current_warnings = set()
     _old_warnings_handler = warnings.showwarning
     _old_exception_handler = sys.excepthook
 
-    _seen_warnings = set()
-
     def _warnings_handler(message: Warning, category, filename, lineno, file=None, line=None):
-        nonlocal _seen_warnings
+        nonlocal _current_warnings
         message_str = str(message)
-        if message_str not in _seen_warnings:
+        if message_str not in _current_warnings:
             _warn_box = QMessageBox(window)
             _warn_box.setWindowTitle('Warning')
             _warn_box.setIcon(QMessageBox.Icon.Warning)
-            _warn_box.finished.connect(lambda x: _seen_warnings.remove(message_str))
+            _warn_box.finished.connect(lambda x: _current_warnings.remove(message_str))
             _warn_box.setText(message_str)
             if not test:
                 _warn_box.open()
-            _seen_warnings.add(message_str)
+            _current_warnings.add(message_str)
         logging.warning(message_str)
+        logging.log(TRACEBACK, ''.join(traceback.format_stack()))
         QApplication.processEvents()
         return _old_warnings_handler(message, category, filename, lineno, file, line)
 
@@ -84,9 +93,10 @@ def main(*, test=False):
             msgBox.setWindowTitle('Error')
         msgBox.setIcon(QMessageBox.Icon.Critical)
         msgBox.setText(str(value))
-        traceback_lines = traceback.extract_tb(traceback_).format()
-        msgBox.setDetailedText(''.join(traceback_lines))
+        traceback_text = ''.join(traceback.extract_tb(traceback_).format())
+        msgBox.setDetailedText(traceback_text)
         logging.error(str(value))
+        logging.log(TRACEBACK, traceback_text)
         if test:
             return _old_exception_handler(type, value, traceback_)
         if issubclass(type, RecoverableError):
@@ -114,8 +124,11 @@ def main(*, test=False):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description=__info__.__description__)
-    parser.add_argument("--log", action="store", dest="log_level", type=str.upper, choices=['INFO', 'DEBUG'],
-                        default='INFO', help="set program's log level [INFO (default), DEBUG]")
+    parser.add_argument("--log", action="store", dest="log_level", type=str.upper, default='CRITICAL',
+                        choices=['TRACEBACK', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        help="set program's log level (default: CRITICAL)")
+    parser.add_argument("--logfile", action="store", dest="log_file",
+                        help="set path of log file")
     parser.add_argument("--version", action="version", version=__info__.__title__ + " " + __info__.__version__)
 
     group = parser.add_mutually_exclusive_group(required=False)

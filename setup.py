@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 info = {}
-with open("src/__info__.py") as fp:
+with open("src/__info__/__init__.py") as fp:
     exec(fp.read(), info)
 
 setup(

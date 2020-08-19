@@ -28,7 +28,6 @@ Put project description here.
 
 ### Usage
 
-<<<<<<< HEAD
 * `extrap --text C:\Users\Admin\git\Extra-P\data\text\one_parameter_1.txt` Text files.
 * `extrap --json C:\Users\Admin\git\Extra-P\data\json\input_1.JSON` JSON files.
 * `extrap --talpas C:\Users\Admin\git\Extra-P\data\talpas\talpas_1.txt` Talpas files.

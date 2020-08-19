@@ -12,6 +12,7 @@ directory for details.
 import argparse
 import logging
 import os
+
 import sys
 from itertools import chain
 
@@ -38,8 +39,9 @@ def main(args=None):
         chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
     parser = argparse.ArgumentParser(description=__info__.__description__)
 
-    parser.add_argument("--log", action="store", dest="log_level",
-                        help="set program's log level [INFO (default), DEBUG]")
+    parser.add_argument("--log", action="store", dest="log_level", type=str.upper, default='WARNING',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        help="set program's log level (default: WARNING)")
     parser.add_argument("--version", action="version", version=__info__.__title__ + " " + __info__.__version__)
     parser.add_argument("--help-options", choices=modelers_list, help="shows help for modeler options",
                         action=ModelerHelpAction)
@@ -74,23 +76,14 @@ def main(args=None):
     arguments = parser.parse_args(args)
 
     # set log level
-    if arguments.log_level is not None:
-        loglevel = arguments.log_level.upper()
-        if loglevel == "DEBUG":
-            loglevel = logging.DEBUG
-        elif loglevel == "INFO":
-            loglevel = logging.INFO
-        else:
-            loglevel = logging.INFO
-    else:
-        loglevel = logging.INFO
+    loglevel = logging.getLevelName(arguments.log_level)
     # set output print type
     printtype = arguments.print_type.upper()
 
     # set log format location etc.
     if loglevel == logging.DEBUG:
-        import warnings
-        warnings.simplefilter('always', DeprecationWarning)
+        # import warnings
+        # warnings.simplefilter('always', DeprecationWarning)
         # check if log file exists and create it if necessary
         # if not os.path.exists("../temp/extrap.log"):
         #    log_file = open("../temp/extrap.log","w")
