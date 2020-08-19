@@ -190,7 +190,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
                             else:
                                 values = float(sum(cnode_values))
 
-                        io_helper.append_to_repetition_dict(complete_data, (callpath, metric), coordinate, values, pbar)
+                        io_helper.append_to_repetition_dict(complete_data, (callpath, metric), coordinate, values)
 
                 # Take care of missing metrics
                 except MissingMetricError as e:  # @UnusedVariable

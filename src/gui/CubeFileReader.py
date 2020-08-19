@@ -8,14 +8,14 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-
-import os
-import re
+import time
+from functools import partial
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from fileio.cube_file_reader2 import read_cube_file
+from util.progress_bar import ProgressBar
 
 
 class ParameterWidget(QWidget):
@@ -57,54 +57,56 @@ class CubeFileReader(QDialog):
         self.repetitions = 1
         self.parameters = list()
 
-        for _ in range(0, self.max_params):
-            self.parameters.append(ParameterWidget(self))
+        # for _ in range(0, self.max_params):
+        #     self.parameters.append(ParameterWidget(self))
 
         self.init_UI()
 
     def init_UI(self):
         self.setWindowTitle("Import settings")
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         layout = QFormLayout(self)
 
-        self.num_params_choice = QSpinBox(self)
-        self.num_params_choice.setMinimum(1)
-        self.num_params_choice.setMaximum(self.max_params)
-        self.num_params_choice.setValue(self.num_params)
-        self.num_params_choice.valueChanged.connect(self.change_param_num)
-
-        layout.addRow("Number of Parameters:", self.num_params_choice)
-
-        self.prefix_edit = QLineEdit(self)
-        self.prefix_edit.setText(self.prefix)
-
-        layout.addRow("Prefix:", self.prefix_edit)
-
-        self.postfix_edit = QLineEdit(self)
-        self.postfix_edit.setText(self.postfix)
-
-        layout.addRow("Postfix:", self.postfix_edit)
-
-        self.filename_edit = QLineEdit(self)
-        self.filename_edit.setText(self.filename)
-
-        layout.addRow("File name:", self.filename_edit)
-
-        self.parameter_tabs = QTabWidget(self)
-        self.parameter_tabs.setMovable(False)
-        self.parameter_tabs.setTabsClosable(False)
-        for param in self.parameters:
-            param.init_UI()
-
-        layout.addRow(self.parameter_tabs)
-
-        self.spin_box = QSpinBox(self)
-        self.spin_box.setMinimum(1)
-        spin_box_max_val = 1073741824
-        self.spin_box.setMaximum(spin_box_max_val)
-        self.spin_box.setValue(self.repetitions)
-
-        layout.addRow("Repetitions:", self.spin_box)
-
+        # self.num_params_choice = QSpinBox(self)
+        # self.num_params_choice.setMinimum(1)
+        # self.num_params_choice.setMaximum(self.max_params)
+        # self.num_params_choice.setValue(self.num_params)
+        # self.num_params_choice.valueChanged.connect(self.change_param_num)
+        #
+        # layout.addRow("Number of Parameters:", self.num_params_choice)
+        #
+        # self.prefix_edit = QLineEdit(self)
+        # self.prefix_edit.setText(self.prefix)
+        #
+        # layout.addRow("Prefix:", self.prefix_edit)
+        #
+        # self.postfix_edit = QLineEdit(self)
+        # self.postfix_edit.setText(self.postfix)
+        #
+        # layout.addRow("Postfix:", self.postfix_edit)
+        #
+        # self.filename_edit = QLineEdit(self)
+        # self.filename_edit.setText(self.filename)
+        #
+        # layout.addRow("File name:", self.filename_edit)
+        #
+        # self.parameter_tabs = QTabWidget(self)
+        # self.parameter_tabs.setMovable(False)
+        # self.parameter_tabs.setTabsClosable(False)
+        # for param in self.parameters:
+        #     param.init_UI()
+        #
+        # layout.addRow(self.parameter_tabs)
+        #
+        # self.spin_box = QSpinBox(self)
+        # self.spin_box.setMinimum(1)
+        # spin_box_max_val = 1073741824
+        # self.spin_box.setMaximum(spin_box_max_val)
+        # self.spin_box.setValue(self.repetitions)
+        #
+        # layout.addRow("Repetitions:", self.spin_box)
+        #
         self.scaling_choice = QComboBox(self)
         self.scaling_choice.addItem("weak")
         self.scaling_choice.addItem("strong")
@@ -113,7 +115,6 @@ class CubeFileReader(QDialog):
 
         self.progress_indicator = QProgressBar(self)
         self.progress_indicator.hide()
-        layout.addRow(self.progress_indicator)
 
         # If the user presses the enter key on any element it activates the
         # first button somehow. Thus, create a fake button, that does nothing
@@ -134,106 +135,120 @@ class CubeFileReader(QDialog):
         # cancel_button.setText("Cancel")
         # cancel_button.pressed.connect(self.close)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
-        layout.addRow(buttonBox)
-        self.change_param_num()
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        layout.addRow(self.buttonBox)
+        # self.change_param_num()
         self.setLayout(layout)
 
-    def change_param_num(self):
-        self.num_params = self.num_params_choice.value()
-        self.parameter_tabs.clear()
-        for param in self.parameters:
-            param.hide()
-        for index in range(0, self.num_params):
-            self.parameter_tabs.addTab(self.parameters[index],
-                                       "Parameter " + str(index + 1))
-            self.parameters[index].show()
-
-        self.autoFillOptions()
-        self.prefix_edit.setText(self.prefix)
-        self.postfix_edit.setText(self.postfix)
-        self.filename_edit.setText(self.filename)
-        self.spin_box.setValue(self.repetitions)
-        for index in range(0, self.num_params):
-            self.parameters[index].onNewValues()
-
-        self.update()
-
-    def autoFillOptions(self):
-
-        auto_fill_rule = r"^([^.]+)"
-        for i in range(0, self.num_params):
-            auto_fill_rule = auto_fill_rule + r"([_\.][^\d]+)(\d+)"
-        auto_fill_rule = auto_fill_rule + r"[_\.]r(\d+)$"
-        auto_fill_regex = re.compile(auto_fill_rule)
-
-        # meaningful defaults
-        self.filename = "profile.cubex"
-        self.postfix = ""
-        self.prefix = ""
-        self.repetitions = 1
-
-        # get list of existing directories matching the pattern
-        available_dirs = os.listdir(self.dir_name)
-        dir_matches = list()
-        for d in available_dirs:
-            m = auto_fill_regex.match(d)
-            if m is not None:
-                dir_matches.append(m)
-
-        # print("matched directoty list with given pattern: ", dir_matches)
-
-        if len(dir_matches) == 0:
-            return
-
-        # get prefix from first match
-        self.prefix = dir_matches[0].group(1)
-        matching_prefix = [d for d in dir_matches if d.group(1) == self.prefix]
-
-        for i in range(0, self.num_params):
-            # get parameter name from first match
-            self.parameters[i].name = dir_matches[0].group(2 + i * 2)
-
-            # extract all values for parameter p
-            available_p_values = sorted(
-                set(int(m.group(3 + i * 2)) for m in matching_prefix))
-            self.parameters[i].values = ','.join(
-                str(v) for v in available_p_values)
-
-        # get maximum repetition count
-        max_repetitions = max(int(m.group(2 + self.num_params * 2))
-                              for m in matching_prefix)
-        self.repetitions = max_repetitions
+    # def change_param_num(self):
+    #     self.num_params = self.num_params_choice.value()
+    #     self.parameter_tabs.clear()
+    #     for param in self.parameters:
+    #         param.hide()
+    #     for index in range(0, self.num_params):
+    #         self.parameter_tabs.addTab(self.parameters[index],
+    #                                    "Parameter " + str(index + 1))
+    #         self.parameters[index].show()
+    #
+    #     self.autoFillOptions()
+    #     self.prefix_edit.setText(self.prefix)
+    #     self.postfix_edit.setText(self.postfix)
+    #     self.filename_edit.setText(self.filename)
+    #     self.spin_box.setValue(self.repetitions)
+    #     for index in range(0, self.num_params):
+    #         self.parameters[index].onNewValues()
+    #
+    #     self.update()
+    #
+    # def autoFillOptions(self):
+    #
+    #     auto_fill_rule = r"^([^.]+)"
+    #     for i in range(0, self.num_params):
+    #         auto_fill_rule = auto_fill_rule + r"([_\.][^\d]+)(\d+)"
+    #     auto_fill_rule = auto_fill_rule + r"[_\.]r(\d+)$"
+    #     auto_fill_regex = re.compile(auto_fill_rule)
+    #
+    #     # meaningful defaults
+    #     self.filename = "profile.cubex"
+    #     self.postfix = ""
+    #     self.prefix = ""
+    #     self.repetitions = 1
+    #
+    #     # get list of existing directories matching the pattern
+    #     available_dirs = os.listdir(self.dir_name)
+    #     dir_matches = list()
+    #     for d in available_dirs:
+    #         m = auto_fill_regex.match(d)
+    #         if m is not None:
+    #             dir_matches.append(m)
+    #
+    #     # print("matched directoty list with given pattern: ", dir_matches)
+    #
+    #     if len(dir_matches) == 0:
+    #         return
+    #
+    #     # get prefix from first match
+    #     self.prefix = dir_matches[0].group(1)
+    #     matching_prefix = [d for d in dir_matches if d.group(1) == self.prefix]
+    #
+    #     for i in range(0, self.num_params):
+    #         # get parameter name from first match
+    #         self.parameters[i].name = dir_matches[0].group(2 + i * 2)
+    #
+    #         # extract all values for parameter p
+    #         available_p_values = sorted(
+    #             set(int(m.group(3 + i * 2)) for m in matching_prefix))
+    #         self.parameters[i].values = ','.join(
+    #             str(v) for v in available_p_values)
+    #
+    #     # get maximum repetition count
+    #     max_repetitions = max(int(m.group(2 + self.num_params * 2))
+    #                           for m in matching_prefix)
+    #     self.repetitions = max_repetitions
 
     @Slot()
     def accept(self):
 
-        self.prefix = self.prefix_edit.text()
-        self.postfix = self.postfix_edit.text()
-        self.filename = self.filename_edit.text()
-        self.repetitions = self.spin_box.value()
+        # self.prefix = self.prefix_edit.text()
+        # self.postfix = self.postfix_edit.text()
+        # self.filename = self.filename_edit.text()
+        # self.repetitions = self.spin_box.value()
         self.scaling_type = self.scaling_choice.currentText()
 
-        # read the cube files
-        self.experiment = read_cube_file(self.dir_name, self.scaling_type)
+        with ProgressBar(total=0, gui=True) as pbar:
+            self._show_progressbar()
+            pbar.display = partial(self._display_progress, pbar)
+            pbar.sp = None
 
-        # TODO: create callback method to update the progress bar
+            # read the cube files
+            try:
+                self.experiment = read_cube_file(self.dir_name, self.scaling_type, pbar)
+            except Exception as err:
+                self.close()
+                raise err
 
-        if not self.experiment:
-            QMessageBox.warning(self,
-                                "Error",
-                                "Could not read Cube Files, may be corrupt!",
-                                QMessageBox.Ok,
-                                QMessageBox.Ok)
-            self.close()
-            return
-        self.valid = True
+            if not self.experiment:
+                QMessageBox.critical(self,
+                                     "Error",
+                                     "Could not read Cube Files, may be corrupt!",
+                                     QMessageBox.Ok,
+                                     QMessageBox.Ok)
+                self.close()
+                return
+            self.valid = True
 
-        super().accept()
+            super().accept()
 
-    def increment_progress(self):
-        currentValue = self.progress_indicator.value()
-        value = currentValue + 1
-        self.progress_indicator.setValue(value)
+    def _show_progressbar(self):
+        self.setEnabled(False)
+        self.layout().replaceWidget(self.buttonBox, self.progress_indicator)
+        self.buttonBox.setParent(None)
+        self.progress_indicator.show()
+
+    def _display_progress(self, pbar: ProgressBar, msg=None, pos=None):
+        self.progress_indicator.setMaximum(pbar.total)
+        self.progress_indicator.setValue(pbar.n)
+        QApplication.processEvents()
+        time.sleep(0.1)
