@@ -143,12 +143,12 @@ def deserialize_metric(ioHelper):
 
 def deserialize_region(id_mappings, ioHelper):
     region_mapping = id_mappings.region_mapping
-    region_set = id_mappings.region_mapping
+    region_set = id_mappings.region_set
     id = ioHelper.readId()
     name = ioHelper.readString()
     sourceFileName = ioHelper.readString()
     sourceFileBeginLine = ioHelper.readInt()
-    if name in region_set:
+    if id not in region_mapping and name in region_set:
         region_set[name] += 1
         name = f'{name} #{region_set[name]}'
     else:

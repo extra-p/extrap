@@ -5,58 +5,41 @@ from collections import defaultdict
 from pathlib import Path
 
 from entities.callpath import Callpath
+from entities.calltree import CallTree, Node
 from entities.coordinate import Coordinate
 from entities.experiment import Experiment
 from entities.metric import Metric
 from entities.parameter import Parameter
 from fileio import io_helper
-from fileio.io_helper import create_call_tree
 from pycubexr import CubexParser  # @UnresolvedImport
 from pycubexr.utils.exceptions import MissingMetricError  # @UnresolvedImport
 from util.exceptions import FileFormatError
 from util.progress_bar import DUMMY_PROGRESS
 
 
-def construct_parent(calltree_elements, occurances, calltree_element_id):
-    occurances_parent = occurances - 1
-    calltree_element_id2 = calltree_element_id - 1
-    calltree_element_id3 = -1
-    while calltree_element_id2 >= 0:
-        calltree_element = calltree_elements[calltree_element_id2]
-        occurances_new = calltree_element.count("-")
-        if occurances_parent == occurances_new:
-            calltree_element_id3 = calltree_element_id2
-            break
-        calltree_element_id2 -= 1
-    calltree_element_new = calltree_elements[calltree_element_id3]
-    if calltree_element_new.count("-") == 0:
-        return calltree_element_new
-    else:
-        occurances_new = calltree_element_new.count("-")
-        calltree_element_parent = construct_parent(calltree_elements, occurances_new, calltree_element_id)
-        calltree_element_new = calltree_element_new.replace("-", "")
-        calltree_element_final = calltree_element_parent + "->" + calltree_element_new
-        return calltree_element_final
+def make_call_tree(cnodes):
+    callpaths = []
+    root = CallTree()
 
+    def walk_tree(parent_cnode, parent):
+        for cnode in parent_cnode.get_children():
+            name = cnode.region.name
+            path_name = '->'.join((parent.path.name, name))
+            callpath = Callpath(path_name)
+            callpaths.append(callpath)
+            node = Node(name, callpath)
+            parent.add_child_node(node)
+            walk_tree(cnode, node)
 
-def fix_call_tree(calltree):
-    calltree_elements = calltree.split("\n")
-    calltree_elements.remove("")
-    calltree_elements_new = []
+    for root_cnode in cnodes:
+        name = root_cnode.region.name
+        callpath = Callpath(name)
+        callpaths.append(callpath)
+        node = Node(name, callpath)
+        root.add_node(node)
+        walk_tree(root_cnode, node)
 
-    for calltree_element_id in range(len(calltree_elements)):
-        calltree_element = calltree_elements[calltree_element_id]
-        if calltree_element.count("-") == 0:
-            calltree_elements_new.append(calltree_element)
-        elif calltree_element.count("-") > 0:
-            occurances = calltree_element.count("-")
-            calltree_element_new = construct_parent(calltree_elements, occurances, calltree_element_id)
-            calltree_element_new = calltree_element_new + "->"
-            calltree_element = calltree_element.replace("-", "")
-            calltree_element_new = calltree_element_new + calltree_element
-            calltree_elements_new.append(calltree_element_new)
-
-    return calltree_elements_new
+    return root, callpaths
 
 
 def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
@@ -136,15 +119,13 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
 
             # get call tree
             if path_id == 0:
-                call_tree = parsed.get_calltree()
-                call_tree = fix_call_tree(call_tree)
-                callpaths = [Callpath(node) for node in call_tree]
+                call_tree, callpaths = make_call_tree(parsed.get_root_cnodes())
                 # create the callpaths
                 for c in callpaths:
                     experiment.add_callpath(c)
 
                 # create the call tree and add it to the experiment
-                call_tree = create_call_tree(callpaths)
+
                 if logging.getLogger().isEnabledFor(logging.DEBUG):
                     call_tree.print_tree()
                 experiment.add_call_tree(call_tree)

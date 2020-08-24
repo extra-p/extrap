@@ -1,8 +1,8 @@
-import sys
 import unittest
 import warnings
 from threading import Thread
 
+import sys
 from PySide2.QtCore import QRect, QItemSelectionModel
 from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
 
@@ -125,7 +125,7 @@ class TestGuiLoadExperiment(unittest.TestCase):
         _old_warnings_handler = warnings.showwarning
         _old_exception_handler = sys.excepthook
         try:
-            window, app = extrapgui.main(test=True)
+            window, app = extrapgui.main(test=True, args=[])
             exp = read_text_file('data/text/one_parameter_1.txt')
             self.assertIsNone(window.experiment)
 

@@ -45,10 +45,10 @@ def _preload_common_fonts():
     return thread
 
 
-def main(*, test=False):
+def main(*, args=None, test=False):
     # preload fonts for matplotlib
     font_preloader = _preload_common_fonts()
-    arguments = parse_arguments()
+    arguments = parse_arguments(args)
 
     # configure logging
     log_level = min(logging.getLevelName(arguments.log_level), logging.INFO)
@@ -122,7 +122,7 @@ def main(*, test=False):
         return window, app
 
 
-def parse_arguments():
+def parse_arguments(args=None):
     parser = argparse.ArgumentParser(description=__info__.__description__)
     parser.add_argument("--log", action="store", dest="log_level", type=str.upper, default='CRITICAL',
                         choices=['TRACEBACK', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
@@ -145,7 +145,7 @@ def parse_arguments():
     parser.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
                         choices=["weak", "strong"],
                         help="set weak or strong scaling when loading data from cube files [weak (default), strong]")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(args)
     return arguments
 
 
