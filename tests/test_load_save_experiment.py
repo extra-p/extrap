@@ -1,9 +1,9 @@
 import tempfile
 import unittest
 
-from fileio.experiment_io import write_experiment, read_experiment
-from fileio.text_file_reader import read_text_file
-from modelers.model_generator import ModelGenerator
+from extrap.fileio.experiment_io import write_experiment, read_experiment
+from extrap.fileio.text_file_reader import read_text_file
+from extrap.modelers.model_generator import ModelGenerator
 
 
 class TestMultiParameterAfterModeling(unittest.TestCase):

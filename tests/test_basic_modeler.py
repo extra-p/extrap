@@ -1,9 +1,9 @@
 import unittest
 
-from entities.coordinate import Coordinate
-from entities.measurement import Measurement
-from entities.terms import CompoundTerm
-from modelers.single_parameter.basic import SingleParameterModeler
+from extrap.entities.coordinate import Coordinate
+from extrap.entities.measurement import Measurement
+from extrap.entities.terms import CompoundTerm
+from extrap.modelers.single_parameter.basic import SingleParameterModeler
 
 
 class TestBasicModeler(unittest.TestCase):

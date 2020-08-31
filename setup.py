@@ -4,14 +4,13 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 info = {}
-with open("src/__info__/__init__.py") as fp:
+with open("extrap/__init__.py") as fp:
     exec(fp.read(), info)
 
 setup(
     name="extrap",
     version=info['__version__'],
-    package_dir={"": "src"},
-    packages=find_packages("src"),
+    packages=find_packages(include=('extrap', 'extrap.*')),
     author="Extra-P project",
     author_email="extra-p@lists.parallel.informatik.tu-darmstadt.de",
     description=info['__description__'],
@@ -20,7 +19,7 @@ setup(
     url="https://github.com/extra-p/extrap",
     entry_points={
         "console_scripts": [
-            "extrap = extrap.extrap:main",
+            "extrap = extrap.extrapcmd:main",
         ],
 
         "gui_scripts": [

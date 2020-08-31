@@ -1,7 +1,7 @@
+import math
 import unittest
 
-from entities.fraction import Fraction
-import math
+from extrap.entities.fraction import Fraction
 
 
 class TestFraction(unittest.TestCase):

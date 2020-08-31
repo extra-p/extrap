@@ -1,6 +1,6 @@
 import unittest
 
-from extrap import extrap
+from extrap.extrap import extrapcmd as extrap
 
 
 class TestConsole(unittest.TestCase):

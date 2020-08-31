@@ -3,9 +3,9 @@ import unittest
 
 from marshmallow import ValidationError
 
-from entities.experiment import ExperimentSchema, Experiment
-from fileio.text_file_reader import read_text_file
-from modelers.model_generator import ModelGenerator
+from extrap.entities.experiment import ExperimentSchema, Experiment
+from extrap.fileio.text_file_reader import read_text_file
+from extrap.modelers.model_generator import ModelGenerator
 
 
 class TestSingleParameter(unittest.TestCase):

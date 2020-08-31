@@ -1,10 +1,10 @@
 import unittest
 
-from entities.callpath import Callpath
-from entities.calltree import CallTree, Node
-from entities.coordinate import Coordinate
-from entities.parameter import Parameter
-from fileio.extrap3_experiment_reader import read_extrap3_experiment
+from extrap.entities.callpath import Callpath
+from extrap.entities.calltree import CallTree, Node
+from extrap.entities.coordinate import Coordinate
+from extrap.entities.parameter import Parameter
+from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 
 
 class TestLoadExtraP3Experiment(unittest.TestCase):

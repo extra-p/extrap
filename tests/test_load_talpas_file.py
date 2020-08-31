@@ -1,11 +1,11 @@
 import unittest
 
-from entities.callpath import Callpath
-from entities.coordinate import Coordinate
-from entities.metric import Metric
-from entities.parameter import Parameter
-from fileio.talpas_file_reader import read_talpas_file
-from util.exceptions import InvalidExperimentError
+from extrap.entities.callpath import Callpath
+from extrap.entities.coordinate import Coordinate
+from extrap.entities.metric import Metric
+from extrap.entities.parameter import Parameter
+from extrap.fileio.talpas_file_reader import read_talpas_file
+from extrap.util.exceptions import InvalidExperimentError
 
 
 class TestTalpasFiles(unittest.TestCase):

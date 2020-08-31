@@ -1,15 +1,15 @@
+import sys
 import unittest
 import warnings
 from threading import Thread
 
-import sys
 from PySide2.QtCore import QRect, QItemSelectionModel
 from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
 
-from extrap import extrapgui
-from fileio.text_file_reader import read_text_file
-from gui.AdvancedPlotWidget import AdvancedPlotWidget
-from gui.MainWidget import MainWidget, QCoreApplication
+from extrap.extrap import extrapgui
+from extrap.fileio.text_file_reader import read_text_file
+from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
+from extrap.gui.MainWidget import MainWidget, QCoreApplication
 
 APP = QApplication()
 APP.setStyle('Fusion')

@@ -1,13 +1,13 @@
 import unittest
 import warnings
 
-from entities.callpath import Callpath
-from entities.calltree import CallTree, Node
-from entities.coordinate import Coordinate
-from entities.metric import Metric
-from entities.parameter import Parameter
-from fileio.cube_file_reader2 import read_cube_file
-from util.exceptions import FileFormatError
+from extrap.entities.callpath import Callpath
+from extrap.entities.calltree import CallTree, Node
+from extrap.entities.coordinate import Coordinate
+from extrap.entities.metric import Metric
+from extrap.entities.parameter import Parameter
+from extrap.fileio.cube_file_reader2 import read_cube_file
+from extrap.util.exceptions import FileFormatError
 
 
 class TestCubeFileLoader(unittest.TestCase):

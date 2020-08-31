@@ -1,13 +1,13 @@
 import unittest
 from random import shuffle
 
-from entities.callpath import Callpath
-from entities.coordinate import Coordinate
-from entities.metric import Metric
-from fileio.jsonlines_file_reader import read_jsonlines_file
-from fileio.text_file_reader import read_text_file
-from modelers.model_generator import ModelGenerator
-from modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
+from extrap.entities.callpath import Callpath
+from extrap.entities.coordinate import Coordinate
+from extrap.entities.metric import Metric
+from extrap.fileio.jsonlines_file_reader import read_jsonlines_file
+from extrap.fileio.text_file_reader import read_text_file
+from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 
 
 class TestFindFirstMeasurements(unittest.TestCase):

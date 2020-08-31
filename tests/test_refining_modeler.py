@@ -1,11 +1,11 @@
 import unittest
 
-from entities.callpath import Callpath
-from entities.hypotheses import ConstantHypothesis, SingleParameterHypothesis
-from entities.metric import Metric
-from fileio.text_file_reader import read_text_file
-from modelers.model_generator import ModelGenerator
-from modelers.single_parameter.refining import RefiningModeler
+from extrap.entities.callpath import Callpath
+from extrap.entities.hypotheses import ConstantHypothesis, SingleParameterHypothesis
+from extrap.entities.metric import Metric
+from extrap.fileio.text_file_reader import read_text_file
+from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.single_parameter.refining import RefiningModeler
 
 
 class TestRefiningModeler(unittest.TestCase):
