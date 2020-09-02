@@ -92,3 +92,45 @@ class TestJsonFiles(unittest.TestCase):
             Coordinate(64.0, 10.0), Coordinate(64.0, 20.0), Coordinate(64.0, 30.0), Coordinate(64.0, 40.0),
             Coordinate(64.0, 50.0)
         ])
+
+
+class TestNewJsonFiles(unittest.TestCase):
+    def test_read_1(self):
+        Parameter.ID_COUNTER = itertools.count()
+        experiment = read_json_file("data/json/new/input1.json")
+        x = Parameter('x')
+        self.assertListEqual(experiment.parameters, [x])
+        self.assertListEqual([p.id for p in experiment.parameters], [0])
+        self.assertListEqual(experiment.coordinates, [
+            Coordinate([(x, 4)]),
+            Coordinate([(x, 8)]),
+            Coordinate([(x, 16)]),
+            Coordinate([(x, 32)]),
+            Coordinate([(x, 64)])
+        ])
+        self.assertListEqual(experiment.metrics, [
+            Metric('time')
+        ])
+        self.assertListEqual(experiment.callpaths, [
+            Callpath('sweep')
+        ])
+
+    def test_read_2(self):
+        Parameter.ID_COUNTER = itertools.count()
+        experiment = read_json_file("data/json/new/input2.json")
+        x = Parameter('x')
+        y = Parameter('y')
+        self.assertListEqual(experiment.parameters, [x, y])
+        self.assertListEqual(experiment.coordinates, [
+            Coordinate(4, 10),
+            Coordinate(8, 20),
+            Coordinate(16, 30),
+            Coordinate(32, 40),
+            Coordinate(64, 50)
+        ])
+        self.assertListEqual(experiment.metrics, [
+            Metric('time'), Metric('visits')
+        ])
+        self.assertListEqual(experiment.callpaths, [
+            Callpath('sweep'), Callpath('sweep2')
+        ])

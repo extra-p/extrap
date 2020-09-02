@@ -22,8 +22,11 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.io_helper import create_call_tree
+from extrap.fileio.jsonlines_file_reader import read_jsonlines_file
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+
+SCHEMA_URI = ""
 
 
 def read_json_file(path, progress_bar=DUMMY_PROGRESS):
@@ -32,11 +35,52 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
         try:
             json_data = json.load(inputfile)
         except JSONDecodeError as error:
-            raise FileFormatError(error)
+            inputfile.seek(0)
+            is_jsonlines = any(line.strip().startswith('{') for line in inputfile) and \
+                           all(line.strip().startswith('{') or line.strip() == "" for line in inputfile)
+            if is_jsonlines:
+                return read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS)
+            else:
+                raise FileFormatError(str(error)) from error
 
     # create an experiment object to save the date loaded from the text file
     experiment = Experiment()
 
+    if "callpaths" not in json_data:
+        _read_new_json_file(experiment, json_data, progress_bar)
+    else:
+        _read_legacy_json_file(experiment, json_data, progress_bar)
+
+    callpaths = experiment.get_callpaths()
+    call_tree = create_call_tree(callpaths, progress_bar)
+    experiment.add_call_tree(call_tree)
+
+    io_helper.validate_experiment(experiment, progress_bar)
+
+    return experiment
+
+
+def _read_new_json_file(experiment, json_data, progress_bar):
+    parameter_data = json_data["parameters"]
+    for p in parameter_data:
+        parameter = Parameter(p)
+        experiment.add_parameter(parameter)
+
+    measurements_data = json_data["measurements"]
+    for callpath_name, data in progress_bar(measurements_data.items()):
+        for metric_name, measurements in data.items():
+            for measurement in measurements:
+                coordinate = Coordinate(measurement['point'])
+                experiment.add_coordinate(coordinate)
+                callpath = Callpath(callpath_name)
+                experiment.add_callpath(callpath)
+                metric = Metric(metric_name)
+                experiment.add_metric(metric)
+                measurement = Measurement(coordinate, callpath, metric, measurement['values'])
+                experiment.add_measurement(measurement)
+
+
+def _read_legacy_json_file(experiment, json_data, progress_bar):
     # read parameters
     parameter_data = json_data["parameters"]
     parameter_data = sorted(parameter_data, key=lambda x: x["id"])
@@ -46,7 +90,6 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
         parameter = Parameter(parameter_name)
         experiment.add_parameter(parameter)
         logging.debug("Parameter " + str(i + 1) + ": " + parameter_name)
-
     # read callpaths
     callpath_data = json_data["callpaths"]
     logging.debug("Number of callpaths: " + str(len(callpath_data)))
@@ -55,12 +98,6 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
         callpath = Callpath(callpath_name)
         experiment.add_callpath(callpath)
         logging.debug("Callpath " + str(i + 1) + ": " + callpath_name)
-
-    # create the call tree and add it to the experiment
-    callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths, progress_bar)
-    experiment.add_call_tree(call_tree)
-
     # read metrics
     metric_data = json_data["metrics"]
     logging.debug("Number of metrics: " + str(len(metric_data)))
@@ -69,7 +106,6 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
         metric = Metric(metric_name)
         experiment.add_metric(metric)
         logging.debug("Metric " + str(i + 1) + ": " + metric_name)
-
     # read coordinates
     coordinate_data = json_data["coordinates"]
     logging.debug("Number of coordinates: " + str(len(coordinate_data)))
@@ -85,7 +121,6 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
             coordinate.add_parameter_value(parameter, parameter_value)
         experiment.add_coordinate(coordinate)
         logging.debug("Coordinate " + str(i + 1) + ": " + coordinate.get_as_string())
-
     aggregate_data = {}
     # read measurements
     measurements_data = json_data["measurements"]
@@ -100,7 +135,6 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
             aggregate_data[key].append(value)
         else:
             aggregate_data[key] = [value]
-
     for key in progress_bar(aggregate_data):
         coordinate_id, callpath_id, metric_id = key
         coordinate = experiment.get_coordinate(coordinate_id)
@@ -109,11 +143,3 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
         values = aggregate_data[key]
         measurement = Measurement(coordinate, callpath, metric, values)
         experiment.add_measurement(measurement)
-
-    callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths, progress_bar)
-    experiment.add_call_tree(call_tree)
-
-    io_helper.validate_experiment(experiment, progress_bar)
-
-    return experiment

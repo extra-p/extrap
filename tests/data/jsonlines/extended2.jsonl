@@ -1,0 +1,11 @@
+{"params":{"x":1,"y":1},"metric":"metr","callpath":"test","value":[2,2,2,2,2]}
+{"params":{"x":1,"y":2},"metric":"metr","callpath":"test","value":[3,3,3,3,3]}
+{"params":{"x":1,"y":3},"metric":"metr","callpath":"test","value":[4,4,4,4,4]}
+
+{"params":{"x":2,"y":1},"metric":"metr","callpath":"test","value":[5,5,5,5,5]}
+{"params":{"x":2,"y":2},"metric":"metr","callpath":"test","value":[6,6,6,6,6]}
+{"params":{"x":2,"y":3},"metric":"metr","callpath":"test","value":[7,7,7,7,7]}
+
+{"params":{"x":3,"y":1},"metric":"metr","callpath":"test","value":[10,10,10,10,10]}
+{"params":{"x":3,"y":2},"metric":"metr","callpath":"test","value":[11,11,11,11,11]}
+{"params":{"x":3,"y":3},"metric":"metr","callpath":"test","value":[12,12,12,12,12]}

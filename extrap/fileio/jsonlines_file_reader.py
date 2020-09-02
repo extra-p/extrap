@@ -30,7 +30,8 @@ def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
 
     complete_data = {}
     parameters = None
-    callpath = Callpath('<root>')
+    default_callpath = Callpath('<root>')
+    default_metric = Metric('<default>')
 
     progress_bar.total += os.path.getsize(path)
 
@@ -47,8 +48,17 @@ def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
             except JSONDecodeError as error:
                 raise FileFormatError(f'Decoding of line {ln} failed: {str(error)}. Line: "{line}"')
             try:
-                key = callpath, Metric(data['metric'])
-                if parameters is None:
+                if 'callpath' in data:
+                    callpath = Callpath(data['callpath'])
+                else:
+                    callpath = default_callpath
+
+                if 'metric' in data:
+                    metric = Metric(data['metric'])
+                else:
+                    metric = default_metric
+                key = callpath, metric
+                if parameters is None:  # ensures uniform order of paremeters
                     parameters = [Parameter(p) for p in data['params'].keys()]
                 coordinate = Coordinate(data['params'][p.name] for p in parameters)
                 io_helper.append_to_repetition_dict(complete_data, key, coordinate, data['value'], progress_bar)
@@ -62,8 +72,7 @@ def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
         experiment.add_parameter(p)
 
     callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths, progress_bar)
-    experiment.add_call_tree(call_tree)
+    experiment.call_tree = create_call_tree(callpaths, progress_bar)
 
     io_helper.validate_experiment(experiment, progress_bar)
 
