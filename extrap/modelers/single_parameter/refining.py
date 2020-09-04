@@ -1,7 +1,7 @@
 import copy
 import warnings
 from collections import namedtuple
-from typing import List, Tuple, Sequence
+from typing import List, Tuple, Sequence, cast
 
 from extrap.entities.fraction import Fraction
 from extrap.entities.functions import SingleParameterFunction
@@ -125,10 +125,14 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
     def iterative_refinement(self, hypotheses: List[SingleParameterRefiningHypothesis],
                              state_per_slice: List[SearchState], slices,
                              constant_cost, measurements):
+        if self.compare_with_RSS:
+            selector = lambda x: x.RSS
+        else:
+            selector = lambda x: x.SMAPE
         best_hypotheses = hypotheses
         best_hypotheses_step = copy.copy(hypotheses)
         best_hypotheses_previous = copy.copy(hypotheses)
-
+        current_acceptance_threshold = self.acceptance_threshold
         for i in range(10):
             for s, slice in enumerate(slices):
                 old_state = state_per_slice[s]  # contains old exponents
@@ -163,18 +167,30 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
                 state_per_slice[s] = state
 
             # determine best hypothesis of step
-            best_hypothesis_step: SingleParameterHypothesis = min(best_hypotheses_step, key=lambda x: x.SMAPE)
-            if best_hypotheses[-1].SMAPE / best_hypothesis_step.SMAPE >= self.acceptance_threshold:
+            best_hypothesis_step: SingleParameterHypothesis = min(best_hypotheses_step, key=selector)
+            global_best_hypothesis = min(best_hypotheses, key=selector)
+            if global_best_hypothesis.SMAPE / best_hypothesis_step.SMAPE >= current_acceptance_threshold:
                 best_hypotheses.append(best_hypothesis_step)
+                current_acceptance_threshold = self.acceptance_threshold
+            else:
+                current_acceptance_threshold *= self.acceptance_threshold
 
-            minimal_slice_improvement = min(best_hypotheses_step[s].SMAPE / best_hypotheses_previous[s].SMAPE
+            minimal_slice_improvement = max(best_hypotheses_previous[s].SMAPE / best_hypotheses_step[s].SMAPE
                                             for s in range(len(slices)))
-            if i == 0 or minimal_slice_improvement >= self.termination_threshold:
+            if minimal_slice_improvement >= self.termination_threshold:
                 best_hypotheses_previous, best_hypotheses_step = best_hypotheses_step, best_hypotheses_previous
             else:
                 break
 
-        return min(best_hypotheses, key=lambda x: x.SMAPE)
+        return min(best_hypotheses, key=selector)
+
+    @staticmethod
+    def _make_refinement_hypothesis(constant_hypothesis, partition):
+        p_partition, l_partition = partition
+        partition_id = max(len(p_partition), len(l_partition)) - 1
+        constant_hypothesis = cast(SingleParameterRefiningHypothesis, copy.copy(constant_hypothesis))
+        constant_hypothesis.partition_index = partition_id
+        return constant_hypothesis
 
     def _build_hypotheses_generator(self, partition, ignore_constant=False):
         p_partition, l_partition = partition

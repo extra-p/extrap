@@ -42,8 +42,10 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         """
         Compares the best with the new hypothesis and decides which one is a better fit for the data.
         If the new hypothesis is better than the best one it becomes the best hypothesis.
-        The choice is made based on the RSS, since this is the metric optimised by the Regression.
+        The choice is made based on the RSS or SMAPE.
         """
+        if old == MAX_HYPOTHESIS:
+            return True
 
         # get the compound terms of the new hypothesis
         compound_terms = new.function.compound_terms
