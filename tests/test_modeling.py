@@ -1,10 +1,11 @@
 import unittest
+from operator import itemgetter
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.metric import Metric
-from extrap.entities.terms import CompoundTerm, SimpleTerm
+from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.modelers.model_generator import ModelGenerator
 
@@ -62,7 +63,7 @@ class TestModeling(unittest.TestCase):
             model_generator.model_all()
 
 
-class FunctionAssertions:
+class TestCaseWithFunctionAssertions(unittest.TestCase):
     def assertApprox(self, function, other, places=5):
         import math
         diff = abs(other - function)
@@ -85,9 +86,16 @@ class FunctionAssertions:
 
     def assertApproxTerm(self, tt: CompoundTerm, to: CompoundTerm, **kwargs):
         self.assertApprox(tt.coefficient, to.coefficient, **kwargs)
-        self.assertEqual(len(tt.simple_terms), len(to.simple_terms))
-        for stt, sto in zip(tt.simple_terms, to.simple_terms):
-            self.assertApproxSimpleTerm(stt, sto, **kwargs)
+        if isinstance(tt, CompoundTerm):
+            self.assertEqual(len(tt.simple_terms), len(to.simple_terms))
+            for stt, sto in zip(tt.simple_terms, to.simple_terms):
+                self.assertApproxSimpleTerm(stt, sto, **kwargs)
+        elif isinstance(tt, MultiParameterTerm):
+            self.assertEqual(len(tt.parameter_term_pairs), len(to.parameter_term_pairs))
+            for stt, sto in zip(sorted(tt.parameter_term_pairs, key=itemgetter(0)),
+                                sorted(to.parameter_term_pairs, key=itemgetter(0))):
+                self.assertEqual(stt[0], sto[0])
+                self.assertApproxTerm(stt[1], sto[1], **kwargs)
 
     def assertApproxSimpleTerm(self, stt: SimpleTerm, sto: SimpleTerm, **kwargs):
         self.assertEqual(stt.term_type, sto.term_type)

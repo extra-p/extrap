@@ -183,6 +183,21 @@ class Hypothesis:
             if abs(self.function.constant_coefficient / minimum) < phi:
                 self.function.constant_coefficient = 0
 
+    def calc_term_contribution(self, term, measurements: Sequence[Measurement]):
+        """
+        Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
+        """
+        maximum_term_contribution = 0
+        for measurement in measurements:
+            parameter_value = measurement.coordinate
+            actual = measurement.value(self._use_median)
+            if actual == 0:
+                continue
+            contribution = abs(term.evaluate(parameter_value) / actual)
+            if contribution > maximum_term_contribution:
+                maximum_term_contribution = contribution
+        return maximum_term_contribution
+
     def __repr__(self):
         return f"Hypothesis({self.function}, RSS:{self._RSS:5f}, SMAPE:{self._SMAPE:5f})"
 
@@ -346,21 +361,6 @@ class SingleParameterHypothesis(Hypothesis):
         for i, compound_term in enumerate(self.function.compound_terms):
             compound_term.coefficient = X[0][i + 1]
 
-    def calc_term_contribution(self, term, measurements: Sequence[Measurement]):
-        """
-        Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
-        """
-        maximum_term_contribution = 0
-        for measurement in measurements:
-            parameter_value = measurement.coordinate[0]
-            actual = measurement.value(self._use_median)
-            if actual == 0:
-                continue
-            contribution = abs(term.evaluate(parameter_value) / actual)
-            if contribution > maximum_term_contribution:
-                maximum_term_contribution = contribution
-        return maximum_term_contribution
-
 
 class MultiParameterHypothesis(Hypothesis):
     """
@@ -480,28 +480,6 @@ class MultiParameterHypothesis(Hypothesis):
         self.function.set_constant_coefficient(X[0][0])
         for multi_parameter_term_id in range(hypothesis_total_terms - 1):
             self.function[multi_parameter_term_id].set_coefficient(X[0][multi_parameter_term_id + 1])
-
-    def calc_term_contribution(self, term_index, measurements, coordinates):
-        """
-        Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
-        """
-        multi_parameter_terms = self.function.get_multi_parameter_terms()
-        # compound_terms = self.function.get_compound_terms()
-        maximum_term_contribution = 0
-        for element_id in range(len(measurements)):
-            # _, parameter_value = coordinates[element_id].get_parameter_value(0)
-            dimensions = coordinates[element_id].get_dimensions()
-            parameter_value_pairs = {}
-            for i in range(dimensions):
-                parameter, value = coordinates[element_id].get_parameter_value(i)
-                parameter_value_pairs[parameter.get_name()] = float(value)
-
-            contribution = abs(multi_parameter_terms[term_index].evaluate(parameter_value_pairs) / measurements[
-                element_id].value(self._use_median))
-
-            if contribution > maximum_term_contribution:
-                maximum_term_contribution = contribution
-        return maximum_term_contribution
 
 
 class HypothesisSchema(BaseSchema):

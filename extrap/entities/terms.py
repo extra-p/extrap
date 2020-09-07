@@ -155,6 +155,8 @@ class MultiParameterTerm(Term):
 
     def __init__(self, *terms: Tuple[int, SingleParameterTerm]):
         super().__init__()
+        if len(terms) > 0 and not isinstance(terms[0], Tuple):
+            raise TypeError('Argument must be a pair of parameter index and term.')
         self.parameter_term_pairs = list(terms)
 
     def add_parameter_term_pair(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):

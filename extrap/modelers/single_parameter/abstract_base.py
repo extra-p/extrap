@@ -27,16 +27,15 @@ H = Union[_H, Hypothesis]
 
 @modeler_options
 class AbstractSingleParameterModeler(AbstractModeler, ABC):
+    CLEAN_CONSTANT_EPSILON = 1e-3  # minimum allowed value for a constant coefficient before it is set to 0
+
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
     use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
     compare_with_RSS = modeler_options.add(False, bool)
 
     def __init__(self, use_median: bool):
         super().__init__(use_median)
-        # value for the minimum term contribution
-        self.phi = 1e-3
-        # minimum allowed value for a constant coefficient befor it is set to 0
-        self.epsilon = 0.0005
+        self.epsilon = 0.0005  # value for the minimum term contribution
 
     def compare_hypotheses(self, old: Hypothesis, new: SingleParameterHypothesis, measurements: Sequence[Measurement]):
         """
@@ -111,7 +110,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     next_hypothesis.compute_coefficients(training_measurements)
 
                     # check if the constant coefficient should actually be 0
-                    next_hypothesis.clean_constant_coefficient(self.phi, training_measurements)
+                    next_hypothesis.clean_constant_coefficient(self.epsilon, training_measurements)
 
                     # compute the cost of the single parameter model for the validation data
                     next_hypothesis.compute_cost(training_measurements, validation_measurement)
@@ -125,7 +124,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
 
                 # check if the constant coefficient should actually be 0
                 next_hypothesis.clean_constant_coefficient(
-                    self.phi, measurements)
+                    self.CLEAN_CONSTANT_EPSILON, measurements)
 
                 # compute the cost of the single parameter model for the validation data
                 next_hypothesis.compute_cost_all_points(measurements)

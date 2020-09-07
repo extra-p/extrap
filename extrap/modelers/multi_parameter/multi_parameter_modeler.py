@@ -55,6 +55,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         super().__init__(use_median=False, single_parameter_modeler=single_parameter.Default())
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
+        self.epsilon = 0.0005  # value for the minimum term contribution
 
     @staticmethod
     def compare_parameter_values(parameter_value_list1, parameter_value_list2):
@@ -368,15 +369,26 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                      f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
 
         # find the best hypothesis
-        for i in range(1, len(hypotheses)):
-            hypotheses[i].compute_coefficients(measurements)
-            hypotheses[i].compute_cost(measurements)
-            hypotheses[i].compute_adjusted_rsquared(constantCost, measurements)
+        for i, hypothesis in enumerate(hypotheses):
+            hypothesis.compute_coefficients(measurements)
+            hypothesis.compute_cost(measurements)
+            hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-            logging.info(f"hypothesis {i}: {hypotheses[i].function} --- smape: {hypotheses[i].SMAPE} "
-                         f"--- ar2: {hypotheses[i].AR2} --- rss: {hypotheses[i].RSS} "
-                         f"--- rrss: {hypotheses[i].rRSS} --- re: {hypotheses[i].RE}")
-            if self.compare_with_RSS:
+            logging.info(f"hypothesis {i}: {hypothesis.function} --- smape: {hypothesis.SMAPE} "
+                         f"--- ar2: {hypothesis.AR2} --- rss: {hypothesis.RSS} "
+                         f"--- rrss: {hypothesis.rRSS} --- re: {hypothesis.RE}")
+
+            term_contribution_big_enough = True
+            # for all compound terms check if they are smaller than minimum allowed contribution
+            for term in hypothesis.function.compound_terms:
+                # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
+                if term.coefficient == 0 or hypothesis.calc_term_contribution(term, measurements) < self.epsilon:
+                    term_contribution_big_enough = False
+                    break
+
+            if not term_contribution_big_enough:
+                continue
+            elif self.compare_with_RSS:
                 if hypotheses[i].RSS < best_hypothesis.RSS:
                     best_hypothesis = copy.deepcopy(hypotheses[i])
             elif hypotheses[i].get_SMAPE() < best_hypothesis.get_SMAPE():

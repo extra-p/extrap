@@ -1,5 +1,3 @@
-import unittest
-
 import numpy as np
 
 from extrap.entities.coordinate import Coordinate
@@ -8,10 +6,10 @@ from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.terms import CompoundTerm
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
-from tests.test_modeling import FunctionAssertions
+from tests.test_modeling import TestCaseWithFunctionAssertions
 
 
-class TestBasicModeler(unittest.TestCase, FunctionAssertions):
+class TestBasicModeler(TestCaseWithFunctionAssertions):
     def test_default_functions(self):
         modeler = SingleParameterModeler()
         for bb in modeler.create_default_building_blocks(False):

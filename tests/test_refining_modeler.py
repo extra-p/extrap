@@ -1,5 +1,3 @@
-import unittest
-
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
@@ -11,10 +9,10 @@ from extrap.entities.terms import CompoundTerm
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.single_parameter.refining import RefiningModeler
-from tests.test_modeling import FunctionAssertions
+from tests.test_modeling import TestCaseWithFunctionAssertions
 
 
-class TestRefiningModeler(unittest.TestCase, FunctionAssertions):
+class TestRefiningModeler(TestCaseWithFunctionAssertions):
 
     def test_general(self):
         experiment = read_text_file('data/text/one_parameter_6.txt')
@@ -199,4 +197,3 @@ class TestRefiningModeler(unittest.TestCase, FunctionAssertions):
             hypothesis = SingleParameterHypothesis(function, False)
             hypothesis.compute_cost_all_points(measurements)
             self.assertApproxFunction(function, models[0].hypothesis.function, places=5)
-  
