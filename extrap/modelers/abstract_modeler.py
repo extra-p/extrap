@@ -25,6 +25,10 @@ class AbstractModeler(ABC):
 
     @abstractmethod
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
+        """ This method is the core of the modeling system.
+        It receives a sequence of measurement point sequences and returns a sequence of models.
+        For each sequence of measurement points one model is generated.
+        The measurement sequences are not guaranteed to have similar coordinates."""
         raise NotImplementedError
 
     @classmethod

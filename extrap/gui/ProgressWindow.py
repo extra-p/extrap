@@ -34,7 +34,10 @@ class ProgressWindow(ProgressBar):
 
     def close(self):
         super().close()
-        self.dialog.close()
+        try:
+            self.dialog.close()
+        except:
+            pass
 
     def clear(self, nolock=False):
         super().clear(nolock)

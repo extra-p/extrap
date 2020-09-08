@@ -2,19 +2,22 @@ import logging
 import re
 import warnings
 from collections import defaultdict
+from itertools import groupby
+from operator import itemgetter
 from pathlib import Path
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
+from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from pycubexr import CubexParser  # @UnresolvedImport
-from pycubexr.utils.exceptions import MissingMetricError  # @UnresolvedImport
+from pycubexr.utils.exceptions import MissingMetricError
 
 
 def make_call_tree(cnodes):
@@ -42,7 +45,26 @@ def make_call_tree(cnodes):
     return root, callpaths
 
 
-def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
+def make_callpath_mapping(cnodes):
+    callpaths = {}
+
+    def walk_tree(parent_cnode, parent_name):
+        for cnode in parent_cnode.get_children():
+            name = cnode.region.name
+            path_name = '->'.join((parent_name, name))
+            callpaths[cnode.id] = Callpath(path_name)
+            walk_tree(cnode, path_name)
+
+    for root_cnode in cnodes:
+        name = root_cnode.region.name
+        callpath = Callpath(name)
+        callpaths[root_cnode.id] = callpath
+        walk_tree(root_cnode, name)
+
+    return callpaths
+
+
+def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics=None):
     # read the paths of the cube files in the given directory with dir_name
     path = Path(dir_name)
     if not path.is_dir():
@@ -95,6 +117,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
             parameter_dict[n].add(v)
         parameter_values.append(parameter_value)
 
+    # determine non-constant parameters and add them to experiment
     parameter_selection_mask = []
     for i, p in enumerate(parameter_names):
         if len(parameter_dict[p]) > 1:
@@ -104,87 +127,85 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS):
     pbar.step("Reading cube files")
     show_warning_no_strong_scaling = False
     show_warning_skipped_metrics = False
-    complete_data = {}
-    # create a progress bar for reading the cube files
-    for path_id, (path, parameter_value) in enumerate(zip(cubex_files, parameter_values)):
-        pbar.update()
-        with CubexParser(str(path)) as parsed:
+    aggregated_values = defaultdict(list)
 
-            # create coordinate
-            coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
+    # import data from cube files
+    # optimize import memory usage by reordering files and grouping by coordinate
+    num_points = 0
+    reordered_files = sorted(zip(cubex_files, parameter_values), key=itemgetter(1))
+    for parameter_value, point_group in groupby(reordered_files, key=itemgetter(1)):
+        num_points += 1
+        # create coordinate
+        coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
+        experiment.add_coordinate(coordinate)
 
-            # check if the coordinate already exists
-            if not experiment.coordinate_exists(coordinate):
-                experiment.add_coordinate(coordinate)
+        aggregated_values = defaultdict(list)
+        for path, _ in point_group:
+            pbar.update()
+            with CubexParser(str(path)) as parsed:
+                callpaths = make_callpath_mapping(parsed.get_root_cnodes())
+                # iterate over all metrics
+                for cube_metric in parsed.get_metrics():
+                    # NOTE: here we could choose which metrics to extract
+                    if selected_metrics and cube_metric.name not in selected_metrics:
+                        continue
+                    try:
+                        metric_values = parsed.get_metric_values(metric=cube_metric)
+                        # create the metrics
+                        metric = Metric(cube_metric.name)
 
-            # get call tree
-            if path_id == 0:
-                call_tree, callpaths = make_call_tree(parsed.get_root_cnodes())
-                # create the callpaths
-                for c in callpaths:
-                    experiment.add_callpath(c)
+                        for cnode_id in metric_values.cnode_indices:
+                            cnode = parsed.get_cnode(cnode_id)
+                            callpath = callpaths[cnode_id]
+                            # NOTE: here we can use clustering algorithm to select only certain node level values
+                            # create the measurements
+                            cnode_values = metric_values.cnode_values(cnode, convert_to_exclusive=True)
 
-                # create the call tree and add it to the experiment
+                            # in case of weak scaling calculate mean and median over all mpi process values
+                            if scaling_type == "weak":
+                                # do NOT use generator it is slower
+                                aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
 
-                if logging.getLogger().isEnabledFor(logging.DEBUG):
-                    call_tree.print_tree()
-                experiment.add_call_tree(call_tree)
+                                # in case of strong scaling calculate the sum over all mpi process values
+                            elif scaling_type == "strong":
+                                # check number of parameters, if > 1 use weak scaling instead
+                                # since sum values for strong scaling does not work for more than 1 parameter
+                                if len(experiment.get_parameters()) > 1:
+                                    aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
+                                    show_warning_no_strong_scaling = True
+                                else:
+                                    aggregated_values[(callpath, metric)].append(float(sum(cnode_values)))
 
-            # make list with region ids
-            # for metric in parsed.get_metrics():
-            #     if metric.name == "time":
-            #         metric_values = parsed.get_metric_values(metric=metric)
-            #         for cnode_id in metric_values.cnode_indices:
-            #             cnode = parsed.get_cnode(cnode_id)
-            #             region = parsed.get_region(cnode)
-            #             print(region)
-            #         break
+                    # Take care of missing metrics
+                    except MissingMetricError as e:  # @UnusedVariable
+                        show_warning_skipped_metrics = True
+                        logging.info(f'The cubex file does not contain data for the metric "{e.metric.name}"')
 
-            # NOTE: here we could choose which metrics to extract
-            # iterate over all metrics
-            for cube_metric in parsed.get_metrics():
-                try:
-                    metric_values = parsed.get_metric_values(metric=cube_metric)
-                    # create the metrics
-                    metric = Metric(cube_metric.name)
-                    experiment.add_metric(metric)
+        # add measurements to experiment
+        for (callpath, metric), values in aggregated_values.items():
+            experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
 
-                    for cnode_id in metric_values.cnode_indices:
-                        cnode = parsed.get_cnode(cnode_id)
-                        callpath = callpaths[cnode_id]
+    to_delete = []
+    # determine common callpaths for common calltree
+    # add common callpaths and metrics to experiment
+    for key, value in experiment.measurements.items():
+        if len(value) < num_points:
+            to_delete.append(key)
+        else:
+            (callpath, metric) = key
+            experiment.add_callpath(callpath)
+            experiment.add_metric(metric)
+    for key in to_delete:
+        del experiment.measurements[key]
 
-                        # NOTE: here we can use clustering algorithm to select only certain node level values
-                        # create the measurements
-                        cnode_values = metric_values.cnode_values(cnode, convert_to_exclusive=True)
-
-                        # in case of weak scaling calculate mean and median over all mpi process values
-                        if scaling_type == "weak":
-                            values = [float(v) for v in cnode_values]
-
-                            # in case of strong scaling calculate the sum over all mpi process values
-                        elif scaling_type == "strong":
-                            # check number of parameters, if > 1 use weak scaling instead
-                            # since sum values for strong scaling does not work for more than 1 parameter
-                            if len(experiment.get_parameters()) > 1:
-                                values = [float(v) for v in cnode_values]
-                                show_warning_no_strong_scaling = True
-                            else:
-                                values = float(sum(cnode_values))
-
-                        io_helper.append_to_repetition_dict(complete_data, (callpath, metric), coordinate, values)
-
-                # Take care of missing metrics
-                except MissingMetricError as e:  # @UnusedVariable
-                    show_warning_skipped_metrics = True
-                    logging.info(f'The cubex file does not contain data for the metric "{e.metric.name}"')
-
-    io_helper.repetition_dict_to_experiment(complete_data, experiment, pbar)
+    # determine calltree
+    call_tree = io_helper.create_call_tree(experiment.callpaths, pbar)
+    experiment.add_call_tree(call_tree)
 
     if show_warning_no_strong_scaling:
         warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
     if show_warning_skipped_metrics:
         warnings.warn("Some metrics were skipped because they contained no data. For details see log.")
-    # take care of the repetitions of the measurements
-    # experiment = compute_repetitions(experiment)
-    io_helper.validate_experiment(experiment, pbar)
+
+    # io_helper.validate_experiment(experiment, pbar)
     return experiment
