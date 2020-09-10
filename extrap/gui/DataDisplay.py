@@ -412,7 +412,7 @@ class GraphLimitsWidget(QWidget):
         self.grid = QGridLayout(self)
         self.grid.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
 
-        self._placeholder = AxisSelection(self, self, 0, [])
+        self._placeholder = AxisSelection(data_display, self, 0, [])
         self._placeholder.setEnabled(False)
         self.grid.addWidget(self._placeholder)
 
@@ -438,12 +438,12 @@ class GraphLimitsWidget(QWidget):
         del self.value_selections[:]
 
         for i in range(0, num_axis):
-            axis_selection = AxisSelection(self, self.data_display, i, parameters)
+            axis_selection = AxisSelection(self.data_display, self, i, parameters)
             self.axis_selections.append(axis_selection)
             self.grid.addWidget(axis_selection, i, 0)
         num_param = len(parameters)
         for i in range(num_axis, num_param):
-            value_selection = ValueSelection(self, self.data_display, i,
+            value_selection = ValueSelection(self.data_display, self, i,
                                              parameters[i].name)
             self.value_selections.append(value_selection)
             self.grid.addWidget(value_selection, i, 0)

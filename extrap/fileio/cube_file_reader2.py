@@ -7,7 +7,6 @@ from operator import itemgetter
 from pathlib import Path
 
 from extrap.entities.callpath import Callpath
-from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
 from extrap.entities.measurement import Measurement
@@ -18,31 +17,6 @@ from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from pycubexr import CubexParser  # @UnresolvedImport
 from pycubexr.utils.exceptions import MissingMetricError
-
-
-def make_call_tree(cnodes):
-    callpaths = []
-    root = CallTree()
-
-    def walk_tree(parent_cnode, parent):
-        for cnode in parent_cnode.get_children():
-            name = cnode.region.name
-            path_name = '->'.join((parent.path.name, name))
-            callpath = Callpath(path_name)
-            callpaths.append(callpath)
-            node = Node(name, callpath)
-            parent.add_child_node(node)
-            walk_tree(cnode, node)
-
-    for root_cnode in cnodes:
-        name = root_cnode.region.name
-        callpath = Callpath(name)
-        callpaths.append(callpath)
-        node = Node(name, callpath)
-        root.add_node(node)
-        walk_tree(root_cnode, node)
-
-    return root, callpaths
 
 
 def make_callpath_mapping(cnodes):
@@ -72,7 +46,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
     cubex_files = list(path.glob('*/*.cubex'))
     if not cubex_files:
         raise FileFormatError(f'No cube files were found in: {dir_name}')
-    pbar.total += 2 * len(cubex_files)
+    pbar.total += len(cubex_files) + 2
     # iterate over all folders and read the cube profiles in them
     experiment = Experiment()
 
@@ -81,8 +55,9 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
     parameter_names = []
     parameter_values = []
     parameter_dict = defaultdict(set)
+    progress_step_size = 1 / len(cubex_files)
     for path_id, path in enumerate(cubex_files):
-        pbar.update()
+        pbar.update(progress_step_size)
         folder_name = path.parent.name
         logging.debug(f"Cube file: {path} Folder: {folder_name}")
 
@@ -124,8 +99,15 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
             experiment.add_parameter(Parameter(p))
             parameter_selection_mask.append(i)
 
+    # check number of parameters, if > 1 use weak scaling instead
+    # since sum values for strong scaling does not work for more than 1 parameter
+    if scaling_type == 'strong' and len(experiment.get_parameters()) > 1:
+        warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
+        scaling_type = 'weak'
+        experiment.set_scaling("weak")
+
     pbar.step("Reading cube files")
-    show_warning_no_strong_scaling = False
+
     show_warning_skipped_metrics = False
     aggregated_values = defaultdict(list)
 
@@ -139,13 +121,14 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
         coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
         experiment.add_coordinate(coordinate)
 
-        aggregated_values = defaultdict(list)
+        aggregated_values.clear()
         for path, _ in point_group:
             pbar.update()
             with CubexParser(str(path)) as parsed:
                 callpaths = make_callpath_mapping(parsed.get_root_cnodes())
                 # iterate over all metrics
                 for cube_metric in parsed.get_metrics():
+                    pbar.update(0)
                     # NOTE: here we could choose which metrics to extract
                     if selected_metrics and cube_metric.name not in selected_metrics:
                         continue
@@ -155,6 +138,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
                         metric = Metric(cube_metric.name)
 
                         for cnode_id in metric_values.cnode_indices:
+                            pbar.update(0)
                             cnode = parsed.get_cnode(cnode_id)
                             callpath = callpaths[cnode_id]
                             # NOTE: here we can use clustering algorithm to select only certain node level values
@@ -168,13 +152,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
                                 # in case of strong scaling calculate the sum over all mpi process values
                             elif scaling_type == "strong":
-                                # check number of parameters, if > 1 use weak scaling instead
-                                # since sum values for strong scaling does not work for more than 1 parameter
-                                if len(experiment.get_parameters()) > 1:
-                                    aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
-                                    show_warning_no_strong_scaling = True
-                                else:
-                                    aggregated_values[(callpath, metric)].append(float(sum(cnode_values)))
+                                aggregated_values[(callpath, metric)].append(float(sum(cnode_values)))
 
                     # Take care of missing metrics
                     except MissingMetricError as e:  # @UnusedVariable
@@ -183,12 +161,14 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
         # add measurements to experiment
         for (callpath, metric), values in aggregated_values.items():
+            pbar.update(0)
             experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
 
+    pbar.step("Unify calltrees")
     to_delete = []
     # determine common callpaths for common calltree
     # add common callpaths and metrics to experiment
-    for key, value in experiment.measurements.items():
+    for key, value in pbar(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
         if len(value) < num_points:
             to_delete.append(key)
         else:
@@ -196,16 +176,16 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
             experiment.add_callpath(callpath)
             experiment.add_metric(metric)
     for key in to_delete:
+        pbar.update(0)
         del experiment.measurements[key]
 
     # determine calltree
-    call_tree = io_helper.create_call_tree(experiment.callpaths, pbar)
+    call_tree = io_helper.create_call_tree(experiment.callpaths, pbar, progress_scale=0.1)
     experiment.add_call_tree(call_tree)
 
-    if show_warning_no_strong_scaling:
-        warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
     if show_warning_skipped_metrics:
         warnings.warn("Some metrics were skipped because they contained no data. For details see log.")
 
-    # io_helper.validate_experiment(experiment, pbar)
+    io_helper.validate_experiment(experiment, pbar)
+    pbar.update()
     return experiment

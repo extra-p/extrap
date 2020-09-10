@@ -12,18 +12,18 @@ class ProgressBar(tqdm):
     def step(self, s='', refresh=True):
         super().set_postfix_str(s, refresh)
 
-    def __call__(self, iterable, length=None):
+    def __call__(self, iterable, length=None, scale=1):
         if length:
-            self.total += length
+            self.total += length * scale
         else:
             try:
-                self.total += len(iterable)
+                self.total += len(iterable) * scale
             except (TypeError, AttributeError):
                 pass
 
         for obj in iterable:
             yield obj
-            self.update()
+            self.update(scale)
 
 
 class DummyProgressBar(ProgressBar):
@@ -43,7 +43,7 @@ class DummyProgressBar(ProgressBar):
     def step(self, s='', refresh=True):
         pass
 
-    def __call__(self, iterable, length=None):
+    def __call__(self, iterable, length=None, scale=1):
         return iterable
 
     def unpause(self):
