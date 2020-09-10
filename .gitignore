@@ -157,3 +157,4 @@ cython_debug/
 media
 static
 .idea/
+tests/data/cubeset/fastest/

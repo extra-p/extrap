@@ -64,21 +64,28 @@ class TestModeling(unittest.TestCase):
 
 
 class TestCaseWithFunctionAssertions(unittest.TestCase):
-    def assertApprox(self, function, other, places=5):
+    def assertApprox(self, function, other, places=6):
         import math
         diff = abs(other - function)
         reference = min(abs(function), abs(other))
         if reference != 0:
-            nondecimal_places = int(math.log10(reference))
+            nondecimal_places = int(math.log10(reference)) + 1
             diff_scaled = diff / (10 ** nondecimal_places)
         else:
             diff_scaled = diff
         diff_rounded = round(diff_scaled, places)
         self.assertTrue(diff_rounded == 0, msg=f"{other} != {function} in {places} places")
 
+    # def test_assertApprox(self):
+    #     self.assertApprox(200, 200.001)
+    #     self.assertApprox(200.002, 200.001)
+    #     self.assertApprox(200.0049, 200.000)
+    #     self.assertApprox(200.000, 199.9951)
+    #     self.assertApprox(200, 200.4999, places=3)
+
     def assertApproxFunction(self, function, other, **kwargs):
         if len(kwargs) == 0:
-            kwargs['places'] = 5
+            kwargs['places'] = 6
         self.assertApprox(function.constant_coefficient, other.constant_coefficient, **kwargs)
         self.assertEqual(len(function.compound_terms), len(other.compound_terms))
         for tt, to in zip(function.compound_terms, other.compound_terms):
