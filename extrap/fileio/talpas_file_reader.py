@@ -61,9 +61,8 @@ def read_talpas_file(path, progress_bar=DUMMY_PROGRESS):
     for p in parameters:
         experiment.add_parameter(p)
 
-    callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths, progress_bar)
-    experiment.add_call_tree(call_tree)
+    call_tree = create_call_tree(experiment.callpaths, progress_bar)
+    experiment.call_tree = call_tree
 
     io_helper.validate_experiment(experiment, progress_bar)
 

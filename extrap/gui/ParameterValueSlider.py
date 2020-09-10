@@ -11,8 +11,8 @@ directory for details.
 
 import math
 
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 
@@ -29,7 +29,7 @@ class ParameterValueSlider(QWidget):
         self.grid = QGridLayout(self)
         self.setLayout(self.grid)
 
-        name_label = QLabel(self.parameter.get_name(), self)
+        name_label = QLabel(self.parameter.name, self)
         name_label.setMinimumWidth(60)
 
         self.spinbox = QSpinBox()

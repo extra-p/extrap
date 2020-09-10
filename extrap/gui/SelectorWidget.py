@@ -105,7 +105,7 @@ class SelectorWidget(QWidget):
         experiment = self.main_widget.getExperiment()
         if experiment is None:
             return
-        metrics = experiment.get_metrics()
+        metrics = experiment.metrics
         for metric in metrics:
             name = metric.name if metric.name != '' else '<default>'
             self.metric_selector.addItem(name, metric)

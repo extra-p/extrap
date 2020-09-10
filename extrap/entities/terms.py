@@ -1,6 +1,5 @@
-import warnings
 from abc import ABC, abstractmethod
-from numbers import Number
+from numbers import Real
 from typing import Tuple, List, Union, Mapping
 
 import numpy as np
@@ -57,7 +56,7 @@ class SingleParameterTerm(Term, ABC):
 
 class SimpleTerm(SingleParameterTerm):
 
-    def __init__(self, term_type, exponent: Number):
+    def __init__(self, term_type, exponent: Real):
         super().__init__()
         del self.coefficient
         self.term_type = term_type
@@ -81,9 +80,9 @@ class SimpleTerm(SingleParameterTerm):
         if self.term_type == "polynomial":
             return np.power(parameter_value, float(self.exponent))
         elif self.term_type == "logarithm":
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                log = np.log2(parameter_value)
+            previous = np.seterr(invalid='ignore')
+            log = np.log2(parameter_value)
+            np.seterr(**previous)
             return np.power(log, float(self.exponent))
 
     def __eq__(self, other):
@@ -215,7 +214,7 @@ class SimpleTermSchema(TermSchema):
     exponent = NumberField()
 
     def create_object(self):
-        return SimpleTerm(None, None)
+        return SimpleTerm(None, 0)
 
 
 class CompoundTermSchema(TermSchema):

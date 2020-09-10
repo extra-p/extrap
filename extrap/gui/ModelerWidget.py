@@ -126,7 +126,7 @@ class ModelerWidget(QWidget):
 
         model_generator = ModelGenerator(experiment, use_median=use_median, modeler=self._modeler)
 
-        model_generator.set_name(self.model_name_edit.text())
+        model_generator.name = self.model_name_edit.text()
         print(QCoreApplication.hasPendingEvents())
         with ProgressWindow(self.main_widget, 'Generating models') as pbar:
             # create models from data

@@ -65,7 +65,7 @@ class AxisSelection(QWidget):
         # self.combo_box.setMinimumWidth( 75 )
         self.combo_box.setMinimumHeight(20)
         for i in range(0, len(parameters)):
-            self.combo_box.addItem(parameters[i].get_name())
+            self.combo_box.addItem(parameters[i].name)
         self.combo_box.setCurrentIndex(self.index)
 
         self.combo_box.currentIndexChanged.connect(self.parameter_selected)
@@ -352,7 +352,7 @@ class DataDisplayManager(QWidget):
                     AxisSelection.max_values[i] = pos * 1.2
                 ValueSelection.default_values[i] = pos
 
-        self.parameters = experiment.get_parameters()
+        self.parameters = experiment.parameters
         self.limits_widget.generateSelections(self.parameters)
         self.updateWidget()
 

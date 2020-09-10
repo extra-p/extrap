@@ -81,7 +81,7 @@ class Experiment:
     @deprecated("Use property directly.")
     def get_metric_id(self, metric_name):
         for metric_id in range(len(self.metrics)):
-            if self.metrics[metric_id].get_name() == metric_name:
+            if self.metrics[metric_id].name == metric_name:
                 return metric_id
         return -1
 
@@ -95,14 +95,14 @@ class Experiment:
     @deprecated("Use property directly.")
     def get_parameter_id(self, parameter_name):
         for parameter_id in range(len(self.parameters)):
-            if self.parameters[parameter_id].get_name() == parameter_name:
+            if self.parameters[parameter_id].name == parameter_name:
                 return parameter_id
         return -1
 
     @deprecated("Use property directly.")
     def parameter_exists(self, parameter_name):
         for parameter_id in range(len(self.parameters)):
-            if self.parameters[parameter_id].get_name() == parameter_name:
+            if self.parameters[parameter_id].name == parameter_name:
                 return True
         return False
 
@@ -161,14 +161,14 @@ class Experiment:
     @deprecated("Use property directly.")
     def get_callpath_id(self, callpath_name):
         for callpath_id in range(len(self.callpaths)):
-            if self.callpaths[callpath_id].get_name() == callpath_name:
+            if self.callpaths[callpath_id].name == callpath_name:
                 return callpath_id
         return -1
 
     @deprecated("Use property directly.")
     def callpath_exists(self, callpath_name):
         for callpath_id in range(len(self.callpaths)):
-            if self.callpaths[callpath_id].get_name() == callpath_name:
+            if self.callpaths[callpath_id].name == callpath_name:
                 return True
         return False
 
@@ -204,20 +204,20 @@ class Experiment:
         if not logging.getLogger().isEnabledFor(logging.DEBUG):
             return
         for i in range(len(self.metrics)):
-            logging.debug("Metric " + str(i + 1) + ": " + self.metrics[i].get_name())
+            logging.debug("Metric " + str(i + 1) + ": " + self.metrics[i].name)
         for i in range(len(self.parameters)):
             logging.debug("Parameter " + str(i + 1) + ": " +
-                          self.parameters[i].get_name())
+                          self.parameters[i].name)
         for i in range(len(self.callpaths)):
             logging.debug("Callpath " + str(i + 1) + ": " +
-                          self.callpaths[i].get_name())
+                          self.callpaths[i].name)
         for i in range(len(self.coordinates)):
             dimensions = self.coordinates[i].get_dimensions()
             coordinate_string = "Coordinate " + str(i + 1) + ": ("
             for dimension in range(dimensions):
                 parameter, value = self.coordinates[i].get_parameter_value(
                     dimension)
-                parameter_name = parameter.get_name()
+                parameter_name = parameter.name
                 coordinate_string += parameter_name + "=" + str(value) + ","
             coordinate_string = coordinate_string[:-1]
             coordinate_string += ")"

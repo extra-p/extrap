@@ -70,10 +70,8 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
         # set scaling flag for experiment
         if path_id == 0:
-            if scaling_type == "weak":
-                experiment.set_scaling("weak")
-            elif scaling_type == "strong":
-                experiment.set_scaling("strong")
+            if scaling_type == "weak" or scaling_type == "strong":
+                experiment.scaling = scaling_type
 
         param_list = re.split('([0-9.,]+)', parameters)
         param_list.remove("")
@@ -101,10 +99,10 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
     # check number of parameters, if > 1 use weak scaling instead
     # since sum values for strong scaling does not work for more than 1 parameter
-    if scaling_type == 'strong' and len(experiment.get_parameters()) > 1:
+    if scaling_type == 'strong' and len(experiment.parameters) > 1:
         warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
         scaling_type = 'weak'
-        experiment.set_scaling("weak")
+        experiment.scaling = scaling_type
 
     pbar.step("Reading cube files")
 
@@ -181,7 +179,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
     # determine calltree
     call_tree = io_helper.create_call_tree(experiment.callpaths, pbar, progress_scale=0.1)
-    experiment.add_call_tree(call_tree)
+    experiment.call_tree = call_tree
 
     if show_warning_skipped_metrics:
         warnings.warn("Some metrics were skipped because they contained no data. For details see log.")

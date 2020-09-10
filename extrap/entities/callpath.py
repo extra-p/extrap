@@ -10,7 +10,6 @@ directory for details.
 """
 import itertools
 
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import make_value_schema
 
 
@@ -29,13 +28,6 @@ class Callpath:
         """
         self.name = name
         self.id = next(Callpath.ID_COUNTER)
-
-    @deprecated("Use property directly.")
-    def get_name(self):
-        """
-        Return the name of a callpath object.
-        """
-        return self.name
 
     def __hash__(self):
         return hash(self.name)

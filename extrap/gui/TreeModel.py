@@ -26,7 +26,7 @@ class TreeModel(QAbstractItemModel):
         self.root_item = TreeItem(None)
         experiment = self.main_widget.getExperiment()
         if experiment is not None:
-            call_tree = experiment.get_call_tree()
+            call_tree = experiment.call_tree
             nodes = call_tree.get_nodes()
             self.setupModelData(nodes, self.root_item)
             self.root_item.call_tree_node = call_tree

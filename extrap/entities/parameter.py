@@ -1,6 +1,5 @@
 import itertools
 
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import make_value_schema
 
 
@@ -13,14 +12,6 @@ class Parameter:
     def __init__(self, name):
         self.name = name
         self.id = next(Parameter.ID_COUNTER)
-
-    @deprecated("Use property directly.")
-    def set_name(self, name):
-        self.name = name
-
-    @deprecated("Use property directly.")
-    def get_name(self):
-        return self.name
 
     def __hash__(self):
         return hash(self.name)

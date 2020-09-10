@@ -71,7 +71,7 @@ def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
     for p in parameters:
         experiment.add_parameter(p)
 
-    callpaths = experiment.get_callpaths()
+    callpaths = experiment.callpaths
     experiment.call_tree = create_call_tree(callpaths, progress_bar)
 
     io_helper.validate_experiment(experiment, progress_bar)

@@ -53,7 +53,7 @@ class MultiParameterModeler(AbstractModeler, ABC):
         super().__init__(use_median)
         single_parameter_modeler.use_median = use_median
         self._default_single_parameter_modeler = single_parameter_modeler
-        self.single_parameter_modeler = copy.copy(single_parameter_modeler)
+        self.single_parameter_modeler: AbstractModeler = copy.copy(single_parameter_modeler)
 
     def reset_single_parameter_modeler(self):
         self.single_parameter_modeler = copy.copy(self._default_single_parameter_modeler)

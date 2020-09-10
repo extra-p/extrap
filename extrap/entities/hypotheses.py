@@ -433,8 +433,8 @@ class MultiParameterHypothesis(Hypothesis):
         adjR = 1.0 - (self.RSS / TSS)
         counter = 0
 
-        for i in range(len(self.function.get_multi_parameter_terms())):
-            counter += len(self.function.get_multi_parameter_terms()[i].get_compound_term_parameter_pairs())
+        for multi_parameter_term in self.function:
+            counter += len(multi_parameter_term.parameter_term_pairs)
 
         degrees_freedom = len(measurements) - counter - 1
         self._AR2 = (1.0 - (1.0 - adjR) * (len(measurements) - 1.0) / degrees_freedom)
@@ -443,43 +443,37 @@ class MultiParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
-        hypothesis_total_terms = len(self.function.get_multi_parameter_terms()) + 1
-
         # creating a numpy matrix representation of the lgs
         a_list = []
         b_list = []
         for measurement in measurements:
             value = measurement.value(self._use_median)
-            list_element = []
-            for multi_parameter_term_id in range(hypothesis_total_terms):
-                if multi_parameter_term_id == 0:
-                    list_element.append(1)
-                else:
-                    multi_parameter_term = self.function[multi_parameter_term_id - 1]
-                    coordinate = measurement.coordinate
-                    multi_parameter_term_value = multi_parameter_term.evaluate(coordinate)
-                    list_element.append(multi_parameter_term_value)
+            list_element = [1]  # 1 for constant coefficient
+            for multi_parameter_term in self.function:
+                coordinate = measurement.coordinate
+                multi_parameter_term_value = multi_parameter_term.evaluate(coordinate)
+                list_element.append(multi_parameter_term_value)
             a_list.append(list_element)
             b_list.append(value)
             # print(str(list_element)+"[x]=["+str(value)+"]")
             # logging.debug(str(list_element)+"[x]=["+str(value)+"]")
 
-        # solving the lgs for X to get the coefficients
+        # solving the lgs for coeffs to get the coefficients
         A = numpy.array(a_list)
         B = numpy.array(b_list)
         try:
-            X = numpy.linalg.lstsq(A, B, None)
+            coeffs, _, _, _ = numpy.linalg.lstsq(A, B, None)
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
-            X = numpy.linalg.lstsq(A, B, None)
+            coeffs, _, _, _ = numpy.linalg.lstsq(A, B, None)
 
-        # print("Coefficients:"+str(X[0]))
-        # logging.debug("Coefficients:"+str(X[0]))
+        # print("Coefficients:"+str(coeffs))
+        # logging.debug("Coefficients:"+str(coeffs[0]))
 
         # setting the coefficients for the hypothesis
-        self.function.set_constant_coefficient(X[0][0])
-        for multi_parameter_term_id in range(hypothesis_total_terms - 1):
-            self.function[multi_parameter_term_id].set_coefficient(X[0][multi_parameter_term_id + 1])
+        self.function.constant_coefficient = coeffs[0]
+        for multi_parameter_term, coeff in zip(self.function, coeffs[1:]):
+            multi_parameter_term.coefficient = coeff
 
 
 class HypothesisSchema(BaseSchema):

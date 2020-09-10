@@ -44,10 +44,8 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
     @staticmethod
     def check_parameter_values(coordinates):
         # analyze the parameter values to see if log terms should be allowed or not
-        for coordinate_id in range(len(coordinates)):
-            for dimension in range(coordinates[coordinate_id].get_dimensions()):
-                parameter, value = coordinates[coordinate_id].get_parameter_value(
-                    dimension)
+        for coordinate in coordinates:
+            for value in coordinate:
                 if value < 1:
                     return False
         return True

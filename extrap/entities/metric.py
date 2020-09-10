@@ -10,7 +10,6 @@ directory for details.
 """
 import itertools
 
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import make_value_schema
 
 
@@ -29,13 +28,6 @@ class Metric:
         """
         self.name = name
         self.id = next(Metric.ID_COUNTER)
-
-    @deprecated("Use property directly.")
-    def get_name(self):
-        """
-        Returns the name of the metric.
-        """
-        return self.name
 
     def __hash__(self):
         return hash(self.name)

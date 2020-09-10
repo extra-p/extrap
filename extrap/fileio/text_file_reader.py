@@ -61,8 +61,9 @@ def read_text_file(path, progress_bar=DUMMY_PROGRESS):
         if field_name == "METRIC":
             # create a new metric if not already exists
             metric_name = field_value
-            if not experiment.metric_exists(metric_name):
-                metric = Metric(metric_name)
+            test_metric = Metric(metric_name)
+            if test_metric not in experiment.metrics:
+                metric = test_metric
                 experiment.add_metric(metric)
                 last_metric = metric
             else:
@@ -142,9 +143,8 @@ def read_text_file(path, progress_bar=DUMMY_PROGRESS):
     if last_metric == Callpath(''):
         experiment.callpaths.append(last_callpath)
     # create the call tree and add it to the experiment
-    callpaths = experiment.get_callpaths()
-    call_tree = create_call_tree(callpaths, progress_bar, progress_scale=10)
-    experiment.add_call_tree(call_tree)
+    call_tree = create_call_tree(experiment.callpaths, progress_bar, progress_scale=10)
+    experiment.call_tree = call_tree
 
     io_helper.validate_experiment(experiment, progress_bar)
 

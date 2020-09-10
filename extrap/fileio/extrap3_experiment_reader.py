@@ -366,7 +366,7 @@ def deserialize_ExperimentPoint(experiment, id_mappings, ioHelper):
     minimum, maximum, metricId, callpathId = ioHelper.read_pattern('qqdddddddddqq')
 
     coordinate = id_mappings.coordinate_mapping[coordinate_id]
-    metric = experiment.get_metric(metricId)
+    metric = experiment.metrics[metricId]
     callpath = id_mappings.callpath_mapping[callpathId]
 
     point = Measurement(coordinate, callpath, metric, None)
@@ -381,7 +381,7 @@ def deserialize_ExperimentPoint(experiment, id_mappings, ioHelper):
 def deserialize_Model(experiment, id_mappings, supports_sparse, ioHelper):
     metricId = ioHelper.readId()
     callpathId = ioHelper.readId()
-    metric = experiment.get_metric(metricId)
+    metric = experiment.metrics[metricId]
     callpath = id_mappings.callpath_mapping[callpathId]
     generator_id = ioHelper.readId()
 
@@ -500,7 +500,7 @@ def deserialize_MultiParameterFunction(id_mappings, ioHelper):
     size = ioHelper.readInt()
     for i in range(0, size):
         term = deserialize_MultiParameterTerm(id_mappings, ioHelper)
-        function.add_multi_parameter_term(term)
+        function.add_compound_term(term)
 
     return function
 
@@ -619,7 +619,7 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
 
         callpaths = exp.callpaths
         call_tree = io_helper.create_call_tree(callpaths, progress_bar, True, progress_scale=100)
-        exp.add_call_tree(call_tree)
+        exp.call_tree = call_tree
 
         io_helper.validate_experiment(exp, progress_bar)
         # new code

@@ -91,18 +91,6 @@ class ModelGenerator:
         # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
 
-    @deprecated("Use property directly.")
-    def set_name(self, name):
-        self.name = name
-
-    @deprecated("Use property directly.")
-    def get_name(self):
-        return self.name
-
-    @deprecated("Use property directly.")
-    def get_id(self):
-        return self.id
-
     @deprecated("Use indexer.")
     def get_model(self, callpath_id, metric_id):
         callpath = self.experiment.callpaths[callpath_id]
