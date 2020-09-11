@@ -187,15 +187,18 @@ class Hypothesis:
         """
         Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
         """
-        maximum_term_contribution = 0
-        for measurement in measurements:
-            parameter_value = measurement.coordinate
-            actual = measurement.value(self._use_median)
-            if actual == 0:
-                continue
-            contribution = abs(term.evaluate(parameter_value) / actual)
-            if contribution > maximum_term_contribution:
-                maximum_term_contribution = contribution
+        if self._use_median:
+            actual = numpy.array([m.median for m in measurements])
+        else:
+            actual = numpy.array([m.mean for m in measurements])
+
+        if measurements[0].coordinate.dimensions > 1:
+            points = numpy.array([m.coordinate.as_tuple() for m in measurements]).T
+        else:
+            points = numpy.array([m.coordinate[0] for m in measurements])
+
+        contribution = numpy.abs(term.evaluate(points) / actual)
+        maximum_term_contribution = contribution.max()
         return maximum_term_contribution
 
     def __repr__(self):
@@ -300,8 +303,11 @@ class SingleParameterHypothesis(Hypothesis):
     def compute_cost_all_points(self, measurements: Sequence[Measurement]):
         points = numpy.array([m.coordinate[0] for m in measurements])
         predicted = self.function.evaluate(points)
-        actual = numpy.array([m.value(self._use_median)
-                              for m in measurements])
+
+        if self._use_median:
+            actual = numpy.array([m.median for m in measurements])
+        else:
+            actual = numpy.array([m.mean for m in measurements])
 
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
@@ -334,32 +340,29 @@ class SingleParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
+        if self._use_median:
+            b_list = numpy.array([m.median for m in measurements])
+        else:
+            b_list = numpy.array([m.mean for m in measurements])
+        points = numpy.array([m.coordinate[0] for m in measurements])
 
-        # creating a numpy matrix representation of the lgs
-        a_list = []
-        b_list = []
-        for measurement in measurements:
-            value = measurement.value(self._use_median)
-            list_element = [1]
-            for compound_term in self.function.compound_terms:
-                parameter_value = measurement.coordinate[0]
-                compound_term.coefficient = 1
-                compound_term_value = compound_term.evaluate(parameter_value)
-                list_element.append(compound_term_value)
-            a_list.append(list_element)
-            b_list.append(value)
-            # logging.debug(str(list_element)+"[x]=["+str(value)+"]")
+        a_list = [numpy.ones((1, len(points)))]
+        for compound_term in self.function.compound_terms:
+            compound_term.coefficient = 1
+            compound_term_value = compound_term.evaluate(points)
+            a_list.append(compound_term_value.reshape(1, -1))
 
         # solving the lgs for X to get the coefficients
-        A = numpy.array(a_list)
-        B = numpy.array(b_list)
-        X = numpy.linalg.lstsq(A, B, None)
-        # logging.debug("Coefficients:"+str(X[0]))
+        A = numpy.concatenate(a_list, axis=0).T
+        B = b_list
+
+        X, _, _, _ = numpy.linalg.lstsq(A, B, None)
+        # logging.debug("Coefficients:"+str(X))
 
         # setting the coefficients for the hypothesis
-        self.function.constant_coefficient = X[0][0]
+        self.function.constant_coefficient = X[0]
         for i, compound_term in enumerate(self.function.compound_terms):
-            compound_term.coefficient = X[0][i + 1]
+            compound_term.coefficient = X[i + 1]
 
 
 class MultiParameterHypothesis(Hypothesis):

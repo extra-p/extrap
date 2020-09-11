@@ -62,6 +62,27 @@ class SimpleTerm(SingleParameterTerm):
         self.term_type = term_type
         self.exponent = exponent
 
+    @property
+    def exponent(self):
+        return self._exponent
+
+    @exponent.setter
+    def exponent(self, value):
+        self._exponent = value
+        self._float_exponent = float(value)
+
+    @property
+    def term_type(self):
+        return self._term_type
+
+    @term_type.setter
+    def term_type(self, val):
+        self._term_type = val
+        if self._term_type == "polynomial":
+            self.evaluate = self._evaluate_polynomial
+        elif self._term_type == "logarithm":
+            self.evaluate = self._evaluate_logarithm
+
     @deprecated("Use property directly.")
     def set_exponent(self, exponent):
         self.exponent = exponent
@@ -71,19 +92,22 @@ class SimpleTerm(SingleParameterTerm):
         return self.exponent
 
     def to_string(self, parameter='p'):
-        if self.term_type == "polynomial":
+        if self._term_type == "polynomial":
             return f"{parameter}^({self.exponent})"
-        elif self.term_type == "logarithm":
+        elif self._term_type == "logarithm":
             return f"log2({parameter})^({self.exponent})"
 
+    def _evaluate_polynomial(self, parameter_value):
+        return parameter_value ** self._float_exponent
+
+    def _evaluate_logarithm(self, parameter_value):
+        log = np.log2(parameter_value)
+        log **= self._float_exponent
+        return log
+
     def evaluate(self, parameter_value):
-        if self.term_type == "polynomial":
-            return np.power(parameter_value, float(self.exponent))
-        elif self.term_type == "logarithm":
-            previous = np.seterr(invalid='ignore')
-            log = np.log2(parameter_value)
-            np.seterr(**previous)
-            return np.power(log, float(self.exponent))
+        # is dispatched during object creation
+        raise NotImplementedError
 
     def __eq__(self, other):
         if not isinstance(other, SimpleTerm):
@@ -92,7 +116,7 @@ class SimpleTerm(SingleParameterTerm):
             return True
         else:
             return self.exponent == other.exponent and \
-                   self.term_type == other.term_type
+                   self._term_type == other._term_type
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -110,10 +134,8 @@ class CompoundTerm(SingleParameterTerm):
 
     def evaluate(self, parameter_value):
         function_value = self.coefficient
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            for t in self.simple_terms:
-                function_value *= t.evaluate(parameter_value)
+        for t in self.simple_terms:
+            function_value *= t.evaluate(parameter_value)
         return function_value
 
     def to_string(self, parameter='p'):

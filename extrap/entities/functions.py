@@ -8,7 +8,6 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-import warnings
 from typing import List, Mapping
 
 import numpy
@@ -78,9 +77,7 @@ class Function:
         else:
             function_value = self.constant_coefficient
         for t in self.compound_terms:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                function_value += t.evaluate(parameter_value)
+            function_value += t.evaluate(parameter_value)
         return function_value
 
     def to_string(self, *parameters):

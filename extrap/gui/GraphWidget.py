@@ -545,9 +545,9 @@ class GraphWidget(QWidget):
 
         # m_x_lower_bound = 1
         number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
-
+        previous = numpy.seterr(invalid='ignore', divide='ignore')
         y_list = function.evaluate(x_list).reshape(-1)
-
+        numpy.seterr(**previous)
         cord_list = self._create_drawing_iterator(x_values, y_list)
 
         return cord_list
@@ -561,7 +561,7 @@ class GraphWidget(QWidget):
 
         y_list = numpy.zeros(number_of_x_points)
 
-        previous = numpy.seterr(invalid='ignore')
+        previous = numpy.seterr(invalid='ignore', divide='ignore')
         for function in functions:
             y_list += function.evaluate(x_list).reshape(-1)
         numpy.seterr(**previous)
@@ -717,6 +717,8 @@ class GraphWidget(QWidget):
                 y = max(model.predictions)
                 y_max = max(y, y_max)
 
+        previous = numpy.seterr(invalid='ignore')
+
         if self.combine_all_callpath:
             y_agg = 0
             for model in modelList:
@@ -744,6 +746,7 @@ class GraphWidget(QWidget):
             y = function.evaluate(pv_list)
             y_max = max(y, y_max)
 
+        numpy.seterr(**previous)
         # Ensure that the maximum value is never too small
         if y_max < 0.000001:
             y_max = 1

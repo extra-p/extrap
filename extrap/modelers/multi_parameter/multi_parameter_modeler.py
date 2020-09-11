@@ -84,6 +84,11 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
     def find_best_measurement_points(self, measurements: Sequence[Measurement]):
 
         def make_measurement(c, ms: Sequence[Measurement]):
+            if len(ms) == 1:
+                measurement = copy.copy(ms[0])
+                measurement.coordinate = Coordinate(c)
+                return measurement
+
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, None)
 
             if self.use_median:
@@ -98,9 +103,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                 measurement.minimum = np.mean([m.minimum for m in ms])
                 measurement.std = np.mean([m.std for m in ms])
             else:
-                measurement.maximum = np.mean([m.maximum / m.mean for m in ms]) * measurement.mean
-                measurement.minimum = np.mean([m.minimum / m.mean for m in ms]) * measurement.mean
-                measurement.std = np.mean([m.std / m.mean for m in ms]) * measurement.mean
+                measurement.maximum = np.nanmean([m.maximum / m.mean for m in ms]) * measurement.mean
+                measurement.minimum = np.nanmean([m.minimum / m.mean for m in ms]) * measurement.mean
+                measurement.std = np.nanmean([m.std / m.mean for m in ms]) * measurement.mean
 
             return measurement
 
@@ -164,9 +169,11 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
                 "Could not use all measurement points. At least 25 measurements are needed; one for each "
                 "combination of parameters.")
 
+        previous = np.seterr(invalid='ignore')
         combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
                                  for p, grp in enumerate(result_groups)]
-
+        np.seterr(**previous)
+        
         return combined_measurements
 
     @staticmethod
