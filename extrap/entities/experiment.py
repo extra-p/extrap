@@ -2,7 +2,7 @@ import logging
 from itertools import chain
 from typing import List, Dict, Tuple
 
-from marshmallow import fields, validate
+from marshmallow import fields, validate, pre_load
 
 import extrap
 from extrap.entities.callpath import Callpath, CallpathSchema
@@ -14,6 +14,7 @@ from extrap.entities.parameter import Parameter, ParameterSchema
 from extrap.fileio import io_helper
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from extrap.util.deprecation import deprecated
+from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import Schema, TupleKeyDict
 from extrap.util.unique_list import UniqueList
 
@@ -239,12 +240,39 @@ class ExperimentSchema(Schema):
     measurements = TupleKeyDict(keys=(fields.Nested(CallpathSchema), fields.Nested(MetricSchema)),
                                 values=fields.List(fields.Nested(MeasurementSchema, exclude=('callpath', 'metric'))))
 
-    modelers = fields.List(fields.Nested(ModelGeneratorSchema), default=[], required=False)
+    modelers = fields.List(fields.Nested(ModelGeneratorSchema), missing=[], required=False)
+
+    def set_progress_bar(self, pbar):
+        self.context['progress_bar'] = pbar
+
+    @pre_load
+    def add_progress(self, data, **kwargs):
+        if 'progress_bar' in self.context:
+            pbar = self.context['progress_bar']
+            models = 0
+            ms = data.get('measurements')
+            if ms:
+                for cp in ms.values():
+                    for m in cp.values():
+                        models += 1
+                        pbar.total += len(m)
+            pbar.total += models
+            ms = data.get('modelers')
+            if ms:
+                pbar.total += len(ms)
+                pbar.total += len(ms) * models
+            pbar.update(0)
+        return data
 
     def create_object(self):
         return Experiment()
 
     def postprocess_object(self, obj: Experiment):
+        if 'progress_bar' in self.context:
+            pbar = self.context['progress_bar']
+        else:
+            pbar = DUMMY_PROGRESS
+
         for (callpath, metric), measurement in obj.measurements.items():
             obj.add_callpath(callpath)
             obj.add_metric(metric)
@@ -252,9 +280,12 @@ class ExperimentSchema(Schema):
                 obj.add_coordinate(m.coordinate)
                 m.callpath = callpath
                 m.metric = metric
+            pbar.update()
+
         obj.call_tree = io_helper.create_call_tree(obj.callpaths)
         for modeler in obj.modelers:
             for key, model in modeler.models.items():
                 model.measurements = obj.measurements[key]
+            pbar.update()
 
         return obj

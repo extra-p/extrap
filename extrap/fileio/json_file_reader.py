@@ -47,9 +47,15 @@ def read_json_file(path, progress_bar=DUMMY_PROGRESS):
     experiment = Experiment()
 
     if "callpaths" not in json_data:
-        _read_new_json_file(experiment, json_data, progress_bar)
+        try:
+            _read_new_json_file(experiment, json_data, progress_bar)
+        except KeyError as err:
+            raise FileFormatError(str(err)) from err
     else:
-        _read_legacy_json_file(experiment, json_data, progress_bar)
+        try:
+            _read_legacy_json_file(experiment, json_data, progress_bar)
+        except KeyError as err:
+            raise FileFormatError(str(err)) from err
 
     call_tree = create_call_tree(experiment.callpaths, progress_bar)
     experiment.call_tree = call_tree

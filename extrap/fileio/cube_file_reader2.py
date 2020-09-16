@@ -46,7 +46,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
     cubex_files = list(path.glob('*/*.cubex'))
     if not cubex_files:
         raise FileFormatError(f'No cube files were found in: {dir_name}')
-    pbar.total += len(cubex_files) + 2
+    pbar.total += len(cubex_files) + 6
     # iterate over all folders and read the cube profiles in them
     experiment = Experiment()
 
@@ -55,7 +55,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
     parameter_names = []
     parameter_values = []
     parameter_dict = defaultdict(set)
-    progress_step_size = 1 / len(cubex_files)
+    progress_step_size = 5 / len(cubex_files)
     for path_id, path in enumerate(cubex_files):
         pbar.update(progress_step_size)
         folder_name = path.parent.name
@@ -106,7 +106,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
     pbar.step("Reading cube files")
 
-    show_warning_skipped_metrics = False
+    show_warning_skipped_metrics = set()
     aggregated_values = defaultdict(list)
 
     # import data from cube files
@@ -131,7 +131,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
                     if selected_metrics and cube_metric.name not in selected_metrics:
                         continue
                     try:
-                        metric_values = parsed.get_metric_values(metric=cube_metric)
+                        metric_values = parsed.get_metric_values(metric=cube_metric, cache=False)
                         # create the metrics
                         metric = Metric(cube_metric.name)
 
@@ -154,8 +154,9 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
 
                     # Take care of missing metrics
                     except MissingMetricError as e:  # @UnusedVariable
-                        show_warning_skipped_metrics = True
-                        logging.info(f'The cubex file does not contain data for the metric "{e.metric.name}"')
+                        show_warning_skipped_metrics.add(e.metric.name)
+                        logging.info(
+                            f'The cubex file {Path(*path.parts[-2:])} does not contain data for the metric "{e.metric.name}"')
 
         # add measurements to experiment
         for (callpath, metric), values in aggregated_values.items():
@@ -182,7 +183,8 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
     experiment.call_tree = call_tree
 
     if show_warning_skipped_metrics:
-        warnings.warn("Some metrics were skipped because they contained no data. For details see log.")
+        warnings.warn("The following metrics were skipped because they contained no data: "
+                      f"{', '.join(show_warning_skipped_metrics)}. For more details see log.")
 
     io_helper.validate_experiment(experiment, pbar)
     pbar.update()

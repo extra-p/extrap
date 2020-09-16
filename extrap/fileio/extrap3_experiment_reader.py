@@ -527,85 +527,94 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
     progress_bar.total += os.path.getsize(path)
     with open(path, "rb") as file:
         ioHelper = IoHelper(file)
-        qualifier = ioHelper.readString()
-        if qualifier != "EXTRAP_EXPERIMENT":
-            raise FileFormatError("This is not an Extra-P 3 Experiment File. Qualifier was " + str(qualifier))
-        exp = Experiment()
-        id_mappings = _Mappings()
-        versionNumber = ioHelper.readString()
-        prefix = ioHelper.readString()
-        progress_bar.step('Load Extra-P 3 experiment')
-        last_pos = 0
+        
+        try:
+            qualifier = ioHelper.readString()
 
-        is_sparse = __Ref(False)
-        while prefix:
-            pos = file.tell()
-            progress_bar.update(pos - last_pos)
-            last_pos = pos
-            # logging.debug("Deserialize " + str(prefix))
-            # noinspection PyNoneFunctionAssignment
-            if prefix == 'Parameter':
-                p = deserialize_parameter(id_mappings, ioHelper)
-                exp.add_parameter(p)
+            if qualifier != "EXTRAP_EXPERIMENT":
+                raise FileFormatError("This is not an Extra-P 3 Experiment File. Qualifier was " + str(qualifier))
+        except struct.error as err:
+            raise FileFormatError("This is not an Extra-P 3 Experiment File.") from err
 
-            elif prefix == 'Metric':
-                m = deserialize_metric(ioHelper)
-                SAFE_RETURN_None(m)
-                exp.add_metric(m)
-
-            elif prefix == 'Region':
-                deserialize_region(id_mappings, ioHelper)
-
-            elif prefix == 'Callpath':
-                c = deserialize_callpath(id_mappings, ioHelper)
-                SAFE_RETURN_None(c)
-                exp.add_callpath(c)
-                progress_bar.total += 100
-
-            elif prefix == 'Coordinate':
-                c = deserialize_coordinate(exp, id_mappings, ioHelper)
-                SAFE_RETURN_None(c)
-                exp.add_coordinate(c)
-
-            elif prefix == 'ModelComment':
-                deserialize_modelcomment(ioHelper)
-                # SAFE_RETURN_None(comment)
-                # exp.addModelComment(comment)
-
-            elif prefix == 'SingleParameterSimpleModelGenerator':
-                generator = deserialize_SingleParameterSimpleModelGenerator(exp, is_sparse, ioHelper)
-                SAFE_RETURN_None(generator)
-                exp.add_modeler(generator)
-
-            elif prefix == 'SingleParameterRefiningModelGenerator':
-                generator = deserialize_SingleParameterModelGenerator(exp, is_sparse, ioHelper)
-                SAFE_RETURN_None(generator)
-                exp.add_modeler(generator)
-
-            elif prefix == 'MultiParameterSimpleModelGenerator':
-                generator = deserialize_MultiParameterModelGenerator(exp, is_sparse, ioHelper)
-                SAFE_RETURN_None(generator)
-                exp.add_modeler(generator)
-
-            elif prefix == 'MultiParameterSparseModelGenerator':
-                generator = deserialize_MultiParameterModelGenerator(exp, is_sparse, ioHelper)
-                SAFE_RETURN_None(generator)
-                exp.add_modeler(generator)
-
-            elif prefix == 'ExperimentPoint':
-                point = deserialize_ExperimentPoint(exp, id_mappings, ioHelper)
-                SAFE_RETURN_None(point)
-                exp.add_measurement(point)
-
-            elif prefix == 'Model':
-                model, generator_id = deserialize_Model(exp, id_mappings, is_sparse, ioHelper)
-                SAFE_RETURN_None(model)
-                exp.modelers[generator_id].models[(model.callpath, model.metric)] = model
-
-            else:
-                raise FileFormatError("Unknown object: " + prefix + ". Can not load experiment.")
-
+        try:
+            exp = Experiment()
+            id_mappings = _Mappings()
+            versionNumber = ioHelper.readString()
             prefix = ioHelper.readString()
+            progress_bar.step('Load Extra-P 3 experiment')
+            last_pos = 0
+
+            is_sparse = __Ref(False)
+            while prefix:
+                pos = file.tell()
+                progress_bar.update(pos - last_pos)
+                last_pos = pos
+                # logging.debug("Deserialize " + str(prefix))
+                # noinspection PyNoneFunctionAssignment
+                if prefix == 'Parameter':
+                    p = deserialize_parameter(id_mappings, ioHelper)
+                    exp.add_parameter(p)
+
+                elif prefix == 'Metric':
+                    m = deserialize_metric(ioHelper)
+                    SAFE_RETURN_None(m)
+                    exp.add_metric(m)
+
+                elif prefix == 'Region':
+                    deserialize_region(id_mappings, ioHelper)
+
+                elif prefix == 'Callpath':
+                    c = deserialize_callpath(id_mappings, ioHelper)
+                    SAFE_RETURN_None(c)
+                    exp.add_callpath(c)
+                    progress_bar.total += 100
+
+                elif prefix == 'Coordinate':
+                    c = deserialize_coordinate(exp, id_mappings, ioHelper)
+                    SAFE_RETURN_None(c)
+                    exp.add_coordinate(c)
+
+                elif prefix == 'ModelComment':
+                    deserialize_modelcomment(ioHelper)
+                    # SAFE_RETURN_None(comment)
+                    # exp.addModelComment(comment)
+
+                elif prefix == 'SingleParameterSimpleModelGenerator':
+                    generator = deserialize_SingleParameterSimpleModelGenerator(exp, is_sparse, ioHelper)
+                    SAFE_RETURN_None(generator)
+                    exp.add_modeler(generator)
+
+                elif prefix == 'SingleParameterRefiningModelGenerator':
+                    generator = deserialize_SingleParameterModelGenerator(exp, is_sparse, ioHelper)
+                    SAFE_RETURN_None(generator)
+                    exp.add_modeler(generator)
+
+                elif prefix == 'MultiParameterSimpleModelGenerator':
+                    generator = deserialize_MultiParameterModelGenerator(exp, is_sparse, ioHelper)
+                    SAFE_RETURN_None(generator)
+                    exp.add_modeler(generator)
+
+                elif prefix == 'MultiParameterSparseModelGenerator':
+                    generator = deserialize_MultiParameterModelGenerator(exp, is_sparse, ioHelper)
+                    SAFE_RETURN_None(generator)
+                    exp.add_modeler(generator)
+
+                elif prefix == 'ExperimentPoint':
+                    point = deserialize_ExperimentPoint(exp, id_mappings, ioHelper)
+                    SAFE_RETURN_None(point)
+                    exp.add_measurement(point)
+
+                elif prefix == 'Model':
+                    model, generator_id = deserialize_Model(exp, id_mappings, is_sparse, ioHelper)
+                    SAFE_RETURN_None(model)
+                    exp.modelers[generator_id].models[(model.callpath, model.metric)] = model
+
+                else:
+                    raise FileFormatError("Unknown object: " + prefix + ". Can not load experiment.")
+
+                prefix = ioHelper.readString()
+        except struct.error as err:
+            raise FileFormatError(str(err)) from err
 
         pos = file.tell()
         progress_bar.update(pos - last_pos)

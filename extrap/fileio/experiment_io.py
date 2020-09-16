@@ -13,6 +13,7 @@ EXPERIMENT_DATA_FILE = 'experiment.json'
 def read_experiment(path, progress_bar=DUMMY_PROGRESS):
     progress_bar.total += 3
     schema = ExperimentSchema()
+    schema.set_progress_bar(progress_bar)
     try:
         with ZipFile(path, 'r', allowZip64=True) as file:
             progress_bar.update()

@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 import numpy
-from marshmallow import fields
+from marshmallow import fields, post_load
 
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.hypotheses import Hypothesis, HypothesisSchema
@@ -52,6 +52,12 @@ class Model:
 class ModelSchema(Schema):
     def create_object(self):
         return Model(None)
+
+    @post_load
+    def report_progress(self, data, **kwargs):
+        if 'progress_bar' in self.context:
+            self.context['progress_bar'].update()
+        return data
 
     hypothesis = fields.Nested(HypothesisSchema)
     callpath = fields.Nested(CallpathSchema)

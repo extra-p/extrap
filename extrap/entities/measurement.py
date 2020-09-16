@@ -9,7 +9,7 @@ a BSD-style license. See the LICENSE file in the base
 directory for details.
 """
 import numpy as np
-from marshmallow import fields
+from marshmallow import fields, post_load
 
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.coordinate import Coordinate, CoordinateSchema
@@ -116,6 +116,12 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
+
+    @post_load
+    def report_progress(self, data, **kwargs):
+        if 'progress_bar' in self.context:
+            self.context['progress_bar'].update()
+        return data
 
     def create_object(self):
         return Measurement(None, None, None, None)

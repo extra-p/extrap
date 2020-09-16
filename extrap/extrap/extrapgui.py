@@ -87,8 +87,9 @@ def main(*, args=None, test=False):
 
     def _exception_handler(type, value, traceback_):
         msgBox = QMessageBox(window)
+        print()
         if hasattr(value, 'NAME'):
-            msgBox.setWindowTitle(extrap.__title__)
+            msgBox.setWindowTitle(getattr(value, 'NAME'))
         else:
             msgBox.setWindowTitle('Error')
         msgBox.setIcon(QMessageBox.Icon.Critical)

@@ -166,7 +166,7 @@ class FunctionSchema(BaseSchema):
 
 
 class ConstantFunctionSchema(FunctionSchema):
-    compound_terms = fields.Constant(None, load_only=True)
+    compound_terms = fields.Constant([], load_only=True)
 
     def create_object(self):
         return ConstantFunction()
