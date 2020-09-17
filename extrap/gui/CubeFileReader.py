@@ -9,11 +9,13 @@ a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
 from functools import partial
+from threading import Event
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.fileio.cube_file_reader2 import read_cube_file
+from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
 
@@ -56,6 +58,8 @@ class CubeFileReader(QDialog):
         self.repetitions = 1
         self.parameters = list()
 
+        self._cancel_event = Event()
+
         # for _ in range(0, self.max_params):
         #     self.parameters.append(ParameterWidget(self))
 
@@ -65,7 +69,9 @@ class CubeFileReader(QDialog):
         self.setWindowTitle("Import settings")
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
+        main_layout = QFormLayout(self)
         layout = QFormLayout(self)
+        self.controls_layout = layout
 
         # self.num_params_choice = QSpinBox(self)
         # self.num_params_choice.setMinimum(1)
@@ -114,6 +120,7 @@ class CubeFileReader(QDialog):
 
         self.progress_indicator = QProgressBar(self)
         self.progress_indicator.hide()
+        layout.addRow(self.progress_indicator)
 
         # If the user presses the enter key on any element it activates the
         # first button somehow. Thus, create a fake button, that does nothing
@@ -133,13 +140,14 @@ class CubeFileReader(QDialog):
         # cancel_button = QPushButton(self)
         # cancel_button.setText("Cancel")
         # cancel_button.pressed.connect(self.close)
-
+        main_layout.addRow(layout)
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-        layout.addRow(self.buttonBox)
+        main_layout.addRow(self.buttonBox)
+
         # self.change_param_num()
-        self.setLayout(layout)
+        self.setLayout(main_layout)
 
     # def change_param_num(self):
     #     self.num_params = self.num_params_choice.value()
@@ -206,6 +214,10 @@ class CubeFileReader(QDialog):
     #     max_repetitions = max(int(m.group(2 + self.num_params * 2))
     #                           for m in matching_prefix)
     #     self.repetitions = max_repetitions
+    @Slot()
+    def reject(self):
+        self._cancel_event.set()
+        super().reject()
 
     @Slot()
     def accept(self):
@@ -241,12 +253,13 @@ class CubeFileReader(QDialog):
             super().accept()
 
     def _show_progressbar(self):
-        self.setEnabled(False)
-        self.layout().replaceWidget(self.buttonBox, self.progress_indicator)
-        self.buttonBox.setParent(None)
+        self.controls_layout.setEnabled(False)
+        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
         self.progress_indicator.show()
 
     def _display_progress(self, pbar: ProgressBar, msg=None, pos=None):
+        if self._cancel_event.is_set():
+            raise CancelProcessError()
         self.progress_indicator.setMaximum(pbar.total)
         self.progress_indicator.setValue(pbar.n)
         QApplication.processEvents()

@@ -18,7 +18,7 @@ from extrap.fileio.json_file_reader import read_json_file
 from extrap.fileio.talpas_file_reader import read_talpas_file
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.gui.MainWidget import MainWidget
-from extrap.util.exceptions import RecoverableError
+from extrap.util.exceptions import RecoverableError, CancelProcessError
 
 TRACEBACK = logging.DEBUG - 1
 logging.addLevelName(TRACEBACK, 'TRACEBACK')
@@ -87,6 +87,13 @@ def main(*, args=None, test=False):
         return _old_warnings_handler(message, category, filename, lineno, file, line)
 
     def _exception_handler(type, value, traceback_):
+        traceback_text = ''.join(traceback.extract_tb(traceback_).format())
+
+        if issubclass(type, CancelProcessError):
+            logging.log(TRACEBACK, str(value))
+            logging.log(TRACEBACK, traceback_text)
+            return
+
         msgBox = QMessageBox(window)
         print()
         if hasattr(value, 'NAME'):
@@ -95,10 +102,11 @@ def main(*, args=None, test=False):
             msgBox.setWindowTitle('Error')
         msgBox.setIcon(QMessageBox.Icon.Critical)
         msgBox.setText(str(value))
-        traceback_text = ''.join(traceback.extract_tb(traceback_).format())
         msgBox.setDetailedText(traceback_text)
+
         logging.error(str(value))
         logging.log(TRACEBACK, traceback_text)
+
         if test:
             return _old_exception_handler(type, value, traceback_)
         if issubclass(type, RecoverableError):
@@ -114,7 +122,10 @@ def main(*, args=None, test=False):
 
     window.show()
 
-    load_from_command(arguments, window)
+    try:
+        load_from_command(arguments, window)
+    except CancelProcessError:
+        pass
 
     if not test:
         app.exec_()

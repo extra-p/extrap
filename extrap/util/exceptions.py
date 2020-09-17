@@ -16,3 +16,10 @@ class InvalidExperimentError(RecoverableError):
 
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
+
+
+class CancelProcessError(RecoverableError):
+    NAME = 'Canceled Process'
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)

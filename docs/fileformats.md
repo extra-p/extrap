@@ -253,6 +253,7 @@ Cube file format
 The Cube file format is based on a directory structure. 
 All measurements are organized in a directory, which contains directories for each measurement point.
 Each directory for a measurement point must contain one or more Cube files (*.cubex), containing the actual measurement.
+The names of Cube files must not start with a dot `.`, otherwise they will be ignored.
 
 The name of the dictionary indicates the measurement point for the different parameters.
 It should be structured in the following way:

@@ -8,9 +8,12 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+from threading import Event
+
 from PySide2.QtCore import Qt, QCoreApplication
 from PySide2.QtWidgets import QProgressDialog, QLabel
 
+from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
 
@@ -20,7 +23,6 @@ class ProgressWindow(ProgressBar):
         self.sp = None
         self.dialog = QProgressDialog(parent)
         self.dialog.setModal(True)
-        self.dialog.setCancelButtonText("")
         self.dialog.setMinimumDuration(500)
         self.dialog.setWindowTitle(self.desc)
         self.dialog.setAutoClose(False)
@@ -30,17 +32,33 @@ class ProgressWindow(ProgressBar):
         label.setTextFormat(Qt.PlainText)
         label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.dialog.setLabel(label)
+        self._cancel_event = Event()
+        self._internal_cancel_event = Event()
+        self.dialog.canceled.connect(self.user_cancel)
         # self.dialog.show()
 
     def close(self):
-        self.dialog.cancel()
+        self._internal_cancel_event.set()
+        try:
+            self.dialog.cancel()
+        except RuntimeError:
+            pass
         try:
             super().close()
         except AttributeError:
             pass
 
+    def user_cancel(self):
+        if not self._internal_cancel_event.is_set():
+            self._cancel_event.set()
+
     def clear(self, nolock=False):
         super().clear(nolock)
+
+    def update(self, n=1):
+        if self._cancel_event.is_set():
+            raise CancelProcessError()
+        super(ProgressWindow, self).update(n)
 
     def display(self, msg=None, pos=None):
         format_dict = self.format_dict
