@@ -25,6 +25,8 @@ Put project description here.
 * maplotlib
 * numpy
 * pycubexr
+* marshmallow
+* tqdm
 
 ### Usage
 
@@ -38,15 +40,15 @@ extrap.py OPTIONS (--cube | --text | --talpas | --json | --extra-p-3) FILEPATH
         
 OPTIONS:
 
-*  `-h, --help`            show this help message and exit
+*  `-h, --help`            show help message and exit
 *  `--log LOG_LEVEL`       set program's log level [INFO (default), DEBUG]
 *  `--version`             show program's version number and exit
 *  `--help-options {Basic,Refining,Multi-Parameter,Default}`
                         shows help for modeler options
 *  `--cube`                load data from cube files
 *  `--text`                load data from text files
-*  `--talpas`              load data from talpas data format
-*  `--json`                load data from json file
+*  `--talpas`              load data from Talpas data format
+*  `--json`                load data from JSON or JSON Lines file
 *  `--extra-p-3`           load data from Extra-P 3 experiment
 *  `--modeler {Basic,Refining,Multi-Parameter,Default}` selects a modeler
 *  `--options KEY=VALUE [KEY=VALUE ...]` sets options for the selected modeler

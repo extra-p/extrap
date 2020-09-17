@@ -20,7 +20,7 @@ class ProgressWindow(ProgressBar):
         self.sp = None
         self.dialog = QProgressDialog(parent)
         self.dialog.setModal(True)
-        self.dialog.setCancelButton(None)
+        self.dialog.setCancelButtonText("")
         self.dialog.setMinimumDuration(500)
         self.dialog.setWindowTitle(self.desc)
         self.dialog.setAutoClose(False)
@@ -33,10 +33,10 @@ class ProgressWindow(ProgressBar):
         # self.dialog.show()
 
     def close(self):
-        super().close()
+        self.dialog.cancel()
         try:
-            self.dialog.close()
-        except:
+            super().close()
+        except AttributeError:
             pass
 
     def clear(self, nolock=False):

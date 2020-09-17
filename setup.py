@@ -19,11 +19,11 @@ setup(
     url="https://github.com/extra-p/extrap",
     entry_points={
         "console_scripts": [
-            "extrap = extrap.extrapcmd:main",
+            "extrap = extrap.extrap.extrapcmd:main",
         ],
 
         "gui_scripts": [
-            "extrap-gui = extrap.extrapgui:main",
+            "extrap-gui = extrap.extrap.extrapgui:main",
         ]
     },
     classifiers=[

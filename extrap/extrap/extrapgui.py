@@ -53,9 +53,10 @@ def main(*, args=None, test=False):
     # configure logging
     log_level = min(logging.getLevelName(arguments.log_level), logging.INFO)
     if arguments.log_file:
-        logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level, filename=arguments.log_file)
+        logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level,
+                            filename=arguments.log_file)
     else:
-        logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
+        logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level))
 
     app = QApplication(sys.argv) if not test else QApplication.instance()
@@ -137,7 +138,8 @@ def parse_arguments(args=None):
     group.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
     group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
                        help="load data from talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json", help="load data from json file")
+    group.add_argument("--json", action="store_true", default=False, dest="json",
+                       help="load data from json or jsonlines file")
     group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
                        help="load data from Extra-P 3 experiment")
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',

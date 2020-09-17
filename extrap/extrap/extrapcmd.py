@@ -49,8 +49,9 @@ def main(args=None, prog=None):
     group.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from cube files")
     group.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
     group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
-                       help="load data from talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json", help="load data from json file")
+                       help="load data from Talpas data format")
+    group.add_argument("--json", action="store_true", default=False, dest="json",
+                       help="load data from JSON or JSON Lines file")
     group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
                        help="load data from Extra-P 3 experiment")
 
@@ -116,7 +117,7 @@ def main(args=None, prog=None):
                 if os.path.isdir(arguments.path):
                     experiment = read_cube_file(arguments.path, scaling_type)
                 else:
-                    logging.error("The given file path is not valid.")
+                    logging.error("The given path is not valid. It must point to a directory.")
                     sys.exit(1)
             elif os.path.isfile(arguments.path):
                 if arguments.text:

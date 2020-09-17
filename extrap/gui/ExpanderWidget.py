@@ -47,7 +47,7 @@ class ExpanderWidget(QGroupBox):
                            '    padding:2px -1px -1px 0px; margin-left:-1px; '
                            '}'
                            'ExpanderWidget::title{ '
-                           '    display:none; '
+                           '    color:transparent; '
                            '}'
                            'ExpanderWidget>#expanderToggle{ '
                            '    background: transparent;'
