@@ -10,8 +10,12 @@
 # ignore visual studio code files
 .vscode/
 
+# ignore PyCharm files
+.idea/
+
 # ignore folder with test data
 /data/cube/*
+tests/data/cubeset/internal/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -156,5 +160,3 @@ cython_debug/
 # static files generated from Django application using `collectstatic`
 media
 static
-.idea/
-tests/data/cubeset/fastest/

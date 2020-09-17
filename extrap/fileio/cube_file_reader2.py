@@ -43,7 +43,7 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
     path = Path(dir_name)
     if not path.is_dir():
         raise FileFormatError(f'Cube file path must point to a directory: {dir_name}')
-    cubex_files = list(path.glob('*/*.cubex'))
+    cubex_files = list(path.glob('*/[!.]*.cubex'))
     if not cubex_files:
         raise FileFormatError(f'No cube files were found in: {dir_name}')
     pbar.total += len(cubex_files) + 6

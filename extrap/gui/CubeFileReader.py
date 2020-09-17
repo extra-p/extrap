@@ -8,7 +8,6 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-import time
 from functools import partial
 
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -251,4 +250,3 @@ class CubeFileReader(QDialog):
         self.progress_indicator.setMaximum(pbar.total)
         self.progress_indicator.setValue(pbar.n)
         QApplication.processEvents()
-        time.sleep(0.1)
