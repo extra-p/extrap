@@ -399,7 +399,7 @@ class MainWidget(QMainWindow):
             return
         dialog = CubeFileReader(self, dir_name)
         dialog.setModal(True)
-        dialog.open()
+        dialog.exec_()  # do not use open, wait for loading to finish
         if dialog.valid:
             self._set_opened_file_name(dir_name)
             self.model_experiment(dialog.experiment)

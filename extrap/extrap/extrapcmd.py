@@ -69,7 +69,8 @@ def main(args=None, prog=None):
     parser.add_argument("--out", action="store", dest="out", help="specify the output path for Extra-P results")
     parser.add_argument("--print", action="store", dest="print_type", default="all",
                         choices=["all", "callpaths", "metrics", "parameters", "functions"],
-                        help="set which information should be displayed after modeling [all (default), callpaths, metrics, parameters, functions]")
+                        help="set which information should be displayed after modeling "
+                             "[all (default), callpaths, metrics, parameters, functions]")
 
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store",
                         help="specify a file path for Extra-P to work with")
@@ -88,7 +89,8 @@ def main(args=None, prog=None):
         # if not os.path.exists("../temp/extrap.log"):
         #    log_file = open("../temp/extrap.log","w")
         #    log_file.close()
-        # logging.basicConfig(format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s", level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p", filename="../temp/extrap.log", filemode="w")
+        # logging.basicConfig(format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s():
+        # %(message)s", level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p", filename="../temp/extrap.log", filemode="w")
         logging.basicConfig(
             format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s",
             level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p")

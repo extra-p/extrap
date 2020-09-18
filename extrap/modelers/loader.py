@@ -19,8 +19,6 @@ def load_modelers(path, pkg_name):
     for importer, modname, is_pkg in pkgutil.walk_packages(path=path,
                                                            prefix=pkg_name + '.',
                                                            onerror=lambda x: None):
-        if is_pkg:
-            continue
         module = importer.find_module(modname).load_module(modname)
         for name, clazz in inspect.getmembers(module, is_modeler):
             name = clazz.NAME

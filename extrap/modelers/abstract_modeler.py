@@ -38,12 +38,12 @@ class AbstractModeler(ABC):
         raise NotImplementedError
 
 
-class LegacyModeler(AbstractModeler, ABC):
+class SingularModeler(AbstractModeler, ABC):
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
         return [self.create_model(m) for m in progress_bar(measurements)]
 
     @abstractmethod
-    def create_model(self, measurements: Sequence[Measurement]):
+    def create_model(self, measurements: Sequence[Measurement]) -> Model:
         raise NotImplementedError
 
 

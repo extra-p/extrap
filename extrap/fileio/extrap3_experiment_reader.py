@@ -267,32 +267,36 @@ def deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper):
         # convert ints to bool values
         use_add_points = add_points
 
-        # convert single parameter strategy to enum
-        if single_strategy == "FIRST_POINTS_FOUND":
-            pass
-
-        elif single_strategy == "MAX_NUMBER_POINTS":
-            pass
-
-        elif single_strategy == "CHEAPEST_POINTS":
-            pass
-
-        else:
-            logging.info("New ModelOptions not found in File.")
-            raise AbortTransaction
-        # convert multi parameter strategy to enum
-        if multi_strategy == "INCREASING_COST":
-            pass
-
-        elif multi_strategy == "DECREASING_COST":
-            pass
-
-        else:
-            logging.info("New ModelOptions not found in File.")
-            raise AbortTransaction
-        supports_sparse.__ = True
+        decode_strategy(multi_strategy, single_strategy, supports_sparse)
 
     return ModelGenerator(exp, SingleParameterModeler(), userName, use_median)
+
+
+def decode_strategy(multi_strategy, single_strategy, supports_sparse):
+    # convert single parameter strategy to enum
+    if single_strategy == "FIRST_POINTS_FOUND":
+        pass
+
+    elif single_strategy == "MAX_NUMBER_POINTS":
+        pass
+
+    elif single_strategy == "CHEAPEST_POINTS":
+        pass
+
+    else:
+        logging.info("New ModelOptions not found in File.")
+        raise AbortTransaction
+    # convert multi parameter strategy to enum
+    if multi_strategy == "INCREASING_COST":
+        pass
+
+    elif multi_strategy == "DECREASING_COST":
+        pass
+
+    else:
+        logging.info("New ModelOptions not found in File.")
+        raise AbortTransaction
+    supports_sparse.__ = True
 
 
 def deserialize_MultiParameterModelGenerator(exp, supports_sparse, ioHelper):
@@ -321,26 +325,7 @@ def deserialize_MultiParameterModelGenerator(exp, supports_sparse, ioHelper):
         # convert ints to bool values
         use_add_points = bool(add_points)
 
-        # convert single parameter strategy to enum
-        if single_strategy == "FIRST_POINTS_FOUND":
-            pass
-        elif single_strategy == "MAX_NUMBER_POINTS":
-            pass
-        elif single_strategy == "CHEAPEST_POINTS":
-            pass
-        else:
-            logging.info("New ModelOptions not found in File.")
-            raise AbortTransaction
-
-        # convert multi parameter strategy to enum
-        if multi_strategy == "INCREASING_COST":
-            pass
-        elif multi_strategy == "DECREASING_COST":
-            pass
-        else:
-            logging.info("New ModelOptions not found in File.")
-            raise AbortTransaction
-        supports_sparse.__ = True
+        decode_strategy(multi_strategy, single_strategy, supports_sparse)
 
     return ModelGenerator(exp, MultiParameterModeler(), userName, use_median)
 
@@ -378,6 +363,16 @@ def deserialize_ExperimentPoint(experiment, id_mappings, ioHelper):
     return point
 
 
+def deserialize_model_interval(id_mappings, ioHelper):
+    prefix = ioHelper.readString()
+    upper = deserialize_Function(ioHelper, id_mappings, prefix)
+    SAFE_RETURN_None(upper)
+    prefix = ioHelper.readString()
+    lower = deserialize_Function(ioHelper, id_mappings, prefix)
+    SAFE_RETURN_None(lower)
+    return upper, lower
+
+
 def deserialize_Model(experiment, id_mappings, supports_sparse, ioHelper):
     metricId = ioHelper.readId()
     callpathId = ioHelper.readId()
@@ -388,26 +383,9 @@ def deserialize_Model(experiment, id_mappings, supports_sparse, ioHelper):
     prefix = ioHelper.readString()
     model_function = deserialize_Function(ioHelper, id_mappings, prefix)
 
-    prefix = ioHelper.readString()
-    confidence_interval_upper = deserialize_Function(ioHelper, id_mappings, prefix)
-    SAFE_RETURN_None(confidence_interval_upper)
-    prefix = ioHelper.readString()
-    confidence_interval_lower = deserialize_Function(ioHelper, id_mappings, prefix)
-    SAFE_RETURN_None(confidence_interval_lower)
-
-    prefix = ioHelper.readString()
-    error_cone_interval_upper = deserialize_Function(ioHelper, id_mappings, prefix)
-    SAFE_RETURN_None(error_cone_interval_upper)
-    prefix = ioHelper.readString()
-    error_cone_interval_lower = deserialize_Function(ioHelper, id_mappings, prefix)
-    SAFE_RETURN_None(error_cone_interval_lower)
-
-    prefix = ioHelper.readString()
-    noise_error_interval_upper = deserialize_Function(ioHelper, id_mappings, prefix)
-    SAFE_RETURN_None(noise_error_interval_upper)
-    prefix = ioHelper.readString()
-    noise_error_interval_lower = deserialize_Function(ioHelper, id_mappings, prefix)
-    SAFE_RETURN_None(noise_error_interval_lower)
+    confidence_interval = deserialize_model_interval(id_mappings, ioHelper)
+    error_cone_interval = deserialize_model_interval(id_mappings, ioHelper)
+    noise_error_interval = deserialize_model_interval(id_mappings, ioHelper)
 
     RSS = ioHelper.readValue()
     AR2 = ioHelper.readValue()
@@ -527,7 +505,7 @@ def read_extrap3_experiment(path, progress_bar=DUMMY_PROGRESS):
     progress_bar.total += os.path.getsize(path)
     with open(path, "rb") as file:
         ioHelper = IoHelper(file)
-        
+
         try:
             qualifier = ioHelper.readString()
 

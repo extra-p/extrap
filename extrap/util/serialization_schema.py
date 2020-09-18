@@ -97,6 +97,7 @@ class TupleKeyDict(fields.Mapping):
                  **kwargs):
         super(TupleKeyDict, self).__init__(fields.Tuple(keys), values, **kwargs)
 
+    # noinspection PyProtectedMember
     def _serialize(self, value, attr, obj, **kwargs):
         if value is None:
             return None

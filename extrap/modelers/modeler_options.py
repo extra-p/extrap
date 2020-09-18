@@ -80,11 +80,30 @@ class _ModelerOptionsClass:
     def add(value: T, type: Type = str, description: str = None, name: str = None,
             range: Union[Mapping[AnyStr, T], range] = None,
             on_change: Callable[[Any, T], None] = None) -> T:
+        """
+        Creates a new modeler option.
+
+        :param value:       The default value of the option
+        :param type:        The data type of the value.
+                            Must support the conversion from a string if called with a string parameter.
+        :param description: A description of the option. Is shown in the command-line help and as tooltip in the GUI.
+        :param name:        Alternative display name. Replaces the automatic conversion of the field name.
+        :param range:       A range of possible alternatives, either a list, a mapping or a range.
+        :param on_change:   Callback function, that is called when the value of the option is changed.
+                            Its arguments are the instance self and the new value.
+        :return:            A ModelerOption object, that is processed during options creation and replaced by the value.
+        """
         return ModelerOption(value=value, type=type, description=description, name=name, range=range,
                              on_change=on_change)
 
     @staticmethod
     def group(name: str, *options: ModelerOption, description: str = None) -> ModelerOptionsGroup:
+        """
+        Groups options under the given name and adds an optional description for the group.
+        :param name:        Name of the group. Is shown in the command-line help and in the GUI.
+        :param options:     One or more options to group.
+        :param description: A description of the option. Is shown as tooltip in the GUI.
+        """
         group = ModelerOptionsGroup(name=name, description=description, options=options)
         for o in options:
             o.group = group

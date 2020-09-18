@@ -21,13 +21,13 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm
-from extrap.modelers.abstract_modeler import LegacyModeler
+from extrap.modelers.abstract_modeler import SingularModeler
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 
 
 @modeler_options
-class SingleParameterModeler(AbstractSingleParameterModeler, LegacyModeler):
+class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
     """
     This class represents the modeler for single parameter functions.
     In order to create a model measurements at least 5 points are needed.

@@ -25,13 +25,13 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
 from extrap.entities.terms import MultiParameterTerm
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import LegacyModeler
 from extrap.modelers.abstract_modeler import MultiParameterModeler as AbstractMultiParameterModeler
+from extrap.modelers.abstract_modeler import SingularModeler
 from extrap.modelers.modeler_options import modeler_options
 
 
 @modeler_options
-class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
+class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     """
     This class represents the modeler for multi parameter functions.
     In order to create a model measurements at least 5 points are needed.
@@ -173,7 +173,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, LegacyModeler):
         combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
                                  for p, grp in enumerate(result_groups)]
         np.seterr(**previous)
-        
+
         return combined_measurements
 
     @staticmethod

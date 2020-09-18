@@ -12,6 +12,8 @@ import logging
 from abc import ABC
 from typing import Iterable, TypeVar, Union, Tuple, Sequence
 
+import numpy
+
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import Hypothesis, SingleParameterHypothesis, MAX_HYPOTHESIS, ConstantHypothesis
 from extrap.entities.measurement import Measurement
@@ -48,13 +50,14 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
 
         # get the compound terms of the new hypothesis
         compound_terms = new.function.compound_terms
-
+        
+        previous = numpy.seterr(divide='ignore', invalid='ignore')
         # for all compound terms check if they are smaller than minimum allowed contribution
         for term in compound_terms:
-
             # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
             if term.coefficient == 0 or new.calc_term_contribution(term, measurements) < self.epsilon:
                 return False
+        numpy.seterr(**previous)
 
         # print smapes in debug mode
         logging.debug("next hypothesis SMAPE: " + str(new.SMAPE) + ' RSS:' + str(new.RSS))

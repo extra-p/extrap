@@ -1,6 +1,7 @@
 import copy
 import warnings
 from collections import namedtuple
+from operator import attrgetter
 from typing import List, Tuple, Sequence, cast
 
 from extrap.entities.fraction import Fraction
@@ -8,7 +9,7 @@ from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.model import Model
 from extrap.entities.terms import CompoundTerm
-from extrap.modelers.abstract_modeler import LegacyModeler
+from extrap.modelers.abstract_modeler import SingularModeler
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 
 SearchState = namedtuple('SearchState', ['left', 'center', 'right'])
@@ -21,7 +22,7 @@ class SingleParameterRefiningHypothesis(SingleParameterHypothesis):
         self.partition_index = partition_index
 
 
-class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
+class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
     """
     Sample implementation of the refinement modeler, not finished yet!
     """
@@ -124,9 +125,9 @@ class RefiningModeler(LegacyModeler, AbstractSingleParameterModeler):
                              state_per_slice: List[SearchState], slices,
                              constant_cost, measurements):
         if self.compare_with_RSS:
-            selector = lambda x: x.RSS
+            selector = attrgetter('RSS')
         else:
-            selector = lambda x: x.SMAPE
+            selector = attrgetter('SMAPE')
         best_hypotheses = hypotheses
         best_hypotheses_step = copy.copy(hypotheses)
         best_hypotheses_previous = copy.copy(hypotheses)
