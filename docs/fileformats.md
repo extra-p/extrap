@@ -7,7 +7,7 @@ File format documentation
 * [JSON Lines format](#JSON-Lines-format)
 * [Cube file format](#Cube-file-format)
 * [Experiment format](#Experiment-format)
-* [Extra-P 3.0 file format](#Extra-P-3.0-file-format)
+* [Extra-P 3.0 file format](#Extra-P-30-file-format)
 
 Text file format
 ----------------
