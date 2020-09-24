@@ -1,9 +1,12 @@
-### Extra-P
+# Extra-P
 
-![Python package](https://github.com/MeaParvitas/Extra-P/workflows/Python%20package/badge.svg?branch=master)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/extra-p/extrap?style=plastic)
 [![PyPI version](https://badge.fury.io/py/extrap.png)](https://badge.fury.io/py/extrap)
 [![PyPI - License](https://img.shields.io/pypi/l/extrap?style=plastic)](https://badge.fury.io/py/extrap)
+![GitHub issues](https://img.shields.io/github/issues/extra-p/extrap?style=plastic)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/extra-p/extrap?style=plastic)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/extra-p/extrap/extrap?style=plastic)
 
 Put project description here.
 
