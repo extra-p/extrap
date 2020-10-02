@@ -12,6 +12,7 @@ import signal
 from enum import Enum
 from functools import partial
 from pathlib import Path
+from typing import Optional
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -292,7 +293,7 @@ class MainWidget(QMainWindow):
     def getSelectedCallpath(self):
         return self.selector_widget.getSelectedCallpath()
 
-    def getCurrentModel(self):
+    def getCurrentModel(self) -> Optional[ModelGenerator]:
         return self.selector_widget.getCurrentModel()
 
     def open_font_dialog_box(self):
@@ -344,11 +345,11 @@ class MainWidget(QMainWindow):
         file_name = self.get_file_name(file_name)
         if file_name:
             image.save(file_name, filetype)
-        self.statusBar().showMessage(self.tr("Ready"))
+        # self.statusBar().showMessage(self.tr("Ready"))
 
     def model_experiment(self, experiment):
         # initialize model generator
-        model_generator = ModelGenerator(experiment, use_median=self.median)
+        model_generator = ModelGenerator(experiment, use_median=self.median, name="Default Model")
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)

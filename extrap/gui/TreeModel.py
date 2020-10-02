@@ -8,7 +8,9 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
-from typing import Optional
+from __future__ import annotations
+
+from typing import Optional, TYPE_CHECKING
 
 from PySide2.QtCore import *  # @UnusedWildImport
 
@@ -17,9 +19,12 @@ from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
+if TYPE_CHECKING:
+    from extrap.gui.SelectorWidget import SelectorWidget
+
 
 class TreeModel(QAbstractItemModel):
-    def __init__(self, selectorWidget, parent=None):
+    def __init__(self, selectorWidget: SelectorWidget, parent=None):
         super(TreeModel, self).__init__(parent)
         self.main_widget = selectorWidget.main_widget
         self.selector_widget = selectorWidget

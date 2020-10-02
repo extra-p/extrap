@@ -8,8 +8,10 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+from __future__ import annotations
 
 import math
+import typing
 
 import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -18,6 +20,9 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
+
+if typing.TYPE_CHECKING:
+    from extrap.gui.MainWidget import MainWidget
 
 
 #####################################################################
@@ -30,7 +35,7 @@ class GraphWidget(QWidget):
 
     #####################################################################
 
-    def __init__(self, main_widget, parent):
+    def __init__(self, main_widget: MainWidget, parent):
         super(GraphWidget, self).__init__(parent)
 
         self.main_widget = main_widget
@@ -236,9 +241,16 @@ class GraphWidget(QWidget):
         # model_list = list()
 
         text = ''
-        model_set = self.main_widget.getCurrentModel().models
+
+        model_set = self.main_widget.getCurrentModel()
+        if model_set is None:
+            return
+        model_set_models = model_set.models
+        if not model_set_models:
+            return
+
         for selected_callpath in selected_callpaths:
-            model = model_set[selected_callpath.path, selected_metric]
+            model = model_set_models[selected_callpath.path, selected_metric]
             if model is None:
                 return
             model_function = model.hypothesis.function
@@ -275,14 +287,18 @@ class GraphWidget(QWidget):
         model_set = self.main_widget.getCurrentModel()
         selected_metric = self.main_widget.getSelectedMetric()
         selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths:
+        if not selected_callpaths or model_set is None:
+            return
+
+        model_set_models = model_set.models
+        if not model_set_models:
             return
 
         model_list = list()
         for selected_callpath in selected_callpaths:
             key = (selected_callpath.path, selected_metric)
-            if key in model_set.models:
-                model = model_set.models[key]
+            if key in model_set_models:
+                model = model_set_models[key]
                 model_list.append(model)
 
         # Calculate geometry constraints

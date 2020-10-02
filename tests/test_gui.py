@@ -77,19 +77,19 @@ class TestGuiExperimentLoaded(TestGuiCommon):
                 self.assertIsNotNone(p.graphDisplayWindow)
                 QCoreApplication.processEvents()
 
-        def test_graph_no_model_selected(self):
-            data_display = self.window.data_display
-            # check graphs
-            tabs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-            data_display.reloadTabs(tabs)
-            for i in tabs:
-                data_display.display_widget.setCurrentIndex(i)
-                p = data_display.display_widget.currentWidget()
-                if isinstance(p, AdvancedPlotWidget):
-                    self.assertIsNotNone(p.graphDisplayWindow)
-                    p.drawGraph()
-                    self.assertIsNotNone(p.graphDisplayWindow)
-                    QCoreApplication.processEvents()
+    def test_graph_no_model_selected(self):
+        data_display = self.window.data_display
+        # check graphs
+        tabs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        data_display.reloadTabs(tabs)
+        for i in tabs:
+            data_display.display_widget.setCurrentIndex(i)
+            p = data_display.display_widget.currentWidget()
+            if isinstance(p, AdvancedPlotWidget):
+                self.assertIsNotNone(p.graphDisplayWindow)
+                p.drawGraph()
+                self.assertIsNotNone(p.graphDisplayWindow)
+                QCoreApplication.processEvents()
 
     def test_modeler_options_reset(self):
         modeler_widget = self.window.modeler_widget
@@ -155,6 +155,13 @@ class TestGuiNoExperiment(TestGuiCommon):
             if isinstance(p, AdvancedPlotWidget):
                 self.assertIsNone(p.graphDisplayWindow)
                 QCoreApplication.processEvents()
+
+
+class TestGuiSelectedThenNoModelSelected(TestGuiExperimentLoaded):
+    def setUp(self) -> None:
+        super().setUp()
+        self.test_graph_model_one_selected()
+        self.window.selector_widget.getCurrentModel = lambda: None
 
 
 if __name__ == '__main__':

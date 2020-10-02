@@ -9,6 +9,7 @@
 
 # ignore visual studio code files
 .vscode/
+.devcontainer/
 
 # ignore PyCharm files
 .idea/

@@ -8,6 +8,7 @@ This software may be modified and distributed under the terms of
 a BSD-style license. See the LICENSE file in the package base
 directory for details.
 """
+from typing import Optional
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -128,8 +129,9 @@ class SelectorWidget(QWidget):
             callpath_list.append(callpath)
         return callpath_list
 
-    def getCurrentModel(self) -> ModelGenerator:
-        return self.model_selector.currentData()
+    def getCurrentModel(self) -> Optional[ModelGenerator]:
+        model = self.model_selector.currentData()
+        return model
 
     def renameCurrentModel(self, newName):
         index = self.model_selector.currentIndex()
