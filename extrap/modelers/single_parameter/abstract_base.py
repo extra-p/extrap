@@ -1,13 +1,10 @@
-"""
-This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2020, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
 
-Copyright (c) 2020,
-Technische Universitaet Darmstadt, Germany
-
-This software may be modified and distributed under the terms of
-a BSD-style license. See the LICENSE file in the base
-directory for details.
-"""
 import logging
 from abc import ABC
 from typing import Iterable, TypeVar, Union, Tuple, Sequence
@@ -50,7 +47,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
 
         # get the compound terms of the new hypothesis
         compound_terms = new.function.compound_terms
-        
+
         previous = numpy.seterr(divide='ignore', invalid='ignore')
         # for all compound terms check if they are smaller than minimum allowed contribution
         for term in compound_terms:

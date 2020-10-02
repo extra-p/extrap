@@ -1,13 +1,9 @@
-"""
-This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
-
-Copyright (c) 2020,
-Technische Universitaet Darmstadt, Germany
-
-This software may be modified and distributed under the terms of
-a BSD-style license. See the LICENSE file in the package base
-directory for details.
-"""
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2020, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
 
 from PySide2.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
