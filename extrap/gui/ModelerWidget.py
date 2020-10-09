@@ -27,7 +27,7 @@ class ModelerWidget(QWidget):
         self._modeler: AbstractModeler = ...
 
         self._model_selector = QComboBox(self)
-        self._options_container = ExpanderWidget(self, 'Advanced Options')
+        self._options_container = ExpanderWidget(self, 'Advanced options')
         self._model_button = QPushButton(self)
         self.initUI()
 
@@ -37,19 +37,19 @@ class ModelerWidget(QWidget):
         self.setLayout(grid)
 
         self.model_name_edit = QLineEdit(self)
-        self.model_name_edit.setPlaceholderText("ModelName")
+        self.model_name_edit.setPlaceholderText("Model name")
         self.model_name_edit.setText("New Model")
 
         label = QLabel(self)
-        label.setText("Model Name:")
+        label.setText("Model name:")
         grid.addWidget(label, 0, 0)
         grid.addWidget(self.model_name_edit, 0, 1)
 
-        self.model_mean_radio = QRadioButton(self.tr("Model Mean"))
+        self.model_mean_radio = QRadioButton("Model mean")
         self.model_mean_radio.setChecked(True)
         grid.addWidget(self.model_mean_radio, 1, 0)
 
-        self.model_median_radio = QRadioButton(self.tr("Model Median"))
+        self.model_median_radio = QRadioButton("Model median")
         grid.addWidget(self.model_median_radio, 1, 1)
 
         self.model_mean_median_radio_group = QButtonGroup(grid)
@@ -61,12 +61,12 @@ class ModelerWidget(QWidget):
 
         self._options_container.setEnabled(False)
 
-        self._model_button.setText("Generate Models")
+        self._model_button.setText("Generate models")
         self._model_button.clicked.connect(self.remodel)
         self._model_button.setEnabled(False)
 
         grid.addWidget(QWidget(), 2, 0, 1, 2)
-        grid.addWidget(QLabel(self.tr('Model Generator:')), 3, 0, 1, 2)
+        grid.addWidget(QLabel('Model generator:'), 3, 0, 1, 2)
         grid.addWidget(self._model_selector, 4, 0, 1, 2)
         grid.addWidget(self._options_container, 5, 0, 1, 2)
         grid.addWidget(self._model_button, 6, 0, 1, 2)

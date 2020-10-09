@@ -68,7 +68,7 @@ class ModelerOptionsWidget(QWidget):
     def _create_single_parameter_selection(self):
         self._modeler: MultiParameterModeler
 
-        group = QGroupBox('Single Parameter Modeler')
+        group = QGroupBox('Single parameter modeler')
         g_layout = QVBoxLayout()
         g_layout.setContentsMargins(0, 0, 0, 0)
         modeler_selection = QComboBox()
@@ -105,7 +105,7 @@ class ModelerOptionsWidget(QWidget):
         if option.name is not None:
             name = option.name
         else:
-            name = option.field.replace('_', ' ').title()
+            name = option.field.replace('_', ' ').capitalize()
         label = QLabel(name)
         label.setToolTip(option.description)
         return label

@@ -29,7 +29,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
     CLEAN_CONSTANT_EPSILON = 1e-3  # minimum allowed value for a constant coefficient before it is set to 0
 
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
-    use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-Validation')
+    use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-validation')
     compare_with_RSS = modeler_options.add(False, bool)
 
     def __init__(self, use_median: bool):

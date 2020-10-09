@@ -170,17 +170,16 @@ class SelectorWidget(QWidget):
         if index < 0:
             return
         result = QInputDialog.getText(self,
-                                      self.tr('Rename current model'),
-                                      self.tr('Enter new name'), QLineEdit.EchoMode.Normal)
+                                      'Rename Current Model',
+                                      'Enter new name', QLineEdit.EchoMode.Normal)
         new_name = result[0]
         if result[1] and new_name:
             self.renameCurrentModel(new_name)
 
     def model_delete(self):
         reply = QMessageBox.question(self,
-                                     self.tr('Delete current model'),
-                                     self.tr(
-                                         "Are you sure to delete the model?"),
+                                     'Delete Current Model',
+                                     "Are you sure to delete the model?",
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:

@@ -39,11 +39,11 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                                         name='Logarithmic', on_change=lambda self, v: self._exponents_changed())
     retain_default_exponents = modeler_options.add(False, bool,
                                                    'If set the default exponents are added to the given ones.',
-                                                   name='Retain Default',
+                                                   name='Retain default',
                                                    on_change=lambda self, v: self._exponents_changed())
     force_combination_exponents = modeler_options.add(False, bool,
                                                       'If set the exact combination of exponents is forced.',
-                                                      name='Force Combination',
+                                                      name='Force combination',
                                                       on_change=lambda self, v: self._exponents_changed())
     modeler_options.group('Exponents', poly_exponents, log_exponents, retain_default_exponents,
                           force_combination_exponents)

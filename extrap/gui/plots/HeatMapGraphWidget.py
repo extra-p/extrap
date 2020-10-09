@@ -103,7 +103,7 @@ class HeatMapGraph(BaseContourGraph):
         ax.yaxis.major.formatter._useMathText = True
         ax.set_xlabel('\n' + x_label)
         ax.set_ylabel('\n' + y_label)
-        ax.set_title(r'Max Z value')
+        ax.set_title('Max. Z Value')
         im = ax.scatter(X, Y, c=max_Z_List, cmap=self.colormap)
         self.fig.colorbar(im, ax=ax, orientation="horizontal",
                           pad=0.2, format=ticker.ScalarFormatter(useMathText=True))

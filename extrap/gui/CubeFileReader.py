@@ -63,7 +63,7 @@ class CubeFileReader(QDialog):
         self.init_UI()
 
     def init_UI(self):
-        self.setWindowTitle("Import settings")
+        self.setWindowTitle("Import Settings")
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         main_layout = QFormLayout(self)

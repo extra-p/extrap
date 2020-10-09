@@ -25,7 +25,6 @@ class ColorWidget(QWidget):
 
         self.setMinimumHeight(40)
         self.setMinimumWidth(200)
-        self.setWindowTitle('Colours')
         self.setContentsMargins(10, 10, 10, 10)
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)

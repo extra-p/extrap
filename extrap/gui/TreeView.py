@@ -26,17 +26,17 @@ class TreeView(QTreeView):
                 selectedCallpath = self.model().getValue(
                     self.selectedIndexes()[0])
                 selectedModel: Model = self.model().getSelectedModel(selectedCallpath.path)
-                expandAction = menu.addAction("Expand All")
+                expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
                 # showCommentsAction = menu.addAction("Show Comments")
                 # showCommentsAction.setEnabled(
                 #     selectedModel is not None and len(selectedModel.getComments()) > 0)
                 # showCommentsAction.triggered.connect(
                 #     lambda: self.showComments(selectedModel))
-                showDataPointsAction = menu.addAction("Show Data Points")
+                showDataPointsAction = menu.addAction("Show data points")
                 showDataPointsAction.triggered.connect(
                     lambda: self.showDataPoints(selectedModel))
-                copyModel = menu.addAction("Copy Model")
+                copyModel = menu.addAction("Copy model")
                 copyModel.triggered.connect(
                     lambda: self.copy_model_to_clipboard(selectedModel)
                 )

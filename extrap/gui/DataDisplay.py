@@ -317,14 +317,14 @@ class DataDisplayManager(QWidget):
                 self.display_widget.addTab(graph, labelText)
 
         graph_widgets = {
-            1: ('SurfacePlot_All', AllFunctionsAsOneSurfacePlot),
-            2: ('SurfacePlot_Single', AllFunctionsAsDifferentSurfacePlot),
-            3: ('ScatterPlot_Dominating', DominatingFunctionsAsSingleScatterPlot),
-            4: ('SurfacePlot_MaxZ', MaxZAsSingleSurfacePlot),
-            5: ("Heat Map", HeatMapGraph),
-            6: ("Contour Plot", IsolinesDisplay),
-            7: ("Interpolated Contour", InterpolatedContourDisplay),
-            8: ("Measurement Points", MeasurementPointsPlot)
+            1: ('Single surface plot', AllFunctionsAsOneSurfacePlot),
+            2: ('Surface plots', AllFunctionsAsDifferentSurfacePlot),
+            3: ('Domination scatter plot', DominatingFunctionsAsSingleScatterPlot),
+            4: ('Max. Z surface plot', MaxZAsSingleSurfacePlot),
+            5: ("Heat map", HeatMapGraph),
+            6: ("Contour plot", IsolinesDisplay),
+            7: ("Interpolated contour", InterpolatedContourDisplay),
+            8: ("Measurement points", MeasurementPointsPlot)
         }
 
         for i in selectedCheckBoxesIndex:
