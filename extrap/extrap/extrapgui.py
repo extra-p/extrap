@@ -96,10 +96,10 @@ def main(*, args=None, test=False):
     def _exception_handler(type, value, traceback_):
         traceback_text = ''.join(traceback.extract_tb(traceback_).format())
 
-        # if issubclass(type, CancelProcessError):
-        #     logging.log(TRACEBACK, str(value))
-        #     logging.log(TRACEBACK, traceback_text)
-        #     return
+        if issubclass(type, CancelProcessError):
+            logging.log(TRACEBACK, str(value))
+            logging.log(TRACEBACK, traceback_text)
+            return
 
         msgBox = QMessageBox(window)
         print()

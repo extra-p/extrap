@@ -18,6 +18,7 @@ class TreeView(QTreeView):
 
         super(TreeView, self).__init__(parent)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setAnimated(True)
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -34,9 +35,11 @@ class TreeView(QTreeView):
                 # showCommentsAction.triggered.connect(
                 #     lambda: self.showComments(selectedModel))
                 showDataPointsAction = menu.addAction("Show data points")
+                showDataPointsAction.setDisabled(selectedModel is None)
                 showDataPointsAction.triggered.connect(
                     lambda: self.showDataPoints(selectedModel))
                 copyModel = menu.addAction("Copy model")
+                copyModel.setDisabled(selectedModel is None)
                 copyModel.triggered.connect(
                     lambda: self.copy_model_to_clipboard(selectedModel)
                 )

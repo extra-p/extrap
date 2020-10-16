@@ -117,12 +117,12 @@ class MainWidget(QMainWindow):
         # Menu creation
 
         # File menu
-        screenshot_action = QAction('Screenshot', self)
+        screenshot_action = QAction('S&creenshot', self)
         screenshot_action.setShortcut('Ctrl+P')
         screenshot_action.setStatusTip('Creates a screenshot of the Extra-P GUI')
         screenshot_action.triggered.connect(self.screenshot)
 
-        exit_action = QAction('Exit', self)
+        exit_action = QAction('E&xit', self)
         exit_action.setShortcut('Ctrl+Q')
         exit_action.setStatusTip('Exit application')
         exit_action.triggered.connect(self.close)
@@ -133,8 +133,8 @@ class MainWidget(QMainWindow):
             ('Open &text input', 'Open text input file',
              self._make_import_func('Open a Text Input File', read_text_file,
                                     filter="Text Files (*.txt);;All Files (*)")),
-            ('Open &JSON input', 'Open JSON input file',
-             self._make_import_func('Open a JSON Input File', read_json_file,
+            ('Open &JSON input', 'Open JSON or JSON Lines input file',
+             self._make_import_func('Open a JSONor JSON Lines Input File', read_json_file,
                                     filter="JSON Files (*.json), JSON Lines (*.jsonl);;All Files (*)")),
             ('Open Tal&pas input', 'Open Talpas input file',
              self._make_import_func('Open a Talpas Input File', read_talpas_file,
@@ -192,7 +192,7 @@ class MainWidget(QMainWindow):
 
         # Main menu bar
         menubar = self.menuBar()
-        menubar.setNativeMenuBar(False)
+        menubar.setNativeMenuBar(True)
 
         file_menu = menubar.addMenu('&File')
         for name, tooltip, command in file_imports:

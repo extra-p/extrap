@@ -79,6 +79,7 @@ class SelectorWidget(QWidget):
     def fillCalltree(self):
         self.tree_model = TreeModel(self)
         self.tree_view.setModel(self.tree_model)
+        self.tree_view.header().setDefaultSectionSize(65)
         # increase width of "Callpath" and "Value" columns
         self.tree_view.setColumnWidth(0, 150)
         self.tree_view.setColumnWidth(3, 150)
@@ -202,7 +203,7 @@ class SelectorWidget(QWidget):
 
     def metric_index_changed(self):
         self.main_widget.metricIndexChanged()
-        self.main_widget.selector_widget.tree_model.valuesChanged()
+        self.tree_model.on_metric_changed()
 
     def getParameterValues(self):
         ''' This functions returns the parameter value list with the

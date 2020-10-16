@@ -105,6 +105,9 @@ def isnumber(c):
 
 
 def formatFormula(formula):
+    if not any(f in [' ', '+', '*'] for f in formula):
+        return formatNumber(formula)
+
     end = 0
     # Set logarithm base
     while formula.find('log', end) != -1:

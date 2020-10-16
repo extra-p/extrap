@@ -42,7 +42,7 @@ def main(args=None, prog=None):
                         action=ModelerHelpAction)
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from cube files")
+    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from CUBE files")
     group.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
     group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
                        help="load data from Talpas data format")

@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 from PySide2.QtCore import *  # @UnusedWildImport
 
@@ -70,7 +70,7 @@ class TreeModel(QAbstractItemModel):
             return "Invalid"
 
         model = self.getSelectedModel(callpath)
-        if model is None:
+        if model is None and index.column() != 0:
             return None
 
         if getDecorationBoxes:
@@ -133,6 +133,24 @@ class TreeModel(QAbstractItemModel):
         else:
             return None
 
+    def on_metric_changed(self):
+
+        model = self.selector_widget.getCurrentModel()
+        metric = self.selector_widget.getSelectedMetric()
+        if model is None or metric is None:
+            return None
+
+        def selection_function(tree_item: TreeItem):
+            key = (tree_item.call_tree_node.path, metric)
+            return key in model.models
+
+        if self.root_item.call_tree_node is not None:
+            if self.root_item.does_selection_change(selection_function):
+                self.beginResetModel()
+                self.root_item.calculate_selection(selection_function)
+                self.endResetModel()
+            self.valuesChanged()
+
     def flags(self, index):
         if not index.isValid():
             return Qt.NoItemFlags
@@ -193,8 +211,10 @@ class TreeModel(QAbstractItemModel):
 
         if parentItem == self.root_item:
             return QModelIndex()
-
-        return self.createIndex(parentItem.row(), 0, parentItem)
+        try:
+            return self.createIndex(parentItem.row(), 0, parentItem)
+        except ValueError:
+            return QModelIndex()
 
     def rowCount(self, parent):
         if parent.column() > 0:
@@ -217,7 +237,8 @@ class TreeModel(QAbstractItemModel):
 
     def valuesChanged(self):
         self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(100, self.columnCount(None) - 1))
+                              self.createIndex(len(self.main_widget.getExperiment().callpaths) - 1,
+                                               self.columnCount(None) - 1))
 
     def getRootItem(self):
         return self.root_item
@@ -227,7 +248,9 @@ class TreeItem(object):
     def __init__(self, call_tree_node, parent=None):
         self.parent_item = parent
         self.call_tree_node: calltree.Node = call_tree_node
-        self.child_items = []
+        self.child_items: List[TreeItem] = []
+        self._all_child_items: Optional[List[TreeItem]] = None
+        self.is_selected = True
 
     def appendChild(self, item):
         self.child_items.append(item)
@@ -245,3 +268,32 @@ class TreeItem(object):
         if self.parent_item:
             return self.parent_item.child_items.index(self)
         return 0
+
+    def set_selection_recursive(self, value: bool):
+        if value:
+            self.child_items = self._all_child_items
+        else:
+            if self._all_child_items is None:
+                self._all_child_items = self.child_items
+            self.child_items = []
+        for c in self.child_items:
+            c.set_selection_recursive(value)
+
+    def calculate_selection(self, selection_function) -> bool:
+        if self.child_items or self._all_child_items:
+            if self._all_child_items is None:
+                self._all_child_items = self.child_items
+            self.child_items = [c for c in self._all_child_items if c.calculate_selection(selection_function)]
+        select = self.child_items or selection_function(self)
+        self.is_selected = select
+        return select
+
+    def does_selection_change(self, selection_function) -> bool:
+        if self.child_items or self._all_child_items:
+            if self._all_child_items is None:
+                self._all_child_items = self.child_items
+            return any(c.does_selection_change(selection_function) for c in self._all_child_items)
+        elif selection_function(self) != self.is_selected:
+            return True
+        else:
+            return False

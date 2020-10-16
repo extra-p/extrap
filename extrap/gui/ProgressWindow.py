@@ -7,7 +7,7 @@
 
 from threading import Event
 
-from PySide2.QtCore import Qt, QCoreApplication
+from PySide2.QtCore import Qt, QCoreApplication, Slot
 from PySide2.QtWidgets import QProgressDialog, QLabel
 
 from extrap.util.exceptions import CancelProcessError
@@ -35,9 +35,9 @@ class ProgressWindow(ProgressBar):
         # self.dialog.show()
 
     def close(self):
-        self._internal_cancel_event.set()
         try:
-            self.dialog.cancel()
+            if not self._cancel_event.is_set():
+                self.dialog.reject()
         except RuntimeError:
             pass
         try:
@@ -45,9 +45,9 @@ class ProgressWindow(ProgressBar):
         except AttributeError:
             pass
 
+    @Slot()
     def user_cancel(self):
-        if not self._internal_cancel_event.is_set():
-            self._cancel_event.set()
+        self._cancel_event.set()
 
     def clear(self, nolock=False):
         super().clear(nolock)
@@ -66,11 +66,12 @@ class ProgressWindow(ProgressBar):
         remaining_str = self.format_interval(remaining) if rate else '??:??'
 
         time_str = f'Time remaining:\t{remaining_str}\nTime elapsed:\t{elapsed_str}'
-
-        self.dialog.setMaximum(self.total)
-        if self.postfix:
-            self.dialog.setLabelText(time_str + '\n\n' + self.postfix)
-        else:
-            self.dialog.setLabelText(time_str)
-        self.dialog.setValue(self.n)
+        
+        if not self._cancel_event.is_set():
+            self.dialog.setMaximum(self.total)
+            if self.postfix:
+                self.dialog.setLabelText(time_str + '\n\n' + self.postfix)
+            else:
+                self.dialog.setLabelText(time_str)
+            self.dialog.setValue(self.n)
         QCoreApplication.processEvents()
