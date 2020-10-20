@@ -18,7 +18,7 @@ class TestConsole(unittest.TestCase):
         self.assertRaisesRegex(SystemExit, '0', extrap.main, ['--help'])
 
     def test_help_modeler_options(self):
-        self.assertRaisesRegex(SystemExit, '0', extrap.main, ['--help-options', 'Default'])
+        self.assertRaisesRegex(SystemExit, '0', extrap.main, ['--help-modeler', 'Default'])
 
     def test_text(self):
         extrap.main(['--text', 'data/text/one_parameter_1.txt'])

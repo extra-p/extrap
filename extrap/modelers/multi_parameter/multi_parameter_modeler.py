@@ -42,7 +42,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     allow_combinations_of_sums_and_products = modeler_options.add(True, bool,
                                                                   description="Allows models that consist of "
                                                                               "combinations of sums and products.")
-    compare_with_RSS = modeler_options.add(False, bool)
+    compare_with_RSS = modeler_options.add(False, bool,
+                                           'If enabled the models are compared using their residual sum of squares '
+                                           '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
 
     def __init__(self):
         """
@@ -176,7 +178,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     def find_first_measurement_points(measurements: Sequence[Measurement]):
         """
         This method returns the measurements that should be used for creating
-        the single parameter models.
+        the single-parameter models.
         """
         dimensions = measurements[0].coordinate.dimensions
         min_coordinate = [
@@ -226,7 +228,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # get the coordinates for modeling
         # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
-        # use all available additional points for modeling the multi parameter models
+        # use all available additional points for modeling the multi-parameter models
         constantCost = 0
         meanModel = 0
 

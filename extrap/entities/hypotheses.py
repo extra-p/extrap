@@ -280,7 +280,7 @@ class SingleParameterHypothesis(Hypothesis):
 
     def compute_cost(self, training_measurements: Sequence[Measurement], validation_measurement: Measurement):
         """
-        Compute the cost for the single parameter model using leave one out crossvalidation.
+        Compute the cost for the single-parameter model using leave one out crossvalidation.
         """
         value = validation_measurement.coordinate[0]
         predicted = self.function.evaluate(value)

@@ -68,7 +68,7 @@ class ModelerOptionsWidget(QWidget):
     def _create_single_parameter_selection(self):
         self._modeler: MultiParameterModeler
 
-        group = QGroupBox('Single parameter modeler')
+        group = QGroupBox('single-parameter modeler')
         g_layout = QVBoxLayout()
         g_layout.setContentsMargins(0, 0, 0, 0)
         modeler_selection = QComboBox()

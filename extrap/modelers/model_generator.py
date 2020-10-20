@@ -53,10 +53,10 @@ class ModelGenerator:
         if isinstance(modeler, str):
             try:
                 if len(self.experiment.parameters) == 1:
-                    # single parameter model generator init here...
+                    # single-parameter model generator init here...
                     result_modeler = single_parameter.all_modelers[modeler]()
                 else:
-                    # multi parameter model generator init here...
+                    # multi-parameter model generator init here...
                     result_modeler = multi_parameter.all_modelers[modeler]()
                 result_modeler.use_median = use_median
             except KeyError:
@@ -66,7 +66,7 @@ class ModelGenerator:
             return NotImplemented
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
-                # single parameter model generator init here...
+                # single-parameter model generator init here...
                 result_modeler = modeler
                 if use_median is not None:
                     result_modeler.use_median = use_median

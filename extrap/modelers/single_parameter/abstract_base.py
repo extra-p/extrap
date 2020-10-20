@@ -30,7 +30,9 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
 
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms')
     use_crossvalidation = modeler_options.add(True, bool, 'Enables cross-validation', name='Cross-validation')
-    compare_with_RSS = modeler_options.add(False, bool)
+    compare_with_RSS = modeler_options.add(False, bool,
+                                           'If enabled the models are compared using their residual sum of squares '
+                                           '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
 
     def __init__(self, use_median: bool):
         super().__init__(use_median)
@@ -112,12 +114,12 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     # check if the constant coefficient should actually be 0
                     next_hypothesis.clean_constant_coefficient(self.epsilon, training_measurements)
 
-                    # compute the cost of the single parameter model for the validation data
+                    # compute the cost of the single-parameter model for the validation data
                     next_hypothesis.compute_cost(training_measurements, validation_measurement)
 
                 # compute the model coefficients using all data
                 next_hypothesis.compute_coefficients(measurements)
-                logging.debug(f"Single parameter model {i}: " + next_hypothesis.function.to_string(Parameter('p')))
+                logging.debug(f"single-parameter model {i}: " + next_hypothesis.function.to_string(Parameter('p')))
             else:
                 # compute the model coefficients based on the training data
                 next_hypothesis.compute_coefficients(measurements)
@@ -126,7 +128,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                 next_hypothesis.clean_constant_coefficient(
                     self.CLEAN_CONSTANT_EPSILON, measurements)
 
-                # compute the cost of the single parameter model for the validation data
+                # compute the cost of the single-parameter model for the validation data
                 next_hypothesis.compute_cost_all_points(measurements)
 
             # compute the AR2 for the hypothesis

@@ -128,7 +128,7 @@ class MainWidget(QMainWindow):
         exit_action.triggered.connect(self.close)
 
         file_imports = [
-            ('Open set of &CUBE files', 'Open a set of CUBE files for single parameter models and generate data points '
+            ('Open set of &CUBE files', 'Open a set of CUBE files for single-parameter models and generate data points '
                                         'for a new experiment from them', self.open_cube_file),
             ('Open &text input', 'Open text input file',
              self._make_import_func('Open a Text Input File', read_text_file,
@@ -226,6 +226,16 @@ class MainWidget(QMainWindow):
 
         # filter_menu = menubar.addMenu('Filter')
         # filter_menu.addAction(filter_callpath_action)
+
+        help_menu = menubar.addMenu('&Help')
+
+        doc_action = QAction('&Documentation', self)
+        doc_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(extrap.__documentation_link__)))
+        help_menu.addAction(doc_action)
+
+        about_action = QAction('&About', self)
+        about_action.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(about_action)
 
         # Main window
         self.resize(1200, 800)
@@ -429,6 +439,15 @@ class MainWidget(QMainWindow):
                 newcolor = color[:-1] + str(multiple)
                 self.dict_callpath_color[callpath] = newcolor
             current_index = current_index + 1
+
+    def show_about_dialog(self):
+        QMessageBox.about(self, "About " + extrap.__title__,
+                          f"""<h1>{extrap.__title__}</h1>
+<p>Version {extrap.__version__}</p>
+<p>{extrap.__description__}</p>
+<p>{extrap.__copyright__}</p>
+"""
+                          )
 
     def getColorForCallPath(self, callpath):
         return self.dict_callpath_color[callpath]

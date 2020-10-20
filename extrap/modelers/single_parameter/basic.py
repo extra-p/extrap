@@ -278,7 +278,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         # otherwise start searching for the best hypothesis based on the PMNF
         else:
-            logging.debug("Searching for a single parameter model.")
+            logging.debug("Searching for a single-parameter model.")
             # search for the best single parameter hypothesis
             hypotheses_generator = self.build_hypotheses(measurements)
             best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, measurements,

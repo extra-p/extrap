@@ -12,6 +12,7 @@ File format documentation
 Text file format
 ----------------
 The text file format is a basic input format consisting of 5 sections:
+
 - PARAMETER: 
   This section defines the names of the modeling parameters separated by spaces.
   Also, multiple sections can be used. 
@@ -36,6 +37,7 @@ The text file format is a basic input format consisting of 5 sections:
   Example: `DATA <value> <...>`
 
 A general subset of the format is defined by the following ABNF grammar:
+
 ```ABNF
 ExtraPTextFile = *CommentLine 1*ParameterDefinition 
 			   1*PointsDefinition 1*MeasurementDefinition
@@ -86,6 +88,7 @@ TaLPas format
 -------------
 The TaLPas format consist of one line for each measurement.
 The lines are structured as follows:
+
 ```
 {"parameters":{"<parameter name>":<parameter value>};"metric":"<metric name>";"callpath":"<callpath>";"value":<measurement value>}
 ```
@@ -96,6 +99,7 @@ JSON format
 Extra-P supports two different JSON formats (`*.json`).
 The newer, recommended one is less verbose. 
 The structure is defined by the following schema and is also shown in this example:
+
 ```json
 {
   "parameters": [
@@ -124,6 +128,7 @@ The structure is defined by the following schema and is also shown in this examp
 ```
 
 #### Schema
+
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema",
@@ -184,8 +189,10 @@ The structure is defined by the following schema and is also shown in this examp
   }
 }
 ```
+
 The older format is based on referencing parts using ids.
 It uses the following structure:
+
 ```json
 {
     "callpaths": [
@@ -228,6 +235,7 @@ It uses the following structure:
     ]
 }
 ```
+
 For more examples see [tests/data/json](../tests/data/json).
 
 JSON Lines format
@@ -235,17 +243,23 @@ JSON Lines format
 Extra-P supports the following JSON Lines format (`*.jsonl`) in addition to the JSON formats.
 Herby, each line of the file, delimited with '\n', contains a JSON object which describes one measurement value.
 The minimal required structure of the JSON objects is as follows:
+
 ```json
 { "params": { "<parameter1>": 0, "...": "..." }, "value": 0.0 }
 ```
+
 Value may also be a list of values:
+
 ```json
 { "...": "...", "value": [0.0, 0.1, 0.2] }
 ```
+
 Optionally the callpath and/or metric can also be defined:
+
 ```json
 { "...": "...", "callpath": "<callpath>", "metric": "<metric>"}
 ```
+
 For more examples see [tests/data/jsonlines](../tests/data/jsonlines).
 
 Cube file format
@@ -264,6 +278,7 @@ PARAMETER-VALUE-PAIRS = PARAMETER-NAME PARAMETER-VALUE *(["."/","] PARAMETER-NAM
 ```
 
 Examples for possible name structures are:
+
 * `mm.a1.1b1.1c1.1`
 * `mm.x1y1z1`
 * `mm.x1y1z1.r1`
@@ -274,6 +289,7 @@ Examples for possible name structures are:
 * `x1y1z1`
 
 The overall directory structure should be similar to the following:
+
 ```
 cube file folder
 |
@@ -295,7 +311,6 @@ cube file folder
 |  +--profile.cubex
 +--+mm.x50y1z1.r1
    +--profile.cubex
-
 ```
 
 Experiment format

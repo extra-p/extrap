@@ -60,10 +60,10 @@ def _add_options_to_parser(modeler, parser):
 def _add_single_parameter_options(parser):
     parser.add_argument('#spm', 'single_parameter_modeler', dest=SINGLE_PARAMETER_MODELER_KEY,
                         choices=list(single_parameter.all_modelers.keys()), default=None,
-                        help="Selects single parameter modeler")
+                        help="Selects the single-parameter modeler used during multi-parameter modeling")
     parser.add_argument('#spo', 'single_parameter_options', dest=SINGLE_PARAMETER_OPTIONS_KEY,
                         nargs='+', metavar='KEY=VALUE', default={},
-                        help="Sets the options for the single parameter modeler", action=ModelerOptionsAction)
+                        help="Sets the options for the single-parameter modeler", action=ModelerOptionsAction)
 
 
 class ModelerHelpAction(Action):
@@ -76,6 +76,7 @@ class ModelerHelpAction(Action):
             modeler = single_parameter.all_modelers[values]
             sub_parser = _create_parser(modeler, values)
             print('Single Parameter Options')
+            print('------------------------')
             sub_parser.print_help()
 
         if values in multi_parameter.all_modelers:
@@ -84,6 +85,7 @@ class ModelerHelpAction(Action):
             _add_single_parameter_options(sub_parser)
             print()
             print('Multi Parameter Options')
+            print('-----------------------')
             sub_parser.print_help()
         parser.exit()
 
@@ -91,7 +93,7 @@ class ModelerHelpAction(Action):
 class ModelerOptionsAction(Action):
     # noinspection PyShadowingBuiltins, PyUnusedLocal
     def __init__(self, option_strings: Sequence[Text], dest: Text, help, **kwargs) -> None:
-        super().__init__(option_strings, dest, **kwargs)
+        super().__init__(option_strings, dest, help=help, **kwargs)
 
     @staticmethod
     def _all_spo_parser():
