@@ -11,7 +11,6 @@ import sys
 import matplotlib.ticker as ticker
 import numpy as np
 from matplotlib import cm
-from matplotlib.colors import LinearSegmentedColormap
 
 from extrap.gui.plots.BaseGraphWidget import BaseContourGraph
 
@@ -127,17 +126,17 @@ class HeatMapGraph(BaseContourGraph):
         # Step 3: Draw legend
         self.draw_legend(ax, dict_callpath_color)
 
-    @staticmethod
-    def getColorMap():
-        """ 
-           This function creates a color map and return it.
-        """
-        colors = [(0, 0, 1), (0, 1, 0), (1, 0, 0)]
-        n_bin = 100
-        cmap_name = 'my_list'
-        colorMap = LinearSegmentedColormap.from_list(
-            cmap_name, colors, N=n_bin)
-        return colorMap
+    # @staticmethod
+    # def getColorMap():
+    #     """
+    #        This function creates a color map and return it.
+    #     """
+    #     colors = [(0, 0, 1), (0, 1, 0), (1, 0, 0)]
+    #     n_bin = 100
+    #     cmap_name = 'my_list'
+    #     colorMap = LinearSegmentedColormap.from_list(
+    #         cmap_name, colors, N=n_bin)
+    #     return colorMap
 
     @staticmethod
     def get_dominating_function_indices(function, functionList):

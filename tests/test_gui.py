@@ -104,7 +104,7 @@ class TestGuiExperimentLoaded(TestGuiCommon):
         QCoreApplication.processEvents()
         checkbox = None
         reset_button = None
-        for child in modeler_widget._options_container.children():
+        for child in modeler_widget._options_container.content().children():
             QCoreApplication.processEvents()
             if not reset_button and isinstance(child, QPushButton):
                 reset_button = child
@@ -118,7 +118,7 @@ class TestGuiExperimentLoaded(TestGuiCommon):
             QCoreApplication.processEvents()
             self.assertNotEqual(old_state, checkbox.isChecked())
             reset_button.click()
-            for child in modeler_widget._options_container.children():
+            for child in modeler_widget._options_container.content().children():
                 QCoreApplication.processEvents()
                 if isinstance(child, QCheckBox):
                     checkbox = child
