@@ -7,13 +7,6 @@ license_header = """
 # See the LICENSE file in the base directory for details.
 """
 
-#  This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
-#
-#  Copyright (c) 2020, Technical University of Darmstadt, Germany
-#
-#  This software may be modified and distributed under the terms of a BSD-style license.
-#  See the LICENSE file in the base directory for details.
-
 import glob
 import re
 
@@ -36,7 +29,10 @@ for file_path in file_paths:
     else:
         data_str = data
 
-    data_str = license_header + data_str
+    if data_str.strip():
+        data_str = license_header + data_str
+    else:
+        data_str = data_str.strip()
     # print(data_str)
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(data_str)
