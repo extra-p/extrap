@@ -15,7 +15,6 @@ from marshmallow import fields, validate
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import Schema, NumberField
 
 
@@ -23,14 +22,6 @@ class Term(ABC):
 
     def __init__(self):
         self.coefficient = 1
-
-    @deprecated("Use property directly.")
-    def set_coefficient(self, coefficient):
-        self.coefficient = coefficient
-
-    @deprecated("Use property directly.")
-    def get_coefficient(self):
-        return self.coefficient
 
     @abstractmethod
     def to_string(self):
@@ -90,14 +81,6 @@ class SimpleTerm(SingleParameterTerm):
         elif self._term_type == "logarithm":
             self.evaluate = self._evaluate_logarithm
 
-    @deprecated("Use property directly.")
-    def set_exponent(self, exponent):
-        self.exponent = exponent
-
-    @deprecated("Use property directly.")
-    def get_exponent(self):
-        return self.exponent
-
     def to_string(self, parameter='p'):
         if self._term_type == "polynomial":
             return f"{parameter}^({self.exponent})"
@@ -131,10 +114,6 @@ class CompoundTerm(SingleParameterTerm):
     def __init__(self, *terms):
         super().__init__()
         self.simple_terms: List[SimpleTerm] = list(terms)
-
-    @deprecated("Use property directly.")
-    def get_simple_terms(self):
-        return self.simple_terms
 
     def add_simple_term(self, simple_term):
         self.simple_terms.append(simple_term)
@@ -188,14 +167,6 @@ class MultiParameterTerm(Term):
         self.parameter_term_pairs = list(terms)
 
     def add_parameter_term_pair(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
-        self.parameter_term_pairs.append(parameter_term_pair)
-
-    @deprecated("Use parameter_term_pairs property directly.")
-    def get_compound_term_parameter_pairs(self):
-        return self.parameter_term_pairs
-
-    @deprecated("Use add_parameter_term_pair instead.")
-    def add_compound_term_parameter_pair(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
         self.parameter_term_pairs.append(parameter_term_pair)
 
     def evaluate(self, parameter_values: Union[Tuple[float], Coordinate]):

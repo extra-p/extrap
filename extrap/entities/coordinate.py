@@ -56,21 +56,6 @@ class Coordinate:
         self._parameters = tuple(itertools.chain(self._parameters, (parameter,)))
         self._values = tuple(itertools.chain(self._values, (value,)))
 
-    @deprecated("Use property directly.")
-    def get_dimensions(self):
-        """
-        Returns the number of dimensions of the coordinate.
-        """
-        return self.dimensions
-
-    @deprecated("Parameters are no longer in use.")
-    def get_parameter_value(self, dimension):
-        """
-        Returns the parameter-value combination of the given dimension.
-        """
-        value = self._values[dimension]
-        return dimension, value
-
     @deprecated("Use str(Coordinate).")
     def get_as_string(self):
         """

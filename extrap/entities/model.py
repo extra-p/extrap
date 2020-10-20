@@ -15,7 +15,6 @@ from extrap.entities.hypotheses import Hypothesis, HypothesisSchema
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import MetricSchema
 from extrap.util.caching import cached_property
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import Schema
 
 
@@ -26,18 +25,6 @@ class Model:
         self.callpath = callpath
         self.metric = metric
         self.measurements: Optional[List[Measurement]] = None
-
-    @deprecated("Use property directly.")
-    def get_hypothesis(self):
-        return self.hypothesis
-
-    @deprecated("Use property directly.")
-    def get_callpath_id(self):
-        return self.callpath.id
-
-    @deprecated("Use property directly.")
-    def get_metric_id(self):
-        return self.metric.id
 
     @cached_property
     def predictions(self):

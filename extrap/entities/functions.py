@@ -11,7 +11,6 @@ import numpy
 from marshmallow import fields
 
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import BaseSchema, NumberField
 
 
@@ -32,34 +31,6 @@ class Function:
     def __iadd__(self, compound_term):
         self.add_compound_term(compound_term)
         return self
-
-    @deprecated("Use property directly.")
-    def get_compound_terms(self):
-        """
-        Return all the compound terms of the function.
-        """
-        return self.compound_terms
-
-    @deprecated("Use property directly.")
-    def get_compound_term(self, compound_term_id):
-        """
-        Return the compound term of the given id of the function.
-        """
-        return self.compound_terms[compound_term_id]
-
-    @deprecated("Use property directly.")
-    def set_constant_coefficient(self, constant_coefficient):
-        """
-        Set the constant coefficient of the function to the given value.
-        """
-        self.constant_coefficient = constant_coefficient
-
-    @deprecated("Use property directly.")
-    def get_constant_coefficient(self):
-        """
-        Return the constant coefficient of the function.
-        """
-        return self.constant_coefficient
 
     def evaluate(self, parameter_value):
         """
@@ -144,14 +115,6 @@ class MultiParameterFunction(Function):
 
     def __init__(self, *compound_terms: MultiParameterTerm):
         super().__init__(*compound_terms)
-
-    @deprecated("Use add_compound_term(Term) instead.")
-    def add_multi_parameter_term(self, multi_parameter_term):
-        self.add_compound_term(multi_parameter_term)
-
-    @deprecated("Use indexer instead.")
-    def get_multi_parameter_terms(self):
-        return self.compound_terms
 
     def __repr__(self):
         return f"MultiParameterFunction({self.to_string()})"

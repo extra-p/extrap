@@ -13,7 +13,6 @@ from extrap.entities.fraction import Fraction
 
 class TestFraction(unittest.TestCase):
     def ASSERT_FRACTION_EQUAL(self, frac, string, value):
-        self.assertAlmostEqual(value, frac.eval())  # tests deprecated function
         self.assertAlmostEqual(value, float(frac))
         self.assertEqual(string, str(frac))
 

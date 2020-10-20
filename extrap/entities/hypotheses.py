@@ -12,7 +12,6 @@ from marshmallow import fields
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
 from extrap.entities.measurement import Measurement
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import BaseSchema, NumberField
 
 
@@ -74,86 +73,6 @@ class Hypothesis:
         if not self._costs_are_calculated:
             raise RuntimeError("Costs are not calculated.")
         return self._RE
-
-    # region Deprecated Getter and Setter
-    @deprecated("Use property directly.")
-    def get_function(self):
-        """
-        Return the function.
-        """
-        return self.function
-
-    @deprecated("Use property directly.")
-    def get_RSS(self):
-        """
-        Return the RSS.
-        """
-        return self.RSS
-
-    @deprecated("Use property directly.")
-    def get_rRSS(self):
-        """
-        Return the rRSS.
-        """
-        return self.rRSS
-
-    @deprecated("Use property directly.")
-    def get_AR2(self):
-        """
-        Return the AR2.
-        """
-        return self.AR2
-
-    @deprecated("Use property directly.")
-    def get_SMAPE(self):
-        """
-        Return the SMAPE.
-        """
-        return self.SMAPE
-
-    @deprecated
-    def get_RE(self):
-        """
-        Return the relative error.
-        """
-        return self.RE
-
-    @deprecated
-    def set_RSS(self, RSS):
-        """
-        Set the RSS.
-        """
-        self._RSS = RSS
-
-    @deprecated
-    def set_rRSS(self, rRSS):
-        """
-        Set the rRSS.
-        """
-        self._rRSS = rRSS
-
-    @deprecated
-    def set_AR2(self, AR2):
-        """
-        Set the AR2.
-        """
-        self._AR2 = AR2
-
-    @deprecated
-    def set_SMAPE(self, SMAPE):
-        """
-        Set the SMAPE.
-        """
-        self._SMAPE = SMAPE
-
-    @deprecated
-    def set_RE(self, RE):
-        """
-        Set the RE.
-        """
-        self._RE = RE
-
-    # endregion
 
     def is_valid(self):
         """

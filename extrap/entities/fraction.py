@@ -9,8 +9,6 @@ import inspect
 from fractions import Fraction as _PyFraction
 from math import floor, fabs
 
-from extrap.util.deprecation import deprecated
-
 
 # noinspection PyAbstractClass
 class Fraction(_PyFraction):
@@ -19,61 +17,11 @@ class Fraction(_PyFraction):
     It is used in the single parameter function modeler in order to iteratively refine the exponents.
     """
 
-    @deprecated
-    def compute_extended_euclidean(self, a, b):
-        """
-        An implementation of the Extended Euclidean Algorithm.
-        For inputs a, b returns the values x, y and gcd such that  x*a + y*b = gcd.
-        Also returns t, s such that (-t) = (a div gcd) and s = (b div gcd) where div is integer division.
-        """
-        s = 0
-        old_s = 1
-        t = 1
-        old_t = 0
-        r = b
-        old_r = a
-        while r != 0:
-            quotient = old_r / r
-            tmp = r
-            r = old_r - quotient * r
-            old_r = tmp
-            tmp = s
-            s = old_s - quotient * s
-            old_s = tmp
-            tmp = t
-            t = old_t - quotient * t
-            old_t = tmp
-        gcd = old_r
-        x = old_s
-        y = old_t
-        return gcd, x, y, t, s
-
-    @deprecated("Use float(Fraction) instead.")
-    def eval(self):
-        """
-        Evaluates the fraction and returns the result as a floating point number.
-        """
-        return float(self)
-
     def numerator_is_zero(self):
         """
         Test if the numerator is 0.
         """
         return self.numerator == 0
-
-    @deprecated("Use property directly.")
-    def get_numerator(self):
-        """
-        Returns the value of the numerator.
-        """
-        return self.numerator
-
-    @deprecated("Use property directly.")
-    def get_denominator(self):
-        """
-        Returns the value of the denominator.
-        """
-        return self.denominator
 
     def get_fractional_part(self):
         """

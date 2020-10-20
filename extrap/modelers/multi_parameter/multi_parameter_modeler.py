@@ -55,31 +55,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         self.min_measurement_points = 5
         self.epsilon = 0.0005  # value for the minimum term contribution
 
-    @staticmethod
-    def compare_parameter_values(parameter_value_list1, parameter_value_list2):
-        """
-        This method compares the parameter values of two coordinates with each other
-        to see if they are equal and returns a True or False.
-        """
-        if len(parameter_value_list1) != len(parameter_value_list2):
-            return False
-        for i in range(len(parameter_value_list1)):
-            if parameter_value_list1[i] != parameter_value_list2[i]:
-                return False
-        return True
-
-    @staticmethod
-    def get_parameter_values(coordinate, parameter_id):
-        """
-        This method returns the parameter values from the coordinate.
-        But only the ones necessary for the compare_parameter_values() method.
-        """
-        parameter_value_list = []
-        _, value = coordinate.get_parameter_value(parameter_id)
-        parameter_value_list.append(float(value))
-        return parameter_value_list
-
     def find_best_measurement_points(self, measurements: Sequence[Measurement]):
+        """
+        Determines the best measurement points for creating the single-parameter models.
+        """
 
         def make_measurement(c, ms: Sequence[Measurement]):
             if len(ms) == 1:
@@ -177,7 +156,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     @staticmethod
     def find_first_measurement_points(measurements: Sequence[Measurement]):
         """
-        This method returns the measurements that should be used for creating
+        This method returns the smallest possible measurements that should be used for creating
         the single-parameter models.
         """
         dimensions = measurements[0].coordinate.dimensions
@@ -203,7 +182,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
     def create_model(self, measurements: Sequence[Measurement]):
         """
-        Create a model for the given callpath and metric using the given data.
+        Create a multi-parameter model using the given measurements.
         """
         if self.single_parameter_point_selection == 'auto' \
                 or self.single_parameter_point_selection == 'all':

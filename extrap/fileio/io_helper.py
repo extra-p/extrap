@@ -24,7 +24,7 @@ def format_callpaths(experiment):
     """
     This method formats the ouput so that only the callpaths are shown.
     """
-    callpaths = experiment.get_callpaths()
+    callpaths = experiment.callpaths
     text = ""
     for callpath_id in range(len(callpaths)):
         callpath = callpaths[callpath_id]
@@ -37,7 +37,7 @@ def format_metrics(experiment):
     """
     This method formats the ouput so that only the metrics are shown.
     """
-    metrics = experiment.get_metrics()
+    metrics = experiment.metrics
     text = ""
     for metric_id in range(len(metrics)):
         metric = metrics[metric_id]
@@ -50,7 +50,7 @@ def format_parameters(experiment):
     """
     This method formats the ouput so that only the parameters are shown.
     """
-    parameters = experiment.get_parameters()
+    parameters = experiment.parameters
     text = ""
     for parameters_id in range(len(parameters)):
         parameter = parameters[parameters_id]
@@ -68,9 +68,9 @@ def format_functions(experiment):
     text = ""
     for model_id in range(len(models)):
         model = models[model_id]
-        hypothesis = model.get_hypothesis()
-        function = hypothesis.get_function()
-        if len(experiment.get_parameters()) == 1:
+        hypothesis = model.hypothesis
+        function = hypothesis.function
+        if len(experiment.parameters) == 1:
             # set exact = True to get exact function printout
             function_string = function.to_string(experiment.get_parameter(0), True)
         else:
