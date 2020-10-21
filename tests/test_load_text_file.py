@@ -172,16 +172,11 @@ class TestTwoParameterFiles(unittest.TestCase):
         self.assertListEqual(experiment.parameters, [
             Parameter('p'), Parameter('q')])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(Parameter('p'), 1000),
-                        (Parameter('q'), 10)]),
-            Coordinate([(Parameter('p'), 2000),
-                        (Parameter('q'), 20)]),
-            Coordinate([(Parameter('p'), 4000),
-                        (Parameter('q'), 40)]),
-            Coordinate([(Parameter('p'), 8000),
-                        (Parameter('q'), 80)]),
-            Coordinate([(Parameter('p'), 16000),
-                        (Parameter('q'), 160)])])
+            Coordinate(1000, 10),
+            Coordinate(2000, 20),
+            Coordinate(4000, 40),
+            Coordinate(8000, 80),
+            Coordinate(16000, 160)])
 
     def test_errors(self):
         read_text_file("data/input/experiments_MP/experiment_MP.txt")

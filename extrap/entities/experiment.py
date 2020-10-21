@@ -39,83 +39,20 @@ class Experiment:
         self.modelers: List[ModelGenerator] = []
         self.scaling = None
 
-    @property
-    @deprecated("Use modelers property instead.")
-    def modeler(self):
-        return self.modelers
-
-    @deprecated("Use property directly.")
-    def set_scaling(self, scaling_type):
-        self.scaling = scaling_type
-
-    @deprecated("Use property directly.")
-    def get_scaling(self):
-        return self.scaling
-
-    @deprecated("Use property directly.")
-    def get_modeler(self, modeler_id):
-        return self.modelers[modeler_id]
-
     def add_modeler(self, modeler):
         self.modelers.append(modeler)
-
-    @deprecated("Use property directly.")
-    def get_new_modeler_id(self):
-        return len(self.modeler) + 1
-
-    @deprecated("Use property directly.")
-    def get_call_tree(self):
-        return self.call_tree
-
-    @deprecated("Use property directly.")
-    def add_call_tree(self, call_tree):
-        self.call_tree = call_tree
 
     def add_metric(self, metric):
         self.metrics.append(metric)
 
-    @deprecated("Use property directly.")
-    def get_metric(self, metric_id):
-        return self.metrics[metric_id]
-
-    @deprecated("Use property directly.")
-    def get_metrics(self):
-        return self.metrics
-
     def add_parameter(self, parameter: Parameter):
         self.parameters.append(parameter)
-
-    @deprecated("Use property directly.")
-    def get_parameter(self, parameter_id):
-        return self.parameters[parameter_id]
 
     def add_coordinate(self, coordinate):
         self.coordinates.append(coordinate)
 
-    @deprecated("Use property directly.")
-    def get_coordinate(self, coordinate_id):
-        return self.coordinates[coordinate_id]
-
-    @deprecated("Use property directly.")
-    def get_coordinate_id(self, coordinate):
-        for coordinate_id in range(len(self.coordinates)):
-            if self.coordinates[coordinate_id].get_as_string() == coordinate.get_as_string():
-                return coordinate_id
-        return -1
-
     def add_callpath(self, callpath: Callpath):
         self.callpaths.append(callpath)
-
-    @deprecated("Use property directly.")
-    def get_callpath(self, callpath_id):
-        return self.callpaths[callpath_id]
-
-    @deprecated("Use property directly.")
-    def callpath_exists(self, callpath_name):
-        for callpath_id in range(len(self.callpaths)):
-            if self.callpaths[callpath_id].name == callpath_name:
-                return True
-        return False
 
     @deprecated("Use property directly.")
     def get_measurement(self, coordinate_id, callpath_id, metric_id):

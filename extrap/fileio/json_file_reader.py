@@ -92,6 +92,7 @@ def _read_legacy_json_file(experiment, json_data, progress_bar):
         logging.debug("Parameter " + str(i + 1) + ": " + parameter_name)
     # read callpaths
     callpath_data = json_data["callpaths"]
+    callpath_data = sorted(callpath_data, key=lambda x: x["id"])
     logging.debug("Number of callpaths: " + str(len(callpath_data)))
     for i, c_data in enumerate(progress_bar(callpath_data)):
         callpath_name = c_data["name"]
@@ -100,6 +101,7 @@ def _read_legacy_json_file(experiment, json_data, progress_bar):
         logging.debug("Callpath " + str(i + 1) + ": " + callpath_name)
     # read metrics
     metric_data = json_data["metrics"]
+    metric_data = sorted(metric_data, key=lambda x: x["id"])
     logging.debug("Number of metrics: " + str(len(metric_data)))
     for i, m_data in enumerate(progress_bar(metric_data)):
         metric_name = m_data["name"]
@@ -108,19 +110,14 @@ def _read_legacy_json_file(experiment, json_data, progress_bar):
         logging.debug("Metric " + str(i + 1) + ": " + metric_name)
     # read coordinates
     coordinate_data = json_data["coordinates"]
+    coordinate_data = sorted(coordinate_data, key=lambda x: x["id"])
     logging.debug("Number of coordinates: " + str(len(coordinate_data)))
     for i, c_data in enumerate(progress_bar(coordinate_data)):
         parameter_value_pairs = c_data["parameter_value_pairs"]
         parameter_value_pairs = sorted(parameter_value_pairs, key=lambda x: x["parameter_id"])
-        coordinate = Coordinate()
-        for j in range(len(parameter_value_pairs)):
-            parameter_value_pair = parameter_value_pairs[j]
-            parameter_id = int(parameter_value_pair["parameter_id"]) - 1
-            parameter_value = float(parameter_value_pair["parameter_value"])
-            parameter = experiment.get_parameter(parameter_id)
-            coordinate.add_parameter_value(parameter, parameter_value)
+        coordinate = Coordinate(float(p["parameter_value"]) for p in parameter_value_pairs)
         experiment.add_coordinate(coordinate)
-        logging.debug("Coordinate " + str(i + 1) + ": " + coordinate.get_as_string())
+        logging.debug(f"Coordinate {i + 1}: {coordinate}")
     aggregate_data = {}
     # read measurements
     measurements_data = json_data["measurements"]
@@ -137,9 +134,9 @@ def _read_legacy_json_file(experiment, json_data, progress_bar):
             aggregate_data[key] = [value]
     for key in progress_bar(aggregate_data):
         coordinate_id, callpath_id, metric_id = key
-        coordinate = experiment.get_coordinate(coordinate_id)
-        callpath = experiment.get_callpath(callpath_id)
-        metric = experiment.get_metric(metric_id)
+        coordinate = experiment.coordinates[coordinate_id]
+        callpath = experiment.callpaths[callpath_id]
+        metric = experiment.metrics[metric_id]
         values = aggregate_data[key]
         measurement = Measurement(coordinate, callpath, metric, values)
         experiment.add_measurement(measurement)

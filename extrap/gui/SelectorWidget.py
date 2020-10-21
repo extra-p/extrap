@@ -5,12 +5,13 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from typing import Optional
+from typing import Optional, Sequence
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.gui.ParameterValueSlider import ParameterValueSlider
 from extrap.gui.TreeModel import TreeModel
@@ -115,7 +116,7 @@ class SelectorWidget(QWidget):
     def getSelectedMetric(self) -> Metric:
         return self.metric_selector.currentData()
 
-    def getSelectedCallpath(self):
+    def getSelectedCallpath(self) -> Sequence[Node]:
         indexes = self.tree_view.selectedIndexes()
         callpath_list = list()
 
@@ -249,7 +250,7 @@ class SelectorWidget(QWidget):
             value_list.append(1)
             return value_list
         param_value_list = self.getParameterValues()
-        call_tree = experiment.get_call_tree()
+        call_tree = experiment.call_tree
         nodes = call_tree.get_nodes()
 
         value_list.extend(self.iterate_children(param_value_list,

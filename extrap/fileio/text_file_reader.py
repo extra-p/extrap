@@ -117,8 +117,7 @@ def read_text_file(path, progress_bar=DUMMY_PROGRESS):
                 coordinate_strings = coordinate_string.split(' ')
             # create a new point
             if number_parameters == 1:
-                parameter = experiment.parameters[0]
-                coordinates = [Coordinate([(parameter, float(c))])
+                coordinates = [Coordinate(float(c))
                                for c in coordinate_strings]
                 experiment.coordinates.extend(coordinates)
             elif 1 < number_parameters < 5:

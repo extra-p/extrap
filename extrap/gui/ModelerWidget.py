@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from PySide2.QtCore import Slot, QCoreApplication, Qt
+from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.ExpanderWidget import ExpanderWidget
@@ -127,7 +127,7 @@ class ModelerWidget(QWidget):
         model_generator = ModelGenerator(experiment, use_median=use_median, modeler=self._modeler)
 
         model_generator.name = self.model_name_edit.text()
-        print(QCoreApplication.hasPendingEvents())
+        # print(QCoreApplication.hasPendingEvents())
         with ProgressWindow(self.main_widget, 'Generating models') as pbar:
             # create models from data
             model_generator.model_all(pbar)

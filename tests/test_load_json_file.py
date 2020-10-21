@@ -22,15 +22,14 @@ class TestJsonFiles(unittest.TestCase):
     def test_read_1(self):
         Parameter.ID_COUNTER = itertools.count()
         experiment = read_json_file("data/json/input_1.JSON")
-        x = Parameter('x')
-        self.assertListEqual(experiment.parameters, [x])
+        self.assertListEqual(experiment.parameters, [Parameter('x')])
         self.assertListEqual([p.id for p in experiment.parameters], [0])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(x, 4)]),
-            Coordinate([(x, 8)]),
-            Coordinate([(x, 16)]),
-            Coordinate([(x, 32)]),
-            Coordinate([(x, 64)])
+            Coordinate(4),
+            Coordinate(8),
+            Coordinate(16),
+            Coordinate(32),
+            Coordinate(64)
         ])
         self.assertListEqual(experiment.metrics, [
             Metric('time')
@@ -105,15 +104,14 @@ class TestNewJsonFiles(unittest.TestCase):
     def test_read_1(self):
         Parameter.ID_COUNTER = itertools.count()
         experiment = read_json_file("data/json/new/input1.json")
-        x = Parameter('x')
-        self.assertListEqual(experiment.parameters, [x])
+        self.assertListEqual(experiment.parameters, [Parameter('x')])
         self.assertListEqual([p.id for p in experiment.parameters], [0])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(x, 4)]),
-            Coordinate([(x, 8)]),
-            Coordinate([(x, 16)]),
-            Coordinate([(x, 32)]),
-            Coordinate([(x, 64)])
+            Coordinate(4),
+            Coordinate(8),
+            Coordinate(16),
+            Coordinate(32),
+            Coordinate(64)
         ])
         self.assertListEqual(experiment.metrics, [
             Metric('time')

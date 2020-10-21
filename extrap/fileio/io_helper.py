@@ -63,7 +63,7 @@ def format_functions(experiment):
     """
     This method formats the ouput so that only the functions are shown.
     """
-    modeler = experiment.get_modeler(0)
+    modeler = experiment.modelers[0]
     models = modeler.get_models()
     text = ""
     for model_id in range(len(models)):
@@ -72,7 +72,7 @@ def format_functions(experiment):
         function = hypothesis.function
         if len(experiment.parameters) == 1:
             # set exact = True to get exact function printout
-            function_string = function.to_string(experiment.get_parameter(0), True)
+            function_string = function.to_string(experiment.parameters[0], True)
         else:
             # set exact = True to get exact function printout
             function_string = function.to_string(True)
@@ -111,7 +111,7 @@ def format_all(experiment):
                 value_mean = measurement.mean
                 value_median = measurement.median
                 text += f"\t\t{coordinate_text} Mean: {value_mean:.2E} Median: {value_median:.2E}\n"
-            model = modeler.get_model(callpath_id, metric_id)
+            model = modeler.models[callpath, metric]
             hypothesis = model.hypothesis
             function = hypothesis.function
             rss = hypothesis.RSS

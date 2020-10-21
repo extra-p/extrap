@@ -22,11 +22,11 @@ class TestTalpasFiles(unittest.TestCase):
         x = Parameter('x')
         self.assertListEqual(experiment.parameters, [x])
         self.assertListEqual(experiment.coordinates, [
-            Coordinate([(x, 20)]),
-            Coordinate([(x, 30)]),
-            Coordinate([(x, 40)]),
-            Coordinate([(x, 50)]),
-            Coordinate([(x, 60)])
+            Coordinate(20),
+            Coordinate(30),
+            Coordinate(40),
+            Coordinate(50),
+            Coordinate(60)
         ])
         self.assertListEqual(experiment.metrics, [
             Metric('time')

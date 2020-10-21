@@ -19,7 +19,6 @@ from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
 from extrap.modelers.modeler_options import modeler_options
-from extrap.util.deprecation import deprecated
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import Schema, TupleKeyDict
 
@@ -87,12 +86,6 @@ class ModelGenerator:
             model.measurements = self.experiment.measurements[(callpath, metric)]
         # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
-
-    @deprecated("Use indexer.")
-    def get_model(self, callpath_id, metric_id):
-        callpath = self.experiment.callpaths[callpath_id]
-        metric = self.experiment.metrics[metric_id]
-        return self.models[(callpath, metric)]
 
     def __eq__(self, other):
         if not isinstance(other, ModelGenerator):

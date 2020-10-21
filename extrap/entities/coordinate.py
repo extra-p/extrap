@@ -6,10 +6,8 @@
 # See the LICENSE file in the base directory for details.
 
 import itertools
-from typing import Union, List, Tuple, Iterable
+from typing import Union, Iterable
 
-from extrap.entities.parameter import Parameter
-from extrap.util.deprecation import deprecated
 from extrap.util.serialization_schema import make_value_schema
 
 
@@ -22,19 +20,12 @@ class Coordinate:
     """
     ID_COUNTER = itertools.count()
 
-    def __init__(self, *parts: Union[List[Tuple[Parameter, float]], Iterable[float], float]):
+    def __init__(self, *parts: Union[Iterable[float], float]):
         """
         Initialize the coordinate object.
         """
-        self._parameters = ()
         if len(parts) == 1 and isinstance(parts[0], Iterable):
-            parts = parts[0]
-            if isinstance(parts, list) and len(parts) > 0 and isinstance(parts[0], tuple):
-                deprecated.code()
-                self._values = tuple(v for _, v in parts)
-                self._parameters = tuple(p for p, _ in parts)
-            else:
-                self._values = tuple(parts)
+            self._values = tuple(parts[0])
         else:
             self._values = parts
 
@@ -47,39 +38,17 @@ class Coordinate:
         """
         return len(self._values)
 
-    @deprecated("No replacement. Coordinates are immutable.")
-    def add_parameter_value(self, parameter, value):
-        """
-        Add a parameter-value combination to the coordinate.
-        Increasing the number of dimensions by 1.
-        """
-        self._parameters = tuple(itertools.chain(self._parameters, (parameter,)))
-        self._values = tuple(itertools.chain(self._values, (value,)))
-
-    @deprecated("Use str(Coordinate).")
-    def get_as_string(self):
-        """
-        Returns a string representation of the coordinate.
-        """
-        return str(self)
-
     def __str__(self):
         """
         Returns a string representation of the coordinate.
         """
         return str(self._values)
 
-    def __getitem__(self, param):
+    def __getitem__(self, param: int):
         """
         Returns the value for a parameter.
         """
-        if isinstance(param, int):
-            return self._values[param]
-        try:
-            return self._values[self._parameters.index(param)]
-        except ValueError as v_err:
-            # required for correct validation of schema
-            raise KeyError(str(v_err)) from v_err
+        return self._values[param]
 
     def __repr__(self):
         """

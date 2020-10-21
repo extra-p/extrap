@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import json
 import unittest
 
 from marshmallow import ValidationError
@@ -20,7 +19,7 @@ class TestSingleParameter(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.experiment = read_text_file("data/text/one_parameter_1.txt")
         schema = ExperimentSchema()
-        print(json.dumps(schema.dump(cls.experiment), indent=1))
+        # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
@@ -58,7 +57,7 @@ class TestSingleParameterAfterModeling(unittest.TestCase):
         cls.experiment = read_text_file("data/text/one_parameter_1.txt")
         ModelGenerator(cls.experiment).model_all()
         schema = ExperimentSchema()
-        print(json.dumps(schema.dump(cls.experiment), indent=1))
+        # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
@@ -104,7 +103,7 @@ class TestSerialization(unittest.TestCase):
         experiment = read_text_file("data/text/one_parameter_1.txt")
         schema = ExperimentSchema()
         exp_data = schema.dump(experiment)
-        print(json.dumps(exp_data, indent=1))
+        # print(json.dumps(exp_data, indent=1))
         exp_data['TEST_ATTRIBUTE'] = 'TEST_ATTRIBUTE'
         reconstructed: Experiment = schema.load(exp_data)
         self.assertFalse(hasattr(reconstructed, 'TEST_ATTRIBUTE'))
@@ -113,7 +112,7 @@ class TestSerialization(unittest.TestCase):
         experiment = read_text_file("data/text/one_parameter_1.txt")
         schema = ExperimentSchema()
         exp_data = schema.dump(experiment)
-        print(json.dumps(exp_data, indent=1))
+        # print(json.dumps(exp_data, indent=1))
         exp_data['measurements']['TEST_ATTRIBUTE'] = 'TEST_ATTRIBUTE'
         self.assertRaises(ValidationError, schema.load, exp_data)
 
@@ -121,7 +120,7 @@ class TestSerialization(unittest.TestCase):
         experiment = read_text_file("data/text/one_parameter_1.txt")
         schema = ExperimentSchema()
         exp_data = schema.dump(experiment)
-        print(json.dumps(exp_data, indent=1))
+        # print(json.dumps(exp_data, indent=1))
         exp_data['measurements']['compute']['time'][0]['TEST_ATTRIBUTE'] = 'TEST_ATTRIBUTE'
         reconstructed: Experiment = schema.load(exp_data)
         self.assertFalse(hasattr(reconstructed, 'TEST_ATTRIBUTE'))
@@ -132,7 +131,7 @@ class TestMultiParameter(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.experiment = read_text_file("data/text/two_parameter_3.txt")
         schema = ExperimentSchema()
-        print(json.dumps(schema.dump(cls.experiment), indent=1))
+        # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
@@ -170,7 +169,7 @@ class TestMultiParameterAfterModeling(unittest.TestCase):
         cls.experiment = read_text_file("data/text/two_parameter_3.txt")
         ModelGenerator(cls.experiment).model_all()
         schema = ExperimentSchema()
-        print(json.dumps(schema.dump(cls.experiment), indent=1))
+        # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 

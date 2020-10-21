@@ -4,10 +4,14 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from typing import cast
+
+from extrap.entities.callpath import Callpath
+
 
 class Node:
 
-    def __init__(self, name, path):
+    def __init__(self, name: str, path: Callpath):
         self.name = name
         self.childs = []
         self.path = path
@@ -52,7 +56,7 @@ class CallTree(Node):
     """
 
     def __init__(self):
-        super().__init__('', '')
+        super().__init__('', cast(Callpath, None))
 
     def add_node(self, node):
         self.childs.append(node)
