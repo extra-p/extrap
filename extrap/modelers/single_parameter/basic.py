@@ -81,19 +81,9 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             self.hypotheses_building_blocks = self.create_default_building_blocks(self.allow_log_terms)
 
     def get_matching_hypotheses(self, measurements: Sequence[Measurement]):
-        """
-        Checks if the parameter values are smaller than 1.
-        In this case log terms are not allowed.
-        These are removed from the returned hypotheses_building_blocks.
-        """
-        values_log_capable = True
-        for measurement in measurements:
-            for value in measurement.coordinate:
-                if value < 1.0:
-                    values_log_capable = False
-                    break
+        """Removes log terms from the returned hypotheses_building_blocks, if those cannot describe the measurements."""
 
-        if values_log_capable:
+        if self.are_measurements_log_capable(measurements):
             return self.hypotheses_building_blocks
 
         return [compound_term

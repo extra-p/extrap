@@ -153,7 +153,6 @@ def main(args=None, prog=None):
                 logging.error("The given file path is not valid.")
                 sys.exit(1)
 
-        # TODO: debug code
         experiment.debug()
 
         # initialize model generator

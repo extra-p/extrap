@@ -9,7 +9,7 @@ import copy
 import warnings
 from collections import namedtuple
 from operator import attrgetter
-from typing import List, Tuple, Sequence, cast
+from typing import List, Tuple, Sequence
 
 from extrap.entities.fraction import Fraction
 from extrap.entities.functions import SingleParameterFunction
@@ -31,7 +31,7 @@ class SingleParameterRefiningHypothesis(SingleParameterHypothesis):
 
 class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
     """
-    Sample implementation of the refinement modeler, not finished yet!
+    Implementation of the refinement modeler
     """
     NAME = 'Refining'
     DESCRIPTION = "Modeler for single-parameter models; refines the search-space iteratively."
@@ -40,9 +40,6 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
         super().__init__(use_median=False)
         self.epsilon = 0.0005
 
-        # check if logarithmic terms should be allowed
-        self.allow_log_terms = True
-
         # init variables for the hypothesis creation
         self.max_log_expo = 2
         self.max_poly_expo = 5
@@ -50,29 +47,13 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
         self.termination_threshold = 2.0
         self.nonconstancy_threshold = 1.3
 
-    @staticmethod
-    def check_parameter_values(coordinates):
-        # analyze the parameter values to see if log terms should be allowed or not
-        for coordinate in coordinates:
-            for value in coordinate:
-                if value < 1:
-                    return False
-        return True
-
     def create_model(self, measurements):
 
-        # TODO: it would be best to have this check when doing the fileio... and remove it here...
-        # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
+        # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < 5:
             warnings.warn(
                 "Number of measurements needs to be at least 5 in order to create a performance model.")
             # return None
-
-        # get the coordinates for modeling
-        coordinates = [m.coordinate for m in measurements]
-
-        # initialize current term count
-        # self.current_term_count = 0
 
         # compute a constant model
         constant_hypothesis, constant_cost = self.create_constant_model(measurements)
@@ -85,7 +66,7 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
 
         # determine all exponents
         # TODO could be set via options
-        allow_log = self.check_parameter_values(coordinates)
+        allow_log = self.allow_log_terms and self.are_measurements_log_capable(measurements)
         poly_expos = range(self.max_poly_expo + 1)
         max_log_expo = self.max_log_expo if allow_log else 0
         log_expos = range(max_log_expo + 1)
@@ -190,14 +171,6 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
                 break
 
         return min(best_hypotheses, key=selector)
-
-    @staticmethod
-    def _make_refinement_hypothesis(constant_hypothesis, partition):
-        p_partition, l_partition = partition
-        partition_id = max(len(p_partition), len(l_partition)) - 1
-        constant_hypothesis = cast(SingleParameterRefiningHypothesis, copy.copy(constant_hypothesis))
-        constant_hypothesis.partition_index = partition_id
-        return constant_hypothesis
 
     def _build_hypotheses_generator(self, partition, ignore_constant=False):
         p_partition, l_partition = partition

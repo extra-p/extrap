@@ -162,15 +162,12 @@ class ConstantHypothesis(Hypothesis):
         """
         smape = 0
         for measurement in measurements:
-            # TODO: remove old code in comments
-            # _, value = coordinates[element_id].get_parameter_value(0)
-            # predicted = self.function.evaluate(value)
             predicted = self.function.constant_coefficient
             if self._use_median:
                 actual = measurement.median
             else:
                 actual = measurement.mean
-            # actual = measurements[element_id].get_value()
+
             difference = predicted - actual
             self._RSS += difference * difference
             if actual != 0:

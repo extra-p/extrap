@@ -724,7 +724,6 @@ class GraphWidget(QWidget):
         pv_list[param] = self.max_x
 
         # Check the maximum value of a displayed data point
-        # TODO: fix this
         if self.show_datapoints:
             for model in modelList:
                 y = max(model.predictions)
