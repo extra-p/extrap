@@ -49,5 +49,5 @@ def write_experiment(experiment, path, progress_bar=DUMMY_PROGRESS):
                 progress_bar.update()
             except ValidationError as v_err:
                 raise FileFormatError(str(v_err)) from v_err
-    except (IOError, zipfile.BadZipFile) as err:
+    except (IOError, FileNotFoundError, zipfile.BadZipFile) as err:
         raise RecoverableError(str(err)) from err

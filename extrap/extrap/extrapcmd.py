@@ -12,6 +12,7 @@ import sys
 from itertools import chain
 
 import extrap
+from extrap.fileio import experiment_io
 from extrap.fileio.cube_file_reader2 import read_cube_file
 from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 from extrap.fileio.io_helper import format_output
@@ -23,6 +24,7 @@ from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.exceptions import RecoverableError
 from extrap.util.options_parser import ModelerOptionsAction, ModelerHelpAction
 from extrap.util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_OPTIONS_KEY
 from extrap.util.progress_bar import ProgressBar
@@ -72,11 +74,15 @@ def main(args=None, prog=None):
                                   action=ModelerHelpAction)
 
     output_options = parser.add_argument_group("Output options")
-    output_options.add_argument("--out", action="store", dest="out", help="Specify the output path for Extra-P results")
+    output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
+                                help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
                                 choices=["all", "callpaths", "metrics", "parameters", "functions"],
                                 help="Set which information should be displayed after modeling "
                                      "(default: all)")
+    output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
+                                help="Saves the experiment including all models as Extra-P experiment "
+                                     "(if no extension is specified, '.extra-p' is appended)")
 
     positional_arguments.add_argument("path", metavar="FILEPATH", type=str, action="store",
                                       help="Specify a file path for Extra-P to work with")
@@ -174,6 +180,16 @@ def main(args=None, prog=None):
         with ProgressBar(desc='Generating models') as pbar:
             # create models from data
             model_generator.model_all(pbar)
+
+        if arguments.save_experiment:
+            try:
+                with ProgressBar(desc='Saving experiment') as pbar:
+                    if not os.path.splitext(arguments.save_experiment)[1]:
+                        arguments.save_experiment += '.extra-p'
+                    experiment_io.write_experiment(experiment, arguments.save_experiment, pbar)
+            except RecoverableError as err:
+                logging.error('Saving experiment: ' + str(err))
+                sys.exit(1)
 
         # format modeler output into text
         text = format_output(experiment, printtype)

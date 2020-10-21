@@ -90,11 +90,11 @@ The Extra-P command line interface has the following options.
 | `--options` _KEY_=_VALUE_ [_KEY_=_VALUE_ ...]                        | Options for the selected modeler                          |
 | `--help-modeler` {`Default`, `Basic`, `Refining`, `Multi-Parameter`} | Show help for modeler options and exit                    |
 
-| Output options                                                       |                                                                           |
-|----------------------------------------------------------------------|---------------------------------------------------------------------------|
-| `--out` _OUT_                                                        | Specify the output path for Extra-P results                               |
-| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`) |
- 
+| Output options                                                       |                                                                                                                        |
+|----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results                                                                            |
+| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`)                                              |
+| `--save-experiment` _EXPERIMENT_PATH_                                | Saves the experiment including all models as Extra-P experiment (if no extension is specified, '.extra-p' is appended) | 
                  
 ### License
 
