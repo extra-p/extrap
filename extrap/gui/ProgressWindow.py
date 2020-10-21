@@ -36,13 +36,14 @@ class ProgressWindow(ProgressBar):
 
     def close(self):
         try:
-            if not self._cancel_event.is_set():
-                self.dialog.reject()
-        except RuntimeError:
-            pass
-        try:
             super().close()
         except AttributeError:
+            pass
+        try:
+            if not self._cancel_event.is_set():
+                self.dialog.cancel()
+                self.dialog.reject()
+        except RuntimeError:
             pass
 
     @Slot()
@@ -66,7 +67,7 @@ class ProgressWindow(ProgressBar):
         remaining_str = self.format_interval(remaining) if rate else '??:??'
 
         time_str = f'Time remaining:\t{remaining_str}\nTime elapsed:\t{elapsed_str}'
-        
+
         if not self._cancel_event.is_set():
             self.dialog.setMaximum(self.total)
             if self.postfix:
