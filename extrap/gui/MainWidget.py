@@ -52,6 +52,7 @@ class MainWidget(QMainWindow):
         self.min_value = 1
         self.old_x_pos = 0
         self.experiment = None
+        self._opened_file_name = ""
         self.graph_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
                                  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
                                  '#bcbd22', '#17becf']
@@ -334,16 +335,18 @@ class MainWidget(QMainWindow):
     def getFontSize(self):
         return self.font_size
 
-    def screenshot(self):
+    def screenshot(self, _checked=False, target=None, name_addition=""):
         """
-        This function creates a screenshot of this widget
+        This function creates a screenshot of this or the target widget
         and stores it into a file. It opens a file dialog to
-        specify the file name.
+        specify the file name and type.
         """
-        pixmap = self.grab()
+        if not target:
+            target = self
+        pixmap = target.grab()
         image = pixmap.toImage()
 
-        initial_path = "extrap"
+        initial_path = Path(self._opened_file_name).stem + name_addition
         file_filter = ';;'.join(
             [f"{str(f, 'utf-8').upper()} image (*.{str(f, 'utf-8')})" for f in QImageWriter.supportedImageFormats() if
              str(f, 'utf-8') not in ['icns', 'cur', 'ico']])
@@ -384,8 +387,10 @@ class MainWidget(QMainWindow):
 
     def _set_opened_file_name(self, file_name):
         if file_name:
-            self.setWindowTitle(extrap.__title__ + " - " + Path(file_name).name)
+            self._opened_file_name = Path(file_name).name
+            self.setWindowTitle(extrap.__title__ + " - " + self._opened_file_name)
         else:
+            self._opened_file_name = ""
             self.setWindowTitle(extrap.__title__)
 
     def open_experiment(self):

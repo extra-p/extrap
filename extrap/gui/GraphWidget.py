@@ -196,6 +196,8 @@ class GraphWidget(QWidget):
         menu.addSeparator()
         exportDataAction = menu.addAction("Export Data")
         exportDataAction.triggered.connect(self.exportData)
+        screenshotAction = menu.addAction("Screenshot")
+        screenshotAction.triggered.connect(self.screenshot)
 
         menu.exec_(self.mapToGlobal(point))
 
@@ -210,7 +212,7 @@ class GraphWidget(QWidget):
     @Slot()
     def combineCallPaths(self):
         """
-          This function combine all callpathe shown on graph.
+          This function combines all callpaths shown on graph.
         """
         self.aggregate_callpath = True
         self.update()
@@ -222,6 +224,19 @@ class GraphWidget(QWidget):
         """
         self.aggregate_callpath = False
         self.update()
+
+    @Slot()
+    def screenshot(self):
+        selected_callpaths = self.main_widget.getSelectedCallpath()
+        selected_metric = self.main_widget.getSelectedMetric()
+
+        name_addition = "-"
+        if selected_metric:
+            name_addition = f"-{selected_metric}-"
+        if selected_callpaths:
+            name_addition += ','.join((c.name for c in selected_callpaths))
+
+        self.main_widget.screenshot(target=self, name_addition=name_addition)
 
     @Slot()
     def exportData(self):
@@ -343,7 +358,6 @@ class GraphWidget(QWidget):
                         paint, data_points)
 
     def drawLegend(self, paint):
-
         # drawing the graph legend
         px_between = 15
         callpath_color_dict = self.main_widget.get_callpath_color_map()
@@ -412,7 +426,6 @@ class GraphWidget(QWidget):
                            aggregated_callpath_name)
 
     def drawModel(self, paint, model, color):
-
         function = model.hypothesis.function
 
         cord_list = self.calculate_function(function, self.graph_width)
@@ -717,7 +730,6 @@ class GraphWidget(QWidget):
         ]
 
     def calculateMaxY(self, modelList):
-
         y_max = 0
         pv_list = self.main_widget.data_display.getValues()
         param = self.main_widget.data_display.getAxisParameter(0).id
@@ -780,7 +792,6 @@ class GraphWidget(QWidget):
                                   y_mean_value, y_median_value, y_max_value)
 
     def plotOutliers(self, paint, x_value, y_min_value, y_mean_value, y_median_value, y_max_value):
-
         # create cordinates and merge them to list
         x_list = [x_value, x_value, x_value, x_value]
         y_list = [y_min_value, y_median_value, y_mean_value, y_max_value]
