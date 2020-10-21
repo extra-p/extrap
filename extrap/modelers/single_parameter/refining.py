@@ -34,6 +34,7 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
     Sample implementation of the refinement modeler, not finished yet!
     """
     NAME = 'Refining'
+    DESCRIPTION = "Modeler for single-parameter models; refines the search-space iteratively."
 
     def __init__(self):
         super().__init__(use_median=False)

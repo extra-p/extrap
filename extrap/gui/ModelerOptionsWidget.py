@@ -7,6 +7,7 @@
 
 from typing import Mapping, Collection, cast
 
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
     QComboBox, QVBoxLayout, QLabel, QPushButton
 
@@ -68,7 +69,7 @@ class ModelerOptionsWidget(QWidget):
     def _create_single_parameter_selection(self):
         self._modeler: MultiParameterModeler
 
-        group = QGroupBox('single-parameter modeler')
+        group = QGroupBox('Single-parameter modeler')
         g_layout = QVBoxLayout()
         g_layout.setContentsMargins(0, 0, 0, 0)
         modeler_selection = QComboBox()
@@ -81,8 +82,9 @@ class ModelerOptionsWidget(QWidget):
             self._single_parameter_modeler_widget.deleteLater()
             self._single_parameter_modeler_widget = options
 
-        for name, modeler in single_parameter.all_modelers.items():
+        for i, (name, modeler) in enumerate(single_parameter.all_modelers.items()):
             modeler_selection.addItem(name, modeler)
+            modeler_selection.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
             if isinstance(self._modeler.single_parameter_modeler, modeler):
                 modeler_selection.setCurrentText(name)
         modeler_selection.currentIndexChanged.connect(selection_changed)
@@ -105,7 +107,8 @@ class ModelerOptionsWidget(QWidget):
         if option.name is not None:
             name = option.name
         else:
-            name = option.field.replace('_', ' ').capitalize()
+            name = option.field.replace('_', ' ')
+            name = name[0].capitalize() + name[1:]
         label = QLabel(name)
         label.setToolTip(option.description)
         return label

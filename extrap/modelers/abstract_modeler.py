@@ -7,12 +7,13 @@
 
 import copy
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import Sequence, Optional
 
 from marshmallow import fields
 
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
+from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import BaseSchema
 
@@ -32,17 +33,30 @@ class AbstractModeler(ABC):
 
     @abstractmethod
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
-        """ This method is the core of the modeling system.
+        """ Creates a model for each sequence of measurements.
+
+        This method is the core of the modeling system.
         It receives a sequence of measurement point sequences and returns a sequence of models.
         For each sequence of measurement points one model is generated.
         The measurement sequences are not guaranteed to have similar coordinates."""
         raise NotImplementedError
 
-    @classmethod
-    @property
+    @classproperty
     @abstractmethod
-    def NAME(cls):
+    def NAME(cls) -> str:  # noqa
+        """ This attribute is the unique display name of the modeler.
+
+        It is used for selecting the modeler in the GUI and CLI.
+        You must override this only in concrete modelers, you should do so by setting the class variable NAME."""
         raise NotImplementedError
+
+    @classproperty
+    def DESCRIPTION(cls) -> Optional[str]:  # noqa
+        """ This attribute is the description of the modeler.
+
+        It is shown as additional information in the GUI and CLI.
+        You should override this by setting the class variable DESCRIPTION."""
+        return None
 
 
 class SingularModeler(AbstractModeler, ABC):

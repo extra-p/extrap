@@ -31,6 +31,8 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
     """
 
     NAME = 'Basic'
+    DESCRIPTION = "Modeler for single-parameter models; traverses the search-space of all defined hypotheses."
+
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms',
                                           on_change=lambda self, v: self._exponents_changed())
     poly_exponents = modeler_options.add('', str, 'Set of polynomial exponents. Use comma separated list.',

@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from PySide2.QtCore import Slot, QCoreApplication
+from PySide2.QtCore import Slot, QCoreApplication, Qt
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.ExpanderWidget import ExpanderWidget
@@ -98,12 +98,15 @@ class ModelerWidget(QWidget):
         self._model_selector.clear()
         self._model_selector.setCurrentText('')
         if len(experiment.parameters) == 1:
-            for name, modeler in single_parameter.all_modelers.items():
+            for i, (name, modeler) in enumerate(single_parameter.all_modelers.items()):
                 self._model_selector.addItem(name, modeler)
+                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
         else:
-            for name, modeler in multi_parameter.all_modelers.items():
+            for i, (name, modeler) in enumerate(multi_parameter.all_modelers.items()):
                 self._model_selector.addItem(name, modeler)
+                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
         self._model_selector.setCurrentText('Default')
+        self._model_selector.currentData()
 
         self._model_selector.setEnabled(True)
         self._model_button.setEnabled(True)

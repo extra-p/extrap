@@ -7,7 +7,7 @@
 
 import inspect
 import pkgutil
-from typing import Mapping
+from typing import Mapping, Type, MutableMapping
 
 from marshmallow import fields, validate
 
@@ -16,7 +16,7 @@ from .abstract_modeler import AbstractModeler, ModelerSchema
 from .modeler_options import ModelerOption, modeler_options
 
 
-def load_modelers(path, pkg_name):
+def load_modelers(path, pkg_name) -> MutableMapping[str, Type[AbstractModeler]]:
     def is_modeler(x):
         return inspect.isclass(x) \
                and issubclass(x, AbstractModeler) \

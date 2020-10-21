@@ -35,6 +35,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     """
 
     NAME = 'Multi-Parameter'
+    DESCRIPTION = "Modeler for multi-parameter models; supports full and sparse modeling."
 
     single_parameter_point_selection = modeler_options.add('auto', str, range=['auto', 'smallest', 'all'],
                                                            description="Sets the point selection method for creating "

@@ -18,6 +18,7 @@ SINGLE_PARAMETER_OPTIONS_KEY = '#single_parameter_options'
 
 def _create_parser(modeler, name=None, description=None, nested_sp=False):
     name = name or modeler.NAME
+    description = description or modeler.DESCRIPTION
     if nested_sp:
         prog = '--options #spo'
     else:
