@@ -14,7 +14,7 @@ import warnings
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QPalette, QColor
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
@@ -67,8 +67,7 @@ def main(*, args=None, test=False):
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level))
 
     app = QApplication(sys.argv) if not test else QApplication.instance()
-    app.setStyle('Fusion')
-    app.setPalette(make_palette())
+    apply_style(app)
 
     window = MainWidget()
 
@@ -186,7 +185,9 @@ def load_from_command(arguments, window):
             window.import_file(read_experiment, model=False, file_name=arguments.path)
 
 
-def make_palette():
+def apply_style(app):
+    app.setStyle('Fusion')
+
     palette = QPalette()
     palette.setColor(QPalette.Window, QColor(190, 190, 190))
     palette.setColor(QPalette.WindowText, Qt.black)
@@ -197,10 +198,13 @@ def make_palette():
     palette.setColor(QPalette.ButtonText, Qt.black)
     palette.setColor(QPalette.Highlight, QColor(31, 119, 180))
     palette.setColor(QPalette.HighlightedText, Qt.white)
+    palette.setColor(QPalette.ToolTipBase, QColor(230, 230, 230))
+    palette.setColor(QPalette.ToolTipText, Qt.black)
     palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
-    return palette
+    app.setPalette(palette)
+    QToolTip.setPalette(palette)
 
 
 if __name__ == "__main__":
