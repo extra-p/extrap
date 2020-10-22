@@ -8,15 +8,15 @@ If you already have files containing measurement data, you may want to skip to [
 * [Installing Extra-P](#Installing-Extra-P)
 * [Creating Extra-P text files](#Creating-Extra-P-text-files)
 * [How to use the graphical user interface](#Graphical-user-interface)
+    - [Starting Extra-P](#Starting-Extra-P)
+    - [Loading files](#Loading-files)
+    - [Modeling data](#Modeling-data)
+    - [Saving performance models](#Saving-performance-models)
+* [How to use the command-line interface](#Command-line-interface)
     - [Starting Extra-P](#Starting-Extra-P-1)
     - [Loading files](#Loading-files-1)
     - [Modeling data](#Modeling-data-1)
     - [Saving performance models](#Saving-performance-models-1)
-* [How to use the command-line interface](#Command-line-interface)
-    - [Starting Extra-P](#Starting-Extra-P-2)
-    - [Loading files](#Loading-files-2)
-    - [Modeling data](#Modeling-data-2)
-    - [Saving performance models](#Saving-performance-models-2)
 
 
 Installing Extra-P
