@@ -28,7 +28,7 @@ For questions regarding Extra-P please send a message to <extra-p-support@lists.
 
 * Python 3.7
 * PySide2 (only if using GUI)
-* maplotlib
+* matplotlib
 * numpy
 * pycubexr
 * marshmallow
@@ -94,7 +94,7 @@ The Extra-P command line interface has the following options.
 |----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
 | `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results                                                                            |
 | `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`)                                              |
-| `--save-experiment` _EXPERIMENT_PATH_                                | Saves the experiment including all models as Extra-P experiment (if no extension is specified, '.extra-p' is appended) | 
+| `--save-experiment` _EXPERIMENT_PATH_                                | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) | 
                  
 ### License
 
