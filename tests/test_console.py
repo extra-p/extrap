@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import shutil
 import tempfile
 import unittest
@@ -31,6 +32,20 @@ class TestConsole(unittest.TestCase):
         extrap.main(['--modeler', 'Default', '--text', 'data/text/one_parameter_1.txt'])
         self.assertRaisesRegex(SystemExit, '[^0]', extrap.main,
                                ['--modeler', 'does_not_exist', '--text', 'data/text/one_parameter_1.txt'])
+
+    def test_print(self):
+        extrap.main(['--text', 'data/text/one_parameter_1.txt'])
+        extrap.main(['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])
+        extrap.main(['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
+        extrap.main(['--print', 'callpaths', '--text', 'data/text/one_parameter_1.txt'])
+        extrap.main(['--print', 'metrics', '--text', 'data/text/one_parameter_1.txt'])
+        extrap.main(['--print', 'parameters', '--text', 'data/text/one_parameter_1.txt'])
+
+        extrap.main(['--print', 'all', '--text', 'data/text/two_parameter_1.txt'])
+        extrap.main(['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
+        extrap.main(['--print', 'callpaths', '--text', 'data/text/two_parameter_1.txt'])
+        extrap.main(['--print', 'metrics', '--text', 'data/text/two_parameter_1.txt'])
+        extrap.main(['--print', 'parameters', '--text', 'data/text/two_parameter_1.txt'])
 
     def test_save_experiment(self):
         temp_dir = tempfile.mkdtemp()

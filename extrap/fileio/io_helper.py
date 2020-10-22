@@ -64,18 +64,12 @@ def format_functions(experiment):
     This method formats the ouput so that only the functions are shown.
     """
     modeler = experiment.modelers[0]
-    models = modeler.get_models()
+    models = modeler.models
     text = ""
-    for model_id in range(len(models)):
-        model = models[model_id]
+    for model in models.values():
         hypothesis = model.hypothesis
         function = hypothesis.function
-        if len(experiment.parameters) == 1:
-            # set exact = True to get exact function printout
-            function_string = function.to_string(experiment.parameters[0], True)
-        else:
-            # set exact = True to get exact function printout
-            function_string = function.to_string(True)
+        function_string = function.to_string(experiment.parameters)
         text += function_string + "\n"
     return text
 
@@ -116,10 +110,7 @@ def format_all(experiment):
             function = hypothesis.function
             rss = hypothesis.RSS
             ar2 = hypothesis.AR2
-            if len(experiment.parameters) == 1:
-                function_string = function.to_string(experiment.parameters[0])
-            else:
-                function_string = function.to_string(experiment.parameters)
+            function_string = function.to_string(experiment.parameters)
             text += "\t\tModel: " + function_string + "\n"
             text += "\t\tRSS: {:.2E}\n".format(rss)
             text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
@@ -141,6 +132,8 @@ def format_output(experiment, printtype):
         text = format_parameters(experiment)
     elif printtype == "FUNCTIONS":
         text = format_functions(experiment)
+    else:
+        raise ValueError('printtype does not exist')
     return text
 
 
