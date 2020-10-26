@@ -60,23 +60,8 @@ class GraphDisplayWindow(FigureCanvas):
 
     # noinspection DuplicatedCode
     def _calculate_grid_parameters(self, maxX, maxY):
-        if maxX < 10:
-            number_of_pixels_x = 45
-        elif 10 <= maxX <= 1000:
-            number_of_pixels_x = 40
-        elif 1000 < maxX <= 1000000000:
-            number_of_pixels_x = 15
-        else:
-            number_of_pixels_x = 5
-
-        if maxY < 10:
-            number_of_pixels_y = 45
-        elif 10 <= maxY <= 1000:
-            number_of_pixels_y = 40
-        elif 1000 < maxY <= 1000000000:
-            number_of_pixels_y = 15
-        else:
-            number_of_pixels_y = 5
+        number_of_pixels_x = 50
+        number_of_pixels_y = 50
 
         pixel_gap_x = self.getPixelGap(0, maxX, number_of_pixels_x)
         pixel_gap_y = self.getPixelGap(0, maxY, number_of_pixels_y)
@@ -178,19 +163,8 @@ class BaseContourGraph(GraphDisplayWindow):
 
     def _calculate_grid_parameters(self, maxX, maxY):
         # define grid parameters based on max x and max y value
-        if maxX <= 1000:
-            numberOfPixels_x = 100
-        elif 1000 < maxX <= 1000000000:
-            numberOfPixels_x = 75
-        else:
-            numberOfPixels_x = 50
-
-        if maxY <= 1000:
-            numberOfPixels_y = 100
-        elif 1000 < maxY <= 1000000000:
-            numberOfPixels_y = 75
-        else:
-            numberOfPixels_y = 50
+        numberOfPixels_x = 100
+        numberOfPixels_y = 100
         pixelGap_x = self.getPixelGap(0, maxX, numberOfPixels_x)
         pixelGap_y = self.getPixelGap(0, maxY, numberOfPixels_y)
         return pixelGap_x, pixelGap_y
