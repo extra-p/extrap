@@ -50,6 +50,6 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires='>=3.7',
-    install_requires=["pyside2~=5.15", "numpy~=1.18", "matplotlib~=3.2", "tqdm~=4.47", "pycubexr~=1.1",
-                      "marshmallow~=3.7"],
+    install_requires=["pyside2~=5.13", "numpy~=1.18", "matplotlib~=3.2", "tqdm~=4.47", "pycubexr~=1.1",
+                      "marshmallow~=3.7", "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'"]
 )

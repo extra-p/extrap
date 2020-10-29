@@ -53,6 +53,7 @@ def _preload_common_fonts():
 
 
 def main(*, args=None, test=False):
+    _update_mac_app_info()
     # preload fonts for matplotlib
     font_preloader = _preload_common_fonts()
     arguments = parse_arguments(args)
@@ -79,13 +80,17 @@ def main(*, args=None, test=False):
         nonlocal _current_warnings
         message_str = str(message)
         if message_str not in _current_warnings:
-            _warn_box = QMessageBox(window)
-            _warn_box.setWindowTitle('Warning')
-            _warn_box.setIcon(QMessageBox.Icon.Warning)
+            parent, modal = _parent(window)
+            _warn_box = QMessageBox(QMessageBox.Warning, 'Warning', message_str, QMessageBox.Ok, parent)
             _warn_box.finished.connect(lambda x: _current_warnings.remove(message_str))
-            _warn_box.setText(message_str)
+
+            if modal:
+                modal.finished.connect(lambda x: _warn_box.raise_())
+
             if not test:
                 _warn_box.open()
+                _warn_box.raise_()
+                _warn_box.activateWindow()
             _current_warnings.add(message_str)
         logging.warning(message_str)
         logging.log(TRACEBACK, ''.join(traceback.format_stack()))
@@ -99,16 +104,14 @@ def main(*, args=None, test=False):
             logging.log(TRACEBACK, str(value))
             logging.log(TRACEBACK, traceback_text)
             return
-
-        msgBox = QMessageBox(window)
+        parent, modal = _parent(window)
+        msg_box = QMessageBox(QMessageBox.Critical, 'Error', str(value), QMessageBox.Ok, parent)
         print()
         if hasattr(value, 'NAME'):
-            msgBox.setWindowTitle(getattr(value, 'NAME'))
-        else:
-            msgBox.setWindowTitle('Error')
-        msgBox.setIcon(QMessageBox.Icon.Critical)
-        msgBox.setText(str(value))
-        msgBox.setDetailedText(traceback_text)
+            msg_box.setWindowTitle(getattr(value, 'NAME'))
+        msg_box.setDetailedText(traceback_text)
+        if modal:
+            modal.finished.connect(lambda x: msg_box.raise_())
 
         logging.error(str(value))
         logging.log(TRACEBACK, traceback_text)
@@ -117,17 +120,20 @@ def main(*, args=None, test=False):
             return _old_exception_handler(type, value, traceback_)
         if issubclass(type, RecoverableError):
             _old_exception_handler(type, value, traceback_)
-            msgBox.open()
+            msg_box.open()
+            msg_box.raise_()
+            msg_box.activateWindow()
         else:
             _old_exception_handler(type, value, traceback_)
-            msgBox.exec_()  # ensures waiting
+            msg_box.raise_()
+            msg_box.activateWindow()
+            msg_box.exec_()  # ensures waiting
             exit(1)
 
     warnings.showwarning = _warnings_handler
     sys.excepthook = _exception_handler
 
     window.show()
-
     try:
         load_from_command(arguments, window)
     except CancelProcessError:
@@ -205,6 +211,27 @@ def apply_style(app):
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
+
+
+def _parent(window):
+    if not sys.platform.startswith('darwin'):
+        return window, False
+    modal = QApplication.activeModalWidget()
+    parent = modal if modal else window
+    return parent, bool(modal)
+
+
+def _update_mac_app_info():
+    if sys.platform.startswith('darwin'):
+        try:
+            from Foundation import NSBundle  # noqa
+            bundle = NSBundle.mainBundle()
+            if bundle:
+                app_info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+                if app_info:
+                    app_info['CFBundleName'] = extrap.__title__
+        except ImportError:
+            pass
 
 
 if __name__ == "__main__":

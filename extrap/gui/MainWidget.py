@@ -287,14 +287,26 @@ class MainWidget(QMainWindow):
         if e.key() == Qt.Key_Escape:
             self.close()
 
+    _should_close = False
+
     def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Quit', "Are you sure to quit?",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
+        if self._should_close:
             event.accept()
-        else:
-            event.ignore()
+            return
+        event.ignore()
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+        msg_box.setWindowTitle('Quit')
+        msg_box.setText("Are you sure to quit?")
+
+        def execute_close():
+            self._should_close = True
+            self.close()
+
+        msg_box.accepted.connect(execute_close)
+        msg_box.open()
 
     def getExperiment(self):
         return self.experiment
@@ -314,7 +326,7 @@ class MainWidget(QMainWindow):
             fontSizeItems.append(str(i))
 
         fontSize, ok = QInputDialog.getItem(
-            self, "Font Size", "Select the font size:", fontSizeItems, 0, False)
+            self, "Font Size", "Select the font size:", fontSizeItems, 0, False, Qt.Sheet)
         if ok:
             self.font_size = fontSize
             self.data_display.updateWidget()
@@ -414,10 +426,14 @@ class MainWidget(QMainWindow):
             return
         dialog = CubeFileReader(self, dir_name)
         dialog.setModal(True)
-        dialog.exec_()  # do not use open, wait for loading to finish
-        if dialog.valid:
-            self._set_opened_file_name(dir_name)
-            self.model_experiment(dialog.experiment)
+
+        def on_finish():
+            if dialog.valid:
+                self._set_opened_file_name(dir_name)
+                self.model_experiment(dialog.experiment)
+
+        dialog.finished.connect(on_finish)
+        dialog.open()
 
     def updateMinMaxValue(self):
         if not self.experiment_change:

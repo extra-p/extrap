@@ -23,6 +23,7 @@ class ProgressWindow(ProgressBar):
         self.dialog.setMinimumDuration(500)
         self.dialog.setWindowTitle(self.desc)
         self.dialog.setAutoClose(False)
+        self.dialog.setWindowModality(Qt.WindowModal)
         self.dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
         self.dialog.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         label = QLabel()
