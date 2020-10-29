@@ -399,9 +399,11 @@ class MainWidget(QMainWindow):
 
     def _set_opened_file_name(self, file_name):
         if file_name:
+            self.setWindowFilePath(file_name)
             self._opened_file_name = Path(file_name).name
             self.setWindowTitle(extrap.__title__ + " - " + self._opened_file_name)
         else:
+            self.setWindowFilePath("")
             self._opened_file_name = ""
             self.setWindowTitle(extrap.__title__)
 
