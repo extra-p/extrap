@@ -31,27 +31,6 @@ TRACEBACK = logging.DEBUG - 1
 logging.addLevelName(TRACEBACK, 'TRACEBACK')
 
 
-def _preload_common_fonts():
-    common_fonts = [
-        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0'),
-        'STIXGeneral', 'STIXGeneral:italic', 'STIXGeneral:weight=bold',
-        'STIXNonUnicode', 'STIXNonUnicode:italic', 'STIXNonUnicode:weight=bold',
-        'STIXSizeOneSym', 'STIXSizeTwoSym', 'STIXSizeThreeSym', 'STIXSizeFourSym', 'STIXSizeFiveSym',
-        'cmsy10', 'cmr10', 'cmtt10', 'cmmi10', 'cmb10', 'cmss10', 'cmex10',
-        'DejaVu Sans', 'DejaVu Sans:italic', 'DejaVu Sans:weight=bold', 'DejaVu Sans Mono', 'DejaVu Sans Display',
-        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0'),
-        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=6.0')
-    ]
-
-    def _thread(fonts):
-        for f in fonts:
-            font_manager.findfont(f)
-
-    thread = threading.Thread(target=_thread, args=(common_fonts,))
-    thread.start()
-    return thread
-
-
 def main(*, args=None, test=False):
     _update_mac_app_info()
     # preload fonts for matplotlib
@@ -72,68 +51,10 @@ def main(*, args=None, test=False):
 
     window = MainWidget()
 
-    _current_warnings = set()
-    _old_warnings_handler = warnings.showwarning
-    _old_exception_handler = sys.excepthook
-
-    def _warnings_handler(message: Warning, category, filename, lineno, file=None, line=None):
-        nonlocal _current_warnings
-        message_str = str(message)
-        if message_str not in _current_warnings:
-            parent, modal = _parent(window)
-            _warn_box = QMessageBox(QMessageBox.Warning, 'Warning', message_str, QMessageBox.Ok, parent)
-            _warn_box.finished.connect(lambda x: _current_warnings.remove(message_str))
-
-            if modal:
-                modal.finished.connect(lambda x: _warn_box.raise_())
-
-            if not test:
-                _warn_box.open()
-                _warn_box.raise_()
-                _warn_box.activateWindow()
-            _current_warnings.add(message_str)
-        logging.warning(message_str)
-        logging.log(TRACEBACK, ''.join(traceback.format_stack()))
-        QApplication.processEvents()
-        return _old_warnings_handler(message, category, filename, lineno, file, line)
-
-    def _exception_handler(type, value, traceback_):
-        traceback_text = ''.join(traceback.extract_tb(traceback_).format())
-
-        if issubclass(type, CancelProcessError):
-            logging.log(TRACEBACK, str(value))
-            logging.log(TRACEBACK, traceback_text)
-            return
-        parent, modal = _parent(window)
-        msg_box = QMessageBox(QMessageBox.Critical, 'Error', str(value), QMessageBox.Ok, parent)
-        print()
-        if hasattr(value, 'NAME'):
-            msg_box.setWindowTitle(getattr(value, 'NAME'))
-        msg_box.setDetailedText(traceback_text)
-        if modal:
-            modal.finished.connect(lambda x: msg_box.raise_())
-
-        logging.error(str(value))
-        logging.log(TRACEBACK, traceback_text)
-
-        if test:
-            return _old_exception_handler(type, value, traceback_)
-        if issubclass(type, RecoverableError):
-            _old_exception_handler(type, value, traceback_)
-            msg_box.open()
-            msg_box.raise_()
-            msg_box.activateWindow()
-        else:
-            _old_exception_handler(type, value, traceback_)
-            msg_box.raise_()
-            msg_box.activateWindow()
-            msg_box.exec_()  # ensures waiting
-            exit(1)
-
-    warnings.showwarning = _warnings_handler
-    sys.excepthook = _exception_handler
+    _init_warning_system(window, test)
 
     window.show()
+
     try:
         load_from_command(arguments, window)
     except CancelProcessError:
@@ -190,6 +111,81 @@ def load_from_command(arguments, window):
         else:
             window.import_file(read_experiment, model=False, file_name=arguments.path)
 
+def _init_warning_system(window, test=False):
+    open_message_boxes = []
+    current_warnings = set()
+
+    # save old handlers
+    _old_warnings_handler = warnings.showwarning
+    _old_exception_handler = sys.excepthook
+
+    def activate_box(box):
+        box.raise_()
+        box.activateWindow()
+
+    def display_messages(event):
+        for w in open_message_boxes:
+            w.raise_()
+            w.activateWindow()
+
+    if sys.platform.startswith('darwin'):
+        window.activate_event_handlers.append(display_messages)
+
+    def _warnings_handler(message: Warning, category, filename, lineno, file=None, line=None):
+        nonlocal current_warnings
+        message_str = str(message)
+        if message_str not in current_warnings:
+            warn_box = QMessageBox(QMessageBox.Warning, 'Warning', message_str, QMessageBox.Ok, window)
+            warn_box.setModal(False)
+            warn_box.setAttribute(Qt.WA_DeleteOnClose)
+            warn_box.destroyed.connect(
+                lambda x: (current_warnings.remove(message_str), open_message_boxes.remove(warn_box)))
+
+            if not test:
+                warn_box.show()
+                activate_box(warn_box)
+                open_message_boxes.append(warn_box)
+
+            current_warnings.add(message_str)
+
+        logging.warning(message_str)
+        logging.log(TRACEBACK, ''.join(traceback.format_stack()))
+        QApplication.processEvents()
+        return _old_warnings_handler(message, category, filename, lineno, file, line)
+
+    def _exception_handler(type, value, traceback_):
+        traceback_text = ''.join(traceback.extract_tb(traceback_).format())
+
+        if issubclass(type, CancelProcessError):
+            logging.log(TRACEBACK, str(value))
+            logging.log(TRACEBACK, traceback_text)
+            return
+
+        parent, modal = _parent(window)
+        msg_box = QMessageBox(QMessageBox.Critical, 'Error', str(value), QMessageBox.Ok, parent)
+        print()
+        if hasattr(value, 'NAME'):
+            msg_box.setWindowTitle(getattr(value, 'NAME'))
+        msg_box.setDetailedText(traceback_text)
+        open_message_boxes.append(msg_box)
+
+        logging.error(str(value))
+        logging.log(TRACEBACK, traceback_text)
+
+        if test:
+            return _old_exception_handler(type, value, traceback_)
+        _old_exception_handler(type, value, traceback_)
+        if issubclass(type, RecoverableError):
+            msg_box.open()
+            activate_box(msg_box)
+        else:
+            activate_box(msg_box)
+            msg_box.exec_()  # ensures waiting
+            exit(1)
+
+    warnings.showwarning = _warnings_handler
+    sys.excepthook = _exception_handler
+    warnings.simplefilter('always', UserWarning)
 
 def apply_style(app):
     app.setStyle('Fusion')
@@ -212,6 +208,26 @@ def apply_style(app):
     app.setPalette(palette)
     QToolTip.setPalette(palette)
 
+def _preload_common_fonts():
+    common_fonts = [
+        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=10.0'),
+        'STIXGeneral', 'STIXGeneral:italic', 'STIXGeneral:weight=bold',
+        'STIXNonUnicode', 'STIXNonUnicode:italic', 'STIXNonUnicode:weight=bold',
+        'STIXSizeOneSym', 'STIXSizeTwoSym', 'STIXSizeThreeSym', 'STIXSizeFourSym', 'STIXSizeFiveSym',
+        'cmsy10', 'cmr10', 'cmtt10', 'cmmi10', 'cmb10', 'cmss10', 'cmex10',
+        'DejaVu Sans', 'DejaVu Sans:italic', 'DejaVu Sans:weight=bold', 'DejaVu Sans Mono', 'DejaVu Sans Display',
+        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=12.0'),
+        font_manager.FontProperties('sans\\-serif:style=normal:variant=normal:weight=normal:stretch=normal:size=6.0')
+    ]
+
+    def _thread(fonts):
+        for f in fonts:
+            font_manager.findfont(f)
+
+    thread = threading.Thread(target=_thread, args=(common_fonts,))
+    thread.start()
+    return thread
+
 
 def _parent(window):
     if not sys.platform.startswith('darwin'):
@@ -230,8 +246,13 @@ def _update_mac_app_info():
                 app_info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
                 if app_info:
                     app_info['CFBundleName'] = extrap.__title__
+            from AppKit import NSWindow
+            NSWindow.setAllowsAutomaticWindowTabbing_(False)
         except ImportError:
             pass
+
+
+
 
 
 if __name__ == "__main__":

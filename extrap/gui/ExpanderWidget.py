@@ -5,8 +5,10 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import sys
+
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QToolButton, QSizePolicy, QWidget, QGroupBox, QVBoxLayout
+from PySide2.QtWidgets import QToolButton, QSizePolicy, QWidget, QGroupBox, QVBoxLayout, QApplication
 
 
 class ExpanderWidget(QGroupBox):
@@ -42,15 +44,18 @@ class ExpanderWidget(QGroupBox):
     def initUI(self):
         self.setStyleSheet('ExpanderWidget{ '
                            '    padding:2px -1px -1px 0px; margin-left:-1px; '
+                           f'{" margin-top: -19px; padding-top:19px; " if sys.platform.startswith("darwin") else ""}'
                            '}'
                            'ExpanderWidget::title{ '
-                           '    color:transparent; '
+                           '    color: transparent; '
+                           #    '    height: 0px; '
                            '}'
                            'ExpanderWidget>#expanderToggle{ '
                            '    background: transparent;'
                            '    border: 1px solid transparent;'
                            '    border-bottom: 1px solid #B0B0B0;'
                            '    border-radius:0;'
+                           f'   font-size: {QApplication.font().pointSizeF()}pt; '
                            '}'
                            'ExpanderWidget>#expanderToggle:hover,'
                            'ExpanderWidget>#expanderToggle:checked:hover{ '
@@ -91,6 +96,7 @@ class ExpanderWidget(QGroupBox):
         self._content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._content.setMinimumHeight(0)
         self._content.setMaximumHeight(0)
+        self._content
 
         layout.addWidget(self._toggle)
         layout.addWidget(self._content)

@@ -31,8 +31,6 @@ from extrap.gui.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.modelers.model_generator import ModelGenerator
 
-pyqt_version = 5
-
 
 class CallPathEnum(Enum):
     constant = "constant"
@@ -52,7 +50,6 @@ class MainWidget(QMainWindow):
         self.min_value = 1
         self.old_x_pos = 0
         self.experiment = None
-        self._opened_file_name = ""
         self.graph_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
                                  '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
                                  '#bcbd22', '#17becf']
@@ -119,12 +116,12 @@ class MainWidget(QMainWindow):
 
         # File menu
         screenshot_action = QAction('S&creenshot', self)
-        screenshot_action.setShortcut('Ctrl+P')
+        screenshot_action.setShortcut('Ctrl+I')
         screenshot_action.setStatusTip('Creates a screenshot of the Extra-P GUI')
         screenshot_action.triggered.connect(self.screenshot)
 
         exit_action = QAction('E&xit', self)
-        exit_action.setShortcut('Ctrl+Q')
+        exit_action.setShortcut(QKeySequence.Quit)
         exit_action.setStatusTip('Exit application')
         exit_action.triggered.connect(self.close)
 
@@ -146,13 +143,15 @@ class MainWidget(QMainWindow):
 
         open_experiment_action = QAction('&Open experiment', self)
         open_experiment_action.setStatusTip('Opens experiment file')
-        open_experiment_action.setShortcut('Ctrl+O')
+        open_experiment_action.setShortcut(QKeySequence.Open)
         open_experiment_action.triggered.connect(self.open_experiment)
 
         save_experiment_action = QAction('&Save experiment', self)
         save_experiment_action.setStatusTip('Saves experiment file')
-        save_experiment_action.setShortcut('Ctrl+S')
+        save_experiment_action.setShortcut(QKeySequence.Save)
         save_experiment_action.triggered.connect(self.save_experiment)
+        save_experiment_action.setEnabled(False)
+        self.save_experiment_action = save_experiment_action
 
         # View menu
         change_font_action = QAction('Legend &font size', self)
@@ -244,19 +243,6 @@ class MainWidget(QMainWindow):
         self.experiment_change = False
         self.show()
 
-    @staticmethod
-    def get_file_name(fileName):
-        """
-        Extracts the file name of the return value of the
-        QFileDialog functions getOpenFileName and getSaveFileName.
-        In Qt5 and Qt4 they have different return values.
-        This function should hide the differences.
-        """
-        if pyqt_version == 5:
-            return fileName[0]
-        else:
-            return fileName
-
     def setExperiment(self, experiment):
         self.experiment_change = True
         self.experiment = experiment
@@ -287,26 +273,18 @@ class MainWidget(QMainWindow):
         if e.key() == Qt.Key_Escape:
             self.close()
 
-    _should_close = False
-
     def closeEvent(self, event):
-        if self._should_close:
+        if not self.windowFilePath():
             event.accept()
             return
-        event.ignore()
-        msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Question)
-        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box = QMessageBox(QMessageBox.Question, 'Quit', "Are you sure to quit?",
+                              QMessageBox.No | QMessageBox.Yes, self, Qt.Sheet)
         msg_box.setDefaultButton(QMessageBox.No)
-        msg_box.setWindowTitle('Quit')
-        msg_box.setText("Are you sure to quit?")
 
-        def execute_close():
-            self._should_close = True
-            self.close()
-
-        msg_box.accepted.connect(execute_close)
-        msg_box.open()
+        if msg_box.exec_() == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
     def getExperiment(self):
         return self.experiment
@@ -358,18 +336,17 @@ class MainWidget(QMainWindow):
         pixmap = target.grab()
         image = pixmap.toImage()
 
-        initial_path = Path(self._opened_file_name).stem + name_addition
+        def _save(file_name):
+            with ProgressWindow(self, "Saving Screenshot"):
+                image.save(file_name)
+
+        initial_path = Path(self.windowFilePath()).stem + name_addition
         file_filter = ';;'.join(
             [f"{str(f, 'utf-8').upper()} image (*.{str(f, 'utf-8')})" for f in QImageWriter.supportedImageFormats() if
              str(f, 'utf-8') not in ['icns', 'cur', 'ico']])
-        file_name, file_type = QFileDialog.getSaveFileName(self,
-                                                           "Save Screenshot",
-                                                           initial_path,
-                                                           file_filter, "PNG image (*.png)")
-        if file_name:
-            with ProgressWindow(self, "Saving Screenshot"):
-                image.save(file_name)
-        # self.statusBar().showMessage("Ready")
+        dialog = self._file_dialog(_save, "Save Screenshot", initial_path,
+                                   file_filter, accept_mode=QFileDialog.AcceptSave)
+        dialog.selectNameFilter("PNG image (*.png)")
 
     def model_experiment(self, experiment):
         # initialize model generator
@@ -384,27 +361,48 @@ class MainWidget(QMainWindow):
 
     def import_file(self, reader_func, title='Open File', filter='', model=True, progress_text="Loading File",
                     file_name=None):
-        if not file_name:
-            file_name = QFileDialog.getOpenFileName(self, title, filter=filter)
-            file_name = self.get_file_name(file_name)
-        if file_name:
+        def _import_file(file_name):
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
                 self._set_opened_file_name(file_name)
-            # call the modeler and create a function model
-            if model:
-                self.model_experiment(experiment)
-            else:
-                self.setExperiment(experiment)
+                # call the modeler and create a function model
+                if model:
+                    self.model_experiment(experiment)
+                else:
+                    self.setExperiment(experiment)
+
+        if file_name:
+            _import_file(file_name)
+        else:
+            self._file_dialog(_import_file, title, filter=filter)
+
+    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None, accept_mode=QFileDialog.AcceptOpen):
+        if file_mode is None:
+            file_mode = QFileDialog.ExistingFile if accept_mode == QFileDialog.AcceptOpen else QFileDialog.AnyFile
+        f_dialog = QFileDialog(self, caption, directory, filter)
+        f_dialog.setAcceptMode(accept_mode)
+        f_dialog.setFileMode(file_mode)
+
+        def _on_accept():
+            file_list = f_dialog.selectedFiles()
+            if file_list:
+                if len(file_list) > 1:
+                    on_accept(file_list)
+                else:
+                    on_accept(file_list[0])
+        f_dialog.accepted.connect(_on_accept)
+        f_dialog.open()
+        return f_dialog
 
     def _set_opened_file_name(self, file_name):
         if file_name:
+            self.save_experiment_action.setEnabled(True)
             self.setWindowFilePath(file_name)
-            self._opened_file_name = Path(file_name).name
-            self.setWindowTitle(extrap.__title__ + " - " + self._opened_file_name)
+            self.setWindowTitle(Path(file_name).name+ " – " + extrap.__title__)
+            
         else:
+            self.save_experiment_action.setEnabled(False)
             self.setWindowFilePath("")
-            self._opened_file_name = ""
             self.setWindowTitle(extrap.__title__)
 
     def open_experiment(self):
@@ -414,28 +412,25 @@ class MainWidget(QMainWindow):
                          progress_text="Loading experiment")
 
     def save_experiment(self):
-        file_name = QFileDialog.getSaveFileName(
-            self, 'Save Experiment', filter='Experiments (*.extra-p)')
-        file_name = self.get_file_name(file_name)
-        if file_name:
+        def _save(file_name):
             with ProgressWindow(self, "Saving Experiment") as pw:
                 write_experiment(self.getExperiment(), file_name, pw)
+                self._set_opened_file_name(file_name)
+        self._file_dialog(_save,
+                          'Save Experiment', filter='Experiments (*.extra-p)', accept_mode=QFileDialog.AcceptSave)
 
     def open_cube_file(self):
-        dir_name = QFileDialog.getExistingDirectory(
-            self, 'Select a Directory with a Set of CUBE Files', "", QFileDialog.ReadOnly)
-        if not dir_name:
-            return
-        dialog = CubeFileReader(self, dir_name)
-        dialog.setModal(True)
-
-        def on_finish():
+        def _process_cube(dir_name):
+            dialog = CubeFileReader(self, dir_name)
+            dialog.setWindowFlag(Qt.Sheet, True)
+            dialog.setModal(True)
+            dialog.exec_()  # do not use open, wait for loading to finish
             if dialog.valid:
                 self._set_opened_file_name(dir_name)
                 self.model_experiment(dialog.experiment)
 
-        dialog.finished.connect(on_finish)
-        dialog.open()
+        self._file_dialog(_process_cube,
+                          'Select a Directory with a Set of CUBE Files', "", file_mode=QFileDialog.Directory)
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
@@ -477,3 +472,11 @@ class MainWidget(QMainWindow):
 
     def get_callpath_color_map(self):
         return self.dict_callpath_color
+
+    activate_event_handlers = []
+
+    def event(self, e: QEvent) -> bool:
+        if e.type() == QEvent.WindowActivate:
+            for h in self.activate_event_handlers:
+                h(e)
+        return super().event(e)

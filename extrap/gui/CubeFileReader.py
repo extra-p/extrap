@@ -68,7 +68,7 @@ class CubeFileReader(QDialog):
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         main_layout = QFormLayout(self)
-        layout = QFormLayout(self)
+        layout = QFormLayout()
         self.controls_layout = layout
 
         # self.num_params_choice = QSpinBox(self)
