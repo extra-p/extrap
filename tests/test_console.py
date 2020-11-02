@@ -4,10 +4,11 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import contextlib
 import shutil
 import tempfile
 import unittest
+from io import StringIO
 
 from extrap.extrap import extrapcmd as extrap
 from extrap.fileio.experiment_io import read_experiment
@@ -35,17 +36,43 @@ class TestConsole(unittest.TestCase):
 
     def test_print(self):
         extrap.main(['--text', 'data/text/one_parameter_1.txt'])
-        extrap.main(['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])
-        extrap.main(['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
+        self.assertOutput("""Callpath: compute
+	Metric: time
+		Measurement point: (2.00E+01) Mean: 8.19E+01 Median: 8.20E+01
+		Measurement point: (3.00E+01) Mean: 1.79E+02 Median: 1.78E+02
+		Measurement point: (4.00E+01) Mean: 3.19E+02 Median: 3.19E+02
+		Measurement point: (5.00E+01) Mean: 5.05E+02 Median: 5.06E+02
+		Measurement point: (6.00E+01) Mean: 7.25E+02 Median: 7.26E+02
+		Model: -0.8897934098062804 + 0.20168243826499183 * x^(2)
+		RSS: 3.43E+01
+		Adjusted R^2: 1.00E+00""", extrap.main, ['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])  # noqa
+        # noqa
+        self.assertOutput('-0.8897934098062804 + 0.20168243826499183 * x^(2)', extrap.main,
+                          ['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'callpaths', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'metrics', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'parameters', '--text', 'data/text/one_parameter_1.txt'])
 
         extrap.main(['--print', 'all', '--text', 'data/text/two_parameter_1.txt'])
-        extrap.main(['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
-        extrap.main(['--print', 'callpaths', '--text', 'data/text/two_parameter_1.txt'])
+        self.assertOutput('7.068256791911488 + 0.044161505135927766 * x^(3/2) * log2(x)^(2) * log2(y)^(1)', extrap.main,
+                          ['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
+        self.assertOutput('reg', extrap.main, ['--print', 'callpaths', '--text', 'data/text/two_parameter_1.txt'])
         extrap.main(['--print', 'metrics', '--text', 'data/text/two_parameter_1.txt'])
         extrap.main(['--print', 'parameters', '--text', 'data/text/two_parameter_1.txt'])
+
+    def assertOutput(self, text, command, *args, **kwargs):
+        temp_stdout = StringIO()
+        with contextlib.redirect_stdout(temp_stdout):
+            command(*args, **kwargs)
+        output = temp_stdout.getvalue().strip()
+        self.assertEqual(text, output)
+
+    def assertOutputRegex(self, regex, command, *args, **kwargs):
+        temp_stdout = StringIO()
+        with contextlib.redirect_stdout(temp_stdout):
+            command(*args, **kwargs)
+        output = temp_stdout.getvalue().strip()
+        self.assertRegex(output, regex)
 
     def test_save_experiment(self):
         temp_dir = tempfile.mkdtemp()

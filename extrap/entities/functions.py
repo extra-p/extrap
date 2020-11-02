@@ -5,11 +5,12 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from typing import List, Mapping
+from typing import List, Mapping, Union
 
 import numpy
 from marshmallow import fields
 
+from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
 from extrap.util.serialization_schema import BaseSchema, NumberField
 
@@ -48,7 +49,7 @@ class Function:
             function_value += t.evaluate(parameter_value)
         return function_value
 
-    def to_string(self, *parameters):
+    def to_string(self, *parameters: Union[str, Parameter]):
         """
         Return a string representation of the function.
         """

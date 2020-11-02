@@ -69,7 +69,7 @@ def format_functions(experiment):
     for model in models.values():
         hypothesis = model.hypothesis
         function = hypothesis.function
-        function_string = function.to_string(experiment.parameters)
+        function_string = function.to_string(*experiment.parameters)
         text += function_string + "\n"
     return text
 
@@ -110,7 +110,7 @@ def format_all(experiment):
             function = hypothesis.function
             rss = hypothesis.RSS
             ar2 = hypothesis.AR2
-            function_string = function.to_string(experiment.parameters)
+            function_string = function.to_string(*experiment.parameters)
             text += "\t\tModel: " + function_string + "\n"
             text += "\t\tRSS: {:.2E}\n".format(rss)
             text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
