@@ -5,18 +5,18 @@ starting with the installation of Extra-P and the creation of measurement files,
 If you already have files containing measurement data, you may want to skip to [using the GUI](#Graphical-user-interface).
 
 ### Table of contents 
-* [Installing Extra-P](#Installing-Extra-P)
-* [Creating Extra-P text files](#Creating-Extra-P-text-files)
-* [How to use the graphical user interface](#Graphical-user-interface)
-    - [Starting Extra-P](#Starting-Extra-P)
-    - [Loading files](#Loading-files)
-    - [Modeling data](#Modeling-data)
-    - [Saving performance models](#Saving-performance-models)
-* [How to use the command-line interface](#Command-line-interface)
-    - [Starting Extra-P](#Starting-Extra-P-1)
-    - [Loading files](#Loading-files-1)
-    - [Modeling data](#Modeling-data-1)
-    - [Saving performance models](#Saving-performance-models-1)
+* [Installing Extra-P](#installing-extra-p)
+* [Creating Extra-P text files](#creating-extra-p-text-files)
+* [How to use the graphical user interface](#graphical-user-interface)
+    - [Starting Extra-P](#starting-extra-p)
+    - [Loading files](#loading-files)
+    - [Modeling data](#modeling-data)
+    - [Saving performance models](#saving-performance-models)
+* [How to use the command-line interface](#command-line-interface)
+    - [Starting Extra-P](#starting-Extra-P-1)
+    - [Loading files](#loading-files-1)
+    - [Modeling data](#modeling-data-1)
+    - [Saving performance models](#saving-performance-models-1)
 
 
 Installing Extra-P
