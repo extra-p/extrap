@@ -1,13 +1,13 @@
 File format documentation
 =========================
 
-* [Text file format](#Text-file-format)
-* [TaLPas format](#TaLPas-format)
-* [JSON format](#JSON-format)
-* [JSON Lines format](#JSON-Lines-format)
-* [Cube file format](#Cube-file-format)
-* [Experiment format](#Experiment-format)
-* [Extra-P 3.0 file format](#Extra-P-30-file-format)
+* [Text file format](#text-file-format)
+* [TaLPas format](#talpas-format)
+* [JSON format](#json-format)
+* [JSON Lines format](#json-lines-format)
+* [Cube file format](#cube-file-format)
+* [Experiment format](#experiment-format)
+* [Extra-P 3.0 file format](#extra-p-30-file-format)
 
 Text file format
 ----------------
