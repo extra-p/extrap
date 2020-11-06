@@ -1,4 +1,5 @@
 # Extra-P
+**Automated empirical performance modeling for HPC and scientific applications.**
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/extra-p/extrap?style=plastic)
@@ -8,14 +9,26 @@
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/extra-p/extrap?style=plastic)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/extra-p/extrap/extrap?style=plastic)
 
-Extra-P, automated empirical performance modeling for HPC and scientific
-applications.
+[<img alt="Screenshot of Extra-P" src="docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
+Extra-P is an automatic performance-modeling tool that supports the user in the identification of *scalability bugs*. 
+A scalability bug is a part of the program whose scaling behavior is unintentionally poor, 
+that is, much worse than expected.
 
-For questions regarding Extra-P please send a message to <extra-p-support@lists.parallel.informatik.tu-darmstadt.de>.
+Extra-P uses measurements of various performance metrics at different processor configurations as input to represent 
+the performance of code regions (including their calling context) as a function of the number of processes. 
+All it takes to search for scalability issues even in full-blown codes is to run a manageable number of small-scale 
+performance experiments, launch Extra-P, and compare the asymptotic or extrapolated performance of the worst instances
+to the expectations. Besides the number of processes, it is also possible to consider other parameters such as the 
+input problem size, as well as combinations of multiple parameters.
+
+Extra-P generates not only a list of potential scalability bugs but also human-readable models for all 
+performance metrics available such as floating-point operations or bytes sent by MPI calls that can be further 
+analyzed and compared to identify the root causes of scalability issues.
+
+*For questions regarding Extra-P please send a message to <extra-p-support@lists.parallel.informatik.tu-darmstadt.de>.*
 
 --------------------------------------------------------------------------------------------
-
-### Table of Contents:
+### Table of Contents
 
 1. [Requirements](#Requirements)
 2. [Installation](#Installation)
@@ -26,13 +39,14 @@ For questions regarding Extra-P please send a message to <extra-p-support@lists.
 
 ### Requirements
 
-* Python 3.7
-* PySide2 (only if using GUI)
-* matplotlib
+* Python 3.7 or higher
 * numpy
 * pycubexr
 * marshmallow
 * tqdm
+* PySide2 (for GUI)
+* matplotlib (for GUI)
+* pyobjc-framework-Cocoa (only for GUI on macOS)
 
 
 ### Installation
