@@ -148,12 +148,11 @@ def _init_warning_system(window, test=False):
                 open_message_boxes.append(warn_box)
 
             current_warnings.add(message_str)
+            _old_warnings_handler(message, category, filename, lineno, file, line)
 
         logging.warning(message_str)
         logging.log(TRACEBACK, ''.join(traceback.format_stack()))
         QApplication.processEvents()
-        if message_str not in current_warnings:
-            return _old_warnings_handler(message, category, filename, lineno, file, line)
 
     def _exception_handler(type, value, traceback_):
         traceback_text = ''.join(traceback.extract_tb(traceback_).format())

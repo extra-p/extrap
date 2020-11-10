@@ -1,5 +1,5 @@
 # Extra-P
-**Automated empirical performance modeling for HPC and scientific applications.**
+**Automated performance modeling for HPC applications**
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/extra-p/extrap?style=plastic)
@@ -12,18 +12,22 @@
 [<img alt="Screenshot of Extra-P" src="docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
 Extra-P is an automatic performance-modeling tool that supports the user in the identification of *scalability bugs*. 
 A scalability bug is a part of the program whose scaling behavior is unintentionally poor, 
-that is, much worse than expected.
+that is, much worse than expected. A performance model is a formula that expresses a performance metric of interest 
+such as execution time or energy consumption as a function of one or more execution parameters such as the size of the 
+input problem or the number of processors. 
 
-Extra-P uses measurements of various performance metrics at different processor configurations as input to represent 
-the performance of code regions (including their calling context) as a function of the number of processes. 
+Extra-P uses measurements of various performance metrics at different execution configurations as input to generate 
+performance models of code regions (including their calling context) as a function of the execution parameters. 
 All it takes to search for scalability issues even in full-blown codes is to run a manageable number of small-scale 
 performance experiments, launch Extra-P, and compare the asymptotic or extrapolated performance of the worst instances
-to the expectations. Besides the number of processes, it is also possible to consider other parameters such as the 
-input problem size, as well as combinations of multiple parameters.
+to the expectations.
 
 Extra-P generates not only a list of potential scalability bugs but also human-readable models for all 
 performance metrics available such as floating-point operations or bytes sent by MPI calls that can be further 
 analyzed and compared to identify the root causes of scalability issues.
+
+Extra-P is developed by [TU Darmstadt](https://www.parallel.informatik.tu-darmstadt.de/) – 
+in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 
 *For questions regarding Extra-P please send a message to <extra-p-support@lists.parallel.informatik.tu-darmstadt.de>.*
 
@@ -62,10 +66,10 @@ The `--upgrade` forces the installation of a new version if a previous version i
 Extra-P can be used in two ways, either using the command-line interface or the graphical user interface.
 More information about the usage of Extra-P with both interfaces can be found in the [quick start guide](docs/quick-start.md).
 
-#### Graphical User Interface
+#### Graphical user interface
 The graphical user interface can be started by executing the `extrap-gui` command.
 
-#### Command Line Interface
+#### Command line interface
 The command line interface is available under the `extrap` command:
 
 `extrap` _OPTIONS_ (`--cube` | `--text` | `--talpas` | `--json` | `--extra-p-3`) _FILEPATH_
