@@ -111,6 +111,7 @@ def load_from_command(arguments, window):
         else:
             window.import_file(read_experiment, model=False, file_name=arguments.path)
 
+
 def _init_warning_system(window, test=False):
     open_message_boxes = []
     current_warnings = set()
@@ -151,7 +152,8 @@ def _init_warning_system(window, test=False):
         logging.warning(message_str)
         logging.log(TRACEBACK, ''.join(traceback.format_stack()))
         QApplication.processEvents()
-        return _old_warnings_handler(message, category, filename, lineno, file, line)
+        if message_str not in current_warnings:
+            return _old_warnings_handler(message, category, filename, lineno, file, line)
 
     def _exception_handler(type, value, traceback_):
         traceback_text = ''.join(traceback.extract_tb(traceback_).format())
@@ -187,6 +189,7 @@ def _init_warning_system(window, test=False):
     sys.excepthook = _exception_handler
     warnings.simplefilter('always', UserWarning)
 
+
 def apply_style(app):
     app.setStyle('Fusion')
 
@@ -207,6 +210,7 @@ def apply_style(app):
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
+
 
 def _preload_common_fonts():
     common_fonts = [
@@ -250,9 +254,6 @@ def _update_mac_app_info():
             NSWindow.setAllowsAutomaticWindowTabbing_(False)
         except ImportError:
             pass
-
-
-
 
 
 if __name__ == "__main__":

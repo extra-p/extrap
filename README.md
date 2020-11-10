@@ -78,36 +78,29 @@ You can use different input formats as shown in the examples below:
 
 The Extra-P command line interface has the following options.
 
-| Positional arguments |                                              |
-|----------------------|----------------------------------------------|
-| _FILEPATH_           | Specify a file path for Extra-P to work with |
-
-| Optional arguments                                        |                                              |
-|-----------------------------------------------------------|----------------------------------------------|
-| `-h`, `--help`                                            | Show help message and exit              |
-| `--version`                                               | Show program's version number and exit       |
-| `--log` {`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`} | Set program's log level (default: `WARNING`) |
-
-| Input options                  |                                                                                |
-|--------------------------------|--------------------------------------------------------------------------------|
-| `--cube`                       | Load data from CUBE files                                                      |
-| `--text`                       | Load data from text files                                                      |
-| `--talpas`                     | Load data from Talpas data format                                              |
-| `--json`                       | Load data from JSON or JSON Lines file                                         |
-| `--extra-p-3`                  | Load data from Extra-P 3 experiment                                            |
-| `--scaling` {`weak`, `strong`} | Set weak or strong scaling when loading data from CUBE files (default: `weak`) |
-
-| Modeling options                                                     |                                                           |
-|----------------------------------------------------------------------|-----------------------------------------------------------|
+| Arguments                                                            |                                              |
+|----------------------------------------------------------------------|----------------------------------------------|
+| **Positional**                                                       |                                              |
+| _FILEPATH_                                                           | Specify a file path for Extra-P to work with |
+| **Optional**                                                         |                                              |
+| `-h`, `--help`                                                       | Show help message and exit                   |
+| `--version`                                                          | Show program's version number and exit       |
+| `--log` {`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`}            | Set program's log level (default: `WARNING`) |
+| **Input options**                                                    |                                              |
+| `--cube`                                                             | Load data from CUBE files                    |
+| `--text`                                                             | Load data from text files                    |
+| `--talpas`                                                           | Load data from Talpas data format            |
+| `--json`                                                             | Load data from JSON or JSON Lines file       |
+| `--extra-p-3`                                                        | Load data from Extra-P 3 experiment          |
+| `--scaling` {`weak`, `strong`}                                       | Set weak or strong scaling when loading data from CUBE files (default: `weak`) |
+| **Modeling options**                                                 |                                              |
 | `--median`                                                           | Use median values for computation instead of mean values  |
 | `--modeler` {`Default`, `Basic`, `Refining`, `Multi-Parameter`}      | Selects the modeler for generating the performance models |
-| `--options` _KEY_=_VALUE_ [_KEY_=_VALUE_ ...]                        | Options for the selected modeler                          |
-| `--help-modeler` {`Default`, `Basic`, `Refining`, `Multi-Parameter`} | Show help for modeler options and exit                    |
-
-| Output options                                                       |                                                                                                                        |
-|----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
-| `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results                                                                            |
-| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`)                                              |
+| `--options` _KEY_=_VALUE_ [_KEY_=_VALUE_ ...]                        | Options for the selected modeler             |
+| `--help-modeler` {`Default`, `Basic`, `Refining`, `Multi-Parameter`} | Show help for modeler options and exit       |
+| **Output options**                                                   |                                              |
+| `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results  |
+| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`) |
 | `--save-experiment` _EXPERIMENT_PATH_                                | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) | 
                  
 ### License
