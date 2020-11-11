@@ -66,8 +66,13 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
     def _exponents_changed(self):
         def parse_expos(expos):
             expos = expos.split(',')
-            return [float(e) if '.' in e else int(e)
-                    for e in expos if e.isnumeric()]
+            result = []
+            for e in expos:
+                try:
+                    result.append(float(e) if '.' in e else int(e))
+                except ValueError:
+                    pass
+            return result
 
         polyexpos = parse_expos(self.poly_exponents)
         logexpos = parse_expos(self.log_exponents)
