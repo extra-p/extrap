@@ -18,15 +18,21 @@ from extrap.fileio.text_file_reader import read_text_file
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
 from extrap.gui.MainWidget import MainWidget, QCoreApplication
 
-APP = QApplication()
-APP.setStyle('Fusion')
-app_thread = Thread(target=APP.exec_)
+try:
+    APP = QApplication()
+    APP.setStyle('Fusion')
+    app_thread = Thread(target=APP.exec_)
+except:
+    app_thread = None
+    pass
 
 
 class TestGuiCommon(unittest.TestCase):
 
     def setUp(self) -> None:
         global app_thread
+        if not app_thread:
+            raise unittest.SkipTest("GUI could not start.")
         if not app_thread.is_alive():
             app_thread = Thread(target=APP.exec_)
             app_thread.start()
@@ -34,6 +40,8 @@ class TestGuiCommon(unittest.TestCase):
         self.window.hide()
 
     def tearDown(self):
+        if not app_thread:
+            raise unittest.SkipTest("GUI could not start.")
         self.window.closeEvent = lambda e: e.accept()
         self.window.close()
 
