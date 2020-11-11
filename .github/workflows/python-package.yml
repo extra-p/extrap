@@ -35,7 +35,7 @@ jobs:
         args: --recursive --in-place --aggressive --aggressive .
     - name: Test with pytest
       run: |
-        cd test
+        cd tests
         pytest . --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml --cov=com --cov-report=xml
     - name: Upload pytest test results
       uses: actions/upload-artifact@v2
