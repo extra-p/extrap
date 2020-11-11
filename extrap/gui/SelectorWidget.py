@@ -4,9 +4,10 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import math
 from typing import Optional, Sequence
 
+import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
@@ -229,7 +230,8 @@ class SelectorWidget(QWidget):
 
             formula = model.hypothesis.function
             value = formula.evaluate(paramValueList)
-            value_list.append(value)
+            if not math.isinf(value):
+                value_list.append(value)
             children = callpath.childs
             value_list += self.iterate_children(paramValueList,
                                                 children, metric)
@@ -252,11 +254,11 @@ class SelectorWidget(QWidget):
         param_value_list = self.getParameterValues()
         call_tree = experiment.call_tree
         nodes = call_tree.get_nodes()
-
+        previous = numpy.seterr(divide='ignore')
         value_list.extend(self.iterate_children(param_value_list,
                                                 nodes,
                                                 selectedMetric))
-
+        numpy.seterr(**previous)
         if len(value_list) == 0:
             value_list.append(1)
         return value_list

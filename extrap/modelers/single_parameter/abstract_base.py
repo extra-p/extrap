@@ -146,13 +146,19 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         return best_hypothesis
 
     @staticmethod
-    def are_measurements_log_capable(measurements):
+    def are_measurements_log_capable(measurements, check_negative_exponents=False):
         """ Checks if logarithmic models can be used to describe the measurements.
             If the parameter values are smaller than 1 log terms are not allowed."""
 
-        for measurement in measurements:
-            for value in measurement.coordinate:
-                if value < 1.0:
-                    return False
+        if check_negative_exponents:
+            for measurement in measurements:
+                for value in measurement.coordinate:
+                    if value <= 1.0:
+                        return False
+        else:
+            for measurement in measurements:
+                for value in measurement.coordinate:
+                    if value < 1.0:
+                        return False
 
         return True

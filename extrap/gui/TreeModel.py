@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, List
 
+import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
@@ -111,7 +112,10 @@ class TreeModel(QAbstractItemModel):
                 return formatFormula(formula.to_string(*parameters))
             else:
                 parameters = self.selector_widget.getParameterValues()
-                return formatNumber(str(formula.evaluate(parameters)))
+                previous = numpy.seterr(divide='ignore')
+                res = formatNumber(str(formula.evaluate(parameters)))
+                numpy.seterr(**previous)
+                return res
         elif index.column() == 4:
             return formatNumber(str(model.hypothesis.RSS))
         elif index.column() == 5:

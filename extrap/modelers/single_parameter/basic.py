@@ -47,8 +47,12 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                                                       'If set the exact combination of exponents is forced.',
                                                       name='Force combination',
                                                       on_change=lambda self, v: self._exponents_changed())
+    allow_negative_exponents = modeler_options.add(False, bool,
+                                                   'If set adds neagtive exponents for strong scaling.',
+                                                   name='Negative exponents',
+                                                   on_change=lambda self, v: self._exponents_changed())
     modeler_options.group('Exponents', poly_exponents, log_exponents, retain_default_exponents,
-                          force_combination_exponents)
+                          force_combination_exponents, allow_negative_exponents)
 
     def __init__(self):
         """
@@ -61,7 +65,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         # create the building blocks for the hypothesis
         self.hypotheses_building_blocks: List[CompoundTerm] = self.create_default_building_blocks(
-            self.allow_log_terms)
+            self.allow_log_terms, self.allow_negative_exponents)
 
     def _exponents_changed(self):
         def parse_expos(expos):
@@ -81,14 +85,16 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             self.hypotheses_building_blocks = self.generate_building_blocks(polyexpos, logexpos,
                                                                             self.force_combination_exponents)
             if self.retain_default_exponents:
-                self.hypotheses_building_blocks.extend(self.create_default_building_blocks(self.allow_log_terms))
+                self.hypotheses_building_blocks.extend(
+                    self.create_default_building_blocks(self.allow_log_terms, self.allow_negative_exponents))
         else:
-            self.hypotheses_building_blocks = self.create_default_building_blocks(self.allow_log_terms)
+            self.hypotheses_building_blocks = self.create_default_building_blocks(self.allow_log_terms,
+                                                                                  self.allow_negative_exponents)
 
     def get_matching_hypotheses(self, measurements: Sequence[Measurement]):
         """Removes log terms from the returned hypotheses_building_blocks, if those cannot describe the measurements."""
 
-        if self.are_measurements_log_capable(measurements):
+        if self.are_measurements_log_capable(measurements, self.allow_negative_exponents):
             return self.hypotheses_building_blocks
 
         return [compound_term
@@ -98,7 +104,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                 ]
 
     @staticmethod
-    def create_default_building_blocks(allow_log_terms):
+    def create_default_building_blocks(allow_log_terms, allow_negative_exponents=False):
         """
         Creates the default building blocks for the single parameter hypothesis
         that will be used during the search for the best hypothesis.
@@ -148,31 +154,31 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                          (3, 1, 0),
                          (3, 1, 1)]
             # These were used for relearn
-            """
-            exponents += [(-0, 1, -1),
-                          (-0, 1, -2),
-                          (-1, 4, -1),
-                          (-1, 3, -1),
-                          (-1, 4, -2),
-                          (-1, 3, -2),
-                          (-1, 2, -1),
-                          (-1, 2, -2),
-                          (-2, 3, -1),
-                          (-3, 4, -1),
-                          (-2, 3, -2),
-                          (-3, 4, -2),
-                          (-1, 1, -1),
-                          (-1, 1, -2),
-                          (-5, 4, -1),
-                          (-4, 3, -1),
-                          (-3, 2, -1),
-                          (-3, 2, -2),
-                          (-2, 1, -1),
-                          (-2, 1, -2),
-                          (-5, 2, -1),
-                          (-5, 2, -2),
-                          (-3, 1, -1)]
-            """
+            if allow_negative_exponents:
+                exponents += [(-0, 1, -1),
+                              (-0, 1, -2),
+                              (-1, 4, -1),
+                              (-1, 3, -1),
+                              (-1, 4, -2),
+                              (-1, 3, -2),
+                              (-1, 2, -1),
+                              (-1, 2, -2),
+                              (-2, 3, -1),
+                              (-3, 4, -1),
+                              (-2, 3, -2),
+                              (-3, 4, -2),
+                              (-1, 1, -1),
+                              (-1, 1, -2),
+                              (-5, 4, -1),
+                              (-4, 3, -1),
+                              (-3, 2, -1),
+                              (-3, 2, -2),
+                              (-2, 1, -1),
+                              (-2, 1, -2),
+                              (-5, 2, -1),
+                              (-5, 2, -2),
+                              (-3, 1, -1)]
+
         else:
             exponents = [(1, 4, 0),
                          (1, 3, 0),
@@ -194,27 +200,27 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                          (11, 4, 0),
                          (3, 1, 0)]
             # These were used for relearn
-            """
-            exponents += [(-1, 4, 0),
-                          (-1, 3, 0),
-                          (-1, 2, 0),
-                          (-2, 3, 0),
-                          (-3, 4, 0),
-                          (-4, 5, 0),
-                          (-1, 1, 0),
-                          (-5, 4, 0),
-                          (-4, 3, 0),
-                          (-3, 2, 0),
-                          (-5, 3, 0),
-                          (-7, 4, 0),
-                          (-2, 1, 0),
-                          (-9, 4, 0),
-                          (-7, 3, 0),
-                          (-5, 2, 0),
-                          (-8, 3, 0),
-                          (-11, 4, 0),
-                          (-3, 1, 0)]
-            """
+            if allow_negative_exponents:
+                exponents += [(-1, 4, 0),
+                              (-1, 3, 0),
+                              (-1, 2, 0),
+                              (-2, 3, 0),
+                              (-3, 4, 0),
+                              (-4, 5, 0),
+                              (-1, 1, 0),
+                              (-5, 4, 0),
+                              (-4, 3, 0),
+                              (-3, 2, 0),
+                              (-5, 3, 0),
+                              (-7, 4, 0),
+                              (-2, 1, 0),
+                              (-9, 4, 0),
+                              (-7, 3, 0),
+                              (-5, 2, 0),
+                              (-8, 3, 0),
+                              (-11, 4, 0),
+                              (-3, 1, 0)]
+
         hypotheses_building_blocks = [CompoundTerm.create(*e) for e in exponents]
         # print the hypothesis building blocks, compound terms in debug mode
         if logging.getLogger().isEnabledFor(logging.DEBUG):

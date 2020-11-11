@@ -596,14 +596,13 @@ class GraphWidget(QWidget):
 
         return cord_list
 
-    @staticmethod
-    def _create_drawing_iterator(x_values, y_list):
+    def _create_drawing_iterator(self, x_values, y_list):
         y_list[y_list == math.inf] = numpy.max(y_list[y_list != math.inf])
         y_list[y_list == -math.inf] = numpy.min(y_list[y_list != -math.inf])
         cord_list_before_filtering = zip(x_values, y_list)
         cord_list = ((x, y)
                      for x, y in cord_list_before_filtering
-                     if not math.isnan(y) and y >= 0)
+                     if not math.isnan(y) and 0 <= y)
         return cord_list
 
     def _calculate_evaluation_points(self, length_x_axis):
@@ -741,7 +740,7 @@ class GraphWidget(QWidget):
                 y = max(model.predictions)
                 y_max = max(y, y_max)
 
-        previous = numpy.seterr(invalid='ignore')
+        previous = numpy.seterr(invalid='ignore', divide='ignore')
 
         if self.combine_all_callpath:
             y_agg = 0
@@ -768,6 +767,8 @@ class GraphWidget(QWidget):
         for model in modelList:
             function = model.hypothesis.function
             y = function.evaluate(pv_list)
+            if math.isinf(y):
+                y = max(model.predictions)
             y_max = max(y, y_max)
 
         numpy.seterr(**previous)
