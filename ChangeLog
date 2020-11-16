@@ -1,5 +1,33 @@
 ------------------- Upcoming version 4.0 -----------------------------
+Sparse modeling support
+- Added support for sparse modeling for multi-parameter models. This allows the 
+model generator to be run to use fewer measurement points.
+- Added several strategies for the sparse modeler that specify how the 
+measurement points will be used for modeling. Advanced users can use this option
+to exactly specify which, and how many points should be used for modeling.
 
+Support for more input files
+- Added two new input formats. Besides a text and the cubex-based file 
+format Extra-P now also supports a JSON lines style format and a JSON
+format. With the JSON lines style format experiment results can be written
+consecutively into one file, that can then be used for modeling, allowing 
+for more flexibility in case it is not clear how many or with which configuration
+the experiments will be done.
+
+A python-based version of Extra-P
+- The new version of Extra-P is completely Python-based and can be installed
+more easily using the pip package manager. Besides some standard python packages,
+there are no further dependencies anymore.
+
+Improved Python-based command-line tool
+- Added a new Python-based command-line tool that allows accessing all of the
+the functionality of Extra-P (besides the graphical plots).
+
+Minor improvements and fixes
+- Fixed some GUI bugs
+- Improved the readability of the GUI, introducing loading indicators for time
+intensive operations
+- Added new save file format for Extra-P
 
 ------------------- Released version 3.0 -----------------------------
 
