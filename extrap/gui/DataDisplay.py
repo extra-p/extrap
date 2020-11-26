@@ -23,8 +23,11 @@ from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
 
-
 #####################################################################
+MIN_PARAM_VALUE = 0.01
+MAX_PARAM_VALUE = 2000000000
+
+
 class AxisSelection(QWidget):
     ''' This class is a helper class for the class DataDisplay.
         It represents one parameter in the data display which
@@ -71,9 +74,9 @@ class AxisSelection(QWidget):
         label2.setMinimumWidth(40)
         label2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.max_edit = QDoubleSpinBox()
-        self.max_edit.setMinimum(0.01)
+        self.max_edit.setMinimum(MIN_PARAM_VALUE)
         self.max_edit.setMinimumHeight(25)
-        self.max_edit.setMaximum(10000000)
+        self.max_edit.setMaximum(MAX_PARAM_VALUE)
         if self.index <= 2:
             self.max_edit.setValue(AxisSelection.max_values[self.index])
         else:
@@ -194,8 +197,8 @@ class ValueSelection(QWidget):
         label2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         self.value_edit = QDoubleSpinBox()
-        self.value_edit.setMinimum(0.01)
-        self.value_edit.setMaximum(10000000)
+        self.value_edit.setMinimum(MIN_PARAM_VALUE)
+        self.value_edit.setMaximum(MAX_PARAM_VALUE)
         self.value_edit.setValue(self.default_values[self.parameter])
         self.value_edit.setMinimumHeight(25)
         self.value_edit.valueChanged.connect(self._value_changed)
