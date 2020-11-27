@@ -91,7 +91,9 @@ class TreeModel(QAbstractItemModel):
             # added for two-parameter models here
             parameters = self.selector_widget.getParameterValues()
             formula = model.hypothesis.function
+            previous = numpy.seterr(divide='ignore', invalid='ignore')
             value = formula.evaluate(parameters)
+            numpy.seterr(**previous)
 
             # convert value to relative value between 0 and 1
             relativeValue = max(0.0, (value - self.main_widget.min_value) / delta)
@@ -112,7 +114,7 @@ class TreeModel(QAbstractItemModel):
                 return formatFormula(formula.to_string(*parameters))
             else:
                 parameters = self.selector_widget.getParameterValues()
-                previous = numpy.seterr(divide='ignore')
+                previous = numpy.seterr(divide='ignore', invalid='ignore')
                 res = formatNumber(str(formula.evaluate(parameters)))
                 numpy.seterr(**previous)
                 return res

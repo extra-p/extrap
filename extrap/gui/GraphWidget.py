@@ -753,13 +753,18 @@ class GraphWidget(QWidget):
             y_agg = 0
             for model in modelList:
                 function = model.hypothesis.function
-                y_agg = y_agg + function.evaluate(pv_list)
+                y = function.evaluate(pv_list)
+                if math.isinf(y):
+                    y = max(model.predictions)
+                y_agg += y
             y_max = max(y_agg, y_max)
 
         # Check the value at the end of the displayed interval
         for model in modelList:
             function = model.hypothesis.function
             y = function.evaluate(pv_list)
+            if math.isinf(y):
+                y = max(model.predictions)
             y_max = max(y, y_max)
 
         # Check the value at the beginning of the displayed interval

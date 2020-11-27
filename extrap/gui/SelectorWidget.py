@@ -254,7 +254,7 @@ class SelectorWidget(QWidget):
         param_value_list = self.getParameterValues()
         call_tree = experiment.call_tree
         nodes = call_tree.get_nodes()
-        previous = numpy.seterr(divide='ignore')
+        previous = numpy.seterr(divide='ignore', invalid='ignore')
         value_list.extend(self.iterate_children(param_value_list,
                                                 nodes,
                                                 selectedMetric))

@@ -103,12 +103,19 @@ class GraphDisplayWindow(FigureCanvas):
         # Get the z value for the x and y value
         z_List = list()
         Z_List = list()
+        max_z = 0
+        previous = np.seterr(invalid='ignore', divide='ignore')
         for model in model_list:
             function = model.hypothesis.function
             zs = self.calculate_z_optimized(X, Y, function)
             Z = zs.reshape(X.shape)
             z_List.append(zs)
             Z_List.append(Z)
+            max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
+        np.seterr(**previous)
+        for z, Z in zip(z_List, Z_List):
+            z[np.isinf(z)] = max_z
+            Z[np.isinf(Z)] = max_z
         return X, Y, Z_List, z_List
 
     def get_selected_models(self):
