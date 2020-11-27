@@ -93,7 +93,7 @@ class GraphDisplayWindow(FigureCanvas):
         z_value = function.evaluate(points)
         return z_value
 
-    def calculate_z_models(self, maxX, maxY, model_list):
+    def calculate_z_models(self, maxX, maxY, model_list, max_z=0):
         # define grid parameters based on max x and max y value
         pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
         # Get the grid of the x and y values
@@ -103,7 +103,6 @@ class GraphDisplayWindow(FigureCanvas):
         # Get the z value for the x and y value
         z_List = list()
         Z_List = list()
-        max_z = 0
         previous = np.seterr(invalid='ignore', divide='ignore')
         for model in model_list:
             function = model.hypothesis.function
