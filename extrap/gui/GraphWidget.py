@@ -273,7 +273,7 @@ class GraphWidget(QWidget):
             parameters = self.main_widget.experiment.parameters
             model_function_text = 'Model: ' + \
                                   formatFormula(
-                                      model_function.to_string(parameters))
+                                      model_function.to_string(*parameters))
 
             data_points_text = '\n'.join(
                 ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)

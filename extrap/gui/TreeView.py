@@ -47,7 +47,7 @@ class TreeView(QTreeView):
 
     def copy_model_to_clipboard(self, selectedModel):
         parameters = self.model().main_widget.getExperiment().parameters
-        function_string = selectedModel.hypothesis.function.to_string(parameters)
+        function_string = selectedModel.hypothesis.function.to_string(*parameters)
         QGuiApplication.clipboard().setText(function_string)
 
     @staticmethod
