@@ -68,7 +68,7 @@ class MeasurementPointsPlot(GraphDisplayWindow):
             median = np.array([m.median for m in points])[in_range]
             minimum = np.array([m.minimum for m in points])[in_range]
             maximum = np.array([m.maximum for m in points])[in_range]
-            if maximum:
+            if len(maximum) > 0:
                 max_z = max(max_z, max(maximum))
 
             # Draw points
