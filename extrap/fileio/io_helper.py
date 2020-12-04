@@ -102,15 +102,27 @@ def format_all(experiment):
                 coordinate_text = coordinate_text[:-1]
                 coordinate_text += ")"
                 measurement = experiment.get_measurement(coordinate_id, callpath_id, metric_id)
-                value_mean = measurement.mean
-                value_median = measurement.median
+                if measurement == None:
+                    value_mean = 0
+                    value_median = 0
+                else:
+                    value_mean = measurement.mean
+                    value_median = measurement.median
                 text += f"\t\t{coordinate_text} Mean: {value_mean:.2E} Median: {value_median:.2E}\n"
-            model = modeler.models[callpath, metric]
-            hypothesis = model.hypothesis
-            function = hypothesis.function
-            rss = hypothesis.RSS
-            ar2 = hypothesis.AR2
-            function_string = function.to_string(*experiment.parameters)
+            try:
+                model = modeler.models[callpath, metric]
+            except KeyError as e:
+                model = None
+            if model != None:
+                hypothesis = model.hypothesis
+                function = hypothesis.function
+                rss = hypothesis.RSS
+                ar2 = hypothesis.AR2
+                function_string = function.to_string(*experiment.parameters)
+            else:
+                rss = 0
+                ar2 = 0
+                function_string = "None"
             text += "\t\tModel: " + function_string + "\n"
             text += "\t\tRSS: {:.2E}\n".format(rss)
             text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)

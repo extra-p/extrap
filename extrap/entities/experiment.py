@@ -60,7 +60,10 @@ class Experiment:
         metric = self.metrics[metric_id]
         coordinate = self.coordinates[coordinate_id]
 
-        measurements = self.measurements[(callpath, metric)]
+        try:
+            measurements = self.measurements[(callpath, metric)]
+        except KeyError as e:
+            return None
 
         for measurement in measurements:
             if measurement.coordinate == coordinate:
