@@ -227,6 +227,7 @@ class MainWidget(QMainWindow):
         # filter_menu = menubar.addMenu('Filter')
         # filter_menu.addAction(filter_callpath_action)
 
+        # Help menue
         help_menu = menubar.addMenu('&Help')
 
         doc_action = QAction('&Documentation', self)
