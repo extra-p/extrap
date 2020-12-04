@@ -9,7 +9,7 @@
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/extra-p/extrap?style=plastic)
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/extra-p/extrap/Test%20extrap%20package?style=plastic)
 
-[<img alt="Screenshot of Extra-P" src="docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
+[<img alt="Screenshot of Extra-P" src="https://github.com/extra-p/extrap/raw/master/docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
 Extra-P is an automatic performance-modeling tool that supports the user in the identification of *scalability bugs*. 
 A scalability bug is a part of the program whose scaling behavior is unintentionally poor, 
 that is, much worse than expected. A performance model is a formula that expresses a performance metric of interest 
