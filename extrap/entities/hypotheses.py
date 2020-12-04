@@ -206,6 +206,7 @@ class SingleParameterHypothesis(Hypothesis):
         self._RSS += difference * difference
         if actual != 0:
             relative_difference = difference / actual
+            self._RE += numpy.abs(relative_difference) / (len(training_measurements) + 1)
             self._rRSS += relative_difference * relative_difference
         abssum = abs(actual) + abs(predicted)
         if abssum != 0:
