@@ -50,5 +50,6 @@ setup(
     ],
     python_requires='>=3.7',
     install_requires=["pyside2~=5.13", "numpy~=1.18", "matplotlib~=3.2", "tqdm~=4.47", "pycubexr~=1.1",
-                      "marshmallow~=3.7", "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'"]
+                      "marshmallow~=3.7", "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'",
+                      "kaitaistruct~=0.9","protobuf~=3.14"]
 )
