@@ -1,4 +1,7 @@
+import gc
+
 from kaitaistruct import KaitaiStream
+from memory_profiler import profile
 
 from extrap.fileio.ncu_reader.pb_parser.ProfilerReport_pb2 import BlockHeader as PbBlockHeader
 
