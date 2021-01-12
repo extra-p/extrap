@@ -55,7 +55,7 @@ class TestConsole(unittest.TestCase):
         extrap.main(['--print', 'parameters', '--text', 'data/text/one_parameter_1.txt'])
 
         extrap.main(['--print', 'all', '--text', 'data/text/two_parameter_1.txt'])
-        self.assertOutput(
+        self.assertOutputRegex(
             r'1\.37420831253\d+ \+ 6\.6980803999\d+ \* log2\(y\)\^\(1\) \+ 0\.043841655290\d+ \* x\^\(3\/2\) \* '
             r'log2\(x\)\^\(2\) \* log2\(y\)\^\(1\)',
             extrap.main,
