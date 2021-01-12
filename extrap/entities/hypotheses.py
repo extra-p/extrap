@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import abc
 from typing import Sequence
 
@@ -188,6 +189,11 @@ class ConstantHypothesis(Hypothesis):
             if actual != 0:
                 relative_difference = difference / actual
                 self._rRSS += relative_difference * relative_difference
+
+                absolute_error = numpy.abs(difference)
+                relative_error = absolute_error / actual
+                self._RE = numpy.mean(relative_error)
+
             abssum = abs(actual) + abs(predicted)
             if abssum != 0:
                 smape += abs(difference) / abssum * 2
