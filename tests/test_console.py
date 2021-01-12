@@ -48,15 +48,16 @@ class TestConsole(unittest.TestCase):
 		RSS: 3.43E+01
 		Adjusted R^2: 1.00E+00""", extrap.main, ['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])  # noqa
         # noqa
-        self.assertOutput('-0.8897934098062804 + 0.20168243826499183 * x^(2)', extrap.main,
-                          ['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
+        self.assertOutputRegex(r'-0\.88979340\d+ \+ 0\.20168243826\d+ \* x\^\(2\)', extrap.main,
+                               ['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'callpaths', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'metrics', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'parameters', '--text', 'data/text/one_parameter_1.txt'])
 
         extrap.main(['--print', 'all', '--text', 'data/text/two_parameter_1.txt'])
         self.assertOutput(
-            '1.3742083125359215 + 6.698080399955742 * log2(y)^(1) + 0.04384165529030426 * x^(3/2) * log2(x)^(2) * log2(y)^(1)',
+            r'1\.37420831253\d+ \+ 6\.6980803999\d+ \* log2\(y\)\^\(1\) \+ 0\.043841655290\d+ \* x\^\(3\/2\) \* '
+            r'log2\(x\)\^\(2\) \* log2\(y\)\^\(1\)',
             extrap.main,
             ['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
         self.assertOutput('reg', extrap.main, ['--print', 'callpaths', '--text', 'data/text/two_parameter_1.txt'])
