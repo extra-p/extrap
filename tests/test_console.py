@@ -37,16 +37,18 @@ class TestConsole(unittest.TestCase):
 
     def test_print(self):
         extrap.main(['--text', 'data/text/one_parameter_1.txt'])
-        self.assertOutput("""Callpath: compute
-	Metric: time
-		Measurement point: (2.00E+01) Mean: 8.19E+01 Median: 8.20E+01
-		Measurement point: (3.00E+01) Mean: 1.79E+02 Median: 1.78E+02
-		Measurement point: (4.00E+01) Mean: 3.19E+02 Median: 3.19E+02
-		Measurement point: (5.00E+01) Mean: 5.05E+02 Median: 5.06E+02
-		Measurement point: (6.00E+01) Mean: 7.25E+02 Median: 7.26E+02
-		Model: -0.8897934098062804 + 0.20168243826499183 * x^(2)
-		RSS: 3.43E+01
-		Adjusted R^2: 1.00E+00""", extrap.main, ['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])  # noqa
+        self.assertOutputRegex(
+            "Callpath\:\s+compute\s+"
+            "Metric\:\s+time\s+"
+            "Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            "Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
+            "Model\:\s+\-0\.88979340\d+\s+\+\s+0\.2016824382\d+\s+\*\s+x\^\(2\)\s+"
+            "RSS\:\s+3\.43E\+01\s+"
+            "Adjusted\s+R\^2\:\s+1\.00E\+00",
+            extrap.main, ['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])  # noqa
         # noqa
         self.assertOutputRegex(r'-0\.88979340\d+ \+ 0\.20168243826\d+ \* x\^\(2\)', extrap.main,
                                ['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
