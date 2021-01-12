@@ -13,7 +13,7 @@ from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.terms import CompoundTerm
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
-from tests.test_modeling import TestCaseWithFunctionAssertions
+from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
 class TestBasicModeler(TestCaseWithFunctionAssertions):

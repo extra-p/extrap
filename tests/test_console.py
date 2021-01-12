@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import contextlib
 import shutil
 import tempfile
@@ -54,8 +55,10 @@ class TestConsole(unittest.TestCase):
         extrap.main(['--print', 'parameters', '--text', 'data/text/one_parameter_1.txt'])
 
         extrap.main(['--print', 'all', '--text', 'data/text/two_parameter_1.txt'])
-        self.assertOutput('7.068256791911488 + 0.044161505135927766 * x^(3/2) * log2(x)^(2) * log2(y)^(1)', extrap.main,
-                          ['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
+        self.assertOutput(
+            '1.3742083125359215 + 6.698080399955742 * log2(y)^(1) + 0.04384165529030426 * x^(3/2) * log2(x)^(2) * log2(y)^(1)',
+            extrap.main,
+            ['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
         self.assertOutput('reg', extrap.main, ['--print', 'callpaths', '--text', 'data/text/two_parameter_1.txt'])
         extrap.main(['--print', 'metrics', '--text', 'data/text/two_parameter_1.txt'])
         extrap.main(['--print', 'parameters', '--text', 'data/text/two_parameter_1.txt'])

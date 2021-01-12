@@ -20,7 +20,7 @@ class Function:
         """
         Initialize a Function object.
         """
-        self.constant_coefficient = 1
+        self.constant_coefficient = 0
         self.compound_terms: List[CompoundTerm] = list(compound_terms)
 
     def add_compound_term(self, compound_term):
@@ -28,6 +28,11 @@ class Function:
         Add a compound term to the function.
         """
         self.compound_terms.append(compound_term)
+
+    def reset_coefficients(self):
+        self.constant_coefficient = 0
+        for t in self.compound_terms:
+            t.reset_coefficients()
 
     def __iadd__(self, compound_term):
         self.add_compound_term(compound_term)
@@ -113,7 +118,8 @@ class SingleParameterFunction(Function):
 
 
 class MultiParameterFunction(Function):
-
+    compound_terms: List[MultiParameterTerm]
+    
     def __init__(self, *compound_terms: MultiParameterTerm):
         super().__init__(*compound_terms)
 
