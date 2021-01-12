@@ -45,12 +45,12 @@ class TestConsole(unittest.TestCase):
             "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
             "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
             "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
-            "Model\:\s+\-0\.88979340\d+\s+\+\s+0\.2016824382\d+\s+\*\s+x\^\(2\)\s+"
+            "Model\:\s+\-0\.88979340\d+\s+\+\s+0\.20168243\d+\s+\*\s+x\^\(2\)\s+"
             "RSS\:\s+3\.43E\+01\s+"
             "Adjusted\s+R\^2\:\s+1\.00E\+00",
             extrap.main, ['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])  # noqa
         # noqa
-        self.assertOutputRegex(r'-0\.88979340\d+ \+ 0\.20168243826\d+ \* x\^\(2\)', extrap.main,
+        self.assertOutputRegex(r'-0\.88979340\d+ \+ 0\.20168243\d+ \* x\^\(2\)', extrap.main,
                                ['--print', 'functions', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'callpaths', '--text', 'data/text/one_parameter_1.txt'])
         extrap.main(['--print', 'metrics', '--text', 'data/text/one_parameter_1.txt'])
@@ -58,7 +58,7 @@ class TestConsole(unittest.TestCase):
 
         extrap.main(['--print', 'all', '--text', 'data/text/two_parameter_1.txt'])
         self.assertOutputRegex(
-            r'1\.37420831253\d+ \+ 6\.6980803999\d+ \* log2\(y\)\^\(1\) \+ 0\.043841655290\d+ \* x\^\(3\/2\) \* '
+            r'1\.37420831\d+ \+ 6\.69808039\d+ \* log2\(y\)\^\(1\) \+ 0\.04384165\d+ \* x\^\(3\/2\) \* '
             r'log2\(x\)\^\(2\) \* log2\(y\)\^\(1\)',
             extrap.main,
             ['--print', 'functions', '--text', 'data/text/two_parameter_1.txt'])
