@@ -21,7 +21,7 @@ from extrap.fileio.jsonlines_file_reader import read_jsonlines_file
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
-from tests.test_modeling import TestCaseWithFunctionAssertions
+from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
 class TestFindFirstMeasurements(unittest.TestCase):
@@ -362,6 +362,62 @@ class TestSparseModeling(TestCaseWithFunctionAssertions):
             self.assertEqual(1, len(models))
             self.assertApproxFunction(function, models[0].hypothesis.function, places=5)
 
+    def test_modeling_3p_plus(self):
+        exponents = [(0, 1, 1), (0, 1, 2), (1, 4, 0), (1, 3, 0), (1, 4, 1), (1, 3, 1), (1, 4, 2), (1, 3, 2),
+                     (1, 2, 0), (1, 2, 1), (1, 2, 2), (2, 3, 0), (3, 4, 0), (2, 3, 1), (3, 4, 1), (4, 5, 0),
+                     (2, 3, 2), (3, 4, 2), (1, 1, 0), (1, 1, 1), (1, 1, 2), (5, 4, 0), (5, 4, 1), (4, 3, 0),
+                     (4, 3, 1), (3, 2, 0), (3, 2, 1), (3, 2, 2), (5, 3, 0), (7, 4, 0), (2, 1, 0), (2, 1, 1),
+                     (2, 1, 2), (9, 4, 0), (7, 3, 0), (5, 2, 0), (5, 2, 1), (5, 2, 2), (8, 3, 0), (11, 4, 0),
+                     (3, 1, 0), (3, 1, 1)]
+        points = np.array(list(zip(*itertools.product([2, 4, 8, 16, 32], repeat=3))))
+        for expo1, expo2, expo3 in zip(exponents, exponents[1:], exponents[2:]):
+            termX = CompoundTerm.create(*expo1)
+            termY = CompoundTerm.create(*expo2)
+            termZ = CompoundTerm.create(*expo3)
+            term1 = MultiParameterTerm((0, termX))
+            term1.coefficient = 10
+            term2 = MultiParameterTerm((1, termY))
+            term2.coefficient = 20
+            term3 = MultiParameterTerm((2, termZ))
+            term3.coefficient = 30
+            function = MultiParameterFunction(term1, term2, term3)
+            function.constant_coefficient = 200
+
+            values = function.evaluate(points)
+            measurements = [Measurement(Coordinate(p), None, None, v) for p, v in zip(zip(*points), values)]
+            modeler = MultiParameterModeler()
+
+            models = modeler.model([measurements])
+            self.assertEqual(1, len(models))
+            self.assertApproxFunction(function, models[0].hypothesis.function)
+
+    def test_modeling_3p_mul_plus(self):
+        exponents = [(0, 1, 1), (0, 1, 2), (1, 4, 0), (1, 3, 0), (1, 4, 1), (1, 3, 1), (1, 4, 2), (1, 3, 2),
+                     (1, 2, 0), (1, 2, 1), (1, 2, 2), (2, 3, 0), (3, 4, 0), (2, 3, 1), (3, 4, 1), (4, 5, 0),
+                     (2, 3, 2), (3, 4, 2), (1, 1, 0), (1, 1, 1), (1, 1, 2), (5, 4, 0), (5, 4, 1), (4, 3, 0),
+                     (4, 3, 1), (3, 2, 0), (3, 2, 1), (3, 2, 2), (5, 3, 0), (7, 4, 0), (2, 1, 0), (2, 1, 1),
+                     (2, 1, 2), (9, 4, 0), (7, 3, 0), (5, 2, 0), (5, 2, 1), (5, 2, 2), (8, 3, 0), (11, 4, 0),
+                     (3, 1, 0), (3, 1, 1)]
+        points = np.array(list(zip(*itertools.product([2, 4, 8, 16, 32], repeat=3))))
+        for expo1, expo2, expo3 in zip(exponents, exponents[1:], exponents[2:]):
+            termX = CompoundTerm.create(*expo1)
+            termY = CompoundTerm.create(*expo2)
+            termZ = CompoundTerm.create(*expo3)
+            term1 = MultiParameterTerm((0, termX))
+            term1.coefficient = 100
+            term2 = MultiParameterTerm((1, termY), (2, termZ))
+            term2.coefficient = 2
+            function = MultiParameterFunction(term1, term2)
+            function.constant_coefficient = 200
+
+            values = function.evaluate(points)
+            measurements = [Measurement(Coordinate(p), None, None, v) for p, v in zip(zip(*points), values)]
+            modeler = MultiParameterModeler()
+
+            models = modeler.model([measurements])
+            self.assertEqual(1, len(models))
+            self.assertApproxFunction(function, models[0].hypothesis.function)
+
     def test_modeling_4p(self):
         exponents = [(0, 1, 1), (0, 1, 2), (1, 4, 0), (1, 3, 0), (1, 4, 1), (1, 3, 1), (1, 4, 2), (1, 3, 2),
                      (1, 2, 0), (1, 2, 1), (1, 2, 2), (2, 3, 0), (3, 4, 0), (2, 3, 1), (3, 4, 1), (4, 5, 0),
@@ -386,7 +442,7 @@ class TestSparseModeling(TestCaseWithFunctionAssertions):
 
             models = modeler.model([measurements])
             self.assertEqual(1, len(models))
-            self.assertApproxFunction(function, models[0].hypothesis.function, places=5)
+            self.assertApproxFunction(function, models[0].hypothesis.function)
 
 
 class TestFindBestMeasurements(unittest.TestCase):

@@ -16,7 +16,7 @@ from extrap.entities.terms import CompoundTerm
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.single_parameter.refining import RefiningModeler
-from tests.test_modeling import TestCaseWithFunctionAssertions
+from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
 class TestRefiningModeler(TestCaseWithFunctionAssertions):

@@ -27,6 +27,9 @@ class Term(ABC):
     def to_string(self):
         raise NotImplementedError
 
+    def reset_coefficients(self):
+        self.coefficient = 1
+
     def __repr__(self):
         return f"Term({self.to_string()})"
 
@@ -80,6 +83,9 @@ class SimpleTerm(SingleParameterTerm):
             self.evaluate = self._evaluate_polynomial
         elif self._term_type == "logarithm":
             self.evaluate = self._evaluate_logarithm
+
+    def reset_coefficients(self):
+        pass
 
     def to_string(self, parameter='p'):
         if self._term_type == "polynomial":
@@ -168,6 +174,11 @@ class MultiParameterTerm(Term):
 
     def add_parameter_term_pair(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
         self.parameter_term_pairs.append(parameter_term_pair)
+
+    def reset_coefficients(self):
+        super().reset_coefficients()
+        for _, t in self.parameter_term_pairs:
+            t.reset_coefficients()
 
     def evaluate(self, parameter_values: Union[Tuple[float], Coordinate]):
         function_value = self.coefficient

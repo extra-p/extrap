@@ -363,6 +363,9 @@ class MultiParameterHypothesis(Hypothesis):
         # creating a numpy matrix representation of the lgs
         a_list = []
         b_list = []
+
+        self.function.reset_coefficients()
+
         for measurement in measurements:
             value = measurement.value(self._use_median)
             list_element = [1]  # 1 for constant coefficient
