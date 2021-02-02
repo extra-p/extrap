@@ -19,6 +19,7 @@ import extrap
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 from extrap.fileio.json_file_reader import read_json_file
+from extrap.fileio.nv_reader import read_nv_file
 from extrap.fileio.talpas_file_reader import read_talpas_file
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.gui.ColorWidget import ColorWidget
@@ -126,7 +127,7 @@ class MainWidget(QMainWindow):
         exit_action.triggered.connect(self.close)
 
         file_imports = [
-            ('Open set of &CUBE files', 'Open a set of CUBE files for single-parameter models and generate data points '
+            ('Open set of &CUBE files', 'Open a set of CUBE files and generate data points '
                                         'for a new experiment from them', self.open_cube_file),
             ('Open &text input', 'Open text input file',
              self._make_import_func('Open a Text Input File', read_text_file,
@@ -138,7 +139,11 @@ class MainWidget(QMainWindow):
              self._make_import_func('Open a Talpas Input File', read_talpas_file,
                                     filter="Talpas Files (*.txt);;All Files (*)")),
             ('Open Extra-P &3 experiment', 'Opens legacy experiment file',
-             self._make_import_func('Open an Extra-P 3 Experiment', read_extrap3_experiment, model=False))
+             self._make_import_func('Open an Extra-P 3 Experiment', read_extrap3_experiment, model=False)),
+            ('Open set of &Nsight files', 'Open a set of Nsight files and generate data points '
+                                          'for a new experiment from them',
+             self._make_import_func('Select a Directory with a Set of Nsight Files', read_nv_file,
+                                    file_mode=QFileDialog.Directory))
         ]
 
         open_experiment_action = QAction('&Open experiment', self)
@@ -361,7 +366,7 @@ class MainWidget(QMainWindow):
         return partial(self.import_file, reader_func, title, **kwargs)
 
     def import_file(self, reader_func, title='Open File', filter='', model=True, progress_text="Loading File",
-                    file_name=None):
+                    file_name=None, file_mode=None):
         def _import_file(file_name):
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
@@ -375,9 +380,10 @@ class MainWidget(QMainWindow):
         if file_name:
             _import_file(file_name)
         else:
-            self._file_dialog(_import_file, title, filter=filter)
+            self._file_dialog(_import_file, title, filter=filter, file_mode=file_mode)
 
-    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None, accept_mode=QFileDialog.AcceptOpen):
+    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None,
+                     accept_mode=QFileDialog.AcceptOpen):
         if file_mode is None:
             file_mode = QFileDialog.ExistingFile if accept_mode == QFileDialog.AcceptOpen else QFileDialog.AnyFile
         f_dialog = QFileDialog(self, caption, directory, filter)
@@ -391,6 +397,7 @@ class MainWidget(QMainWindow):
                     on_accept(file_list)
                 else:
                     on_accept(file_list[0])
+
         f_dialog.accepted.connect(_on_accept)
         f_dialog.open()
         return f_dialog
@@ -399,8 +406,8 @@ class MainWidget(QMainWindow):
         if file_name:
             self.save_experiment_action.setEnabled(True)
             self.setWindowFilePath(file_name)
-            self.setWindowTitle(Path(file_name).name+ " – " + extrap.__title__)
-            
+            self.setWindowTitle(Path(file_name).name + " – " + extrap.__title__)
+
         else:
             self.save_experiment_action.setEnabled(False)
             self.setWindowFilePath("")
@@ -417,6 +424,7 @@ class MainWidget(QMainWindow):
             with ProgressWindow(self, "Saving Experiment") as pw:
                 write_experiment(self.getExperiment(), file_name, pw)
                 self._set_opened_file_name(file_name)
+
         self._file_dialog(_save,
                           'Save Experiment', filter='Experiments (*.extra-p)', accept_mode=QFileDialog.AcceptSave)
 

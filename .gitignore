@@ -19,7 +19,7 @@
 tests/data/cubeset/internal/
 
 # ignore private data
-extrap/fileio/ncu_reader/pb_parser/FileFormat
+extrap/fileio/nv_reader/pb_parser/FileFormat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

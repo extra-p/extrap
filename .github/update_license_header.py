@@ -18,7 +18,7 @@ license_header += '\n\n'
 find_license_comment = re.compile(r"\s*(?:#.*?\n)+(?:#.*?Copyright.*?\n)(?:#.*?\n)+\s*")
 
 for file_path in file_paths:
-    if file_path.endswith('update_license_header.py'):
+    if file_path.endswith('update_license_header.py') or file_path.endswith('_pb2.py'):
         continue
     print(file_path)
     with open(file_path, 'r', encoding='utf-8') as file:

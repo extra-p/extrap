@@ -1,3 +1,10 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2020, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
 from pkg_resources import parse_version
@@ -129,9 +136,9 @@ class NsightCuprofReport(KaitaiStruct):
             _raw_header = self._io.read_bytes(self.sizeof_header)
             _io__raw_header = KaitaiStream(BytesIO(_raw_header))
             self.header = block_header.BlockHeader(_io__raw_header)
-            _raw_payloads = self._io.read_bytes(self.header.payload_size)
-            _io__raw_payloads = KaitaiStream(BytesIO(_raw_payloads))
-            self.payloads = NsightCuprofReport.PayloadEntries(self.header.num_sources, self.header.num_results, _io__raw_payloads, self, self._root)
+            _raw_payload = self._io.read_bytes(self.header.payload_size)
+            _io__raw_payload = KaitaiStream(BytesIO(_raw_payload))
+            self.payload = NsightCuprofReport.PayloadEntries(self.header.num_sources, self.header.num_results, _io__raw_payload, self, self._root)
 
 
 

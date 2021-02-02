@@ -1,9 +1,16 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2020, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 import gc
 
 from kaitaistruct import KaitaiStream
 from memory_profiler import profile
 
-from extrap.fileio.ncu_reader.pb_parser.ProfilerReport_pb2 import BlockHeader as PbBlockHeader
+from extrap.fileio.nv_reader.pb_parser.ProfilerReport_pb2 import BlockHeader as PbBlockHeader
 
 
 class BlockHeader():

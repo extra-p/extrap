@@ -23,7 +23,7 @@ types:
       - id: header
         size: sizeof_header
         type: block_header
-      - id: payloads
+      - id: payload
         type: payload_entries(header.as<i_block_header>.num_sources, header.as<i_block_header>.num_results)
         size: header.as<i_block_header>.payload_size
 
