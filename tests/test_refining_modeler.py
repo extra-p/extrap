@@ -202,5 +202,5 @@ class TestRefiningModeler(TestCaseWithFunctionAssertions):
             models = modeler.model([measurements])
             self.assertEqual(1, len(models))
             hypothesis = SingleParameterHypothesis(function, False)
-            hypothesis.compute_cost_all_points(measurements)
+            hypothesis.compute_cost(measurements)
             self.assertApproxFunction(function, models[0].hypothesis.function)

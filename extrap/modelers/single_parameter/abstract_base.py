@@ -115,7 +115,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     next_hypothesis.clean_constant_coefficient(self.epsilon, training_measurements)
 
                     # compute the cost of the single-parameter model for the validation data
-                    next_hypothesis.compute_cost(training_measurements, validation_measurement)
+                    next_hypothesis.compute_cost_leave_one_out(training_measurements, validation_measurement)
 
                 # compute the model coefficients using all data
                 next_hypothesis.compute_coefficients(measurements)
@@ -129,7 +129,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     self.CLEAN_CONSTANT_EPSILON, measurements)
 
                 # compute the cost of the single-parameter model for the validation data
-                next_hypothesis.compute_cost_all_points(measurements)
+                next_hypothesis.compute_cost(measurements)
 
             # compute the AR2 for the hypothesis
             next_hypothesis.compute_adjusted_rsquared(constant_cost, measurements)

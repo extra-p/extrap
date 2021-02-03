@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import abc
 from typing import Sequence
 
 import numpy
@@ -73,6 +73,12 @@ class Hypothesis:
         if not self._costs_are_calculated:
             raise RuntimeError("Costs are not calculated.")
         return self._RE
+
+    def compute_coefficients(self, measurements: Sequence[Measurement]):
+        raise NotImplementedError()
+
+    def compute_cost(self, measurements: Sequence[Measurement]):
+        raise NotImplementedError()
 
     def is_valid(self):
         """
@@ -156,6 +162,15 @@ class ConstantHypothesis(Hypothesis):
     def AR2(self):
         return 1
 
+    def compute_coefficients(self, measurements: Sequence[Measurement]):
+        """
+        Computes the constant_coefficients of the function using the mean.
+        """
+        if self._use_median:
+            self.function.constant_coefficient = numpy.mean([m.median for m in measurements])
+        else:
+            self.function.constant_coefficient = numpy.mean([m.mean for m in measurements])
+
     def compute_cost(self, measurements: Sequence[Measurement]):
         """
         Computes the cost of the constant hypothesis using all data points.
@@ -194,7 +209,8 @@ class SingleParameterHypothesis(Hypothesis):
         """
         super().__init__(function, use_median)
 
-    def compute_cost(self, training_measurements: Sequence[Measurement], validation_measurement: Measurement):
+    def compute_cost_leave_one_out(self, training_measurements: Sequence[Measurement],
+                                   validation_measurement: Measurement):
         """
         Compute the cost for the single-parameter model using leave one out crossvalidation.
         """
@@ -214,7 +230,7 @@ class SingleParameterHypothesis(Hypothesis):
                            len(training_measurements) * 100
         self._costs_are_calculated = True
 
-    def compute_cost_all_points(self, measurements: Sequence[Measurement]):
+    def compute_cost(self, measurements: Sequence[Measurement]):
         points = numpy.array([m.coordinate[0] for m in measurements])
         predicted = self.function.evaluate(points)
 
