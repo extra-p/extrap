@@ -48,7 +48,7 @@ def read_nv_file(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None):
     for path_id, path in enumerate(nv_files):
         pbar.update(progress_step_size)
         folder_name = path.name
-        logging.debug(f"Cube file: {path} Folder: {folder_name}")
+        logging.debug(f"NV file: {path}")
 
         # create the parameters
         par_start = folder_name.find(".") + 1

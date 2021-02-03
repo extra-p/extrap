@@ -5,18 +5,13 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import multiprocessing
 import os
 from collections import defaultdict
-# os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'cpp'
 from itertools import islice
 
 from extrap.fileio.nv_reader.binary_parser.nsight_cuprof_report import NsightCuprofReport
 from extrap.fileio.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult
 from extrap.fileio.nv_reader.pb_parser.ProfilerResults_pb2 import MetricValueMessage
-from google.protobuf.internal import api_implementation
-
-print(api_implementation.Type())
 
 
 class NcuReport:
@@ -56,23 +51,7 @@ class NcuReport:
                     mv.MetricValue)
         return aggregated_values
 
-    @staticmethod
-    def _convert_parallel(elem):
-        raw, (name, _, _, _, callpath) = elem
-        res: ProfileResult = raw.parse()
-        assert res.KernelFunctionName == name
-        return (callpath + '->' + name + '->GPU',
-                {mv.NameId: NcuReport.convertMetricValue(mv.MetricValue) for mv in res.MetricResults})
-
-    @staticmethod
-    def _reduce_parallel(mapped):
-        aggregated_values = defaultdict(int)
-        for callpath, data in mapped:
-            for metric, value in data.items():
-                aggregated_values[(callpath, metric)] += value
-        return aggregated_values
-
-    def get_measurements_parallel(self, paths,pool):
+    def get_measurements_parallel(self, paths, pool):
         aggregated_values = defaultdict(int)
 
         data = zip(self.result_blocks, list(paths))
