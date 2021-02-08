@@ -16,7 +16,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.gui.ParameterValueSlider import ParameterValueSlider
-from extrap.gui.TreeModel import TreeModel
+from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
 from extrap.modelers.model_generator import ModelGenerator
 
@@ -49,22 +49,53 @@ class SelectorWidget(QWidget):
         self.metric_selector.currentIndexChanged.connect(
             self.metric_index_changed)
 
-        # Callpath selection
-        self.tree_view = TreeView(self)
+        group = QFrame(self)
+        group.setObjectName("TreeViewContainer")
+        group.setStyleSheet("QFrame#TreeViewContainer{border:1px solid #939393}")
+        group_layout = QVBoxLayout(group)
+        group.setLayout(group_layout)
+        group.setContentsMargins(0, 0, 0, 0)
+        group_layout.setContentsMargins(0, 0, 0, 0)
+        group_layout.setSpacing(0)
 
+        # group.setAutoFillBackground(True)
+        # Callpath selection
+        self.tree_view = TreeView(group)
+        group_layout.addWidget(self.tree_view)
         # Input variable values
-        self.asymptoticCheckBox = QCheckBox('Show model', self)
+
+        self.toolbar = QToolBar(group)
+        self.toolbar.layout().setContentsMargins(2, 3, 2, 2)
+        self.toolbar.layout().setSpacing(5)
+        group_layout.addWidget(self.toolbar)
+
+        self.view_select = QComboBox(self.toolbar)
+        self.view_select.addItem('All', TreeItemFilterProvider.ConstructionType.INCLUDE)
+        self.view_select.addItem('Compact', TreeItemFilterProvider.ConstructionType.COMPACT)
+        self.view_select.addItem('Flat', TreeItemFilterProvider.ConstructionType.FLAT)
+
+        def select_view_type(x):
+            self.tree_model.item_filter.view_type = self.view_select.currentData()
+
+        self.view_select.currentIndexChanged.connect(select_view_type)
+        self.toolbar.addWidget(self.view_select)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.toolbar.addWidget(spacer)
+
+        self.asymptoticCheckBox = QCheckBox('Show model', self.toolbar)
         self.asymptoticCheckBox.toggle()
         self.asymptoticCheckBox.stateChanged.connect(
             self.changeAsymptoticBehavior)
-
+        self.toolbar.addWidget(self.asymptoticCheckBox)
         # Positioning
         self.grid.addWidget(model_label, 0, 0)
         self.grid.addWidget(self.model_selector, 0, 1)
         self.grid.addWidget(metric_label, 1, 0)
         self.grid.addWidget(self.metric_selector, 1, 1)
-        self.grid.addWidget(self.tree_view, 2, 0, 1, 2)
-        self.grid.addWidget(self.asymptoticCheckBox, 3, 1, Qt.AlignRight)
+        self.grid.addWidget(group, 2, 0, 1, 2)
+        # self.grid.addWidget(self.toolbar, 3, 0, 1, 2)
+
         self.grid.setColumnStretch(1, 1)
 
     def createParameterSliders(self):
