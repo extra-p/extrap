@@ -18,6 +18,7 @@ class Callpath:
     Counter for global callpath ids
     """
     ID_COUNTER = itertools.count()
+    EMPTY: 'Callpath'
 
     def __init__(self, name):
         """
@@ -42,3 +43,4 @@ class Callpath:
 
 
 CallpathSchema = make_value_schema(Callpath, 'name')
+Callpath.EMPTY = Callpath(None)
