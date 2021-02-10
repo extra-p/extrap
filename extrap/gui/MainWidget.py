@@ -377,7 +377,8 @@ class MainWidget(QMainWindow):
         else:
             self._file_dialog(_import_file, title, filter=filter)
 
-    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None, accept_mode=QFileDialog.AcceptOpen):
+    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None,
+                     accept_mode=QFileDialog.AcceptOpen):
         if file_mode is None:
             file_mode = QFileDialog.ExistingFile if accept_mode == QFileDialog.AcceptOpen else QFileDialog.AnyFile
         f_dialog = QFileDialog(self, caption, directory, filter)
@@ -391,6 +392,7 @@ class MainWidget(QMainWindow):
                     on_accept(file_list)
                 else:
                     on_accept(file_list[0])
+
         f_dialog.accepted.connect(_on_accept)
         f_dialog.open()
         return f_dialog
@@ -399,8 +401,8 @@ class MainWidget(QMainWindow):
         if file_name:
             self.save_experiment_action.setEnabled(True)
             self.setWindowFilePath(file_name)
-            self.setWindowTitle(Path(file_name).name+ " – " + extrap.__title__)
-            
+            self.setWindowTitle(Path(file_name).name + " – " + extrap.__title__)
+
         else:
             self.save_experiment_action.setEnabled(False)
             self.setWindowFilePath("")
@@ -417,6 +419,7 @@ class MainWidget(QMainWindow):
             with ProgressWindow(self, "Saving Experiment") as pw:
                 write_experiment(self.getExperiment(), file_name, pw)
                 self._set_opened_file_name(file_name)
+
         self._file_dialog(_save,
                           'Save Experiment', filter='Experiments (*.extra-p)', accept_mode=QFileDialog.AcceptSave)
 
@@ -443,12 +446,13 @@ class MainWidget(QMainWindow):
             self.max_value = updated_max_value
             self.color_widget.update_min_max(self.min_value, self.max_value)
 
-    def populateCallPathColorMap(self, callpaths):
-        callpaths = list(set(callpaths))
+    def populateCallPathColorMap(self, call_tree_nodes):
+        metric = self.selector_widget.getSelectedMetric()
+        call_tree_nodes = [c for c in set(call_tree_nodes) if (c.path, metric) in self.selector_widget.getCurrentModel().models]
         current_index = 0
         size_of_color_list = len(self.graph_color_list)
         self.dict_callpath_color = {}
-        for callpath in callpaths:
+        for callpath in call_tree_nodes:
             if current_index < size_of_color_list:
                 self.dict_callpath_color[callpath] = self.graph_color_list[current_index]
             else:
