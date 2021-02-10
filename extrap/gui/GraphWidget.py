@@ -307,11 +307,14 @@ class GraphWidget(QWidget):
             return
 
         model_list = list()
+        selected_callpaths_checked=[]
         for selected_callpath in selected_callpaths:
             key = (selected_callpath.path, selected_metric)
             if key in model_set_models:
                 model = model_set_models[key]
                 model_list.append(model)
+                selected_callpaths_checked.append(selected_callpath)
+
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
@@ -322,20 +325,20 @@ class GraphWidget(QWidget):
         # Draw coordinate system
         self.drawAxis(paint, selected_metric)
 
-        # Draw functions
+        # Draw functionss
         index_indicator = 0
         if not self.combine_all_callpath:
             for model in model_list:
                 color = self.main_widget.getColorForCallPath(
-                    selected_callpaths[index_indicator])
+                    selected_callpaths_checked[index_indicator])
                 self.drawModel(paint, model, color)
                 index_indicator = index_indicator + 1
         else:
-            color = self.main_widget.getColorForCallPath(selected_callpaths[0])
+            color = self.main_widget.getColorForCallPath(selected_callpaths_checked[0])
             self.drawAggregratedModel(paint, model_list)
 
         # Draw data points
-        self.drawDataPoints(paint, selected_metric, selected_callpaths)
+        self.drawDataPoints(paint, selected_metric, selected_callpaths_checked)
 
         # Draw legend
         self.drawLegend(paint)
