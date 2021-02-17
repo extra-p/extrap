@@ -1,4 +1,5 @@
 # Extra-P
+
 **Automated performance modeling for HPC applications**
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
@@ -32,6 +33,7 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 *For questions regarding Extra-P please send a message to <extra-p-support@lists.parallel.informatik.tu-darmstadt.de>.*
 
 --------------------------------------------------------------------------------------------
+
 ### Table of Contents
 
 1. [Requirements](#Requirements)
@@ -52,8 +54,8 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 * matplotlib (for GUI)
 * pyobjc-framework-Cocoa (only for GUI on macOS)
 
-
 ### Installation
+
 Use the following command to install Extra-P and all required packages via `pip`.
 
 ```
@@ -63,22 +65,28 @@ python -m pip install extrap --upgrade
 The `--upgrade` forces the installation of a new version if a previous version is already installed.
 
 ### Usage
-Extra-P can be used in two ways, either using the command-line interface or the graphical user interface.
-More information about the usage of Extra-P with both interfaces can be found in the [quick start guide](docs/quick-start.md).
+
+Extra-P can be used in two ways, either using the command-line interface or the graphical user interface. More
+information about the usage of Extra-P with both interfaces can be found in the [quick start guide](docs/quick-start.md)
+.
 
 #### Graphical user interface
+
 The graphical user interface can be started by executing the `extrap-gui` command.
 
 #### Command line interface
+
 The command line interface is available under the `extrap` command:
 
 `extrap` _OPTIONS_ (`--cube` | `--text` | `--talpas` | `--json` | `--extra-p-3`) _FILEPATH_
 
 You can use different input formats as shown in the examples below:
+
 * Text files: `extrap --text test/data/text/one_parameter_1.txt`
 * JSON files: `extrap --json test/data/json/input_1.JSON`
 * Talpas files: `extrap --talpas test/data/talpas/talpas_1.txt`
-* Create model and save it to text file at the given path: `extrap --out test.txt --text test/data/text/one_parameter_1.txt` 
+* Create model and save it to text file at the given
+  path: `extrap --out test.txt --text test/data/text/one_parameter_1.txt`
 
 The Extra-P command line interface has the following options.
 
@@ -89,7 +97,7 @@ The Extra-P command line interface has the following options.
 | **Optional**                                                         |                                              |
 | `-h`, `--help`                                                       | Show help message and exit                   |
 | `--version`                                                          | Show program's version number and exit       |
-| `--log` {`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`}            | Set program's log level (default: `WARNING`) |
+| `--log` {`debug`, `info`, `warning`, `error`, `critical`}            | Set program's log level (default: `warning`) |
 | **Input options**                                                    |                                              |
 | `--cube`                                                             | Load data from CUBE files                    |
 | `--text`                                                             | Load data from text files                    |
@@ -99,14 +107,14 @@ The Extra-P command line interface has the following options.
 | `--scaling` {`weak`, `strong`}                                       | Set weak or strong scaling when loading data from CUBE files (default: `weak`) |
 | **Modeling options**                                                 |                                              |
 | `--median`                                                           | Use median values for computation instead of mean values  |
-| `--modeler` {`Default`, `Basic`, `Refining`, `Multi-Parameter`}      | Selects the modeler for generating the performance models |
+| `--modeler` {`default`, `basic`, `refining`, `multi-parameter`}      | Selects the modeler for generating the performance models |
 | `--options` _KEY_=_VALUE_ [_KEY_=_VALUE_ ...]                        | Options for the selected modeler             |
-| `--help-modeler` {`Default`, `Basic`, `Refining`, `Multi-Parameter`} | Show help for modeler options and exit       |
+| `--help-modeler` {`default`, `basic`, `refining`, `multi-parameter`} | Show help for modeler options and exit       |
 | **Output options**                                                   |                                              |
 | `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results  |
 | `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`) |
-| `--save-experiment` _EXPERIMENT_PATH_                                | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) | 
-                 
+| `--save-experiment` <i>EXPERIMENT_PATH</i>                           | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) |
+
 ### License
 
 [BSD 3-Clause "New" or "Revised" License](LICENSE)
