@@ -32,8 +32,8 @@ from extrap.util.progress_bar import ProgressBar
 
 def main(args=None, prog=None):
     # argparse
-    modelers_list = list(set(
-        chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
+    modelers_list = list(set(k.lower() for k in
+                             chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
     parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False)
     positional_arguments = parser.add_argument_group("Positional arguments")
     basic_arguments = parser.add_argument_group("Optional arguments")
@@ -42,9 +42,9 @@ def main(args=None, prog=None):
 
     basic_arguments.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__,
                                  help="Show program's version number and exit")
-    basic_arguments.add_argument("--log", action="store", dest="log_level", type=str.upper, default='WARNING',
-                                 choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                                 help="Set program's log level (default: WARNING)")
+    basic_arguments.add_argument("--log", action="store", dest="log_level", type=str.lower, default='warning',
+                                 choices=['debug', 'info', 'warning', 'error', 'critical'],
+                                 help="Set program's log level (default: warning)")
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
@@ -56,20 +56,20 @@ def main(args=None, prog=None):
                        help="Load data from JSON or JSON Lines file")
     group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
                        help="Load data from Extra-P 3 experiment")
-    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak",
+    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
                                choices=["weak", "strong"],
                                help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
 
     modeling_options = parser.add_argument_group("Modeling options")
     modeling_options.add_argument("--median", action="store_true", dest="median",
                                   help="Use median values for computation instead of mean values")
-    modeling_options.add_argument("--modeler", action="store", dest="modeler", default='Default',
+    modeling_options.add_argument("--modeler", action="store", dest="modeler", default='default', type=str.lower,
                                   choices=modelers_list,
                                   help="Selects the modeler for generating the performance models")
     modeling_options.add_argument("--options", dest="modeler_options", default={}, nargs='+', metavar="KEY=VALUE",
                                   action=ModelerOptionsAction,
                                   help="Options for the selected modeler")
-    modeling_options.add_argument("--help-modeler", choices=modelers_list,
+    modeling_options.add_argument("--help-modeler", choices=modelers_list, type=str.lower,
                                   help="Show help for modeler options and exit",
                                   action=ModelerHelpAction)
 
@@ -89,7 +89,7 @@ def main(args=None, prog=None):
     arguments = parser.parse_args(args)
 
     # set log level
-    loglevel = logging.getLevelName(arguments.log_level)
+    loglevel = logging.getLevelName(arguments.log_level.upper())
     # set output print type
     printtype = arguments.print_type.upper()
 
