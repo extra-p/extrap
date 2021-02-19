@@ -21,6 +21,7 @@ from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 from extrap.fileio.json_file_reader import read_json_file
 from extrap.fileio.talpas_file_reader import read_talpas_file
 from extrap.fileio.text_file_reader import read_text_file
+from extrap.gui.AggregationWidget import AggregationWidget
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
@@ -95,6 +96,10 @@ class MainWidget(QMainWindow):
         dock.setWidget(self.modeler_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
+        dock = QDockWidget("Aggregation", self)
+        self.aggregation_widget = AggregationWidget(self, dock)
+        dock.setWidget(self.aggregation_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
         # bottom widget
         dock = QDockWidget("Color Info", self)
         self.color_widget = ColorWidget()
