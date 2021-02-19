@@ -74,4 +74,7 @@ class NamedEntityWithTags(NamedEntity, ABC):
             self.name = val
 
     def __repr__(self):
-        return f"{type(self).TYPENAME}({self.name},{self.tags})"
+        if self.tags:
+            return f"{type(self).TYPENAME}({self.name}:{self.tags})"
+        else:
+            return super().__repr__()
