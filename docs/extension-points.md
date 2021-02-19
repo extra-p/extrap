@@ -7,20 +7,17 @@ Modelers
 Modelers are automatically registered and available for modeling if they are added to the correct location.
 To add a new modeler to Extra-P,  you must add a new python module to the corresponding subpackage of `extrap.modelers`. 
 
-Your new module must contain a class with the implementation of the new modeler. 
-The class must inherit from `extrap.modelers.abstract_modeler.AbstractModeler`. It must, furthermore, include a 
-class-level field `NAME` that contains a unique display name for the modeler.
-Users can select the modeler using that name. 
-You should also provide a class-level field `DESCRIPTION` with a short description of the modeler.
-The description will be shown to the user in both the GUI and the CLI.
+Your new module must contain a class with the implementation of the new modeler. The class must inherit
+from `extrap.modelers.abstract_modeler.AbstractModeler`. It must, furthermore, include a class-level field `NAME` that
+contains a unique display name for the modeler (casing is not part of the uniqueness criterion). Users can select the
+modeler using that name. You should also provide a class-level field `DESCRIPTION` with a short description of the
+modeler. The description will be shown to the user in both the GUI and the CLI.
 
-The most important method of the modeler is the `model` method. 
-It is called with the parameter `measurements`, a sequence of measurement point sequences. 
-It must create a model for each sequence of measurement points. 
-The optional second parameter `progress_bar` is intended for progress reporting using the `tqdm` package.
-The return value must be a Sequence of models. The index of each model  must correspond to the index of the 
-measurement point sequence in `measurements`, which was used to create the model.
-
+The most important method of the modeler is the `model` method. It is called with the parameter `measurements`, a
+sequence of measurement point sequences. It must create a model for each sequence of measurement points. The optional
+second parameter `progress_bar` is intended for progress reporting using the `tqdm` package. The return value must be a
+Sequence of models. The index of each model must correspond to the index of the measurement point sequence
+in `measurements`, which was used to create the model.
 
 ### Single-parameter modeler specifics
 

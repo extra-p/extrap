@@ -23,6 +23,12 @@ class Node:
     def get_childs(self):
         return self.childs
 
+    def find_child(self, child_node_name):
+        for child in self.childs:
+            if child.name == child_node_name:
+                return child
+        return None
+
     def child_exists(self, child_node_name):
         for i in range(len(self.childs)):
             child_name = self.childs[i].name

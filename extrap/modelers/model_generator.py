@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -18,6 +18,7 @@ from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
+from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.modeler_options import modeler_options
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import Schema, TupleKeyDict
@@ -86,6 +87,12 @@ class ModelGenerator:
             model.measurements = self.experiment.measurements[(callpath, metric)]
         # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
+
+    def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS):
+        mg = ModelGenerator(self.experiment, self._modeler, aggregation.NAME + ' ' + self.name,
+                            self._modeler.use_median)
+        mg.models = aggregation.aggregate(self.models, self.experiment.call_tree, self.experiment.metrics, progress_bar)
+        self.experiment.add_modeler(mg)
 
     def __eq__(self, other):
         if not isinstance(other, ModelGenerator):

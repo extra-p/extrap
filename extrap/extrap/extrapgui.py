@@ -38,13 +38,13 @@ def main(*, args=None, test=False):
     arguments = parse_arguments(args)
 
     # configure logging
-    log_level = min(logging.getLevelName(arguments.log_level), logging.INFO)
+    log_level = min(logging.getLevelName(arguments.log_level.upper()), logging.INFO)
     if arguments.log_file:
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level,
                             filename=arguments.log_file)
     else:
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
-    logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level))
+    logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level.upper()))
 
     app = QApplication(sys.argv) if not test else QApplication.instance()
     apply_style(app)
@@ -70,9 +70,9 @@ def main(*, args=None, test=False):
 
 def parse_arguments(args=None):
     parser = argparse.ArgumentParser(description=extrap.__description__)
-    parser.add_argument("--log", action="store", dest="log_level", type=str.upper, default='CRITICAL',
-                        choices=['TRACEBACK', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                        help="set program's log level (default: CRITICAL)")
+    parser.add_argument("--log", action="store", dest="log_level", type=str.lower, default='critical',
+                        choices=['traceback', 'debug', 'info', 'warning', 'error', 'critical'],
+                        help="set program's log level (default: critical)")
     parser.add_argument("--logfile", action="store", dest="log_file",
                         help="set path of log file")
     parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__)

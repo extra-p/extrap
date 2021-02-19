@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, List
 
 from extrap.entities.callpath import Callpath
@@ -226,7 +227,6 @@ def create_call_tree(callpaths: List[Callpath], progress_bar=DUMMY_PROGRESS, pro
             max_length = len(elems)
 
     # iterate over the elements of one call path
-
     for i in range(max_length):
         # iterate over all callpaths
         for callpath, splitted_callpath in zip(callpaths, callpaths2):
@@ -239,22 +239,29 @@ def create_call_tree(callpaths: List[Callpath], progress_bar=DUMMY_PROGRESS, pro
 
             # when at root level
             if i == 0:
-                # check if that node is already existing
-                if not tree.node_exist(callpath_string):
-                    # add a new rootles node to the tree
-                    node = Node(callpath_string, callpath)
-                    tree.add_node(node)
-
-            # when not at root level the root node of the elements have to be checked
+                root_node = tree
+            # when not at root level, the previous nodes of the elements have to be checked
             else:
                 # find the root node of the element that we want to add currently
                 root_node = find_root_node(splitted_callpath, tree, i)
 
-                # check if that child node is already existing
-                if not root_node.child_exists(callpath_string):
-                    # add a new child node to the root node
+            # check if that child node is already existing
+            child_node = root_node.find_child(callpath_string)
+            is_leaf = i == len(splitted_callpath) - 1
+            if child_node:
+                if is_leaf:
+                    if child_node.path == Callpath.EMPTY:
+                        child_node.path = callpath
+                    else:
+                        warnings.warn("Duplicate callpath encountered, only first occurence is retained.")
+
+            else:
+                # add a new child node to the root node
+                if is_leaf:
                     child_node = Node(callpath_string, callpath)
-                    root_node.add_child_node(child_node)
+                else:
+                    child_node = Node(callpath_string, Callpath.EMPTY)
+                root_node.add_child_node(child_node)
 
     return tree
 

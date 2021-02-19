@@ -22,6 +22,7 @@ from extrap.fileio.json_file_reader import read_json_file
 from extrap.fileio.nv_reader import read_nv_file
 from extrap.fileio.talpas_file_reader import read_talpas_file
 from extrap.fileio.text_file_reader import read_text_file
+from extrap.gui.AggregationWidget import AggregationWidget
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
@@ -96,6 +97,10 @@ class MainWidget(QMainWindow):
         dock.setWidget(self.modeler_widget)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
+        dock = QDockWidget("Aggregation", self)
+        self.aggregation_widget = AggregationWidget(self, dock)
+        dock.setWidget(self.aggregation_widget)
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
         # bottom widget
         dock = QDockWidget("Color Info", self)
         self.color_widget = ColorWidget()
@@ -133,8 +138,8 @@ class MainWidget(QMainWindow):
              self._make_import_func('Open a Text Input File', read_text_file,
                                     filter="Text Files (*.txt);;All Files (*)")),
             ('Open &JSON input', 'Open JSON or JSON Lines input file',
-             self._make_import_func('Open a JSONor JSON Lines Input File', read_json_file,
-                                    filter="JSON Files (*.json), JSON Lines (*.jsonl);;All Files (*)")),
+             self._make_import_func('Open a JSON or JSON Lines Input File', read_json_file,
+                                    filter="JSON (Lines) Files (*.json *.jsonl);;All Files (*)")),
             ('Open Tal&pas input', 'Open Talpas input file',
              self._make_import_func('Open a Talpas Input File', read_talpas_file,
                                     filter="Talpas Files (*.txt);;All Files (*)")),
@@ -451,12 +456,13 @@ class MainWidget(QMainWindow):
             self.max_value = updated_max_value
             self.color_widget.update_min_max(self.min_value, self.max_value)
 
-    def populateCallPathColorMap(self, callpaths):
-        callpaths = list(set(callpaths))
+    def populateCallPathColorMap(self, call_tree_nodes):
+        metric = self.selector_widget.getSelectedMetric()
+        call_tree_nodes = [c for c in set(call_tree_nodes) if (c.path, metric) in self.selector_widget.getCurrentModel().models]
         current_index = 0
         size_of_color_list = len(self.graph_color_list)
         self.dict_callpath_color = {}
-        for callpath in callpaths:
+        for callpath in call_tree_nodes:
             if current_index < size_of_color_list:
                 self.dict_callpath_color[callpath] = self.graph_color_list[current_index]
             else:
