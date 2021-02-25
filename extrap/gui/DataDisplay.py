@@ -24,6 +24,8 @@ from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePl
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
 
 #####################################################################
+from extrap.gui.plots.line_graph_plus import LineGraphPlus
+
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = 2000000000
 
@@ -327,7 +329,8 @@ class DataDisplayManager(QWidget):
             5: ("Heat map", HeatMapGraph),
             6: ("Contour plot", IsolinesDisplay),
             7: ("Interpolated contour", InterpolatedContourDisplay),
-            8: ("Measurement points", MeasurementPointsPlot)
+            8: ("Measurement points", MeasurementPointsPlot),
+            9: ("Line graph plus", LineGraphPlus)
         }
 
         for i in selectedCheckBoxesIndex:

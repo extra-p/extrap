@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import warnings
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, Sequence, Optional
 
 import numpy as np
 from PySide2.QtWidgets import QSizePolicy
@@ -17,6 +17,9 @@ from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
+
+from extrap.entities.callpath import Callpath
+from extrap.entities.model import Model
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -117,7 +120,7 @@ class GraphDisplayWindow(FigureCanvas):
             Z[np.isinf(Z)] = max_z
         return X, Y, Z_List, z_List
 
-    def get_selected_models(self):
+    def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Callpath]]]:
         selected_metric = self.main_widget.getSelectedMetric()
         selected_callpaths = self.main_widget.getSelectedCallpath()
         model_set = self.main_widget.getCurrentModel()
