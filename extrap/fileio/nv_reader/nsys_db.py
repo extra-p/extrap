@@ -60,7 +60,25 @@ class NsysReport:
                 NULL          AS grid,
                 NULL          AS block,
                 NULL          AS sharedMemoryExecuted
-         FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION
+         FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION),
+     cupti_synchronization_kernels AS (
+         SELECT correlationId,
+                NULL                                                    AS duration,
+                (MIN(CAKS.end, CAKK.end) - MAX(CAKS.start, CAKK.start)) AS durationGPU,
+                CASE syncType
+                    WHEN 0 THEN 'UNKNOWN'
+                    WHEN 1 THEN 'EVENT_SYNCHRONIZE'
+                    WHEN 2 THEN 'STREAM_WAIT_EVENT'
+                    WHEN 3 THEN 'STREAM_SYNCHRONIZE'
+                    WHEN 4 THEN 'CONTEXT_SYNCHRONIZE'
+                    END                                                 AS syncType,
+                shortName,
+                NULL                                                    AS grid,
+                NULL                                                    AS block,
+                NULL                                                    AS sharedMemoryExecuted
+         FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS CAKS
+                  LEFT JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                            ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
      ),
      cupti_kernel AS (
          SELECT correlationId,
@@ -84,7 +102,14 @@ class NsysReport:
                 durationGPU,
                 CAKK.duration                                                       AS other_duration
          FROM CUPTI_ACTIVITY_KIND_RUNTIME
-                  LEFT JOIN (SELECT * FROM cupti_synchronization UNION ALL SELECT * FROM cupti_kernel) AS CAKK
+                  LEFT JOIN (SELECT *
+                             FROM cupti_synchronization
+                             UNION ALL
+                             SELECT *
+                             FROM cupti_kernel
+                             UNION ALL
+                             SELECT *
+                             FROM cupti_synchronization_kernels) AS CAKK
                             ON CUPTI_ACTIVITY_KIND_RUNTIME.correlationId = CAKK.correlationId
                   LEFT JOIN StringIds ON shortName = StringIds.id
      )

@@ -329,6 +329,6 @@ def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
                 f'parameters ({length_parameters}).')
 
     for k, m in progress_bar(experiment.measurements.items(), len(experiment.measurements)):
-        require(len(m) == length_coordinates,
+        require(len(m) == length_coordinates or 'gpu_overlap' in k[0].tags,
                 f'The number of measurements ({len(m)}) for {k} does not match the number of coordinates '
                 f'({length_coordinates}).')

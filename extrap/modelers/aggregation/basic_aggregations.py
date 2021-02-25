@@ -15,7 +15,7 @@ class SumAggregation(BinaryAggregation):
     def binary_operator(self, a, b):
         return a + b
 
-    NOT_CALCULABLE_TAG = 'agg.sum.not_calculable'
+    NOT_CALCULABLE_TAG = 'agg_sum__not_calculable'
     _OPERATION_NAME = 'sum'
 
 
@@ -25,5 +25,5 @@ class MaxAggregation(BinaryAggregation):
     def binary_operator(self, a, b):
         return np.maximum(a, b)
 
-    NOT_CALCULABLE_TAG = 'agg.max.not_calculable'
+    NOT_CALCULABLE_TAG = 'agg_max__not_calculable'
     _OPERATION_NAME = 'max'

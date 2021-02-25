@@ -22,6 +22,7 @@ from extrap.fileio.cube_file_reader2 import read_cube_file
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 from extrap.fileio.json_file_reader import read_json_file
+from extrap.fileio.nv_reader import read_nv_file
 from extrap.fileio.talpas_file_reader import read_talpas_file
 from extrap.fileio.text_file_reader import read_text_file
 from extrap.gui.MainWidget import MainWidget
@@ -86,6 +87,8 @@ def parse_arguments(args=None):
                        help="load data from json or jsonlines file")
     group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
                        help="load data from Extra-P 3 experiment")
+    group.add_argument("--nsight", action="store_true", default=False, dest="nsight",
+                       help="load data from nsight reports")
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
                         help="specify a file path for Extra-P to work with")
 
@@ -108,6 +111,8 @@ def load_from_command(arguments, window):
             window.import_file(lambda x, y: read_cube_file(x, arguments.scaling_type, y), file_name=arguments.path)
         elif arguments.extrap3:
             window.import_file(read_extrap3_experiment, model=False, file_name=arguments.path)
+        elif arguments.nsight:
+            window.import_file(read_nv_file, file_name=arguments.path)
         else:
             window.import_file(read_experiment, model=False, file_name=arguments.path)
 

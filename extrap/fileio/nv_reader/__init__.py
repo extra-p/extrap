@@ -13,6 +13,7 @@ from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
+from typing import Sequence, List
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -27,7 +28,7 @@ from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
-def read_nv_file(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None):
+def read_nv_file(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None, only_time=True):
     # read the paths of the cube files in the given directory with dir_name
     path = Path(dir_name)
     if not path.is_dir():
@@ -104,18 +105,32 @@ def read_nv_file(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None):
                     # iterate over all callpaths and get time
                     for id, _, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_kernel_runtimes():
                         pbar.update(0)
-                        if kernelName:
+
+                        if syncType:
+                            if kernelName:
+                                aggregated_values[
+                                    (Callpath(callpath + "->" + syncType + "->OVERLAP",
+                                              agg_gpu_overlap=True, agg_sum__not_calculable=True), metric)] = [0]
+
+                                overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
+                                                      gpu_overlap=True, gpu_kernel=True)
+                                aggregated_values[(overlap_cp, metric)].append(durationGPU / 10 ** 9)
+                            else:
+                                if duration:
+                                    aggregated_values[(
+                                        Callpath(callpath + "->" + syncType), metric)].append(
+                                        duration / 10 ** 9)
+                                aggregated_values[(
+                                    Callpath(callpath + "->" + syncType + "->WAIT", agg_sum__not_calculable=True),
+                                    metric)].append(
+                                    other_duration / 10 ** 9)
+                        elif kernelName:
                             if duration:
                                 aggregated_values[(Callpath(callpath + "->" + kernelName), metric)].append(
                                     duration / 10 ** 9)
-                            aggregated_values[(Callpath(callpath + "->" + kernelName + "->GPU"), metric)].append(
+                            aggregated_values[
+                                (Callpath(callpath + "->" + kernelName + "->GPU", gpu=True), metric)].append(
                                 durationGPU / 10 ** 9)
-                        elif syncType:
-                            if duration:
-                                aggregated_values[(Callpath(callpath + "->" + syncType), metric)].append(
-                                    duration / 10 ** 9)
-                            aggregated_values[(Callpath(callpath + "->" + syncType + "->WAIT"), metric)].append(
-                                other_duration / 10 ** 9)
                         elif duration:
                             aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
                     for id, _, callpath, name, duration in parsed.get_os_runtimes():
@@ -124,7 +139,7 @@ def read_nv_file(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None):
                             aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
 
                     correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
-                    if correponding_ncu_path.exists():
+                    if correponding_ncu_path.exists() and not only_time:
                         if pool is None:
                             pool = multiprocessing.Pool()
                         with NcuReport(correponding_ncu_path) as ncuReport:
@@ -145,11 +160,19 @@ def read_nv_file(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None):
     to_delete = []
     # determine common callpaths for common calltree
     # add common callpaths and metrics to experiment
-    for key, value in pbar(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
-        if len(value) < num_points:
+    for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
+        value: List[Measurement]
+        if len(value) < num_points and 'gpu_overlap' not in key[0].tags:
             to_delete.append(key)
         else:
             (callpath, metric) = key
+            # if len(value) < num_points and 'gpu_overlap' in callpath.tags:
+            #     # construct empty measurements for overlap
+            #     measurements = {c: Measurement(c, callpath, metric, None) for c in experiment.coordinates}
+            #     for v in value:
+            #         del measurements[v.coordinate]
+            #     value.extend(measurements.values())
+
             experiment.add_callpath(callpath)
             experiment.add_metric(metric)
     for key in to_delete:
