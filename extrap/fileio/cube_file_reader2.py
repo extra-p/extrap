@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,6 +12,10 @@ from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
+from typing import Dict
+
+from pycubexr import CubexParser
+from pycubexr.utils.exceptions import MissingMetricError
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -22,8 +26,6 @@ from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from pycubexr import CubexParser  # @UnresolvedImport
-from pycubexr.utils.exceptions import MissingMetricError
 
 
 def make_callpath_mapping(cnodes):
@@ -171,18 +173,39 @@ def read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics
             experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
 
     pbar.step("Unify calltrees")
-    to_delete = []
+    callpaths_to_merge = []
     # determine common callpaths for common calltree
     # add common callpaths and metrics to experiment
     for key, value in pbar(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
         if len(value) < num_points:
-            to_delete.append(key)
+            callpaths_to_merge.append(key)
+            pbar.total += 0.1
         else:
             (callpath, metric) = key
             experiment.add_callpath(callpath)
             experiment.add_metric(metric)
-    for key in to_delete:
-        pbar.update(0)
+    for key in callpaths_to_merge:
+        (callpath, metric) = key
+        new_callpath: Callpath = callpath
+        new_key = key
+        # find parent call-path
+        while new_key not in experiment.measurements and '->' in new_callpath.name:
+            new_callpath = Callpath(str(new_callpath).rsplit(sep='->', maxsplit=1)[0])
+            new_key = (new_callpath, metric)
+        # merge parent measurements with the current measurements
+        if new_key in experiment.measurements:
+            measurements: Dict[Coordinate, Measurement] = {m.coordinate: m for m in experiment.measurements[new_key]}
+            for m in experiment.measurements[key]:
+                new_m = measurements.get(m.coordinate)
+                if new_m:
+                    new_m.merge(m)
+                else:
+                    m.callpath = experiment.measurements[new_key][0].callpath
+                    experiment.measurements[new_key].append(m)
+        else:
+            warnings.warn("Some call paths could not be integrated into the common call tree.")
+        pbar.update(0.1)
+        # delete current measurements
         del experiment.measurements[key]
 
     # determine calltree
