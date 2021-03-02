@@ -6,7 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 from kaitaistruct import KaitaiStream
-from memory_profiler import profile
+#from memory_profiler import profile
 
 from extrap.fileio.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult as PbProfileResult
 
