@@ -332,18 +332,18 @@ class TreeItemFilterProvider:
         self._model.valuesChanged()
 
     @staticmethod
-    def is_tree_changed(oldTree: TreeItem, newTree: TreeItem):
-        if len(oldTree.child_items) != len(newTree.child_items):
-            return True;
+    def is_tree_changed(old_tree: TreeItem, new_tree: TreeItem):
+        if len(old_tree.child_items) != len(new_tree.child_items):
+            return True
         diverge = False
-        for i in range(len(oldTree.child_items)):
-            oldNode = oldTree.child_items[i]
-            newNode = newTree.child_items[i]
-            if(oldNode.call_tree_node.path != newNode.call_tree_node.path):
+        for i in range(len(old_tree.child_items)):
+            old_node = old_tree.child_items[i]
+            new_node = new_tree.child_items[i]
+            if old_node.call_tree_node.path != new_node.call_tree_node.path:
                 diverge = True
                 break
             else:
-                diverge = TreeItemFilterProvider.is_tree_changed(oldNode, newNode)
+                diverge = TreeItemFilterProvider.is_tree_changed(old_node, new_node)
         return diverge
 
     @staticmethod
