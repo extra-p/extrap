@@ -16,5 +16,6 @@ individuals who have contributed code to this repository:
 * Patrick Reisert (kpreisert@gmail.com)
 * Marcus Ritter (marcus.ritter@tu-darmstadt.de)
 * Niharika Sharma (niharika.sharma1908@gmail.com)
+* Moritz Vanderheyden (moritz.vanderheyden@stud.tu-darmstadt.de)
 * Johannes Wehrstein (johannes.wehrstein@gmx.de)
 * Paul Wiedeking (p.wiedeking@grs-sim.de)

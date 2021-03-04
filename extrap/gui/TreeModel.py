@@ -324,10 +324,27 @@ class TreeItemFilterProvider:
         for child in self._call_tree:
             self._tree_builder(child, root, predicate)
 
-        self._model.beginResetModel()
-        self._model.root_item = root
-        self._model.endResetModel()
+        if len(self._model.root_item.child_items) == 0 or self.is_tree_changed(self._model.root_item, root):
+            self._model.beginResetModel()
+            self._model.root_item = root
+            self._model.endResetModel()
+
         self._model.valuesChanged()
+
+    @staticmethod
+    def is_tree_changed(oldTree: TreeItem, newTree: TreeItem):
+        if len(oldTree.child_items) != len(newTree.child_items):
+            return True;
+        diverge = False
+        for i in range(len(oldTree.child_items)):
+            oldNode = oldTree.child_items[i]
+            newNode = newTree.child_items[i]
+            if(oldNode.call_tree_node.path != newNode.call_tree_node.path):
+                diverge = True
+                break
+            else:
+                diverge = TreeItemFilterProvider.is_tree_changed(oldNode, newNode)
+        return diverge
 
     @staticmethod
     def _construct_tree_exclude_child_if_mismatch(ct_node: Node, parent: TreeItem,
