@@ -20,6 +20,8 @@ from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
+import re
+
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
 
@@ -104,7 +106,10 @@ class TreeModel(QAbstractItemModel):
             return self.main_widget.color_widget.getColor(relativeValue)
 
         if index.column() == 0:
-            return call_tree_node.name
+            if self.selector_widget.show_parameters.isChecked():
+                return call_tree_node.name
+            else:
+                return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
             # if len(model.getComments()) > 0:
             #     return len(model.getComments())
@@ -130,6 +135,11 @@ class TreeModel(QAbstractItemModel):
         elif index.column() == 7:
             return formatNumber(str(model.hypothesis.RE))
         return None
+
+    def remove_method_parameters(self, name):
+        re.escape("()")
+        tmp = re.sub("<.*>", "<...>", name)
+        return re.sub("\(.*\)", "(...)", tmp)
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()
