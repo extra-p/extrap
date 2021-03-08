@@ -241,7 +241,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                 itertools.product([0], log_exponents),
                 itertools.product(poly_exponents, log_exponents))
 
-        return [CompoundTerm.create(*e) for e in exponents]
+        return [CompoundTerm.create(*e) for e in exponents if not e == (0, 0)]
 
     def build_hypotheses(self, measurements):
         """
