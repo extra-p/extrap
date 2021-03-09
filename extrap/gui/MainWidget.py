@@ -29,6 +29,7 @@ from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
 from extrap.gui.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
+from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
 
 
@@ -50,11 +51,7 @@ class MainWidget(QMainWindow):
         self.min_value = 1
         self.old_x_pos = 0
         self.experiment = None
-        self.graph_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                                 '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
-                                 '#bcbd22', '#17becf']
-        # ['#8B0000', '#00008B', '#006400', '#2F4F4F', '#8B4513', '#556B2F',
-        #  '#808000', '#008080', '#FF00FF', '#800000', '#FF0000', '#000080', '#008000', '#00FFFF', '#800080']
+        self.model_color_map = ModelColorMap()
         self.font_size = 6
         self.experiment_change = True
         self.initUI()
@@ -441,23 +438,6 @@ class MainWidget(QMainWindow):
             self.max_value = updated_max_value
             self.color_widget.update_min_max(self.min_value, self.max_value)
 
-    def populateCallPathColorMap(self, call_tree_nodes):
-        metric = self.selector_widget.getSelectedMetric()
-        call_tree_nodes = [c for c in set(call_tree_nodes) if (c.path, metric) in self.selector_widget.getCurrentModel().models]
-        current_index = 0
-        size_of_color_list = len(self.graph_color_list)
-        self.dict_callpath_color = {}
-        for callpath in call_tree_nodes:
-            if current_index < size_of_color_list:
-                self.dict_callpath_color[callpath] = self.graph_color_list[current_index]
-            else:
-                offset = (current_index - size_of_color_list) % size_of_color_list
-                multiple = int(current_index / size_of_color_list)
-                color = self.graph_color_list[offset]
-                newcolor = color[:-1] + str(multiple)
-                self.dict_callpath_color[callpath] = newcolor
-            current_index = current_index + 1
-
     def show_about_dialog(self):
         QMessageBox.about(self, "About " + extrap.__title__,
                           f"""<h1>{extrap.__title__}</h1>
@@ -466,12 +446,6 @@ class MainWidget(QMainWindow):
 <p>{extrap.__copyright__}</p>
 """
                           )
-
-    def getColorForCallPath(self, callpath):
-        return self.dict_callpath_color[callpath]
-
-    def get_callpath_color_map(self):
-        return self.dict_callpath_color
 
     activate_event_handlers = []
 

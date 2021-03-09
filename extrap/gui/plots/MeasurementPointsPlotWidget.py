@@ -34,7 +34,8 @@ class MeasurementPointsPlot(GraphDisplayWindow):
             return
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # Set the x_label and y_label based on parameter selected.
         x_label = self.main_widget.data_display.getAxisParameter(0).name

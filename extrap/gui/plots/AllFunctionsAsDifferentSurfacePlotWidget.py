@@ -31,7 +31,8 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # Create subplots based on the number of functions
         number_of_subplots = len(Z_List)
