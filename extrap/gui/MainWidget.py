@@ -247,12 +247,7 @@ class MainWidget(QMainWindow):
     def setExperiment(self, experiment):
         self.experiment_change = True
         self.experiment = experiment
-        self.selector_widget.updateModelList()
-        self.selector_widget.fillMetricList()
-        self.selector_widget.createParameterSliders()
-        self.selector_widget.fillCalltree()
-
-        self.selector_widget.tree_model.valuesChanged()
+        self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
         self.experiment_change = False

@@ -262,9 +262,9 @@ class GraphWidget(QWidget):
             return
 
         for selected_callpath in selected_callpaths:
-            model = model_set_models[selected_callpath.path, selected_metric]
+            model = model_set_models.get((selected_callpath.path, selected_metric))
             if model is None:
-                return
+                continue
             model_function = model.hypothesis.function
             data_points = [p for (_, p) in self.calculateDataPoints(
                 selected_metric, selected_callpath, True)]
@@ -307,14 +307,13 @@ class GraphWidget(QWidget):
             return
 
         model_list = list()
-        selected_callpaths_checked=[]
+        selected_callpaths_checked = []
         for selected_callpath in selected_callpaths:
             key = (selected_callpath.path, selected_metric)
             if key in model_set_models:
                 model = model_set_models[key]
                 model_list.append(model)
                 selected_callpaths_checked.append(selected_callpath)
-
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
