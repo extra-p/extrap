@@ -11,8 +11,6 @@ import math
 from typing import Optional, Sequence, TYPE_CHECKING
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.calltree import Node
@@ -133,9 +131,11 @@ class SelectorWidget(QWidget):
             self.callpath_selection_changed)
 
     def callpath_selection_changed(self):
-        callpath_list = self.getSelectedCallpath()
-        # self.dict_callpath_color = {}
-        self.main_widget.populateCallPathColorMap(callpath_list)
+        call_tree_nodes = self.getSelectedCallpath()
+        metric = self.getSelectedMetric()
+        call_tree_nodes = [c for c in call_tree_nodes if
+                           (c.path, metric) in self.getCurrentModel().models]
+        self.main_widget.model_color_map.update(call_tree_nodes)
         self.main_widget.updateAllWidget()
 
     def fillMetricList(self):

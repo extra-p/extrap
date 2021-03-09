@@ -32,7 +32,8 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # colors = ['r','g','b','c','m','y']
         # colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]

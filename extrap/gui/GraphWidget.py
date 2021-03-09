@@ -115,9 +115,9 @@ class GraphWidget(QWidget):
         self.BACKGROUND_COLOR = QColor("white")
         self.TEXT_COLOR = QColor("black")
         self.AXES_COLOR = QColor("black")
-        self.AGGREGATE_MODEL_COLOR = QColor(self.main_widget.graph_color_list[0])
-        self.DATA_POINT_COLOR = QColor(self.main_widget.graph_color_list[0]).darker(200)
-        self.DATA_RANGE_COLOR = QColor(self.main_widget.graph_color_list[0]).darker(150)
+        self.AGGREGATE_MODEL_COLOR = QColor(self.main_widget.model_color_map.default_color)
+        self.DATA_POINT_COLOR = QColor(self.main_widget.model_color_map.default_color).darker(200)
+        self.DATA_RANGE_COLOR = QColor(self.main_widget.model_color_map.default_color).darker(150)
 
         self.minimum_number_points_marked = 2
         self.aggregate_callpath = False
@@ -328,12 +328,14 @@ class GraphWidget(QWidget):
         index_indicator = 0
         if not self.combine_all_callpath:
             for model in model_list:
-                color = self.main_widget.getColorForCallPath(
-                    selected_callpaths_checked[index_indicator])
+                widget = self.main_widget
+                color = widget.model_color_map[
+                    selected_callpaths_checked[index_indicator]]
                 self.drawModel(paint, model, color)
                 index_indicator = index_indicator + 1
         else:
-            color = self.main_widget.getColorForCallPath(selected_callpaths_checked[0])
+            main_widget = self.main_widget
+            color = main_widget.model_color_map[selected_callpaths_checked[0]]
             self.drawAggregratedModel(paint, model_list)
 
         # Draw data points
@@ -362,7 +364,8 @@ class GraphWidget(QWidget):
     def drawLegend(self, paint):
         # drawing the graph legend
         px_between = 15
-        callpath_color_dict = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        callpath_color_dict = widget.model_color_map
         dict_size = len(callpath_color_dict)
         font_size = int(self.main_widget.getFontSize())
         paint.setFont(QFont('Decorative', font_size))

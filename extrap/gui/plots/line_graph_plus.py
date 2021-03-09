@@ -14,7 +14,8 @@ class LineGraphPlus(GraphDisplayWindow):
         model_list, selected_callpaths = self.get_selected_models()
         if model_list is None:
             return
-        color_map = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        color_map = widget.model_color_map
         ax: Axes = self.figure.add_subplot()
         width, _ = self.get_width_height()
         maxX, maxY = self.get_max()

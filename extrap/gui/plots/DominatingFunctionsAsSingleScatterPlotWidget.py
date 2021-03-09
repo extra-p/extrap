@@ -39,7 +39,8 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
         X, Y, Z_list, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # calculate max_z value
         color_for_max_z = dict_callpath_color[selected_callpaths[0]]
