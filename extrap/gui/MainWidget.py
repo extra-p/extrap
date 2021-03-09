@@ -177,7 +177,7 @@ class MainWidget(QMainWindow):
                   'Dominating models in a 3D S&catter plot',
                   'Max &z as a single surface plot', 'Dominating models and max z as &heat map',
                   'Selected models in c&ontour plot', 'Selected models in &interpolated contour plots',
-                  '&Measurement points','Line &graph plus']
+                  '&Measurement points', 'Line &graph plus']
         graph_actions = [QAction(g, self) for g in graphs]
         for i, g in enumerate(graph_actions):
             slot = (lambda k: lambda: self.data_display.reloadTabs((k,)))(i)
@@ -257,12 +257,7 @@ class MainWidget(QMainWindow):
     def setExperiment(self, experiment):
         self.experiment_change = True
         self.experiment = experiment
-        self.selector_widget.updateModelList()
-        self.selector_widget.fillMetricList()
-        self.selector_widget.createParameterSliders()
-        self.selector_widget.fillCalltree()
-
-        self.selector_widget.tree_model.valuesChanged()
+        self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
         self.experiment_change = False

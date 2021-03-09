@@ -5,8 +5,10 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 import math
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TYPE_CHECKING
 
 import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -20,11 +22,14 @@ from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
 from extrap.modelers.model_generator import ModelGenerator
 
+if TYPE_CHECKING:
+    from extrap.gui.MainWidget import MainWidget
+
 
 class SelectorWidget(QWidget):
-    def __init__(self, mainWidget, parent):
+    def __init__(self, main_widget: MainWidget, parent):
         super(SelectorWidget, self).__init__(parent)
-        self.main_widget = mainWidget
+        self.main_widget = main_widget
         self.tree_model = TreeModel(self)
         self.parameter_sliders = list()
         self.initUI()
@@ -142,6 +147,13 @@ class SelectorWidget(QWidget):
         for metric in metrics:
             name = metric.name if metric.name != '' else '<default>'
             self.metric_selector.addItem(name, metric)
+
+    def on_experiment_changed(self):
+        self.updateModelList()
+        self.fillMetricList()
+        self.createParameterSliders()
+        self.fillCalltree()
+        self.tree_model.valuesChanged()
 
     def changeAsymptoticBehavior(self):
         self.tree_model.valuesChanged()

@@ -47,11 +47,11 @@ class TestGuiCommon(unittest.TestCase):
 
     def test_line_graph(self):
         data_display = self.window.data_display
-        self.assertTrue(data_display.ifTabAlreadyOpened("Line graph"))
+        self.assertTrue(data_display.is_tab_already_opened("Line graph"))
         data_display.display_widget.tabBar().removeTab(0)
-        self.assertFalse(data_display.ifTabAlreadyOpened("Line graph"))
+        self.assertFalse(data_display.is_tab_already_opened("Line graph"))
         data_display.reloadTabs([0])
-        self.assertTrue(data_display.ifTabAlreadyOpened("Line graph"))
+        self.assertTrue(data_display.is_tab_already_opened("Line graph"))
 
 
 class TestGuiExperimentLoaded(TestGuiCommon):
