@@ -32,6 +32,8 @@ class SelectorWidget(QWidget):
         self.parameter_sliders = list()
         self.initUI()
         self._sections_switched = False
+        self.min_value = 0
+        self.max_value = 0
 
     # noinspection PyAttributeOutsideInit
     def initUI(self):
@@ -143,7 +145,7 @@ class SelectorWidget(QWidget):
         call_tree_nodes = [c for c in call_tree_nodes if
                            (c.path, metric) in self.getCurrentModel().models]
         self.main_widget.model_color_map.update(call_tree_nodes)
-        self.main_widget.updateAllWidget()
+        self.main_widget.on_selection_changed()
 
     def fillMetricList(self):
         self.metric_selector.clear()
@@ -216,7 +218,7 @@ class SelectorWidget(QWidget):
         #     generator = model._modeler
         self.main_widget.selector_widget.tree_model.valuesChanged()
 
-        self.main_widget.updateAllWidget()
+        self.main_widget.on_selection_changed()
         self.update()
 
     def model_rename(self):
@@ -255,14 +257,14 @@ class SelectorWidget(QWidget):
         return models
 
     def metric_index_changed(self):
-        self.main_widget.metricIndexChanged()
+        self.main_widget.on_selection_changed()
         self.tree_model.on_metric_changed()
 
     def getParameterValues(self):
         """ This functions returns the parameter value list with the
             parameter values from the bottom of the calltree selection.
             This information is necessary for the evaluation of the model
-            functions, e.g. to colot the severity boxes.
+            functions, e.g. to color the severity boxes.
         """
         value_list = []
         for param in self.parameter_sliders:
@@ -270,7 +272,7 @@ class SelectorWidget(QWidget):
         return value_list
 
     def iterate_children(self, param_value_list, callpaths, metric):
-        """ This is a helper function for get_min_max_value.
+        """ This is a helper function for update_min_max_value.
             It iterates the calltree recursively.
         """
         value_list = list()
@@ -285,25 +287,23 @@ class SelectorWidget(QWidget):
             value_list += self.iterate_children(param_value_list, children, metric)
         return value_list
 
-    def get_min_max_value(self):
+    def update_min_max_value(self):
         """ This function calculated the minimum and the maximum values that
             appear in the call tree. This information is e.g. used to scale
             legends ot the color line at the bottom of the extrap window.
         """
-        null = (0, 0)
-        value_list = list()
+        min_max_value = (0, 0)
         experiment = self.main_widget.getExperiment()
-        if experiment is None:
-            return null
-        selectedMetric = self.getSelectedMetric()
-        if selectedMetric is None:
-            return null
-        param_value_list = self.getParameterValues()
-        call_tree = experiment.call_tree
-        nodes = call_tree.get_nodes()
-        previous = numpy.seterr(divide='ignore', invalid='ignore')
-        value_list.extend(self.iterate_children(param_value_list, nodes, selectedMetric))
-        numpy.seterr(**previous)
-        if len(value_list) == 0:
-            return null
-        return max(0.0, min(value_list)), max(0.0, max(value_list))
+        if experiment:
+            selected_metric = self.getSelectedMetric()
+            if selected_metric:
+                param_value_list = self.getParameterValues()
+                call_tree = experiment.call_tree
+                nodes = call_tree.get_nodes()
+                previous = numpy.seterr(divide='ignore', invalid='ignore')
+                value_list = self.iterate_children(param_value_list, nodes, selected_metric)
+                numpy.seterr(**previous)
+                if len(value_list) > 0:
+                    min_max_value = max(0.0, min(value_list)), max(0.0, max(value_list))
+        self.min_value, self.max_value = min_max_value
+        return min_max_value

@@ -80,7 +80,7 @@ class TreeModel(QAbstractItemModel):
             return None
 
         if getDecorationBoxes:
-            delta = self.main_widget.max_value - self.main_widget.min_value
+            delta = self.selector_widget.max_value - self.selector_widget.min_value
             if delta == 0:
                 return None  # can't divide by zero
 

@@ -29,11 +29,11 @@ MAX_PARAM_VALUE = 2000000000
 
 
 class AxisSelection(QWidget):
-    ''' This class is a helper class for the class DataDisplay.
+    """ This class is a helper class for the class DataDisplay.
         It represents one parameter in the data display which
         shown on one of the graph axis. It allows to set the maximum
         value for the axis in the graph.
-    '''
+    """
     #####################################################################
 
     max_values = [10, 10, 10]
@@ -100,11 +100,11 @@ class AxisSelection(QWidget):
         display.setMax(self.index, self.max_edit.value())
 
     def max_changed(self):
-        ''' This function should only be called from the connected event
+        """ This function should only be called from the connected event
             when the user has entered a new value.
             Otherwise use maxChanged() which does not update the graph drawing.
             This is to avoid multiple updates of the graph.
-        '''
+        """
         self.maxChanged()
         display = self.manager.display_widget.currentWidget()
         if isinstance(display, GraphWidget):
@@ -114,10 +114,10 @@ class AxisSelection(QWidget):
             display.update()
 
     def maxChanged(self):
-        ''' This function updates the max value without redrawing the graph.
+        """ This function updates the max value without redrawing the graph.
             Use this function from external calls to avoid multiple redraws
             of the graph.
-        '''
+        """
         if self.max_edit.value() == 0:
             self.max_edit.setValue(self.max_edit.minimum())
             return
