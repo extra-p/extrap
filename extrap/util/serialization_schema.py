@@ -64,7 +64,7 @@ class BaseSchema(Schema):
         return subclass.mro()[1] == classs_
 
     def load(self, data, **kwargs):
-        if self.__is_direct_subclass(type(self), BaseSchema):
+        if self.__is_direct_subclass(type(self), BaseSchema) and self.type_field in data:
             type_ = data[self.type_field]
             del data[self.type_field]
             try:
@@ -76,11 +76,12 @@ class BaseSchema(Schema):
             return super(BaseSchema, self).load(data, **kwargs)
 
     def dump(self, obj, **kwargs):
-        if self.__is_direct_subclass(type(self), BaseSchema):
+        if self.__is_direct_subclass(type(self), BaseSchema) and type(obj).__name__ in self._subclasses:
             return self._subclasses[type(obj).__name__]().dump(obj, **kwargs)
         else:
             result = super(BaseSchema, self).dump(obj, **kwargs)
-            result[self.type_field] = type(obj).__name__
+            if type(obj).__name__ in self._subclasses:
+                result[self.type_field] = type(obj).__name__
             return result
 
 
