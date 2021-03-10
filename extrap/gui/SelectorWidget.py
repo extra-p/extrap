@@ -252,57 +252,51 @@ class SelectorWidget(QWidget):
         self.tree_model.on_metric_changed()
 
     def getParameterValues(self):
-        ''' This functions returns the parameter value list with the
+        """ This functions returns the parameter value list with the
             parameter values from the bottom of the calltree selection.
             This information is necessary for the evaluation of the model
             functions, e.g. to colot the severity boxes.
-        '''
+        """
         value_list = []
         for param in self.parameter_sliders:
             value_list.append(param.getValue())
         return value_list
 
-    def iterate_children(self, paramValueList, callpaths, metric):
-        ''' This is a helper function for getMinMaxValue.
+    def iterate_children(self, param_value_list, callpaths, metric):
+        """ This is a helper function for get_min_max_value.
             It iterates the calltree recursively.
-        '''
+        """
         value_list = list()
         for callpath in callpaths:
             model = self.getCurrentModel().models.get((callpath.path, metric))
-            if model is None:
-                continue
-
-            formula = model.hypothesis.function
-            value = formula.evaluate(paramValueList)
-            if not math.isinf(value):
-                value_list.append(value)
+            if model is not None:
+                formula = model.hypothesis.function
+                value = formula.evaluate(param_value_list)
+                if not math.isinf(value):
+                    value_list.append(value)
             children = callpath.childs
-            value_list += self.iterate_children(paramValueList,
-                                                children, metric)
+            value_list += self.iterate_children(param_value_list, children, metric)
         return value_list
 
-    def getMinMaxValue(self):
-        ''' This function calculated the minimum and the maximum values that
+    def get_min_max_value(self):
+        """ This function calculated the minimum and the maximum values that
             appear in the call tree. This information is e.g. used to scale
             legends ot the color line at the bottom of the extrap window.
-        '''
+        """
+        null = (0, 0)
         value_list = list()
         experiment = self.main_widget.getExperiment()
         if experiment is None:
-            value_list.append(1)
-            return value_list
+            return null
         selectedMetric = self.getSelectedMetric()
         if selectedMetric is None:
-            value_list.append(1)
-            return value_list
+            return null
         param_value_list = self.getParameterValues()
         call_tree = experiment.call_tree
         nodes = call_tree.get_nodes()
         previous = numpy.seterr(divide='ignore', invalid='ignore')
-        value_list.extend(self.iterate_children(param_value_list,
-                                                nodes,
-                                                selectedMetric))
+        value_list.extend(self.iterate_children(param_value_list, nodes, selectedMetric))
         numpy.seterr(**previous)
         if len(value_list) == 0:
-            value_list.append(1)
-        return value_list
+            return null
+        return max(0.0, min(value_list)), max(0.0, max(value_list))
