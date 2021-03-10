@@ -47,8 +47,8 @@ class MainWidget(QMainWindow):
         Initializes the extrap application widget.
         """
         super(MainWidget, self).__init__(*args, **kwargs)
-        self.max_value = 1
-        self.min_value = 1
+        self.max_value = 0
+        self.min_value = 0
         self.old_x_pos = 0
         self.experiment = None
         self.model_color_map = ModelColorMap()
@@ -180,6 +180,11 @@ class MainWidget(QMainWindow):
         model_rename_action.setShortcut('Ctrl+R')
         model_rename_action.setStatusTip('Rename the current model')
         model_rename_action.triggered.connect(self.selector_widget.model_rename)
+
+        # compare menu
+        compare_action = QAction('&Compare with experiment', self)
+        compare_action.setStatusTip('Compare the current models with ')
+        compare_action.triggered.connect(self.selector_widget.model_delete)
 
         # Filter menu
         # filter_callpath_action = QAction('Filter Callpaths', self)
@@ -430,13 +435,10 @@ class MainWidget(QMainWindow):
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
-            updated_value_list = self.selector_widget.getMinMaxValue()
+            values = self.selector_widget.get_min_max_value()
             # don't allow values < 0
-            updated_max_value = max(0.0, max(updated_value_list))
-            updated_min_value = max(0.0, min(updated_value_list))
-            self.min_value = updated_min_value
-            self.max_value = updated_max_value
-            self.color_widget.update_min_max(self.min_value, self.max_value)
+            self.min_value, self.max_value = values
+            self.color_widget.update_min_max(*values)
 
     def show_about_dialog(self):
         QMessageBox.about(self, "About " + extrap.__title__,
@@ -444,8 +446,7 @@ class MainWidget(QMainWindow):
 <p>Version {extrap.__version__}</p>
 <p>{extrap.__description__}</p>
 <p>{extrap.__copyright__}</p>
-"""
-                          )
+""")
 
     activate_event_handlers = []
 
