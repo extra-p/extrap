@@ -15,7 +15,7 @@ from extrap.entities.hypotheses import Hypothesis, HypothesisSchema
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import MetricSchema
 from extrap.util.caching import cached_property
-from extrap.util.serialization_schema import Schema
+from extrap.util.serialization_schema import Schema, BaseSchema
 
 
 class Model:
@@ -43,7 +43,7 @@ class Model:
                    self.measurements == other.measurements
 
 
-class ModelSchema(Schema):
+class ModelSchema(BaseSchema):
     def create_object(self):
         return Model(None)
 

@@ -20,7 +20,10 @@ from extrap.util.serialization_schema import BaseSchema
 
 class AbstractModeler(ABC):
     def __init__(self, use_median: bool):
-        # use mean or median measurement values to calculate models
+        """Creates a new modeler object, that uses either the median or the mean when modeling.
+
+           :param use_median: use mean or median measurement values to calculate models
+        """
         self._use_median = use_median
 
     @property

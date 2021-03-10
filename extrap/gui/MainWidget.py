@@ -16,6 +16,8 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
+from extrap.comparison.experiment_comparison import ComparisonExperiment
+from extrap.comparison.matcher import MinimumMatcher
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 from extrap.fileio.json_file_reader import read_json_file
@@ -193,7 +195,7 @@ class MainWidget(QMainWindow):
         # compare menu
         compare_action = QAction('&Compare with experiment', self)
         compare_action.setStatusTip('Compare the current models with ')
-        compare_action.triggered.connect(self.selector_widget.model_delete)
+        compare_action.triggered.connect(self._compare_experiment)
 
         # Filter menu
         # filter_callpath_action = QAction('Filter Callpaths', self)
@@ -214,6 +216,7 @@ class MainWidget(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(open_experiment_action)
         file_menu.addAction(save_experiment_action)
+        file_menu.addAction(compare_action)
         file_menu.addSeparator()
         file_menu.addAction(screenshot_action)
         file_menu.addSeparator()
@@ -316,6 +319,18 @@ class MainWidget(QMainWindow):
         dialog = PlotTypeSelector(self, self.data_display)
         dialog.setModal(True)
         dialog.open()
+
+    def _compare_experiment(self):
+        def _import_file(file_name):
+            with ProgressWindow(self, 'Comparing Experiment') as pw:
+                experiment2 = read_experiment(file_name, pw)
+                self.setExperiment(ComparisonExperiment(self.getExperiment(), experiment2, matcher=MinimumMatcher()))
+                current = self.windowTitle()
+                self._set_opened_file_name(None)
+                self.setWindowTitle(Path(file_name).name + " <> " + current)
+                self.save_experiment_action.setEnabled(True)
+
+        self._file_dialog(_import_file, 'Choose Experiment to Compare', filter='*.extra-p')
 
     # def hide_callpath_dialog_box(self):
     #     callpathList = list()
