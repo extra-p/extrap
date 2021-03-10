@@ -18,10 +18,20 @@ class UniqueList(list, Sequence[T]):
             self.extend(iterable)
 
     def __setitem__(self, i, value):
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    def insert(self, index, item):
+        if item in self._set:
+            return False
+        self._set.add(item)
+        super().insert(index, item)
+        return True
 
     def __contains__(self, item):
         return item in self._set
+
+    def count(self, item) -> int:
+        return 1 if item in self._set else 0
 
     def append(self, item):
         if item in self._set:
@@ -41,6 +51,11 @@ class UniqueList(list, Sequence[T]):
         super().remove(item)
         self._set.remove(item)
 
+    def pop(self, index: int = ...):
+        e = super().pop(index)
+        self._set.remove(e)
+        return e
+
     def __iadd__(self, items):
         self.extend(items)
         return self
@@ -49,3 +64,7 @@ class UniqueList(list, Sequence[T]):
         item = super().__getitem__(i)
         super().__delitem__(i)
         self._set.remove(item)
+
+    def clear(self) -> None:
+        super(UniqueList, self).clear()
+        self._set.clear()
