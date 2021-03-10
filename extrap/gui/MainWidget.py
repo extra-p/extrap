@@ -101,7 +101,6 @@ class MainWidget(QMainWindow):
         # bottom widget
         dock = QDockWidget("Color Info", self)
         self.color_widget = ColorWidget()
-        self.color_widget.update_min_max(self.min_value, self.max_value)
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
@@ -266,12 +265,7 @@ class MainWidget(QMainWindow):
         self.updateMinMaxValue()
         self.update()
 
-    def updateAllWidget(self):
-        if not self.experiment_change:
-            self.data_display.updateWidget()
-            self.update()
-
-    def metricIndexChanged(self):
+    def on_selection_changed(self):
         if not self.experiment_change:
             self.data_display.updateWidget()
             self.update()
@@ -445,10 +439,7 @@ class MainWidget(QMainWindow):
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
-            values = self.selector_widget.get_min_max_value()
-            # don't allow values < 0
-            self.min_value, self.max_value = values
-            self.color_widget.update_min_max(*values)
+            self.color_widget.update_min_max(*self.selector_widget.update_min_max_value())
 
     def show_about_dialog(self):
         QMessageBox.about(self, "About " + extrap.__title__,
