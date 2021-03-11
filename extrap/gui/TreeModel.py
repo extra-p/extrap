@@ -136,10 +136,33 @@ class TreeModel(QAbstractItemModel):
             return formatNumber(str(model.hypothesis.RE))
         return None
 
+    ''' 
     def remove_method_parameters(self, name):
         re.escape("()")
-        tmp = re.sub("<.*>", "<...>", name)
+        tmp, n = re.subn(r'<[^<>]*>', "<...>", name)
+        while n > 0:
+            tmp, n = re.subn(r'<[^<|>]*([(<...>)]*[^<|>]*[(<...>)])*[^<|>]*[^(<...>)]>', "<...>", tmp)
         return re.sub("\(.*\)", "(...)", tmp)
+    '''
+
+    def remove_method_parameters(self, name):
+        depth = 0
+        start = -1
+        re.escape("()")
+        for i in range(0, len(name)):
+            elem = name[i]
+            if elem == "<":
+                depth += 1
+                if start == -1:
+                    start = i
+            if elem == ">":
+                depth -= 1
+                if start != -1 and depth == 0:
+                    name = name[0:start:] + "<...>" + self.remove_method_parameters(name[i+1:len(name):])
+                    return re.sub("\(.*\)", "(...)", name)
+        return re.sub("\(.*\)", "(...)", name)
+
+
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()
