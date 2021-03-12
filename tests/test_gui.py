@@ -176,7 +176,7 @@ class TestGuiSelectedThenNoModelSelected(TestGuiExperimentLoaded):
     def setUp(self) -> None:
         super().setUp()
         self.test_graph_model_one_selected()
-        self.window.selector_widget.getCurrentModel = lambda: None
+        self.window.selector_widget.get_current_model_gen = lambda: None
 
 
 if __name__ == '__main__':

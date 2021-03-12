@@ -117,23 +117,6 @@ class GraphDisplayWindow(FigureCanvas):
             Z[np.isinf(Z)] = max_z
         return X, Y, Z_List, z_List
 
-    def get_selected_models(self):
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        model_set = self.main_widget.getCurrentModel()
-        if not selected_callpaths or model_set is None:
-            return None, None
-        model_set_models = model_set.models
-        if not model_set_models:
-            return None, None
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            key = (selected_callpath.path, selected_metric)
-            if key in model_set_models:
-                model = model_set_models[key]
-                model_list.append(model)
-        return model_list, selected_callpaths
-
     def draw_legend(self, ax_all, dict_callpath_color):
         fontSize = self.graphWidget.getFontSize()
         # draw legend
