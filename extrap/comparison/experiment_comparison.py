@@ -18,6 +18,8 @@ from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
+COMPARISON_NODE_NAME = '[Comparison]'
+
 
 class ComparisonError(RecoverableError):
     NAME = "Experiment Comparison Error"
@@ -167,12 +169,12 @@ class ComparisonExperiment(Experiment):
         new_matches = {}
         for metric, source_metrics in self.metrics_match.items():
             for node, source_nodes in call_tree_match.items():
-                origin_node = Node('[Origin]', node.path.concat('[Origin]'))
+                origin_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
                 for i, (s_node, s_metric, s_measurement, s_name) in enumerate(
                         zip(source_nodes, source_metrics, source_measurements, self.experiment_names)):
                     source_key = (s_node.path, s_metric)
                     if source_key in s_measurement:
-                        cp = origin_node.path.concat(s_name)
+                        cp = origin_node.path.concat(f"[{s_name}]{origin_node.name}")
                         ct_node = Node(s_name, cp)
                         origin_node.add_child_node(ct_node)
                         new_match = [None] * len(source_measurements)
