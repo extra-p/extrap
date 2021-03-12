@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import copy
 import json
 from abc import abstractmethod, ABC
 from typing import Iterator
@@ -46,6 +46,9 @@ class NamedEntity(ABC):
 
     def __repr__(self):
         return f"{type(self).TYPENAME}({self.name})"
+
+    def copy(self):
+        return copy.copy(self)
 
 
 _DATA_SEPARATOR = '\x03'

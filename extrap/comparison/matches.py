@@ -1,24 +1,26 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Callable, Sequence, Mapping
+from typing import TypeVar, Callable, Sequence, Mapping, MutableMapping, Optional
 
 _T = TypeVar('_T')
 
 AbstractMatches = Mapping[_T, Sequence[_T]]
 
+MutableAbstractMatches = MutableMapping[_T, Sequence[Optional[_T]]]
+
 
 class IdentityMatches(AbstractMatches[_T]):
     def __init__(self, num_matches: int, items):
-        self.items = items
+        self._items = items
         self.num_matches = num_matches
 
     def __getitem__(self, target: _T) -> Sequence[_T]:
         return [target] * self.num_matches
 
     def __iter__(self):
-        return iter(self.items)
+        return iter(self._items)
 
     def __len__(self):
-        return len(self.items)
+        return len(self._items)
 
 # class DictMatches(Matches[_T]):
 #     def __init__(self, matches: Dict[_T,Sequence[_T]]):

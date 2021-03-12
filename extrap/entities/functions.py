@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+from numbers import Number
 from typing import List, Mapping, Union
 
 import numpy
@@ -38,9 +38,17 @@ class Function:
         self.add_compound_term(compound_term)
         return self
 
-    def evaluate(self, parameter_value):
+    def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]]]) -> \
+    Union[Number, numpy.ndarray]:
         """
-        Evalute the function according to the given value and return the result.
+        Evaluate the function according to the given value and return the result.
+
+        If the input is an ndarray the following rules apply:
+        If the ndarray is one-dimensional, each element is interpreted as if this was one number input to this function.
+        The output has the same shape as the input.
+        If the ndarry is two-dimensional the first dimension is interpreted as the different parameters.
+        The second dimension is interpreted as individual values.
+        The output is one-dimensional with the same length as the second dimension.
         """
 
         if isinstance(parameter_value, numpy.ndarray):
@@ -119,7 +127,7 @@ class SingleParameterFunction(Function):
 
 class MultiParameterFunction(Function):
     compound_terms: List[MultiParameterTerm]
-    
+
     def __init__(self, *compound_terms: MultiParameterTerm):
         super().__init__(*compound_terms)
 
