@@ -8,13 +8,15 @@
 from __future__ import annotations
 
 import math
-from typing import Optional, Sequence, TYPE_CHECKING
+from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
+from extrap.entities.model import Model
 from extrap.gui.ParameterValueSlider import ParameterValueSlider
 from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
@@ -133,7 +135,7 @@ class SelectorWidget(QWidget):
             self.callpath_selection_changed)
 
     def callpath_selection_changed(self):
-        call_tree_nodes = self.getSelectedCallpath()
+        call_tree_nodes = self.get_selected_call_tree_nodes()
         metric = self.getSelectedMetric()
         call_tree_nodes = [c for c in call_tree_nodes if
                            (c.path, metric) in self.getCurrentModel().models]
@@ -163,7 +165,7 @@ class SelectorWidget(QWidget):
     def getSelectedMetric(self) -> Metric:
         return self.metric_selector.currentData()
 
-    def getSelectedCallpath(self) -> Sequence[Node]:
+    def get_selected_call_tree_nodes(self) -> Sequence[Node]:
         indexes = self.tree_view.selectedIndexes()
         callpath_list = list()
 
@@ -178,6 +180,23 @@ class SelectorWidget(QWidget):
     def getCurrentModel(self) -> Optional[ModelGenerator]:
         model = self.model_selector.currentData()
         return model
+
+    def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Node]]]:
+        selected_metric = self.getSelectedMetric()
+        selected_call_tree_nodes = self.get_selected_call_tree_nodes()
+        model_set = self.getCurrentModel()
+        if not selected_call_tree_nodes or model_set is None:
+            return None, None
+        model_set_models = model_set.models
+        if not model_set_models:
+            return None, None
+        model_list = list()
+        for node in selected_call_tree_nodes:
+            key = (node.path, selected_metric)
+            if key in model_set_models:
+                model = model_set_models[key]
+                model_list.append(model)
+        return model_list, selected_call_tree_nodes
 
     def renameCurrentModel(self, newName):
         index = self.model_selector.currentIndex()
@@ -274,7 +293,7 @@ class SelectorWidget(QWidget):
             if model is not None:
                 formula = model.hypothesis.function
                 value = formula.evaluate(param_value_list)
-                if not math.isinf(value):
+                if not math.isinf(value) and not math.isnan(value):
                     value_list.append(value)
             children = callpath.childs
             value_list += self.iterate_children(param_value_list, children, metric)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import warnings
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Tuple, Sequence, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide2.QtWidgets import QSizePolicy
@@ -17,9 +17,6 @@ from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
-
-from extrap.entities.callpath import Callpath
-from extrap.entities.model import Model
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -119,23 +116,6 @@ class GraphDisplayWindow(FigureCanvas):
             z[np.isinf(z)] = max_z
             Z[np.isinf(Z)] = max_z
         return X, Y, Z_List, z_List
-
-    def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Callpath]]]:
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        model_set = self.main_widget.getCurrentModel()
-        if not selected_callpaths or model_set is None:
-            return None, None
-        model_set_models = model_set.models
-        if not model_set_models:
-            return None, None
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            key = (selected_callpath.path, selected_metric)
-            if key in model_set_models:
-                model = model_set_models[key]
-                model_list.append(model)
-        return model_list, selected_callpaths
 
     def draw_legend(self, ax_all, dict_callpath_color):
         fontSize = self.graphWidget.getFontSize()

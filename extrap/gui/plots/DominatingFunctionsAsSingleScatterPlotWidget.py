@@ -29,7 +29,7 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
           This function draws the graph
         """
         # Get data
-        model_list, selected_callpaths = self.get_selected_models()
+        model_list, selected_callpaths = self.main_widget.get_selected_models()
         if model_list is None:
             return
 
@@ -81,7 +81,7 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
         ax.set_xlabel('\n' + x_label)
         ax.set_ylabel('\n' + y_label, linespacing=3.1)
         ax.set_zlabel(
-            '\n' + self.main_widget.getSelectedMetric().name, linespacing=3.1)
+            '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
         ax.set_title(r'Dominating Functions')
 
         self.draw_legend(ax, dict_callpath_color)

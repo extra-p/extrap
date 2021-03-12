@@ -43,7 +43,7 @@ class AggregationWidget(QWidget):
     @Slot()
     def aggregate(self):
 
-        model_generator = self.main_widget.getCurrentModel()
+        model_generator = self.main_widget.get_current_model_gen()
         if model_generator:
             aggregation_type = self._cb_strategy.currentData()
             aggregation = aggregation_type()
