@@ -10,23 +10,26 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.model import Model
+from extrap.gui.TreeModel import TreeModel
 
 
 class TreeView(QTreeView):
 
     def __init__(self, parent):
-
         super(TreeView, self).__init__(parent)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setAnimated(True)
 
     def contextMenuEvent(self, event):
         menu = QMenu()
-        if self.model() is not None:
+        model: TreeModel = self.model()
+        if model is not None:
             if self.selectedIndexes():
-                selectedCallpath = self.model().getValue(
+                selectedCallpath = model.getValue(
                     self.selectedIndexes()[0])
-                selectedModel: Model = self.model().getSelectedModel(selectedCallpath.path)
+                if selectedCallpath is None:
+                    return
+                selectedModel = model.getSelectedModel(selectedCallpath.path)
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
                 # showCommentsAction = menu.addAction("Show Comments")
