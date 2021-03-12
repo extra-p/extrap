@@ -9,7 +9,7 @@ import signal
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -17,6 +17,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
 from extrap.entities.calltree import Node
+from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
 from extrap.fileio.json_file_reader import read_json_file
@@ -290,6 +291,9 @@ class MainWidget(QMainWindow):
 
     def get_current_model_gen(self) -> Optional[ModelGenerator]:
         return self.selector_widget.getCurrentModel()
+
+    def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Node]]]:
+        return self.selector_widget.get_selected_models()
 
     def open_font_dialog_box(self):
         fontSizeItems = list()
