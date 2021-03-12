@@ -95,6 +95,13 @@ class SelectorWidget(QWidget):
         self.asymptoticCheckBox.stateChanged.connect(
             self.changeAsymptoticBehavior)
         self.toolbar.addWidget(self.asymptoticCheckBox)
+
+        self.show_parameters = QCheckBox('Show parameters', self.toolbar)
+        #self.show_parameters.toggle()
+        self.show_parameters.stateChanged.connect(
+            self.changeAsymptoticBehavior)
+        self.toolbar.addWidget(self.show_parameters)
+
         # Positioning
         self.grid.addWidget(model_label, 0, 0)
         self.grid.addWidget(self.model_selector, 0, 1)
