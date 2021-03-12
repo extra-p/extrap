@@ -142,11 +142,11 @@ class TestGuiLoadExperiment(unittest.TestCase):
         try:
             window, app = extrapgui.main(test=True, args=[])
             exp = read_text_file('data/text/one_parameter_1.txt')
-            self.assertIsNone(window.experiment)
+            self.assertIsNone(window.getExperiment())
 
             window.model_experiment(exp)
             QCoreApplication.processEvents()
-            self.assertIsNotNone(window.experiment)
+            self.assertIsNotNone(window.getExperiment())
             window.closeEvent = lambda e: e.accept()
             window.close()
         finally:
