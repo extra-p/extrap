@@ -252,7 +252,7 @@ class GraphWidget(QWidget):
         for model in models:
             callpath_name = model.callpath.name
             data_points = [p for (_, p) in self.calculateDataPoints(model, True)]
-            parameters = self.main_widget.experiment.parameters
+            parameters = self.main_widget.getExperiment().parameters
             model_function_text = 'Model: ' + \
                                   formatFormula(
                                       model.hypothesis.function.to_string(*parameters))
@@ -573,7 +573,7 @@ class GraphWidget(QWidget):
     def _calculate_evaluation_points(self, length_x_axis):
         number_of_x_points = int(length_x_axis / 2)
         x_values = numpy.linspace(0, self.max_x, number_of_x_points)
-        x_list = numpy.ndarray((len(self.main_widget.experiment.parameters), number_of_x_points))
+        x_list = numpy.ndarray((len(self.main_widget.getExperiment().parameters), number_of_x_points))
         param = self.main_widget.data_display.getAxisParameter(0).id
         parameter_value_list = self.main_widget.data_display.getValues()
         for i, val in parameter_value_list.items():

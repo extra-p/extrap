@@ -51,7 +51,7 @@ class MainWidget(QMainWindow):
         self.max_value = 0
         self.min_value = 0
         self.old_x_pos = 0
-        self.experiment = None
+        self._experiment = None
         self.model_color_map = ModelColorMap()
         self.font_size = 6
         self.experiment_change = True
@@ -246,9 +246,9 @@ class MainWidget(QMainWindow):
         self.experiment_change = False
         self.show()
 
-    def setExperiment(self, experiment):
+    def set_experiment(self, experiment):
         self.experiment_change = True
-        self.experiment = experiment
+        self._experiment = experiment
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
@@ -280,7 +280,7 @@ class MainWidget(QMainWindow):
             event.ignore()
 
     def getExperiment(self):
-        return self.experiment
+        return self._experiment
 
     def get_selected_metric(self):
         return self.selector_widget.getSelectedMetric()
@@ -347,7 +347,7 @@ class MainWidget(QMainWindow):
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)
-        self.setExperiment(experiment)
+        self.set_experiment(experiment)
 
     def _make_import_func(self, title, reader_func, **kwargs):
         return partial(self.import_file, reader_func, title, **kwargs)
@@ -362,7 +362,7 @@ class MainWidget(QMainWindow):
                 if model:
                     self.model_experiment(experiment)
                 else:
-                    self.setExperiment(experiment)
+                    self.set_experiment(experiment)
 
         if file_name:
             _import_file(file_name)
