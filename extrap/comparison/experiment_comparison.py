@@ -174,8 +174,9 @@ class ComparisonExperiment(Experiment):
                         zip(source_nodes, source_metrics, source_measurements, self.experiment_names)):
                     source_key = (s_node.path, s_metric)
                     if source_key in s_measurement:
-                        cp = origin_node.path.concat(f"[{s_name}]{origin_node.name}")
-                        ct_node = Node(s_name, cp)
+                        name = f"[{s_name}] {node.name}"
+                        cp = origin_node.path.concat(name)
+                        ct_node = Node(name, cp)
                         origin_node.add_child_node(ct_node)
                         new_match = [None] * len(source_measurements)
                         new_match[i] = s_node
