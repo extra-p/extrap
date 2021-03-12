@@ -136,15 +136,6 @@ class TreeModel(QAbstractItemModel):
             return formatNumber(str(model.hypothesis.RE))
         return None
 
-    ''' 
-    def remove_method_parameters(self, name):
-        re.escape("()")
-        tmp, n = re.subn(r'<[^<>]*>', "<...>", name)
-        while n > 0:
-            tmp, n = re.subn(r'<[^<|>]*([(<...>)]*[^<|>]*[(<...>)])*[^<|>]*[^(<...>)]>', "<...>", tmp)
-        return re.sub("\(.*\)", "(...)", tmp)
-    '''
-
     def remove_method_parameters(self, name):
         depth = 0
         start = -1
@@ -158,9 +149,9 @@ class TreeModel(QAbstractItemModel):
             if elem == ">":
                 depth -= 1
                 if start != -1 and depth == 0:
-                    name = name[0:start:] + "<...>" + self.remove_method_parameters(name[i+1:len(name):])
-                    return re.sub("\(.*\)", "(...)", name)
-        return re.sub("\(.*\)", "(...)", name)
+                    name = name[0:start:] + "<…>" + self.remove_method_parameters(name[i+1:len(name):])
+                    return re.sub(r"\(.*\)", "(…)", name)
+        return re.sub(r"\(.*\)", "(…)", name)
 
 
 
