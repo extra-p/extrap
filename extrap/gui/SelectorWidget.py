@@ -97,7 +97,7 @@ class SelectorWidget(QWidget):
         self.toolbar.addWidget(self.asymptoticCheckBox)
 
         self.show_parameters = QCheckBox('Show parameters', self.toolbar)
-        #self.show_parameters.toggle()
+        # self.show_parameters.toggle()
         self.show_parameters.stateChanged.connect(
             self.changeAsymptoticBehavior)
         self.toolbar.addWidget(self.show_parameters)
@@ -290,20 +290,20 @@ class SelectorWidget(QWidget):
             value_list.append(param.getValue())
         return value_list
 
-    def iterate_children(self, param_value_list, callpaths, metric):
+    def iterate_children(self, models, param_value_list, callpaths, metric):
         """ This is a helper function for update_min_max_value.
             It iterates the calltree recursively.
         """
         value_list = list()
         for callpath in callpaths:
-            model = self.getCurrentModel().models.get((callpath.path, metric))
+            model = models.get((callpath.path, metric))
             if model is not None:
                 formula = model.hypothesis.function
                 value = formula.evaluate(param_value_list)
                 if not math.isinf(value) and not math.isnan(value):
                     value_list.append(value)
             children = callpath.childs
-            value_list += self.iterate_children(param_value_list, children, metric)
+            value_list += self.iterate_children(models, param_value_list, children, metric)
         return value_list
 
     def update_min_max_value(self):
@@ -315,12 +315,13 @@ class SelectorWidget(QWidget):
         experiment = self.main_widget.getExperiment()
         if experiment:
             selected_metric = self.getSelectedMetric()
-            if selected_metric:
+            model_set = self.getCurrentModel()
+            if selected_metric and model_set:
                 param_value_list = self.getParameterValues()
                 call_tree = experiment.call_tree
                 nodes = call_tree.get_nodes()
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
-                value_list = self.iterate_children(param_value_list, nodes, selected_metric)
+                value_list = self.iterate_children(model_set.models, param_value_list, nodes, selected_metric)
                 numpy.seterr(**previous)
                 if len(value_list) > 0:
                     min_max_value = max(0.0, min(value_list)), max(0.0, max(value_list))
