@@ -13,13 +13,14 @@ from itertools import chain
 
 import extrap
 from extrap.fileio import experiment_io
-from extrap.fileio.cube_file_reader2 import read_cube_file
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
+from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.extrap3_experiment_reader import ExtrapExperimentFileReader
+from extrap.fileio.file_reader.json_file_reader import JsonFileReader
+from extrap.fileio.file_reader.talpas_file_reader import TalpasFileReader
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.fileio.io_helper import format_output
 from extrap.fileio.io_helper import save_output
-from extrap.fileio.json_file_reader import read_json_file
-from extrap.fileio.talpas_file_reader import read_talpas_file
-from extrap.fileio.text_file_reader import read_text_file
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
@@ -126,32 +127,47 @@ def main(args=None, prog=None):
 
     if arguments.path is not None:
         with ProgressBar(desc='Loading file') as pbar:
-            if arguments.cube:
-                # load data from cube files
-                if os.path.isdir(arguments.path):
-                    experiment = read_cube_file(arguments.path, scaling_type)
-                else:
-                    logging.error("The given path is not valid. It must point to a directory.")
-                    sys.exit(1)
-            elif os.path.isfile(arguments.path):
-                if arguments.text:
-                    # load data from text files
-                    experiment = read_text_file(arguments.path, pbar)
-                elif arguments.talpas:
-                    # load data from talpas format
-                    experiment = read_talpas_file(arguments.path, pbar)
-                elif arguments.json:
-                    # load data from json file
-                    experiment = read_json_file(arguments.path, pbar)
-                elif arguments.extrap3:
-                    # load data from Extra-P 3 file
-                    experiment = read_extrap3_experiment(arguments.path, pbar)
-                else:
-                    logging.error("The file format specifier is missing.")
-                    sys.exit(1)
-            else:
-                logging.error("The given file path is not valid.")
-                sys.exit(1)
+            for reader in all_reader.values():
+                if getattr(arguments, reader.NAME):
+                    file_reader = reader()
+                    if reader is CubeFileReader2:
+                        if os.path.isdir(arguments.path):
+                            file_reader.scaling_type = arguments.scaling_type
+                        else:
+                            logging.error("The given path is not valid. It must point to a directory.")
+                            sys.exit(1)
+                    elif os.path.isfile(arguments.path):
+                        experiment = file_reader.read_experiment(arguments.path, pbar)
+                    else:
+                        logging.error("The given file path is not valid.")
+                        sys.exit(1)
+
+            # if arguments.cube:
+            #     # load data from cube files
+            #     if os.path.isdir(arguments.path):
+            #         experiment = CubeFileReader2.read_cube_file(arguments.path, scaling_type)
+            #     else:
+            #         logging.error("The given path is not valid. It must point to a directory.")
+            #         sys.exit(1)
+            # elif os.path.isfile(arguments.path):
+            #     if arguments.text:
+            #         # load data from text files
+            #         experiment = TextFileReader.read_experiment(arguments.path, pbar)
+            #     elif arguments.talpas:
+            #         # load data from talpas format
+            #         experiment = TalpasFileReader.read_experiment(arguments.path, pbar)
+            #     elif arguments.json:
+            #         # load data from json file
+            #         experiment = JsonFileReader.read_experiment(arguments.path, pbar)
+            #     elif arguments.extrap3:
+            #         # load data from Extra-P 3 file
+            #         experiment =ExtrapExperimentFileReader.read_experiment(arguments.path, pbar)
+            #     else:
+            #         logging.error("The file format specifier is missing.")
+            #         sys.exit(1)
+            # else:
+            #     logging.error("The given file path is not valid.")
+            #     sys.exit(1)
 
         experiment.debug()
 

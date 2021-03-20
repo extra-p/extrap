@@ -12,8 +12,8 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
-from extrap.fileio.json_file_reader import read_json_file
-from extrap.fileio.jsonlines_file_reader import read_jsonlines_file
+from extrap.fileio.file_reader.json_file_reader import JsonFileReader
+from extrap.fileio.file_reader.jsonlines_file_reader import read_jsonlines_file
 
 
 # noinspection PyUnusedLocal
@@ -35,7 +35,7 @@ class TestJsonLinesFiles(unittest.TestCase):
 
     def test_read_1_json(self):
         Parameter.ID_COUNTER = itertools.count()
-        experiment = read_json_file("data/jsonlines/test1.jsonl")
+        experiment = JsonFileReader().read_experiment("data/jsonlines/test1.jsonl")
         self.assertListEqual([Parameter('x'), Parameter('y')], experiment.parameters)
         self.assertListEqual([0, 1], [p.id for p in experiment.parameters])
         self.assertListEqual([Coordinate(x, y) for x in range(1, 5 + 1) for y in range(1, 5 + 1)],
