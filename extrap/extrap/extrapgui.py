@@ -101,10 +101,11 @@ def parse_arguments(args=None):
 def load_from_command(arguments, window):
     if arguments.path:
         for reader in all_reader.values():
-            if arguments[reader.NAME]:
-                if reader is CubeFileReader2:
-                    reader.scaling_type = arguments.scaling_type
-                window.import_file(reader.read_experiment, file_name=arguments.path)
+            if getattr(arguments, reader.NAME):
+                file_reader = reader()
+                if file_reader is CubeFileReader2:
+                    file_reader.scaling_type = arguments.scaling_type
+                window.import_file(file_reader.read_experiment, file_name=arguments.path)
 
         # if arguments.text:
         #     window.import_file(read_text_file, file_name=arguments.path)
