@@ -27,8 +27,8 @@ re_whitespace = re.compile(r'\s+')
 
 class TextFileReader(FileReader, ABC):
     NAME = "text"
-    SHORT_NAME = "Open &text input"
-    LONG_NAME = "Open text input file"
+    SHORT_DESCRIPTION = "Open &text input"
+    EXTENDED_DESCRIPTION = "Open text input file"
     FILTER = "Text Files (*.txt);;All Files (*)"
     CMD_ARGUMENT = "--text"
 

@@ -26,8 +26,8 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 class TalpasFileReader(FileReader, ABC):
     NAME = "talpas"
-    SHORT_NAME = "Open Tal&pas input"
-    LONG_NAME = "Open Talpas input file"
+    SHORT_DESCRIPTION = "Open Tal&pas input"
+    EXTENDED_DESCRIPTION = "Open Talpas input file"
     FILTER = "Talpas Files (*.txt);;All Files (*)"
     CMD_ARGUMENT = "--talpas"
 

@@ -142,33 +142,6 @@ def main(args=None, prog=None):
                         logging.error("The given file path is not valid.")
                         sys.exit(1)
 
-            # if arguments.cube:
-            #     # load data from cube files
-            #     if os.path.isdir(arguments.path):
-            #         experiment = CubeFileReader2.read_cube_file(arguments.path, scaling_type)
-            #     else:
-            #         logging.error("The given path is not valid. It must point to a directory.")
-            #         sys.exit(1)
-            # elif os.path.isfile(arguments.path):
-            #     if arguments.text:
-            #         # load data from text files
-            #         experiment = TextFileReader.read_experiment(arguments.path, pbar)
-            #     elif arguments.talpas:
-            #         # load data from talpas format
-            #         experiment = TalpasFileReader.read_experiment(arguments.path, pbar)
-            #     elif arguments.json:
-            #         # load data from json file
-            #         experiment = JsonFileReader.read_experiment(arguments.path, pbar)
-            #     elif arguments.extrap3:
-            #         # load data from Extra-P 3 file
-            #         experiment =ExtrapExperimentFileReader.read_experiment(arguments.path, pbar)
-            #     else:
-            #         logging.error("The file format specifier is missing.")
-            #         sys.exit(1)
-            # else:
-            #     logging.error("The given file path is not valid.")
-            #     sys.exit(1)
-
         experiment.debug()
 
         # initialize model generator

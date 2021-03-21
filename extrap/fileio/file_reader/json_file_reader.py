@@ -30,8 +30,8 @@ SCHEMA_URI = ""
 
 class JsonFileReader(FileReader, ABC):
     NAME = "json"
-    SHORT_NAME = "Open &JSON input"
-    LONG_NAME = "Open JSON or JSON Lines input file"
+    SHORT_DESCRIPTION = "Open &JSON input"
+    EXTENDED_DESCRIPTION = "Open JSON or JSON Lines input file"
     FILTER = "JSON (Lines) Files (*.json *.jsonl);;All Files (*)"
     CMD_ARGUMENT = "--json"
 

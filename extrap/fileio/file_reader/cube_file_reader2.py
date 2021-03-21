@@ -32,8 +32,8 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 class CubeFileReader2(FileReader, ABC):
     NAME = "cube"
-    SHORT_NAME = "Open set of &CUBE files"
-    LONG_NAME = "Open a set of CUBE files for single-parameter models and generate data points for a new experiment " \
+    SHORT_DESCRIPTION = "Open set of &CUBE files"
+    EXTENDED_DESCRIPTION = "Open a set of CUBE files for single-parameter models and generate data points for a new experiment " \
                 "from them "
     CMD_ARGUMENT = "--cube"
 

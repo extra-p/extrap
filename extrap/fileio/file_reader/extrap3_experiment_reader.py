@@ -497,8 +497,8 @@ class _Mappings:
 
 class ExtrapExperimentFileReader(FileReader, ABC):
     NAME = "extrap3"
-    SHORT_NAME = "Open Extra-P &3 experiment"
-    LONG_NAME = "Opens legacy experiment file"
+    SHORT_DESCRIPTION = "Open Extra-P &3 experiment"
+    EXTENDED_DESCRIPTION = "Opens legacy experiment file"
     FILTER = ""
     CMD_ARGUMENT = "--extra-p-3"
     IS_MODEL = False
