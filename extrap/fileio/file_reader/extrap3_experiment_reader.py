@@ -487,11 +487,6 @@ def SAFE_RETURN_None(x):
         raise FileFormatError()
 
 
-class __Ref:
-    def __init__(self, _):
-        self.__ = _
-
-
 class _Mappings:
     region_mapping = {}
     region_set = {}
@@ -507,6 +502,10 @@ class ExtrapExperimentFileReader(FileReader, ABC):
     FILTER = ""
     CMD_ARGUMENT = "--extra-p-3"
     IS_MODEL = False
+
+    class __Ref:
+        def __init__(self, _):
+            self.__ = _
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         progress_bar.total += os.path.getsize(path)
@@ -529,7 +528,7 @@ class ExtrapExperimentFileReader(FileReader, ABC):
                 progress_bar.step('Load Extra-P 3 experiment')
                 last_pos = 0
 
-                is_sparse = __Ref(False)
+                is_sparse = ExtrapExperimentFileReader.__Ref(False)
                 while prefix:
                     pos = file.tell()
                     progress_bar.update(pos - last_pos)
