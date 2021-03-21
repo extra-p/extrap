@@ -20,6 +20,7 @@ from extrap.entities.calltree import Node
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
@@ -122,7 +123,7 @@ class MainWidget(QMainWindow):
 
         file_imports = []
         for reader in all_reader.values():
-            if reader is CubeFileReader:
+            if reader is CubeFileReader2:
                 file_imports.append((reader.SHORT_NAME, reader.LONG_NAME, self.open_cube_file))
             else:
                 file_imports.append((reader.SHORT_NAME, reader.LONG_NAME,
