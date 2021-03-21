@@ -363,7 +363,7 @@ class TreeItemFilterProvider:
         for i in range(len(old_tree.child_items)):
             old_node = old_tree.child_items[i]
             new_node = new_tree.child_items[i]
-            if old_node.call_tree_node.path != new_node.call_tree_node.path:
+            if old_node.call_tree_node.name != new_node.call_tree_node.name:
                 diverge = True
                 break
             else:
