@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from PySide2.QtCore import *
 from PySide2.QtWidgets import *
 
-from extrap.gui.ProgressWindow import ProgressWindow
+from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.modelers.aggregation import all_aggregations
 
 if TYPE_CHECKING:

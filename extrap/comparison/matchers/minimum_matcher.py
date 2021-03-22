@@ -1,30 +1,17 @@
-from abc import ABC, abstractmethod
-from typing import Sequence, Tuple, Mapping, MutableMapping, Optional
+from typing import Sequence, Mapping, Tuple
 
-from extrap.comparison.matches import AbstractMatches, IdentityMatches, MutableAbstractMatches
+from extrap.comparison.matchers import AbstractMatcher
+from extrap.comparison.matches import AbstractMatches
+from extrap.comparison.matches import IdentityMatches
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.metric import Metric
 from extrap.modelers.model_generator import ModelGenerator
 
 
-
-
-
-class AbstractMatcher(ABC):
-    @abstractmethod
-    def match_metrics(self, *metric: Sequence[Metric]) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
-        pass
-
-    @abstractmethod
-    def match_call_tree(self, *call_tree: Sequence[CallTree]) -> Tuple[CallTree, MutableAbstractMatches[Node]]:
-        pass
-
-    @abstractmethod
-    def match_modelers(self, *mg: Sequence[ModelGenerator]) -> Mapping[str, Sequence[ModelGenerator]]:
-        pass
-
-
 class MinimumMatcher(AbstractMatcher):
+    NAME = 'Minimum'
+    DESCRIPTION = 'Selects the minimal common values in all comparisons.'
+
     def match_metrics(self, *metric: Sequence[Metric]) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
         metrics = [m for m in metric[0] if m in metric[1]]
         return metrics, IdentityMatches(2, metrics)

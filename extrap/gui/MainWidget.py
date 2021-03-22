@@ -17,7 +17,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
 from extrap.comparison.experiment_comparison import ComparisonExperiment
-from extrap.comparison.matcher import MinimumMatcher
+from extrap.comparison.matchers.minimum_matcher import MinimumMatcher
 from extrap.entities.calltree import Node
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
@@ -35,6 +35,7 @@ from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
+from extrap.gui.comparison.comparison_wizard import ComparisonWizard
 from extrap.gui.components import file_dialog
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
@@ -327,16 +328,18 @@ class MainWidget(QMainWindow):
         dialog.open()
 
     def _compare_experiment(self):
-        def _import_file(file_name):
-            with ProgressWindow(self, 'Comparing Experiment') as pw:
-                experiment2 = read_experiment(file_name, pw)
-                self.set_experiment(ComparisonExperiment(self.getExperiment(), experiment2, matcher=MinimumMatcher()))
-                current = self.windowTitle()
-                self._set_opened_file_name(None)
-                self.setWindowTitle(Path(file_name).name + " <> " + current)
-                self.save_experiment_action.setEnabled(True)
+        cw = ComparisonWizard(self.getExperiment(),self.getExperiment())
+        cw.file_name=''
 
-        self._file_dialog(_import_file, 'Choose Experiment to Compare', filter='*.extra-p')
+        def on_accept():
+            self.set_experiment(cw.experiment)
+            current = self.windowTitle()
+            self._set_opened_file_name(None)
+            self.setWindowTitle(Path(cw.file_name).name + " <> " + current)
+            self.save_experiment_action.setEnabled(True)
+
+        cw.accepted.connect(on_accept)
+        cw.open()
 
     # def hide_callpath_dialog_box(self):
     #     callpathList = list()
@@ -433,7 +436,8 @@ class MainWidget(QMainWindow):
                 self._set_opened_file_name(dir_name)
                 self.model_experiment(dialog.experiment)
 
-        file_dialog.showOpenDirectory(self, _process_cube, 'Select a Directory with a Set of CUBE Files')
+        file_dialog.show(_process_cube,
+                         'Select a Directory with a Set of CUBE Files', "", file_mode=QFileDialog.Directory)
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
