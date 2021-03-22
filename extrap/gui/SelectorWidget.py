@@ -13,11 +13,10 @@ from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 import numpy
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.gui.ParameterValueSlider import ParameterValueSlider
+from extrap.gui.components.ParameterValueSlider import ParameterValueSlider
 from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
 from extrap.modelers.model_generator import ModelGenerator

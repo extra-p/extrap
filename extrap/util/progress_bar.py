@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from numbers import Number
 
 from tqdm import tqdm
 
@@ -18,6 +19,15 @@ class ProgressBar(tqdm):
 
     def step(self, s='', refresh=True):
         super().set_postfix_str(s, refresh)
+
+    def create_target(self, target: Number):
+        self.total += target
+        return self.total
+
+    def reach_target(self, target):
+        if self.n < target:
+            self.update(target - self.n)
+            self.refresh()
 
     def __call__(self, iterable, length=None, scale=1):
         if length:

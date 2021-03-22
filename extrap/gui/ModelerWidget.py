@@ -8,9 +8,9 @@
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gui.ExpanderWidget import ExpanderWidget
+from extrap.gui.components.ExpanderWidget import ExpanderWidget
 from extrap.gui.ModelerOptionsWidget import ModelerOptionsWidget
-from extrap.gui.ProgressWindow import ProgressWindow
+from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler

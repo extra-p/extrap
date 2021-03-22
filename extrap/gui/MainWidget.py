@@ -29,8 +29,9 @@ from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
-from extrap.gui.ProgressWindow import ProgressWindow
+from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
+from extrap.gui.components import file_dialog
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
 
@@ -341,8 +342,7 @@ class MainWidget(QMainWindow):
         file_filter = ';;'.join(
             [f"{str(f, 'utf-8').upper()} image (*.{str(f, 'utf-8')})" for f in QImageWriter.supportedImageFormats() if
              str(f, 'utf-8') not in ['icns', 'cur', 'ico']])
-        dialog = self._file_dialog(_save, "Save Screenshot", initial_path,
-                                   file_filter, accept_mode=QFileDialog.AcceptSave)
+        dialog = file_dialog.showSave(self, _save, "Save Screenshot", initial_path, file_filter)
         dialog.selectNameFilter("PNG image (*.png)")
 
     def model_experiment(self, experiment):
@@ -371,27 +371,7 @@ class MainWidget(QMainWindow):
         if file_name:
             _import_file(file_name)
         else:
-            self._file_dialog(_import_file, title, filter=filter)
-
-    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None,
-                     accept_mode=QFileDialog.AcceptOpen):
-        if file_mode is None:
-            file_mode = QFileDialog.ExistingFile if accept_mode == QFileDialog.AcceptOpen else QFileDialog.AnyFile
-        f_dialog = QFileDialog(self, caption, directory, filter)
-        f_dialog.setAcceptMode(accept_mode)
-        f_dialog.setFileMode(file_mode)
-
-        def _on_accept():
-            file_list = f_dialog.selectedFiles()
-            if file_list:
-                if len(file_list) > 1:
-                    on_accept(file_list)
-                else:
-                    on_accept(file_list[0])
-
-        f_dialog.accepted.connect(_on_accept)
-        f_dialog.open()
-        return f_dialog
+            file_dialog.show(self, _import_file, title, filter=filter, file_mode=file_mode)
 
     def _set_opened_file_name(self, file_name):
         if file_name:
@@ -416,8 +396,7 @@ class MainWidget(QMainWindow):
                 write_experiment(self.getExperiment(), file_name, pw)
                 self._set_opened_file_name(file_name)
 
-        self._file_dialog(_save,
-                          'Save Experiment', filter='Experiments (*.extra-p)', accept_mode=QFileDialog.AcceptSave)
+        file_dialog.showSave(self, _save, 'Save Experiment', filter='Experiments (*.extra-p)')
 
     def open_cube_file(self):
         def _process_cube(dir_name):
@@ -429,8 +408,7 @@ class MainWidget(QMainWindow):
                 self._set_opened_file_name(dir_name)
                 self.model_experiment(dialog.experiment)
 
-        self._file_dialog(_process_cube,
-                          'Select a Directory with a Set of CUBE Files', "", file_mode=QFileDialog.Directory)
+        file_dialog.showOpenDirectory(self, _process_cube, 'Select a Directory with a Set of CUBE Files')
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
