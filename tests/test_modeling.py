@@ -9,7 +9,7 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.metric import Metric
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
@@ -17,7 +17,7 @@ from tests.modelling_testcase import TestCaseWithFunctionAssertions
 class TestModeling(TestCaseWithFunctionAssertions):
 
     def test_default_single_parameter_modeling(self):
-        experiment = read_text_file('data/text/one_parameter_6.txt')
+        experiment = TextFileReader().read_experiment('data/text/one_parameter_6.txt')
 
         # initialize model generator
         model_generator = ModelGenerator(experiment)
@@ -59,7 +59,7 @@ class TestModeling(TestCaseWithFunctionAssertions):
                  "data/text/three_parameter_2.txt",
                  "data/text/three_parameter_3.txt"]
         for f in files:
-            experiment = read_text_file(f)
+            experiment = TextFileReader().read_experiment(f)
 
             # initialize model generator
             model_generator = ModelGenerator(experiment)
@@ -69,7 +69,7 @@ class TestModeling(TestCaseWithFunctionAssertions):
     def test_two_parameter_modeling(self):
         import logging
         logging.basicConfig(level=logging.DEBUG)
-        experiment = read_text_file("data/text/two_parameter_3.txt")
+        experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
 
         # initialize model generator
         model_generator = ModelGenerator(experiment)

@@ -14,7 +14,7 @@ from PySide2.QtCore import QRect, QItemSelectionModel
 from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
 
 from extrap.extrap import extrapgui
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
 from extrap.gui.MainWidget import MainWidget, QCoreApplication
 
@@ -59,7 +59,7 @@ class TestGuiExperimentLoaded(TestGuiCommon):
     def setUp(self) -> None:
         super().setUp()
 
-        exp = read_text_file('data/text/one_parameter_6.txt')
+        exp = TextFileReader().read_experiment('data/text/one_parameter_6.txt')
         self.window.model_experiment(exp)
 
     def test_graph_model_multiple_selected(self):
@@ -141,7 +141,7 @@ class TestGuiLoadExperiment(unittest.TestCase):
         _old_exception_handler = sys.excepthook
         try:
             window, app = extrapgui.main(test=True, args=[])
-            exp = read_text_file('data/text/one_parameter_1.txt')
+            exp = TextFileReader().read_experiment('data/text/one_parameter_1.txt')
             self.assertIsNone(window.getExperiment())
 
             window.model_experiment(exp)
