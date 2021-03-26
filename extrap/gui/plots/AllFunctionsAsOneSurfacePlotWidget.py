@@ -22,7 +22,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         """
 
         # Get data
-        model_list, selected_callpaths = self.get_selected_models()
+        model_list, selected_callpaths = self.main_widget.get_selected_models()
         if model_list is None:
             return
 
@@ -32,7 +32,8 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # colors = ['r','g','b','c','m','y']
         # colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
@@ -59,7 +60,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         ax_all.set_xlabel('\n' + x_label)
         ax_all.set_ylabel('\n' + y_label, linespacing=3.1)
         ax_all.set_zlabel(
-            '\n' + self.main_widget.getSelectedMetric().name, linespacing=3.1)
+            '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
         for i in range(len(Z_List)):
             ax_all.plot_surface(
                 X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])

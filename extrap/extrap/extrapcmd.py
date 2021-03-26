@@ -13,13 +13,10 @@ from itertools import chain
 
 import extrap
 from extrap.fileio import experiment_io
-from extrap.fileio.cube_file_reader2 import read_cube_file
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
+from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.io_helper import format_output
 from extrap.fileio.io_helper import save_output
-from extrap.fileio.json_file_reader import read_json_file
-from extrap.fileio.talpas_file_reader import read_talpas_file
-from extrap.fileio.text_file_reader import read_text_file
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
@@ -32,8 +29,8 @@ from extrap.util.progress_bar import ProgressBar
 
 def main(args=None, prog=None):
     # argparse
-    modelers_list = list(set(
-        chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
+    modelers_list = list(set(k.lower() for k in
+                             chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
     parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False)
     positional_arguments = parser.add_argument_group("Positional arguments")
     basic_arguments = parser.add_argument_group("Optional arguments")
@@ -42,34 +39,29 @@ def main(args=None, prog=None):
 
     basic_arguments.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__,
                                  help="Show program's version number and exit")
-    basic_arguments.add_argument("--log", action="store", dest="log_level", type=str.upper, default='WARNING',
-                                 choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                                 help="Set program's log level (default: WARNING)")
+    basic_arguments.add_argument("--log", action="store", dest="log_level", type=str.lower, default='warning',
+                                 choices=['debug', 'info', 'warning', 'error', 'critical'],
+                                 help="Set program's log level (default: warning)")
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
-    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="Load data from CUBE files")
-    group.add_argument("--text", action="store_true", default=False, dest="text", help="Load data from text files")
-    group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
-                       help="Load data from Talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json",
-                       help="Load data from JSON or JSON Lines file")
-    group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
-                       help="Load data from Extra-P 3 experiment")
-    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak",
+    for reader in all_reader.values():
+        group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
+                           help=reader.DESCRIPTION)
+    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
                                choices=["weak", "strong"],
                                help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
 
     modeling_options = parser.add_argument_group("Modeling options")
     modeling_options.add_argument("--median", action="store_true", dest="median",
                                   help="Use median values for computation instead of mean values")
-    modeling_options.add_argument("--modeler", action="store", dest="modeler", default='Default',
+    modeling_options.add_argument("--modeler", action="store", dest="modeler", default='default', type=str.lower,
                                   choices=modelers_list,
                                   help="Selects the modeler for generating the performance models")
     modeling_options.add_argument("--options", dest="modeler_options", default={}, nargs='+', metavar="KEY=VALUE",
                                   action=ModelerOptionsAction,
                                   help="Options for the selected modeler")
-    modeling_options.add_argument("--help-modeler", choices=modelers_list,
+    modeling_options.add_argument("--help-modeler", choices=modelers_list, type=str.lower,
                                   help="Show help for modeler options and exit",
                                   action=ModelerHelpAction)
 
@@ -89,7 +81,7 @@ def main(args=None, prog=None):
     arguments = parser.parse_args(args)
 
     # set log level
-    loglevel = logging.getLevelName(arguments.log_level)
+    loglevel = logging.getLevelName(arguments.log_level.upper())
     # set output print type
     printtype = arguments.print_type.upper()
 
@@ -126,32 +118,20 @@ def main(args=None, prog=None):
 
     if arguments.path is not None:
         with ProgressBar(desc='Loading file') as pbar:
-            if arguments.cube:
-                # load data from cube files
-                if os.path.isdir(arguments.path):
-                    experiment = read_cube_file(arguments.path, scaling_type)
-                else:
-                    logging.error("The given path is not valid. It must point to a directory.")
-                    sys.exit(1)
-            elif os.path.isfile(arguments.path):
-                if arguments.text:
-                    # load data from text files
-                    experiment = read_text_file(arguments.path, pbar)
-                elif arguments.talpas:
-                    # load data from talpas format
-                    experiment = read_talpas_file(arguments.path, pbar)
-                elif arguments.json:
-                    # load data from json file
-                    experiment = read_json_file(arguments.path, pbar)
-                elif arguments.extrap3:
-                    # load data from Extra-P 3 file
-                    experiment = read_extrap3_experiment(arguments.path, pbar)
-                else:
-                    logging.error("The file format specifier is missing.")
-                    sys.exit(1)
-            else:
-                logging.error("The given file path is not valid.")
-                sys.exit(1)
+            for reader in all_reader.values():
+                if getattr(arguments, reader.NAME):
+                    file_reader = reader()
+                    if reader is CubeFileReader2:
+                        if os.path.isdir(arguments.path):
+                            file_reader.scaling_type = arguments.scaling_type
+                        else:
+                            logging.error("The given path is not valid. It must point to a directory.")
+                            sys.exit(1)
+                    elif os.path.isfile(arguments.path):
+                        experiment = file_reader.read_experiment(arguments.path, pbar)
+                    else:
+                        logging.error("The given file path is not valid.")
+                        sys.exit(1)
 
         experiment.debug()
 

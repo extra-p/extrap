@@ -115,9 +115,9 @@ class GraphWidget(QWidget):
         self.BACKGROUND_COLOR = QColor("white")
         self.TEXT_COLOR = QColor("black")
         self.AXES_COLOR = QColor("black")
-        self.AGGREGATE_MODEL_COLOR = QColor(self.main_widget.graph_color_list[0])
-        self.DATA_POINT_COLOR = QColor(self.main_widget.graph_color_list[0]).darker(200)
-        self.DATA_RANGE_COLOR = QColor(self.main_widget.graph_color_list[0]).darker(150)
+        self.AGGREGATE_MODEL_COLOR = QColor(self.main_widget.model_color_map.default_color)
+        self.DATA_POINT_COLOR = QColor(self.main_widget.model_color_map.default_color).darker(200)
+        self.DATA_RANGE_COLOR = QColor(self.main_widget.model_color_map.default_color).darker(150)
 
         self.minimum_number_points_marked = 2
         self.aggregate_callpath = False
@@ -132,7 +132,7 @@ class GraphWidget(QWidget):
 
     @property
     def combine_all_callpath(self):
-        return self.aggregate_callpath and len(self.main_widget.getSelectedCallpath()) > 1
+        return self.aggregate_callpath and len(self.main_widget.get_selected_call_tree_nodes()) > 1
 
     @Slot(QPoint)
     def showContextMenu(self, point):
@@ -140,13 +140,13 @@ class GraphWidget(QWidget):
           This function takes care of different options and their visibility in the context menu.
         """
 
-        # selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
+        # selected_metric = self.main_widget.get_selected_metric()
+        selected_callpaths = self.main_widget.get_selected_call_tree_nodes()
 
         if not selected_callpaths:
             return
 
-        menu = QMenu()
+        menu = QMenu(self)
         points_group = QActionGroup(self)
         points_group.setEnabled(not self.combine_all_callpath)
 
@@ -227,8 +227,8 @@ class GraphWidget(QWidget):
 
     @Slot()
     def screenshot(self):
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        selected_metric = self.main_widget.getSelectedMetric()
+        selected_callpaths = self.main_widget.get_selected_call_tree_nodes()
+        selected_metric = self.main_widget.get_selected_metric()
 
         name_addition = "-"
         if selected_metric:
@@ -244,43 +244,24 @@ class GraphWidget(QWidget):
           This function allows to export the currently shown points and functions in a text format
         """
 
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-
-        if not selected_callpaths:
-            return
-
-        # model_list = list()
-
         text = ''
-
-        model_set = self.main_widget.getCurrentModel()
-        if model_set is None:
-            return
-        model_set_models = model_set.models
-        if not model_set_models:
+        models, _ = self.main_widget.get_selected_models()
+        if models is None:
             return
 
-        for selected_callpath in selected_callpaths:
-            model = model_set_models[selected_callpath.path, selected_metric]
-            if model is None:
-                return
-            model_function = model.hypothesis.function
-            data_points = [p for (_, p) in self.calculateDataPoints(
-                selected_metric, selected_callpath, True)]
-            callpath_name = selected_callpath.name
-
-            parameters = self.main_widget.experiment.parameters
+        for model in models:
+            callpath_name = model.callpath.name
+            data_points = [p for (_, p) in self.calculateDataPoints(model, True)]
+            parameters = self.main_widget.getExperiment().parameters
             model_function_text = 'Model: ' + \
                                   formatFormula(
-                                      model_function.to_string(*parameters))
+                                      model.hypothesis.function.to_string(*parameters))
 
             data_points_text = '\n'.join(
                 ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)
-            text += callpath_name + '\n' + data_points_text + \
-                    '\n' + model_function_text + '\n\n'
+            text += callpath_name + '\n' + data_points_text + '\n' + model_function_text + '\n\n'
 
-        msg = QMessageBox()
+        msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Information)
         msg.setText(
             "Exported data (text can be copied to the clipboard using the context menu):")
@@ -296,22 +277,9 @@ class GraphWidget(QWidget):
         """
 
         # Get data
-        model_set = self.main_widget.getCurrentModel()
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        if not selected_callpaths or model_set is None:
+        model_list, selected_call_nodes = self.main_widget.get_selected_models()
+        if not model_list:
             return
-
-        model_set_models = model_set.models
-        if not model_set_models:
-            return
-
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            key = (selected_callpath.path, selected_metric)
-            if key in model_set_models:
-                model = model_set_models[key]
-                model_list.append(model)
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
@@ -320,47 +288,44 @@ class GraphWidget(QWidget):
         self.max_y = y
 
         # Draw coordinate system
-        self.drawAxis(paint, selected_metric)
+        self.drawAxis(paint, self.main_widget.get_selected_metric())
 
-        # Draw functions
+        # Draw functionss
         index_indicator = 0
         if not self.combine_all_callpath:
-            for model in model_list:
-                color = self.main_widget.getColorForCallPath(
-                    selected_callpaths[index_indicator])
+            for model, call_node in zip(model_list, selected_call_nodes):
+                color = self.main_widget.model_color_map[call_node]
                 self.drawModel(paint, model, color)
-                index_indicator = index_indicator + 1
         else:
-            color = self.main_widget.getColorForCallPath(selected_callpaths[0])
+            # main_widget = self.main_widget
+            # color = main_widget.model_color_map[selected_call_nodes[0]]
             self.drawAggregratedModel(paint, model_list)
 
         # Draw data points
-        self.drawDataPoints(paint, selected_metric, selected_callpaths)
+        self.drawDataPoints(paint, model_list)
 
         # Draw legend
         self.drawLegend(paint)
 
-    def drawDataPoints(self, paint, selectedMetric, selectedCallpaths):
+    def drawDataPoints(self, paint, selected_models):
         if self.show_datapoints is True:
             pen = QPen(self.DATA_POINT_COLOR)
             pen.setWidth(4)
             paint.setPen(pen)
             # data_points_list = list()
-            for selected_callpath in selectedCallpaths:
+            for selected_model in selected_models:
                 if self.datapoints_type == "outlier":
-                    self.showOutlierPoints(
-                        paint, selectedMetric, selected_callpath)
+                    self.showOutlierPoints(paint, selected_model)
 
                 else:
-                    data_points = self.calculateDataPoints(
-                        selectedMetric, selected_callpath)
-                    self.plotPointsOnGraph(
-                        paint, data_points)
+                    data_points = self.calculateDataPoints(selected_model)
+                    self.plotPointsOnGraph(paint, data_points)
 
     def drawLegend(self, paint):
         # drawing the graph legend
         px_between = 15
-        callpath_color_dict = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        callpath_color_dict = widget.model_color_map
         dict_size = len(callpath_color_dict)
         font_size = int(self.main_widget.getFontSize())
         paint.setFont(QFont('Decorative', font_size))
@@ -608,7 +573,7 @@ class GraphWidget(QWidget):
     def _calculate_evaluation_points(self, length_x_axis):
         number_of_x_points = int(length_x_axis / 2)
         x_values = numpy.linspace(0, self.max_x, number_of_x_points)
-        x_list = numpy.ndarray((len(self.main_widget.experiment.parameters), number_of_x_points))
+        x_list = numpy.ndarray((len(self.main_widget.getExperiment().parameters), number_of_x_points))
         param = self.main_widget.data_display.getAxisParameter(0).id
         parameter_value_list = self.main_widget.data_display.getValues()
         for i, val in parameter_value_list.items():
@@ -676,11 +641,11 @@ class GraphWidget(QWidget):
         first_part = round(first_part, 2)
         return '{:g}'.format(float(first_part)) + "e" + ''.join(splitted_value[1])
 
-    def calculateDataPoints(self, selectedMetric, selectedCallpath, ignore_limit=False):
+    def calculateDataPoints(self, model, ignore_limit=False):
         """ This function calculates datapoints to be marked on the graph
         """
 
-        datapoints = self.main_widget.getCurrentModel().models[(selectedCallpath.path, selectedMetric)].measurements
+        datapoints = model.measurements
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         datapoint_x_absolute_pos_list = list()
         datapoint_y_absolute_pos_list = list()
@@ -783,9 +748,8 @@ class GraphWidget(QWidget):
 
         return y_max
 
-    def showOutlierPoints(self, paint, selectedMetric, selectedCallpath):
-        model_set = self.main_widget.getCurrentModel()
-        datapoints = model_set.models[(selectedCallpath.path, selectedMetric)].measurements
+    def showOutlierPoints(self, paint, selected_model):
+        datapoints = selected_model.measurements
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         for datapoint in datapoints:
             x_value = datapoint.coordinate[parameter_datapoint]

@@ -1,37 +1,22 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import inspect
-import pkgutil
 from typing import Mapping, Type, MutableMapping
 
 from marshmallow import fields, validate
 
+from extrap.util.extension_loader import load_extensions
 from extrap.util.serialization_schema import NumberField
 from .abstract_modeler import AbstractModeler, ModelerSchema
 from .modeler_options import ModelerOption, modeler_options
 
 
 def load_modelers(path, pkg_name) -> MutableMapping[str, Type[AbstractModeler]]:
-    def is_modeler(x):
-        return inspect.isclass(x) \
-               and issubclass(x, AbstractModeler) \
-               and not inspect.isabstract(x)
-
-    modelers = {}
-    for importer, modname, is_pkg in pkgutil.walk_packages(path=path,
-                                                           prefix=pkg_name + '.',
-                                                           onerror=lambda x: None):
-        module = importer.find_module(modname).load_module(modname)
-        for name, clazz in inspect.getmembers(module, is_modeler):
-            name = clazz.NAME
-            modelers[name] = clazz
-            create_schema(clazz)
-    return modelers
+    return load_extensions(path, pkg_name, AbstractModeler, create_schema)
 
 
 def _determine_field(option: ModelerOption):

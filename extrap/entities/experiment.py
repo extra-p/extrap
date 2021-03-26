@@ -22,7 +22,7 @@ from extrap.fileio import io_helper
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from extrap.util.deprecation import deprecated
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from extrap.util.serialization_schema import Schema, TupleKeyDict
+from extrap.util.serialization_schema import TupleKeyDict, BaseSchema
 from extrap.util.unique_list import UniqueList
 
 
@@ -104,7 +104,7 @@ class Experiment:
                 f"Measurement {i}: {metric}, {callpath}, {coordinate}: {value_mean} (mean), {value_median} (median)")
 
 
-class ExperimentSchema(Schema):
+class ExperimentSchema(BaseSchema):
     _version_ = fields.Constant(extrap.__version__, data_key=extrap.__title__)
     scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf(['strong', 'weak']))
     parameters = fields.List(fields.Nested(ParameterSchema))
@@ -155,6 +155,7 @@ class ExperimentSchema(Schema):
 
         obj.call_tree = io_helper.create_call_tree(obj.callpaths)
         for modeler in obj.modelers:
+            modeler.experiment = obj
             for key, model in modeler.models.items():
                 model.measurements = obj.measurements[key]
             pbar.update()

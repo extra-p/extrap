@@ -46,11 +46,15 @@ To simplify the example, we repeated the measurements only three-times.
 | 32 |        186.78 |        184.68 |        181.58 |
 | 64 |        528.86 |        522.44 |        531.78 |
 
-The measurement results must be converted before Extra-P can use them.
-In this example we use the [text file format](file-formats.md#text-file-format). 
-Other possible formats can be found in the [file formats documentation](file-formats.md).
-The text file format consists of 5 sections. We will create them in the following.
-First, we create the parameter section:
+> ###### Hint
+> The selection and scaling of parameters can affect the modeling outcome.
+> For example, if your parameter is the edge length of a qudratic matrix,
+> it can be insightful to model the number of entries in the matrix instead.
+
+The measurement results must be converted before Extra-P can use them. In this example we use
+the [text file format](file-formats.md#text-file-format). Other possible formats can be found in
+the [file formats documentation](file-formats.md). The text file format consists of 5 sections. We will create them in
+the following. First, we create the parameter section:
 
 ```
 PARAMETER p

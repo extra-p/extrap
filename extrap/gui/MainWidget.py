@@ -9,27 +9,29 @@ import signal
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence, Tuple
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
+from extrap.entities.calltree import Node
+from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
-from extrap.fileio.json_file_reader import read_json_file
 from extrap.fileio.nv_reader import read_nv_file
-from extrap.fileio.talpas_file_reader import read_talpas_file
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
-from extrap.gui.ProgressWindow import ProgressWindow
+from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
+from extrap.gui.components import file_dialog
+from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
 
 
@@ -47,15 +49,11 @@ class MainWidget(QMainWindow):
         Initializes the extrap application widget.
         """
         super(MainWidget, self).__init__(*args, **kwargs)
-        self.max_value = 1
-        self.min_value = 1
+        self.max_value = 0
+        self.min_value = 0
         self.old_x_pos = 0
-        self.experiment = None
-        self.graph_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
-                                 '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
-                                 '#bcbd22', '#17becf']
-        # ['#8B0000', '#00008B', '#006400', '#2F4F4F', '#8B4513', '#556B2F',
-        #  '#808000', '#008080', '#FF00FF', '#800000', '#FF0000', '#000080', '#008000', '#00FFFF', '#800080']
+        self._experiment = None
+        self.model_color_map = ModelColorMap()
         self.font_size = 6
         self.experiment_change = True
         self.initUI()
@@ -99,7 +97,6 @@ class MainWidget(QMainWindow):
         # bottom widget
         dock = QDockWidget("Color Info", self)
         self.color_widget = ColorWidget()
-        self.color_widget.update_min_max(self.min_value, self.max_value)
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
@@ -126,25 +123,34 @@ class MainWidget(QMainWindow):
         exit_action.setStatusTip('Exit application')
         exit_action.triggered.connect(self.close)
 
-        file_imports = [
-            ('Open set of &CUBE files', 'Open a set of CUBE files and generate data points '
-                                        'for a new experiment from them', self.open_cube_file),
-            ('Open &text input', 'Open text input file',
-             self._make_import_func('Open a Text Input File', read_text_file,
-                                    filter="Text Files (*.txt);;All Files (*)")),
-            ('Open &JSON input', 'Open JSON or JSON Lines input file',
-             self._make_import_func('Open a JSONor JSON Lines Input File', read_json_file,
-                                    filter="JSON Files (*.json), JSON Lines (*.jsonl);;All Files (*)")),
-            ('Open Tal&pas input', 'Open Talpas input file',
-             self._make_import_func('Open a Talpas Input File', read_talpas_file,
-                                    filter="Talpas Files (*.txt);;All Files (*)")),
-            ('Open Extra-P &3 experiment', 'Opens legacy experiment file',
-             self._make_import_func('Open an Extra-P 3 Experiment', read_extrap3_experiment, model=False)),
-            ('Open set of &Nsight files', 'Open a set of Nsight files and generate data points '
+        file_imports = []
+        for reader in all_reader.values():
+            if reader is CubeFileReader2:
+                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
+            else:
+                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION,
+                                     self._make_import_func(reader.DESCRIPTION, reader().read_experiment,
+                                                            filter=reader.FILTER, model=reader.GENERATE_MODELS_AFTER_LOAD)))
+        file_imports.append(('Open set of &Nsight files', 'Open a set of Nsight files and generate data points '
                                           'for a new experiment from them',
              self._make_import_func('Select a Directory with a Set of Nsight Files', read_nv_file,
-                                    file_mode=QFileDialog.Directory))
-        ]
+                                    file_mode=QFileDialog.Directory)))
+        #
+        # file_imports = [
+        #     ('Open set of &CUBE files', 'Open a set of CUBE files for single-parameter models and generate data points '
+        #                                 'for a new experiment from them', self.open_cube_file),
+        #     ('Open &text input', 'Open text input file',
+        #      self._make_import_func('Open a Text Input File', read_text_file,
+        #                             filter="Text Files (*.txt);;All Files (*)")),
+        #     ('Open &JSON input', 'Open JSON or JSON Lines input file',
+        #      self._make_import_func('Open a JSON or JSON Lines Input File', read_json_file,
+        #                             filter="JSON (Lines) Files (*.json *.jsonl);;All Files (*)")),
+        #     ('Open Tal&pas input', 'Open Talpas input file',
+        #      self._make_import_func('Open a Talpas Input File', read_talpas_file,
+        #                             filter="Talpas Files (*.txt);;All Files (*)")),
+        #     ('Open Extra-P &3 experiment', 'Opens legacy experiment file',
+        #      self._make_import_func('Open an Extra-P 3 Experiment', read_extrap3_experiment, model=False))
+        # ]
 
         open_experiment_action = QAction('&Open experiment', self)
         open_experiment_action.setStatusTip('Opens experiment file')
@@ -249,27 +255,17 @@ class MainWidget(QMainWindow):
         self.experiment_change = False
         self.show()
 
-    def setExperiment(self, experiment):
+    def set_experiment(self, experiment):
         self.experiment_change = True
-        self.experiment = experiment
-        self.selector_widget.updateModelList()
-        self.selector_widget.fillMetricList()
-        self.selector_widget.createParameterSliders()
-        self.selector_widget.fillCalltree()
-
-        self.selector_widget.tree_model.valuesChanged()
+        self._experiment = experiment
+        self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
         self.experiment_change = False
         self.updateMinMaxValue()
         self.update()
 
-    def updateAllWidget(self):
-        if not self.experiment_change:
-            self.data_display.updateWidget()
-            self.update()
-
-    def metricIndexChanged(self):
+    def on_selection_changed(self):
         if not self.experiment_change:
             self.data_display.updateWidget()
             self.update()
@@ -293,16 +289,19 @@ class MainWidget(QMainWindow):
             event.ignore()
 
     def getExperiment(self):
-        return self.experiment
+        return self._experiment
 
-    def getSelectedMetric(self):
+    def get_selected_metric(self):
         return self.selector_widget.getSelectedMetric()
 
-    def getSelectedCallpath(self):
-        return self.selector_widget.getSelectedCallpath()
+    def get_selected_call_tree_nodes(self) -> Sequence[Node]:
+        return self.selector_widget.get_selected_call_tree_nodes()
 
-    def getCurrentModel(self) -> Optional[ModelGenerator]:
+    def get_current_model_gen(self) -> Optional[ModelGenerator]:
         return self.selector_widget.getCurrentModel()
+
+    def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Node]]]:
+        return self.selector_widget.get_selected_models()
 
     def open_font_dialog_box(self):
         fontSizeItems = list()
@@ -350,8 +349,7 @@ class MainWidget(QMainWindow):
         file_filter = ';;'.join(
             [f"{str(f, 'utf-8').upper()} image (*.{str(f, 'utf-8')})" for f in QImageWriter.supportedImageFormats() if
              str(f, 'utf-8') not in ['icns', 'cur', 'ico']])
-        dialog = self._file_dialog(_save, "Save Screenshot", initial_path,
-                                   file_filter, accept_mode=QFileDialog.AcceptSave)
+        dialog = file_dialog.showSave(self, _save, "Save Screenshot", initial_path, file_filter)
         dialog.selectNameFilter("PNG image (*.png)")
 
     def model_experiment(self, experiment):
@@ -360,7 +358,7 @@ class MainWidget(QMainWindow):
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)
-        self.setExperiment(experiment)
+        self.set_experiment(experiment)
 
     def _make_import_func(self, title, reader_func, **kwargs):
         return partial(self.import_file, reader_func, title, **kwargs)
@@ -375,32 +373,12 @@ class MainWidget(QMainWindow):
                 if model:
                     self.model_experiment(experiment)
                 else:
-                    self.setExperiment(experiment)
+                    self.set_experiment(experiment)
 
         if file_name:
             _import_file(file_name)
         else:
-            self._file_dialog(_import_file, title, filter=filter, file_mode=file_mode)
-
-    def _file_dialog(self, on_accept, caption='', directory='', filter='', file_mode=None,
-                     accept_mode=QFileDialog.AcceptOpen):
-        if file_mode is None:
-            file_mode = QFileDialog.ExistingFile if accept_mode == QFileDialog.AcceptOpen else QFileDialog.AnyFile
-        f_dialog = QFileDialog(self, caption, directory, filter)
-        f_dialog.setAcceptMode(accept_mode)
-        f_dialog.setFileMode(file_mode)
-
-        def _on_accept():
-            file_list = f_dialog.selectedFiles()
-            if file_list:
-                if len(file_list) > 1:
-                    on_accept(file_list)
-                else:
-                    on_accept(file_list[0])
-
-        f_dialog.accepted.connect(_on_accept)
-        f_dialog.open()
-        return f_dialog
+            file_dialog.show(self, _import_file, title, filter=filter, file_mode=file_mode)
 
     def _set_opened_file_name(self, file_name):
         if file_name:
@@ -425,8 +403,7 @@ class MainWidget(QMainWindow):
                 write_experiment(self.getExperiment(), file_name, pw)
                 self._set_opened_file_name(file_name)
 
-        self._file_dialog(_save,
-                          'Save Experiment', filter='Experiments (*.extra-p)', accept_mode=QFileDialog.AcceptSave)
+        file_dialog.showSave(self, _save, 'Save Experiment', filter='Experiments (*.extra-p)')
 
     def open_cube_file(self):
         def _process_cube(dir_name):
@@ -438,34 +415,11 @@ class MainWidget(QMainWindow):
                 self._set_opened_file_name(dir_name)
                 self.model_experiment(dialog.experiment)
 
-        self._file_dialog(_process_cube,
-                          'Select a Directory with a Set of CUBE Files', "", file_mode=QFileDialog.Directory)
+        file_dialog.showOpenDirectory(self, _process_cube, 'Select a Directory with a Set of CUBE Files')
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
-            updated_value_list = self.selector_widget.getMinMaxValue()
-            # don't allow values < 0
-            updated_max_value = max(0.0, max(updated_value_list))
-            updated_min_value = max(0.0, min(updated_value_list))
-            self.min_value = updated_min_value
-            self.max_value = updated_max_value
-            self.color_widget.update_min_max(self.min_value, self.max_value)
-
-    def populateCallPathColorMap(self, callpaths):
-        callpaths = list(set(callpaths))
-        current_index = 0
-        size_of_color_list = len(self.graph_color_list)
-        self.dict_callpath_color = {}
-        for callpath in callpaths:
-            if current_index < size_of_color_list:
-                self.dict_callpath_color[callpath] = self.graph_color_list[current_index]
-            else:
-                offset = (current_index - size_of_color_list) % size_of_color_list
-                multiple = int(current_index / size_of_color_list)
-                color = self.graph_color_list[offset]
-                newcolor = color[:-1] + str(multiple)
-                self.dict_callpath_color[callpath] = newcolor
-            current_index = current_index + 1
+            self.color_widget.update_min_max(*self.selector_widget.update_min_max_value())
 
     def show_about_dialog(self):
         QMessageBox.about(self, "About " + extrap.__title__,
@@ -473,14 +427,7 @@ class MainWidget(QMainWindow):
 <p>Version {extrap.__version__}</p>
 <p>{extrap.__description__}</p>
 <p>{extrap.__copyright__}</p>
-"""
-                          )
-
-    def getColorForCallPath(self, callpath):
-        return self.dict_callpath_color[callpath]
-
-    def get_callpath_color_map(self):
-        return self.dict_callpath_color
+""")
 
     activate_event_handlers = []
 

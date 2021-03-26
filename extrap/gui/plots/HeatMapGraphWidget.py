@@ -38,7 +38,7 @@ class HeatMapGraph(BaseContourGraph):
           This function draws the graph
         """
         # Get data
-        model_list, selected_callpaths = self.get_selected_models()
+        model_list, selected_callpaths = self.main_widget.get_selected_models()
         if model_list is None:
             return
 
@@ -48,7 +48,8 @@ class HeatMapGraph(BaseContourGraph):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # for each x,y value , calculate max z for all function and
         # get the associated model functions for which z is highest.

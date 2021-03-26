@@ -164,9 +164,6 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
             current_index = current_index + 1
         return dict_callpath_color
 
-    def getColorForCallPath(self, callpath):
-        return self.dict_callpath_color[callpath]
-
     @staticmethod
     def getColorMap():
         colors = [(0, 0, 1), (0, 1, 0), (1, 0, 0)]

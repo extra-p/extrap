@@ -9,14 +9,14 @@ import tempfile
 import unittest
 
 from extrap.fileio.experiment_io import write_experiment, read_experiment
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
 
 
 class TestMultiParameterAfterModeling(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.experiment = read_text_file("data/text/two_parameter_3.txt")
+        cls.experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
         ModelGenerator(cls.experiment).model_all()
         with tempfile.TemporaryFile() as tmp:
             write_experiment(cls.experiment, tmp)
