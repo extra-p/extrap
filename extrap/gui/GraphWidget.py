@@ -315,8 +315,10 @@ class GraphWidget(QWidget):
             # data_points_list = list()
             for selected_model in selected_models:
                 if self.datapoints_type == "outlier":
-                    self.showOutlierPoints(paint, selected_model)
-
+                    try:
+                        self.showOutlierPoints(paint, selected_model)
+                    except OverflowError:
+                        pass
                 else:
                     data_points = self.calculateDataPoints(selected_model)
                     self.plotPointsOnGraph(paint, data_points)

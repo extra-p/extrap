@@ -116,6 +116,10 @@ class CubeFileReader(QDialog):
 
         layout.addRow("Scaling type:", self.scaling_choice)
 
+        self._demangle_cb = QCheckBox("Demangle function names",self)
+        self._demangle_cb.setChecked(True)
+        layout.addRow(self._demangle_cb)
+
         self.progress_indicator = QProgressBar(self)
         self.progress_indicator.hide()
         layout.addRow(self.progress_indicator)
@@ -233,7 +237,9 @@ class CubeFileReader(QDialog):
 
             # read the cube files
             try:
-                self.experiment = CubeFileReader2().read_cube_file(self.dir_name, self.scaling_type, pbar)
+                file_reader = CubeFileReader2()
+                file_reader.demangle_names = self._demangle_cb.isChecked()
+                self.experiment = file_reader.read_cube_file(self.dir_name, self.scaling_type, pbar)
             except Exception as err:
                 self.close()
                 raise err

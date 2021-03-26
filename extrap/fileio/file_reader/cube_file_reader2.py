@@ -34,10 +34,11 @@ class CubeFileReader2(FileReader):
     GUI_ACTION = "Open set of &CUBE files"
     DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
     CMD_ARGUMENT = "--cube"
-    LOADS_FROM_DIRECTORY=True
+    LOADS_FROM_DIRECTORY = True
 
     scaling_type = "weak"
     selected_metrics = None
+    demangle_names = True
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
@@ -216,15 +217,28 @@ class CubeFileReader2(FileReader):
     def make_callpath_mapping(self, cnodes):
         callpaths = {}
 
+        def demangle_name(name):
+            if self.demangle_names:
+                from itanium_demangler import parse as demangle
+                try:
+                    demangled = demangle(name)
+                    if demangled:
+                        name = str(demangled)
+                except NotImplementedError as e:
+                    pass
+            return name
+
         def walk_tree(parent_cnode, parent_name):
             for cnode in parent_cnode.get_children():
                 name = cnode.region.name
+                name = demangle_name(name)
                 path_name = '->'.join((parent_name, name))
                 callpaths[cnode.id] = Callpath(path_name)
                 walk_tree(cnode, path_name)
 
         for root_cnode in cnodes:
             name = root_cnode.region.name
+            name = demangle_name(name)
             callpath = Callpath(name)
             callpaths[root_cnode.id] = callpath
             walk_tree(root_cnode, name)
