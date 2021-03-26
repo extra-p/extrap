@@ -121,9 +121,11 @@ def main(args=None, prog=None):
             for reader in all_reader.values():
                 if getattr(arguments, reader.NAME):
                     file_reader = reader()
-                    if reader is CubeFileReader2:
+                    if reader.LOADS_FROM_DIRECTORY:
                         if os.path.isdir(arguments.path):
-                            file_reader.scaling_type = arguments.scaling_type
+                            if reader is CubeFileReader2:
+                                file_reader.scaling_type = arguments.scaling_type
+                            experiment = file_reader.read_experiment(arguments.path, pbar)
                         else:
                             logging.error("The given path is not valid. It must point to a directory.")
                             sys.exit(1)

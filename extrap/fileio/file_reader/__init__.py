@@ -7,7 +7,7 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union
 
 from extrap.entities.experiment import Experiment
 from extrap.util.classproperty import classproperty
@@ -48,7 +48,7 @@ class FileReader(ABC):
         raise NotImplementedError()
 
     @classproperty
-    def DESCRIPTION(cls) -> Optional[str]:  # noqa
+    def DESCRIPTION(cls) -> str:  # noqa
         """ This attribute is the short description of the FileReader.
 
         It will be shown in Tooltips and the help message. You should override this only in concrete
@@ -57,7 +57,7 @@ class FileReader(ABC):
         return ""
 
     @classproperty
-    def FILTER(cls) -> Optional[str]:  # noqa
+    def FILTER(cls) -> str:  # noqa
         """ This attribute is the filter for the files of the FileReader.
 
         It will be used to determine the files that are associated with this Reader. You should override this only in
@@ -66,8 +66,12 @@ class FileReader(ABC):
         return ""
 
     @classproperty
-    def GENERATE_MODELS_AFTER_LOAD(cls) -> Optional[bool]:  # noqa
+    def GENERATE_MODELS_AFTER_LOAD(cls) -> bool:  # noqa
         return True
+
+    @classproperty
+    def LOADS_FROM_DIRECTORY(cls) -> bool:  # noqa
+        return False
 
     @abstractmethod
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:

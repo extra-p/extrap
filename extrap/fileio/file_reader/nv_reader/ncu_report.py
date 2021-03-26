@@ -9,9 +9,9 @@ import os
 from collections import defaultdict
 from itertools import islice
 
-from extrap.fileio.nv_reader.binary_parser.nsight_cuprof_report import NsightCuprofReport
-from extrap.fileio.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult
-from extrap.fileio.nv_reader.pb_parser.ProfilerResults_pb2 import MetricValueMessage
+from extrap.fileio.file_reader.nv_reader.binary_parser.nsight_cuprof_report import NsightCuprofReport
+from extrap.fileio.file_reader.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult
+from extrap.fileio.file_reader.nv_reader.pb_parser.ProfilerResults_pb2 import MetricValueMessage
 
 
 class NcuReport:
