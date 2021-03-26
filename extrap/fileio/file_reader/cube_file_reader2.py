@@ -31,6 +31,7 @@ class CubeFileReader2(AbstractDirectoryReader):
     GUI_ACTION = "Open set of &CUBE files"
     DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
     CMD_ARGUMENT = "--cube"
+    LOADS_FROM_DIRECTORY=True
 
     scaling_type = "weak"
     selected_metrics = None

@@ -30,6 +30,11 @@ class TestConsole(unittest.TestCase):
         self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--text', 'data/text/does_not_exist.txt'])
         self.assertRaises(Exception, extrap.main, ['--text', 'data/talpas/talpas_1.txt'])
 
+    def test_cube(self):
+        extrap.main(['--cube', 'data/cubeset/single_parameter/'])
+        self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--cube', 'data/cubeset/does_not_exist'])
+        self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--cube', 'data/text/one_parameter_1.txt'])
+
     def test_modeler(self):
         extrap.main(['--modeler', 'Default', '--text', 'data/text/one_parameter_1.txt'])
         self.assertRaisesRegex(SystemExit, '[^0]', extrap.main,
