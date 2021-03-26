@@ -1,19 +1,24 @@
 from asyncio import Event
+from functools import partial
 from itertools import chain
-from typing import Optional
+from typing import Optional, Type
 
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QWizard, QCommandLinkButton, QSpacerItem, QSizePolicy
+from PySide2.QtWidgets import QWizard, QCommandLinkButton, QSpacerItem, QSizePolicy, QFileDialog
 
 from extrap.comparison import matchers
 from extrap.comparison.experiment_comparison import ComparisonExperiment
-from extrap.fileio.experiment_io import read_experiment
+from extrap.fileio.experiment_io import ExperimentReader
+from extrap.fileio.file_reader import all_readers, FileReader
 from extrap.gui.comparison.interactive_matcher import InteractiveMatcher
 from extrap.gui.components import file_dialog
 from extrap.gui.components.wizard_pages import ScrollAreaPage, ProgressPage
+from extrap.modelers.model_generator import ModelGenerator
 
 
 class ComparisonWizard(QWizard):
+    file_reader: Type[FileReader]
+    file_name: str
 
     def __init__(self, experiment1, experiment2=None):
         super().__init__()
@@ -43,16 +48,24 @@ class FileSelectionPage(ScrollAreaPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle('Select input format')
+        layout = self.scroll_layout
+        for reader in chain([ExperimentReader], all_readers.values()):
+            def _(reader):
+                btn = QCommandLinkButton(reader.GUI_ACTION.replace('&', ''))
+                # btn.setDescription(reader.DESCRIPTION)
+                btn.clicked.connect(
+                    lambda: file_dialog.show(self, partial(self.open_file, reader), reader.DESCRIPTION,
+                                             filter=reader.FILTER,
+                                             file_mode=QFileDialog.Directory if reader.LOADS_FROM_DIRECTORY else None))
+                layout.addWidget(btn)
 
-        btn = QCommandLinkButton("Extra-P experiment")
-        btn.clicked.connect(lambda: file_dialog.show(self, self.open_file, 'Open Experiment',
-                                                     filter='Experiments (*.extra-p)'))
-        self.scroll_layout.addWidget(btn)
+            _(reader)
+        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
         self.scroll_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
-    def open_file(self, name):
+    def open_file(self, reader, name):
         self.wizard().file_name = name
-        self.wizard().file_reader = read_experiment
+        self.wizard().file_reader = reader
         self.wizard().next()
 
     def isComplete(self) -> bool:
@@ -88,8 +101,10 @@ class FileLoadingPage(ProgressPage):
         self.setTitle('Loading experiment')
 
     def do_process(self, pbar):
-        wizard = self.wizard()
-        wizard.experiment2 = wizard.file_reader(wizard.file_name, pbar)
+        wizard: ComparisonWizard = self.wizard()
+        wizard.experiment2 = wizard.file_reader().read_experiment(wizard.file_name, pbar)
+        if wizard.file_reader.GENERATE_MODELS_AFTER_LOAD:
+            ModelGenerator(wizard.experiment2).model_all(pbar)
 
 
 class ComparingPage(ProgressPage):

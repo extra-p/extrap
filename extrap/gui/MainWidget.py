@@ -16,8 +16,6 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
-from extrap.comparison.experiment_comparison import ComparisonExperiment
-from extrap.comparison.matchers.minimum_matcher import MinimumMatcher
 from extrap.entities.calltree import Node
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
@@ -188,6 +186,8 @@ class MainWidget(QMainWindow):
         compare_action = QAction('&Compare with experiment', self)
         compare_action.setStatusTip('Compare the current models with ')
         compare_action.triggered.connect(self._compare_experiment)
+        compare_action.setEnabled(False)
+        self.compare_action = compare_action
 
         # Filter menu
         # filter_callpath_action = QAction('Filter Callpaths', self)
@@ -316,8 +316,8 @@ class MainWidget(QMainWindow):
         dialog.open()
 
     def _compare_experiment(self):
-        cw = ComparisonWizard(self.getExperiment(),self.getExperiment())
-        cw.file_name=''
+        cw = ComparisonWizard(self.getExperiment())
+        cw.file_name = ''
 
         def on_accept():
             self.set_experiment(cw.experiment)
@@ -392,11 +392,13 @@ class MainWidget(QMainWindow):
     def _set_opened_file_name(self, file_name):
         if file_name:
             self.save_experiment_action.setEnabled(True)
+            self.compare_action.setEnabled(True)
             self.setWindowFilePath(file_name)
             self.setWindowTitle(Path(file_name).name + " – " + extrap.__title__)
 
         else:
             self.save_experiment_action.setEnabled(False)
+            self.compare_action.setEnabled(False)
             self.setWindowFilePath("")
             self.setWindowTitle(extrap.__title__)
 

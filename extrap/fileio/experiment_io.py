@@ -6,13 +6,16 @@
 # See the LICENSE file in the base directory for details.
 
 import zipfile
+from pathlib import Path
+from typing import Union
 from zipfile import ZipFile
 
 from marshmallow import ValidationError
 
-from extrap.entities.experiment import ExperimentSchema
+from extrap.entities.experiment import ExperimentSchema, Experiment
+from extrap.fileio.file_reader import FileReader
 from extrap.util.exceptions import FileFormatError, RecoverableError
-from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 EXPERIMENT_DATA_FILE = 'experiment.json'
 
@@ -34,6 +37,18 @@ def read_experiment(path, progress_bar=DUMMY_PROGRESS):
                 raise FileFormatError(str(v_err)) from v_err
     except (IOError, zipfile.BadZipFile) as err:
         raise RecoverableError(str(err)) from err
+
+
+class ExperimentReader(FileReader):
+    NAME = 'experiment'
+    CMD_ARGUMENT = '--experiment'
+    GUI_ACTION = '&Open experiment'
+    DESCRIPTION = 'Load experiment file'
+    FILTER = 'Experiments (*.extra-p)'
+    GENERATE_MODELS_AFTER_LOAD = False
+
+    def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
+        return read_experiment(path, progress_bar)
 
 
 def write_experiment(experiment, path, progress_bar=DUMMY_PROGRESS):
