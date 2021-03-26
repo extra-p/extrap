@@ -39,7 +39,7 @@ def _modeler_option_bool(o):
     return bool(o)
 
 
-def _add_options_to_parser(modeler, parser):
+def _add_options_to_parser(modeler, parser, prev_modeler=None):
     if hasattr(modeler, 'OPTIONS'):
         for name, option in modeler.OPTIONS.items():
             if isinstance(option, ModelerOptionsGroup):
@@ -47,15 +47,26 @@ def _add_options_to_parser(modeler, parser):
                 for o in option.options:
                     metavar = o.range or o.type.__name__.upper()
                     o_type = _modeler_option_bool if o.type is bool else o.type
-                    group.add_argument(o.field, dest=o.field, action="store", type=o_type, metavar=metavar,
-                                       choices=o.range,
-                                       help=o.description)
+                    try:
+                        group.add_argument(o.field, dest=o.field, action="store", type=o_type, metavar=metavar,
+                                           choices=o.range,
+                                           help=o.description)
+                    except argparse.ArgumentError as e:
+                        raise argparse.ArgumentError(None,
+                                                     f'{e.argument_name}: The current modeler cannot be resolved. '
+                                                     'Please specify its unique name.')
             else:
                 metavar = option.range or option.type.__name__.upper()
                 o_type = _modeler_option_bool if option.type is bool else option.type
-                parser.add_argument(name, dest=option.field, action="store", type=o_type, metavar=metavar,
-                                    choices=option.range,
-                                    help=option.description)
+                try:
+                    parser.add_argument(name, dest=option.field, action="store", type=o_type, metavar=metavar,
+                                        choices=option.range,
+                                        help=option.description)
+                except argparse.ArgumentError as e:
+                    if prev_modeler and modeler.OPTIONS[e.argument_name] != prev_modeler.OPTIONS[e.argument_name]:
+                        raise argparse.ArgumentError(None,
+                                                     f'{e.argument_name}: The current modeler cannot be resolved. '
+                                                     'Please specify its unique name.')
 
 
 def _add_single_parameter_options(parser):
@@ -117,17 +128,19 @@ class ModelerOptionsAction(Action):
         else:
             modeler_name = namespace.modeler
 
+        modeler = None
         if modeler_name in single_parameter.all_modelers:
             modeler = single_parameter.all_modelers[modeler_name]
             if hasattr(modeler, 'OPTIONS'):
                 parser = _create_parser(modeler(), name=modeler_name, nested_sp=nested_sp)
 
         if modeler_name in multi_parameter.all_modelers:
+            prev_modeler = modeler
             modeler = multi_parameter.all_modelers[modeler_name]
             if parser is None:
                 parser = _create_parser(modeler(), name=modeler_name, nested_sp=nested_sp)
             _add_single_parameter_options(parser)
-            _add_options_to_parser(modeler, parser)
+            _add_options_to_parser(modeler, parser, prev_modeler)
 
         if parser is not None:
             options = parser.parse_args(values)
