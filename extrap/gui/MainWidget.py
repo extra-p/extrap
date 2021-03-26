@@ -124,11 +124,11 @@ class MainWidget(QMainWindow):
         file_imports = []
         for reader in all_reader.values():
             if reader is CubeFileReader2:
-                file_imports.append((reader.SHORT_DESCRIPTION, reader.EXTENDED_DESCRIPTION, self.open_cube_file))
+                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
             else:
-                file_imports.append((reader.SHORT_DESCRIPTION, reader.EXTENDED_DESCRIPTION,
-                                     self._make_import_func(reader.EXTENDED_DESCRIPTION, reader().read_experiment,
-                                                            filter=reader.FILTER, model=reader.IS_MODEL)))
+                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION,
+                                     self._make_import_func(reader.DESCRIPTION, reader().read_experiment,
+                                                            filter=reader.FILTER, model=reader.GENERATE_MODELS_AFTER_LOAD)))
         #
         # file_imports = [
         #     ('Open set of &CUBE files', 'Open a set of CUBE files for single-parameter models and generate data points '

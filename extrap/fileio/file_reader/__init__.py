@@ -1,6 +1,13 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 from extrap.entities.experiment import Experiment
 from extrap.util.classproperty import classproperty
@@ -11,38 +18,41 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 class FileReader(ABC):
 
     @classproperty
+    @abstractmethod
     def NAME(cls) -> str:  # noqa
         """ This attribute is the unique display name of the FileReader.
 
         It is used for identifying the filetype internally.
         You must override this only in concrete FileReaders, you should do so by setting the class variable NAME.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @classproperty
+    @abstractmethod
     def CMD_ARGUMENT(cls) -> bool:  # noqa
         """ This attribute is the unique cmd argument of the FileReader.
 
         It is used to determine the the cmd command to call this FileReader. You must override this only in concrete
         FileReaders, you should do so by setting the class variable CMD_ARGUMENT.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @classproperty
-    def SHORT_DESCRIPTION(cls) -> Optional[str]:  # noqa
-        """ This attribute is the short description of the FileReader.
+    @abstractmethod
+    def GUI_ACTION(cls) -> str:  # noqa
+        """ This attribute is the text of the FileReader's GUI action.
 
         It is used for selecting the FileReader in the GUI. You should override this only in concrete
-        FileReaders, you should do so by setting the class variable SHORT_DESCRIPTION.
+        FileReaders, you should do so by setting the class variable GUI_ACTION.
         """
-        return ""
+        raise NotImplementedError()
 
     @classproperty
-    def EXTENDED_DESCRIPTION(cls) -> Optional[str]:  # noqa
+    def DESCRIPTION(cls) -> Optional[str]:  # noqa
         """ This attribute is the short description of the FileReader.
 
-        It will be shown in Tooltips. You should override this only in concrete
-        FileReaders, you should do so by setting the class variable EXTENDED_DESCRIPTION.
+        It will be shown in Tooltips and the help message. You should override this only in concrete
+        FileReaders, you should do so by setting the class variable DESCRIPTION.
         """
         return ""
 
@@ -56,7 +66,7 @@ class FileReader(ABC):
         return ""
 
     @classproperty
-    def IS_MODEL(cls) -> Optional[bool]:  # noqa
+    def GENERATE_MODELS_AFTER_LOAD(cls) -> Optional[bool]:  # noqa
         return True
 
     @abstractmethod

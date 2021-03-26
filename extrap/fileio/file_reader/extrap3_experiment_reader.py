@@ -9,7 +9,6 @@ import copy
 import logging
 import os
 import struct
-from abc import ABC
 from pathlib import Path
 from typing import Optional, Union
 
@@ -495,13 +494,12 @@ class _Mappings:
     coordinate_mapping = {}
 
 
-class ExtrapExperimentFileReader(FileReader, ABC):
+class Extrap3ExperimentFileReader(FileReader):
     NAME = "extrap3"
-    SHORT_DESCRIPTION = "Open Extra-P &3 experiment"
-    EXTENDED_DESCRIPTION = "Opens legacy experiment file"
-    FILTER = ""
+    GUI_ACTION = "Open Extra-P &3 experiment"
+    DESCRIPTION = "Load data from Extra-P 3 (legacy) experiment"
     CMD_ARGUMENT = "--extra-p-3"
-    IS_MODEL = False
+    GENERATE_MODELS_AFTER_LOAD = False
 
     class __Ref:
         def __init__(self, _):
@@ -528,7 +526,7 @@ class ExtrapExperimentFileReader(FileReader, ABC):
                 progress_bar.step('Load Extra-P 3 experiment')
                 last_pos = 0
 
-                is_sparse = ExtrapExperimentFileReader.__Ref(False)
+                is_sparse = Extrap3ExperimentFileReader.__Ref(False)
                 while prefix:
                     pos = file.tell()
                     progress_bar.update(pos - last_pos)

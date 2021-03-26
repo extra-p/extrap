@@ -77,7 +77,7 @@ def parse_arguments(args=None):
     group = parser.add_mutually_exclusive_group(required=False)
     for reader in all_reader.values():
         group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
-                           help=reader.EXTENDED_DESCRIPTION)
+                           help=reader.DESCRIPTION)
 
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
                         help="specify a file path for Extra-P to work with")

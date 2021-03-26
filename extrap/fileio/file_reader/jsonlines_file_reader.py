@@ -7,7 +7,6 @@
 
 import json
 import os
-from abc import ABC
 from json import JSONDecodeError
 
 from extrap.entities.callpath import Callpath
@@ -16,7 +15,6 @@ from extrap.entities.experiment import Experiment
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
-from extrap.fileio.file_reader import FileReader
 from extrap.fileio.io_helper import create_call_tree
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS

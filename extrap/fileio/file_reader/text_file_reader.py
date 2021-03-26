@@ -6,7 +6,6 @@
 # See the LICENSE file in the base directory for details.
 
 import re
-from abc import ABC
 from pathlib import Path
 from typing import Union
 
@@ -25,10 +24,10 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 re_whitespace = re.compile(r'\s+')
 
 
-class TextFileReader(FileReader, ABC):
+class TextFileReader(FileReader):
     NAME = "text"
-    SHORT_DESCRIPTION = "Open &text input"
-    EXTENDED_DESCRIPTION = "Open text input file"
+    GUI_ACTION = "Open &text input"
+    DESCRIPTION = "Load data from text input file"
     FILTER = "Text Files (*.txt);;All Files (*)"
     CMD_ARGUMENT = "--text"
 

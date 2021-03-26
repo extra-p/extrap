@@ -7,7 +7,6 @@
 
 import json
 import os
-from abc import ABC
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Union
@@ -24,10 +23,10 @@ from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 
-class TalpasFileReader(FileReader, ABC):
+class TalpasFileReader(FileReader):
     NAME = "talpas"
-    SHORT_DESCRIPTION = "Open Tal&pas input"
-    EXTENDED_DESCRIPTION = "Open Talpas input file"
+    GUI_ACTION = "Open Tal&pas input"
+    DESCRIPTION = "Load data from Talpas data format"
     FILTER = "Talpas Files (*.txt);;All Files (*)"
     CMD_ARGUMENT = "--talpas"
 

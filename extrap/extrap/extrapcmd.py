@@ -15,10 +15,6 @@ import extrap
 from extrap.fileio import experiment_io
 from extrap.fileio.file_reader import all_reader
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
-from extrap.fileio.file_reader.extrap3_experiment_reader import ExtrapExperimentFileReader
-from extrap.fileio.file_reader.json_file_reader import JsonFileReader
-from extrap.fileio.file_reader.talpas_file_reader import TalpasFileReader
-from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.fileio.io_helper import format_output
 from extrap.fileio.io_helper import save_output
 from extrap.modelers import multi_parameter
@@ -49,14 +45,9 @@ def main(args=None, prog=None):
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
-    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="Load data from CUBE files")
-    group.add_argument("--text", action="store_true", default=False, dest="text", help="Load data from text files")
-    group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
-                       help="Load data from Talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json",
-                       help="Load data from JSON or JSON Lines file")
-    group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
-                       help="Load data from Extra-P 3 experiment")
+    for reader in all_reader.values():
+        group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
+                           help=reader.DESCRIPTION)
     input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
                                choices=["weak", "strong"],
                                help="Set weak or strong scaling when loading data from CUBE files (default: weak)")

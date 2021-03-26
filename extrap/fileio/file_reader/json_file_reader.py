@@ -7,7 +7,6 @@
 
 import json
 import logging
-from abc import ABC
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import Union
@@ -20,18 +19,18 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader import FileReader
-from extrap.fileio.io_helper import create_call_tree
 from extrap.fileio.file_reader.jsonlines_file_reader import read_jsonlines_file
+from extrap.fileio.io_helper import create_call_tree
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 SCHEMA_URI = ""
 
 
-class JsonFileReader(FileReader, ABC):
+class JsonFileReader(FileReader):
     NAME = "json"
-    SHORT_DESCRIPTION = "Open &JSON input"
-    EXTENDED_DESCRIPTION = "Open JSON or JSON Lines input file"
+    GUI_ACTION = "Open &JSON input"
+    DESCRIPTION = "Load data from JSON or JSON Lines input file"
     FILTER = "JSON (Lines) Files (*.json *.jsonl);;All Files (*)"
     CMD_ARGUMENT = "--json"
 

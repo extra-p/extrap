@@ -8,7 +8,6 @@
 import logging
 import re
 import warnings
-from abc import ABC
 from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
@@ -30,11 +29,10 @@ from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 
-class CubeFileReader2(FileReader, ABC):
+class CubeFileReader2(FileReader):
     NAME = "cube"
-    SHORT_DESCRIPTION = "Open set of &CUBE files"
-    EXTENDED_DESCRIPTION = "Open a set of CUBE files for single-parameter models and generate data points for a new experiment " \
-                "from them "
+    GUI_ACTION = "Open set of &CUBE files"
+    DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
     CMD_ARGUMENT = "--cube"
 
     scaling_type = "weak"
@@ -236,4 +234,3 @@ class CubeFileReader2(FileReader, ABC):
         self.scaling_type = scaling_type
         self.selected_metrics = selected_metrics
         return self.read_experiment(dir_name, pbar)
-
