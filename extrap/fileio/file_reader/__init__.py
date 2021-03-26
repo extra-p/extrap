@@ -79,4 +79,4 @@ class FileReader(ABC):
         raise NotImplementedError
 
 
-all_reader = load_extensions(__path__, __name__, FileReader)
+all_readers = load_extensions(__path__, __name__, FileReader)

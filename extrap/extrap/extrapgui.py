@@ -18,7 +18,7 @@ from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
-from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.experiment_io import read_experiment
 from extrap.gui.MainWidget import MainWidget
@@ -75,7 +75,7 @@ def parse_arguments(args=None):
     parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__)
 
     group = parser.add_mutually_exclusive_group(required=False)
-    for reader in all_reader.values():
+    for reader in all_readers.values():
         group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
                            help=reader.DESCRIPTION)
 
@@ -91,7 +91,7 @@ def parse_arguments(args=None):
 
 def load_from_command(arguments, window):
     if arguments.path:
-        for reader in all_reader.values():
+        for reader in all_readers.values():
             if getattr(arguments, reader.NAME):
                 file_reader = reader()
                 if file_reader is CubeFileReader2:
