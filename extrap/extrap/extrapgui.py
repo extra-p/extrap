@@ -18,13 +18,9 @@ from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
-from extrap.fileio.cube_file_reader2 import read_cube_file
+from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.experiment_io import read_experiment
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
-from extrap.fileio.json_file_reader import read_json_file
-from extrap.fileio.nv_reader import read_nv_file
-from extrap.fileio.talpas_file_reader import read_talpas_file
-from extrap.fileio.text_file_reader import read_text_file
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -79,16 +75,10 @@ def parse_arguments(args=None):
     parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__)
 
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from cube files")
-    group.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
-    group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
-                       help="load data from talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json",
-                       help="load data from json or jsonlines file")
-    group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
-                       help="load data from Extra-P 3 experiment")
-    group.add_argument("--nsight", action="store_true", default=False, dest="nsight",
-                       help="load data from nsight reports")
+    for reader in all_reader.values():
+        group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
+                           help=reader.DESCRIPTION)
+
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
                         help="specify a file path for Extra-P to work with")
 
@@ -101,20 +91,12 @@ def parse_arguments(args=None):
 
 def load_from_command(arguments, window):
     if arguments.path:
-        if arguments.text:
-            window.import_file(read_text_file, file_name=arguments.path)
-        elif arguments.json:
-            window.import_file(read_json_file, file_name=arguments.path)
-        elif arguments.talpas:
-            window.import_file(read_talpas_file, file_name=arguments.path)
-        elif arguments.cube:
-            window.import_file(lambda x, y: read_cube_file(x, arguments.scaling_type, y), file_name=arguments.path)
-        elif arguments.extrap3:
-            window.import_file(read_extrap3_experiment, model=False, file_name=arguments.path)
-        elif arguments.nsight:
-            window.import_file(read_nv_file, file_name=arguments.path)
-        else:
-            window.import_file(read_experiment, model=False, file_name=arguments.path)
+        for reader in all_reader.values():
+            if getattr(arguments, reader.NAME):
+                file_reader = reader()
+                if file_reader is CubeFileReader2:
+                    file_reader.scaling_type = arguments.scaling_type
+                window.import_file(file_reader.read_experiment, file_name=arguments.path)
 
 
 def _init_warning_system(window, test=False):

@@ -11,7 +11,7 @@ from threading import Event
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.fileio.cube_file_reader2 import read_cube_file
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
@@ -233,7 +233,7 @@ class CubeFileReader(QDialog):
 
             # read the cube files
             try:
-                self.experiment = read_cube_file(self.dir_name, self.scaling_type, pbar)
+                self.experiment = CubeFileReader2().read_cube_file(self.dir_name, self.scaling_type, pbar)
             except Exception as err:
                 self.close()
                 raise err
