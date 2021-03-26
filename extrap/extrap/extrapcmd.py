@@ -13,7 +13,7 @@ from itertools import chain
 
 import extrap
 from extrap.fileio import experiment_io
-from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.io_helper import format_output
 from extrap.fileio.io_helper import save_output
@@ -45,7 +45,7 @@ def main(args=None, prog=None):
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
-    for reader in all_reader.values():
+    for reader in all_readers.values():
         group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
                            help=reader.DESCRIPTION)
     input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
@@ -118,7 +118,7 @@ def main(args=None, prog=None):
 
     if arguments.path is not None:
         with ProgressBar(desc='Loading file') as pbar:
-            for reader in all_reader.values():
+            for reader in all_readers.values():
                 if getattr(arguments, reader.NAME):
                     file_reader = reader()
                     if reader is CubeFileReader2:

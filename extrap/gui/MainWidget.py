@@ -19,7 +19,7 @@ import extrap
 from extrap.entities.calltree import Node
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
-from extrap.fileio.file_reader import all_reader
+from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CubeFileReader import CubeFileReader
@@ -123,7 +123,7 @@ class MainWidget(QMainWindow):
         exit_action.triggered.connect(self.close)
 
         file_imports = []
-        for reader in all_reader.values():
+        for reader in all_readers.values():
             if reader is CubeFileReader2:
                 file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
             else:
