@@ -127,9 +127,11 @@ class MainWidget(QMainWindow):
             if reader is CubeFileReader2:
                 file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
             else:
+                file_mode = None
                 file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION,
                                      self._make_import_func(reader.DESCRIPTION, reader().read_experiment,
-                                                            filter=reader.FILTER, model=reader.GENERATE_MODELS_AFTER_LOAD)))
+                                                            filter=reader.FILTER, file_mode=file_mode,
+                                                            model=reader.GENERATE_MODELS_AFTER_LOAD)))
         #
         # file_imports = [
         #     ('Open set of &CUBE files', 'Open a set of CUBE files for single-parameter models and generate data points '
@@ -364,7 +366,7 @@ class MainWidget(QMainWindow):
         return partial(self.import_file, reader_func, title, **kwargs)
 
     def import_file(self, reader_func, title='Open File', filter='', model=True, progress_text="Loading File",
-                    file_name=None):
+                    file_name=None, file_mode=None):
         def _import_file(file_name):
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
