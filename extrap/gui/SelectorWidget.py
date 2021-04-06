@@ -16,9 +16,9 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.gui.components.ParameterValueSlider import ParameterValueSlider
 from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
+from extrap.gui.components.ParameterValueSlider import ParameterValueSlider
 from extrap.modelers.model_generator import ModelGenerator
 
 if TYPE_CHECKING:
@@ -253,7 +253,7 @@ class SelectorWidget(QWidget):
     def model_delete(self):
         reply = QMessageBox.question(self,
                                      'Delete Current Model',
-                                     "Are you sure to delete the model?",
+                                     "Are you sure to delete the current model?",
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
@@ -264,6 +264,30 @@ class SelectorWidget(QWidget):
 
             self.model_selector.removeItem(index)
             del experiment.modelers[index]
+
+    def delete_metric(self):
+        reply = QMessageBox.question(self,
+                                     'Delete Current Metric',
+                                     "Are you sure to delete the current metric?",
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            index = self.metric_selector.currentIndex()
+            metric = self.getSelectedMetric()
+            if index < 0:
+                return
+            experiment = self.main_widget.getExperiment()
+            self.metric_selector.removeItem(index)
+            experiment.metrics.remove(metric)
+            for callpath in experiment.callpaths:
+                key = (callpath, metric)
+                if key in experiment.measurements:
+                    del experiment.measurements[key]
+            for model_set in experiment.modelers:
+                for callpath in experiment.callpaths:
+                    key = (callpath, metric)
+                    if key in model_set.models:
+                        del model_set.models[key]
 
     @staticmethod
     def get_all_models(experiment):

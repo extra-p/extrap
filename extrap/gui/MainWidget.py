@@ -17,6 +17,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
 from extrap.entities.calltree import Node
+from extrap.entities.experiment import Experiment
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.file_reader import all_readers
@@ -192,6 +193,9 @@ class MainWidget(QMainWindow):
         model_rename_action.setStatusTip('Rename the current model')
         model_rename_action.triggered.connect(self.selector_widget.model_rename)
 
+        metric_delete_action = QAction('Dele&te metrics', self)
+        metric_delete_action.triggered.connect(self.selector_widget.delete_metric)
+
         # compare menu
         compare_action = QAction('&Compare with experiment', self)
         compare_action.setStatusTip('Compare the current models with ')
@@ -236,6 +240,8 @@ class MainWidget(QMainWindow):
         model_menu = menubar.addMenu('&Model')
         model_menu.addAction(model_delete_action)
         model_menu.addAction(model_rename_action)
+        model_menu.addSeparator()
+        model_menu.addAction(metric_delete_action)
 
         # filter_menu = menubar.addMenu('Filter')
         # filter_menu.addAction(filter_callpath_action)
@@ -290,7 +296,7 @@ class MainWidget(QMainWindow):
         else:
             event.ignore()
 
-    def getExperiment(self):
+    def getExperiment(self) -> Experiment:
         return self._experiment
 
     def get_selected_metric(self):
