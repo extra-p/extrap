@@ -18,9 +18,9 @@ from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
+from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
-from extrap.fileio.experiment_io import read_experiment
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -96,7 +96,10 @@ def load_from_command(arguments, window):
                 file_reader = reader()
                 if file_reader is CubeFileReader2:
                     file_reader.scaling_type = arguments.scaling_type
-                window.import_file(file_reader.read_experiment, file_name=arguments.path)
+                window.import_file(file_reader.read_experiment, file_name=arguments.path,
+                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD)
+                return
+        window.import_file(read_experiment, file_name=arguments.path, model=False)
 
 
 def _init_warning_system(window, test=False):
