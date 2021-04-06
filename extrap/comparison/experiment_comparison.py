@@ -1,5 +1,4 @@
 from functools import reduce
-from itertools import product
 from typing import List, Sequence, Union, Mapping
 
 import numpy as np
@@ -9,7 +8,6 @@ from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.functions import Function
-from extrap.entities.hypotheses import Hypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
@@ -156,8 +154,14 @@ class ComparisonExperiment(Experiment):
 
     def do_call_tree_merge(self, progress_bar=DUMMY_PROGRESS):
         self.call_tree, self.call_tree_match = self.matcher.match_call_tree(self.exp1.call_tree, self.exp2.call_tree)
-        self.measurements = self._make_measurements_and_update_call_tree(self.call_tree_match, self.exp1.measurements,
-                                                                         self.exp2.measurements)
+        if hasattr(self.matcher, 'make_measurements_and_update_call_tree'):
+            self.measurements = self.matcher.make_measurements_and_update_call_tree(self, self.call_tree_match,
+                                                                                    self.exp1.measurements,
+                                                                                    self.exp2.measurements)
+        else:
+            self.measurements = self._make_measurements_and_update_call_tree(self.call_tree_match,
+                                                                             self.exp1.measurements,
+                                                                             self.exp2.measurements)
         self.callpaths, self.callpaths_match = self._callpaths_from_tree(self.call_tree_match)
 
     def _callpaths_from_tree(self, match):

@@ -315,8 +315,9 @@ class MainWidget(QMainWindow):
         dialog.setModal(True)
         dialog.open()
 
-    def _compare_experiment(self):
-        cw = ComparisonWizard(self.getExperiment())
+    @Slot()
+    def _compare_experiment(self, experiment=None):
+        cw = ComparisonWizard(self.getExperiment(), experiment)
         cw.file_name = ''
 
         def on_accept():
