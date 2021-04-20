@@ -82,12 +82,12 @@ class BinaryAggregation(Aggregation, ABC):
         for metric in metrics:
             if self.NOT_CALCULABLE_TAG in metric.tags:
                 continue
-            self.walk(result, calltree, models, metric, progress_bar=progress_bar)
+            self.walk_nodes(result, calltree, models, metric, progress_bar=progress_bar)
 
         return result
 
-    def walk(self, result: Dict[Tuple[Callpath, Metric], Model], node: Node,
-             models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS):
+    def walk_nodes(self, result: Dict[Tuple[Callpath, Metric], Model], node: Node,
+                   models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS):
         agg_models: List[Model] = []
         if node.name:
             if path == "":
@@ -101,7 +101,7 @@ class BinaryAggregation(Aggregation, ABC):
         else:
             progress_bar.total += 1
         for c in node:
-            model = self.walk(result, c, models, metric, path, progress_bar)
+            model = self.walk_nodes(result, c, models, metric, path, progress_bar)
             if model is not None:
                 agg_models.append(model)
 

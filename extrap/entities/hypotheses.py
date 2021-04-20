@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import abc
 from typing import Sequence
 
 import numpy
@@ -197,8 +196,8 @@ class ConstantHypothesis(Hypothesis):
             abssum = abs(actual) + abs(predicted)
             if abssum != 0:
                 smape += abs(difference) / abssum * 2
-
-        self._SMAPE = smape / len(measurements) * 100
+        if measurements:
+            self._SMAPE = smape / len(measurements) * 100
         self._costs_are_calculated = True
 
 

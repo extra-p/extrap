@@ -78,3 +78,6 @@ class NamedEntityWithTags(NamedEntity, ABC):
             return f"{type(self).TYPENAME}({self.name}:{self.tags})"
         else:
             return super().__repr__()
+
+    def exactly_equal(self, other):
+        return self == other and self.tags == other.tags
