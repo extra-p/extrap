@@ -1,6 +1,7 @@
 from functools import reduce
 from typing import List, Sequence, Union, Mapping
 
+import numpy
 import numpy as np
 
 from extrap.comparison.matchers import AbstractMatcher
@@ -13,6 +14,7 @@ from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.caching import cached_property
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -85,6 +87,9 @@ class ComparisonModel(Model):
     def __init__(self, callpath, metric, models: Sequence[Model]):
         super().__init__(self._make_comparison_hypothesis(models), callpath, metric)
         self.models = models
+
+    def predictions(self):
+        raise NotImplementedError()
 
     @staticmethod
     def _make_comparison_hypothesis(models):
@@ -195,7 +200,10 @@ class ComparisonExperiment(Experiment):
 
     def do_model_set_merge(self, progress_bar=DUMMY_PROGRESS):
         self.modelers_match = self.matcher.match_modelers(self.exp1.modelers, self.exp2.modelers)
-        self.modelers = [self._make_model_generator(k, match) for k, match in self.modelers_match.items()]
+        if hasattr(self.matcher, 'make_measurements_and_update_call_tree'):
+            self.modelers = [self.matcher.make_model_generator(self,k, match) for k, match in self.modelers_match.items()]
+        else:
+            self.modelers = [self._make_model_generator(k, match) for k, match in self.modelers_match.items()]
 
     def _make_model_generator(self, name: str, modelers: Sequence[ModelGenerator]):
         mg = ModelGenerator(self, PlaceholderModeler(False), name, modelers[0].modeler.use_median)

@@ -15,6 +15,7 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from extrap.comparison.experiment_comparison import ComparisonModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
@@ -277,9 +278,20 @@ class GraphWidget(QWidget):
         """
 
         # Get data
-        model_list, selected_call_nodes = self.main_widget.get_selected_models()
-        if not model_list:
+        model_list1, selected_call_nodes1 = self.main_widget.get_selected_models()
+        if not model_list1:
             return
+
+        model_list = []
+        selected_call_nodes = []
+        for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
+            if isinstance(model, ComparisonModel):
+                for m in model.models:
+                    model_list.append(m)
+                    selected_call_nodes.append(call_node)
+            else:
+                model_list.append(model)
+                selected_call_nodes.append(call_node)
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin

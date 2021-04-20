@@ -1,7 +1,7 @@
 from functools import partial
 
 import PySide2
-from PySide2.QtCore import QEvent
+from PySide2.QtCore import QEvent, QTimer
 from PySide2.QtWidgets import QWizardPage, QVBoxLayout, QScrollArea, QProgressBar, QLabel, QApplication
 
 from extrap.util.exceptions import CancelProcessError
@@ -52,7 +52,7 @@ class ProgressPage(QWizardPage):
         value = super(ProgressPage, self).event(event)
         if not self.once and event.type() == QEvent.Paint:
             self.once = True
-            self.once_after_shown()
+            QTimer.singleShot(0, self.once_after_shown)
         return value
 
     def once_after_shown(self):
