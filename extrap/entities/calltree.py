@@ -12,9 +12,9 @@ from extrap.entities.callpath import Callpath
 
 class Node:
 
-    def __init__(self, name: str, path: Callpath):
+    def __init__(self, name: str, path: Callpath, childs=None):
         self.name = name
-        self.childs = []
+        self.childs = [] if childs is None else childs
         self.path = path
 
     def add_child_node(self, child_node):
@@ -56,6 +56,17 @@ class Node:
     def __hash__(self):
         return hash((self.name, self.path))
 
+    def _generate_code_representation(self):
+        return f'Node("{self.name}",Callpath("{self.path}"),[{",".join(c._generate_code_representation() for c in self.childs)}])'
+
+    def exactly_equal(self, other):
+        if not isinstance(other, Node):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.name == other.name and self.path.exactly_equal(other.path) and all(
+                a.exactly_equal(b) for a, b in zip(self.childs, other.childs))
 
 class CallTree(Node):
     """
