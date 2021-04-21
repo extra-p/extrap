@@ -1,7 +1,6 @@
 from functools import reduce
 from typing import List, Sequence, Union, Mapping
 
-import numpy
 import numpy as np
 
 from extrap.comparison.matchers import AbstractMatcher
@@ -14,7 +13,6 @@ from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.model_generator import ModelGenerator
-from extrap.util.caching import cached_property
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -119,9 +117,13 @@ class ComparisonExperiment(Experiment):
 
     def do_comparison(self, progress_bar=DUMMY_PROGRESS):
         progress_bar.total += 3
-        progress_metrics_target = progress_bar.create_target(max(len(e.metrics) for e in self.compared_experiments))
-        progress_call_tree_target = progress_bar.create_target(max(len(e.callpaths) for e in self.compared_experiments))
-        progress_modelers_target = progress_bar.create_target(max(len(e.modelers) for e in self.compared_experiments))
+        num_metrics = max(len(e.metrics) for e in self.compared_experiments)
+        num_callpaths = max(len(e.callpaths) for e in self.compared_experiments)
+        num_models = max(len(e.modelers) for e in self.compared_experiments)
+
+        progress_metrics_target = progress_bar.create_target(num_metrics)
+        progress_call_tree_target = progress_bar.create_target(num_callpaths)
+        progress_modelers_target = progress_bar.create_target(num_models * num_metrics * num_callpaths)
 
         self.do_initial_checks()
         progress_bar.update(3)
@@ -155,7 +157,8 @@ class ComparisonExperiment(Experiment):
         return True
 
     def do_metrics_merge(self, progress_bar=DUMMY_PROGRESS):
-        self.metrics, self.metrics_match = self.matcher.match_metrics(self.exp1.metrics, self.exp2.metrics)
+        self.metrics, self.metrics_match = self.matcher.match_metrics(self.exp1.metrics, self.exp2.metrics,
+                                                                      progress_bar)
 
     def do_call_tree_merge(self, progress_bar=DUMMY_PROGRESS):
         self.call_tree, self.call_tree_match = self.matcher.match_call_tree(self.exp1.call_tree, self.exp2.call_tree)
@@ -201,7 +204,8 @@ class ComparisonExperiment(Experiment):
     def do_model_set_merge(self, progress_bar=DUMMY_PROGRESS):
         self.modelers_match = self.matcher.match_modelers(self.exp1.modelers, self.exp2.modelers)
         if hasattr(self.matcher, 'make_measurements_and_update_call_tree'):
-            self.modelers = [self.matcher.make_model_generator(self,k, match) for k, match in self.modelers_match.items()]
+            self.modelers = [self.matcher.make_model_generator(self, k, match, progress_bar) for k, match in
+                             self.modelers_match.items()]
         else:
             self.modelers = [self._make_model_generator(k, match) for k, match in self.modelers_match.items()]
 

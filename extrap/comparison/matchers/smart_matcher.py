@@ -8,6 +8,8 @@ from extrap.comparison.matches import AbstractMatches, IdentityMatches, MutableA
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
+from extrap.entities.functions import ConstantFunction
+from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
@@ -19,14 +21,17 @@ if TYPE_CHECKING:
     from extrap.comparison.experiment_comparison import ComparisonExperiment
 
 
-class TestMatcher(AbstractMatcher):
-    NAME = 'Test'
+class SmartMatcher(AbstractMatcher):
+    NAME = 'Smart Matcher'
+    DESCRIPTION = 'Tries to find the common call tree and integrates the remaining call paths into this call tree.'
 
-    def match_metrics(self, *metric: Sequence[Metric]) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
-        metrics = [m for m in metric[0] if m in metric[1]]
+    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
+        Sequence[Metric], AbstractMatches[Metric]]:
+        # preliminary, TODO we need to add new matches for hw counters, etc.
+        metrics = [m for m in progress_bar(metric[0]) if m in metric[1]]
         return metrics, IdentityMatches(2, metrics)
 
-    def match_call_tree(self, *call_tree: CallTree):
+    def match_call_tree(self, *call_tree: CallTree, progress_bar=DUMMY_PROGRESS):
         root = CallTree()
         matches = {}
         self._update_tree_paths(call_tree[0])
@@ -36,7 +41,7 @@ class TestMatcher(AbstractMatcher):
         n = Node(self._normalizeName(main_node0.name), Callpath('main'))
         matches[n] = [main_node0, main_node1]
         root.add_child_node(n)
-        self._merge_call_trees(n, main_node0, main_node1, 'main', matches)
+        self._merge_call_trees(n, main_node0, main_node1, 'main', matches, progress_bar)
         return root, matches
 
     def make_measurements_and_update_call_tree(self, experiment: ComparisonExperiment,
@@ -102,7 +107,8 @@ class TestMatcher(AbstractMatcher):
         call_tree_match.update(new_matches)
         return measurements
 
-    def match_modelers(self, *mg: Sequence[ModelGenerator]) -> Mapping[str, Sequence[ModelGenerator]]:
+    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[
+        str, Sequence[ModelGenerator]]:
         mg_map = {m.name: m for m in mg[1]}
         return {m.name: [m, mg_map[m.name]] for m in mg[0] if m.name in mg_map}
 
@@ -111,7 +117,7 @@ class TestMatcher(AbstractMatcher):
         name = re.sub(r'<.*?>', '', name)
         return name
 
-    def _merge_call_trees(self, parent: Node, parent1: Node, parent2: Node, path, matches):
+    def _merge_call_trees(self, parent: Node, parent1: Node, parent2: Node, path, matches, progress_bar):
         for n1 in parent1.childs:
             normalized_name = self._normalizeName(n1.name)
             for n2 in parent2.childs:
@@ -120,7 +126,8 @@ class TestMatcher(AbstractMatcher):
                     n = Node(normalized_name, Callpath(new_path))
                     matches[n] = [n1, n2]
                     parent.add_child_node(n)
-                    self._merge_call_trees(n, n1, n2, new_path, matches)
+                    self._merge_call_trees(n, n1, n2, new_path, matches, progress_bar)
+        progress_bar.update()
 
     def _find_main(self, node: Node):
         if 'main' == node.name.strip().casefold():
@@ -168,14 +175,15 @@ class TestMatcher(AbstractMatcher):
             self._add_subtree_and_merge_measurements(node, child, s_measurements, i, total, metric, measurements_out,
                                                      new_matches, measurements)
 
-    def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator]):
+    def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
+                             progress_bar):
         from extrap.comparison.experiment_comparison import PlaceholderModeler, ComparisonModel
         mg = ModelGenerator(experiment, PlaceholderModeler(False), name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in experiment.metrics_match.items():
             for node, source_nodes in experiment.call_tree_match.items():
                 models = []
-
+                progress_bar.update()
                 if node.path.tags.get('comparison_part_agg', False):
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
@@ -186,7 +194,8 @@ class TestMatcher(AbstractMatcher):
                                                 child in experiment.call_tree_match]
                             t_node = Node(s_node.name, s_node.path, [c for c in s_node.childs if c in allowed_s_childs])
                             model = self.walk_nodes(t_node, s_modeler.models, metric,
-                                                    path=s_node.path.name.rpartition('->')[0])
+                                                    path=s_node.path.name.rpartition('->')[0],
+                                                    progress_bar=progress_bar)
                             if model:
                                 models.append(model)
 
@@ -201,37 +210,19 @@ class TestMatcher(AbstractMatcher):
                                     t_node.childs.remove(s_child)
 
                             model = self.walk_nodes(t_node, s_modeler.models, metric,
-                                                    path=s_node.path.name.rpartition('->')[0])
+                                                    path=s_node.path.name.rpartition('->')[0],
+                                                    progress_bar=progress_bar)
                             if model:
                                 models.append(model)
-                                # else:
-                                #     hypothesis = ConstantHypothesis(ConstantFunction(0), False)
-                                #     hypothesis.compute_cost([])
-                                #     models.append(Model(hypothesis))
+                            else:
+                                hypothesis = ConstantHypothesis(ConstantFunction(0), False)
+                                hypothesis.compute_cost([])
+                                models.append(Model(hypothesis))
                 else:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None and (s_node.path, s_metric) in s_modeler.models:
                             models.append(s_modeler.models[(s_node.path, s_metric)])
-
-                    # if s_node is not None:
-                    #     t_node = Node(s_node.name, s_node.path, s_node.childs.copy())
-                    #     for child in node:
-                    #         if child in experiment.call_tree_match:
-                    #             s_child = experiment.call_tree_match[child][i]
-                    #             t_node.childs.remove(s_child)
-                    #
-                    #
-                    #     agg_models = {}
-                    #     # TODO check aggregation
-                    #     # model = self.walk_nodes(t_node, s_modeler.models, metric,
-                    #     #                         path=s_node.path.name.rpartition('->')[0])
-                    #     # if model:
-                    #     #     models.append(model)
-                    #     # else:
-                    #     #     hypothesis = ConstantHypothesis(ConstantFunction(0), False)
-                    #     #     hypothesis.compute_cost([])
-                    #     #     models.append(Model(hypothesis))
 
                 if len(models) == 1:
                     mg.models[node.path, metric] = models[0]

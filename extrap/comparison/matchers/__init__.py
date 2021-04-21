@@ -7,19 +7,23 @@ from extrap.entities.metric import Metric
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
+from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
 class AbstractMatcher(ABC):
     @abstractmethod
-    def match_metrics(self, *metric: Sequence[Metric]) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
+    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
+        Sequence[Metric], AbstractMatches[Metric]]:
         pass
 
     @abstractmethod
-    def match_call_tree(self, *call_tree: CallTree) -> Tuple[CallTree, MutableAbstractMatches[Node]]:
+    def match_call_tree(self, *call_tree: CallTree, progress_bar=DUMMY_PROGRESS) -> Tuple[
+        CallTree, MutableAbstractMatches[Node]]:
         pass
 
     @abstractmethod
-    def match_modelers(self, *mg: Sequence[ModelGenerator]) -> Mapping[str, Sequence[ModelGenerator]]:
+    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[
+        str, Sequence[ModelGenerator]]:
         pass
 
     @classproperty

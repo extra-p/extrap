@@ -12,6 +12,7 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.metric import Metric
 from extrap.gui.components.worker import Worker, MTWorker
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.progress_bar import DUMMY_PROGRESS
 
 if TYPE_CHECKING:
     from extrap.gui.comparison.comparison_wizard import ComparisonWizard
@@ -84,15 +85,15 @@ class InteractiveMatcher(AbstractMatcher):
         else:
             return self._call_tree_page_id
 
-    def match_metrics(self, *metric: Sequence[Metric]) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
+    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
         matches = self._metrics_page.get_matches(*metric)
         return [], matches
 
-    def match_call_tree(self, *call_tree: Sequence[CallTree]) -> Tuple[CallTree, MutableAbstractMatches[Node]]:
+    def match_call_tree(self, *call_tree: Sequence[CallTree], progress_bar=DUMMY_PROGRESS) -> Tuple[CallTree, MutableAbstractMatches[Node]]:
         matches = self._call_tree_page.get_matches(*call_tree)
         return CallTree(), matches
 
-    def match_modelers(self, *mg: Sequence[ModelGenerator]) -> Mapping[str, Sequence[ModelGenerator]]:
+    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[str, Sequence[ModelGenerator]]:
         return self._model_set_page.get_matches(*mg)
 
     NAME = 'Interactive'
