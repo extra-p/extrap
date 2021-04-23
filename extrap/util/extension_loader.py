@@ -31,7 +31,7 @@ class CaseInsensitiveStringDict(MutableMapping[str, _VT]):
         return len(self.data)
 
     def __iter__(self) -> Iterator:
-        return iter(self.data)
+        return iter(sorted(self.data))
 
     def __getitem__(self, k: str) -> _VT:
         k = self.resolve_key(k)

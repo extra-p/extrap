@@ -13,7 +13,7 @@ from extrap.entities.hypotheses import ConstantHypothesis, SingleParameterHypoth
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.terms import CompoundTerm
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.single_parameter.refining import RefiningModeler
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
@@ -22,7 +22,7 @@ from tests.modelling_testcase import TestCaseWithFunctionAssertions
 class TestRefiningModeler(TestCaseWithFunctionAssertions):
 
     def test_general(self):
-        experiment = read_text_file('data/text/one_parameter_6.txt')
+        experiment = TextFileReader().read_experiment('data/text/one_parameter_6.txt')
         # initialize model generator
         model_generator = ModelGenerator(experiment, RefiningModeler())
 

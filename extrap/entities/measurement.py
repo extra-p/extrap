@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -37,6 +37,16 @@ class Measurement:
 
     def value(self, use_median):
         return self.median if use_median else self.mean
+
+    def merge(self, other: 'Measurement') -> None:
+        """Approximately merges the other measurement into this measurement."""
+        if self.coordinate != other.coordinate:
+            raise ValueError("Coordinate does not match while merging measurements.")
+        self.median += other.median
+        self.mean += other.mean
+        self.minimum += other.minimum
+        self.maximum += other.maximum
+        self.std = np.sqrt(self.std ** 2 + other.std ** 2)
 
     def __repr__(self):
         return f"Measurement({self.coordinate}: {self.mean:0.6} median={self.median:0.6})"

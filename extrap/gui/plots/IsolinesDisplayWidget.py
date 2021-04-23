@@ -23,7 +23,7 @@ class IsolinesDisplay(BaseContourGraph):
         """
 
         # Get data
-        model_list, selected_callpaths = self.get_selected_models()
+        model_list, selected_callpaths = self.main_widget.get_selected_models()
         if model_list is None:
             return
 
@@ -33,7 +33,8 @@ class IsolinesDisplay(BaseContourGraph):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
         number_of_subplots = 1
         if len(Z_List) > 1:
             number_of_subplots = len(Z_List) + 1

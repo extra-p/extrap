@@ -20,6 +20,8 @@ from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
+import re
+
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
 
@@ -78,7 +80,7 @@ class TreeModel(QAbstractItemModel):
             return None
 
         if getDecorationBoxes:
-            delta = self.main_widget.max_value - self.main_widget.min_value
+            delta = self.selector_widget.max_value - self.selector_widget.min_value
             if delta == 0:
                 return None  # can't divide by zero
 
@@ -104,7 +106,10 @@ class TreeModel(QAbstractItemModel):
             return self.main_widget.color_widget.getColor(relativeValue)
 
         if index.column() == 0:
-            return call_tree_node.name
+            if self.selector_widget.show_parameters.isChecked():
+                return call_tree_node.name
+            else:
+                return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
             # if len(model.getComments()) > 0:
             #     return len(model.getComments())
@@ -130,6 +135,25 @@ class TreeModel(QAbstractItemModel):
         elif index.column() == 7:
             return formatNumber(str(model.hypothesis.RE))
         return None
+
+    def remove_method_parameters(self, name):
+        depth = 0
+        start = -1
+        re.escape("()")
+        for i in range(0, len(name)):
+            elem = name[i]
+            if elem == "<":
+                depth += 1
+                if start == -1:
+                    start = i
+            if elem == ">":
+                depth -= 1
+                if start != -1 and depth == 0:
+                    name = name[0:start:] + "<…>" + self.remove_method_parameters(name[i+1:len(name):])
+                    return re.sub(r"\(.*\)", "(…)", name)
+        return re.sub(r"\(.*\)", "(…)", name)
+
+
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()
@@ -324,10 +348,27 @@ class TreeItemFilterProvider:
         for child in self._call_tree:
             self._tree_builder(child, root, predicate)
 
-        self._model.beginResetModel()
-        self._model.root_item = root
-        self._model.endResetModel()
+        if len(self._model.root_item.child_items) == 0 or self.is_tree_changed(self._model.root_item, root):
+            self._model.beginResetModel()
+            self._model.root_item = root
+            self._model.endResetModel()
+
         self._model.valuesChanged()
+
+    @staticmethod
+    def is_tree_changed(old_tree: TreeItem, new_tree: TreeItem):
+        if len(old_tree.child_items) != len(new_tree.child_items):
+            return True
+        diverge = False
+        for i in range(len(old_tree.child_items)):
+            old_node = old_tree.child_items[i]
+            new_node = new_tree.child_items[i]
+            if old_node.call_tree_node.name != new_node.call_tree_node.name:
+                diverge = True
+                break
+            else:
+                diverge = TreeItemFilterProvider.is_tree_changed(old_node, new_node)
+        return diverge
 
     @staticmethod
     def _construct_tree_exclude_child_if_mismatch(ct_node: Node, parent: TreeItem,

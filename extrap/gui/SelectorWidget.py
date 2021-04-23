@@ -5,30 +5,36 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 import math
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
-from extrap.gui.ParameterValueSlider import ParameterValueSlider
+from extrap.entities.model import Model
 from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
+from extrap.gui.components.ParameterValueSlider import ParameterValueSlider
 from extrap.modelers.model_generator import ModelGenerator
+
+if TYPE_CHECKING:
+    from extrap.gui.MainWidget import MainWidget
 
 
 class SelectorWidget(QWidget):
-    def __init__(self, mainWidget, parent):
+    def __init__(self, main_widget: MainWidget, parent):
         super(SelectorWidget, self).__init__(parent)
-        self.main_widget = mainWidget
+        self.main_widget = main_widget
         self.tree_model = TreeModel(self)
         self.parameter_sliders = list()
         self.initUI()
         self._sections_switched = False
+        self.min_value = 0
+        self.max_value = 0
 
     # noinspection PyAttributeOutsideInit
     def initUI(self):
@@ -88,6 +94,13 @@ class SelectorWidget(QWidget):
         self.asymptoticCheckBox.stateChanged.connect(
             self.changeAsymptoticBehavior)
         self.toolbar.addWidget(self.asymptoticCheckBox)
+
+        self.show_parameters = QCheckBox('Show parameters', self.toolbar)
+        # self.show_parameters.toggle()
+        self.show_parameters.stateChanged.connect(
+            self.changeAsymptoticBehavior)
+        self.toolbar.addWidget(self.show_parameters)
+
         # Positioning
         self.grid.addWidget(model_label, 0, 0)
         self.grid.addWidget(self.model_selector, 0, 1)
@@ -128,10 +141,12 @@ class SelectorWidget(QWidget):
             self.callpath_selection_changed)
 
     def callpath_selection_changed(self):
-        callpath_list = self.getSelectedCallpath()
-        # self.dict_callpath_color = {}
-        self.main_widget.populateCallPathColorMap(callpath_list)
-        self.main_widget.updateAllWidget()
+        call_tree_nodes = self.get_selected_call_tree_nodes()
+        metric = self.getSelectedMetric()
+        call_tree_nodes = [c for c in call_tree_nodes if
+                           (c.path, metric) in self.getCurrentModel().models]
+        self.main_widget.model_color_map.update(call_tree_nodes)
+        self.main_widget.on_selection_changed()
 
     def fillMetricList(self):
         self.metric_selector.clear()
@@ -143,13 +158,20 @@ class SelectorWidget(QWidget):
             name = metric.name if metric.name != '' else '<default>'
             self.metric_selector.addItem(name, metric)
 
+    def on_experiment_changed(self):
+        self.updateModelList()
+        self.fillMetricList()
+        self.createParameterSliders()
+        self.fillCalltree()
+        self.tree_model.valuesChanged()
+
     def changeAsymptoticBehavior(self):
         self.tree_model.valuesChanged()
 
     def getSelectedMetric(self) -> Metric:
         return self.metric_selector.currentData()
 
-    def getSelectedCallpath(self) -> Sequence[Node]:
+    def get_selected_call_tree_nodes(self) -> Sequence[Node]:
         indexes = self.tree_view.selectedIndexes()
         callpath_list = list()
 
@@ -164,6 +186,23 @@ class SelectorWidget(QWidget):
     def getCurrentModel(self) -> Optional[ModelGenerator]:
         model = self.model_selector.currentData()
         return model
+
+    def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Node]]]:
+        selected_metric = self.getSelectedMetric()
+        selected_call_tree_nodes = self.get_selected_call_tree_nodes()
+        model_set = self.getCurrentModel()
+        if not selected_call_tree_nodes or model_set is None:
+            return None, None
+        model_set_models = model_set.models
+        if not model_set_models:
+            return None, None
+        model_list = list()
+        for node in selected_call_tree_nodes:
+            key = (node.path, selected_metric)
+            if key in model_set_models:
+                model = model_set_models[key]
+                model_list.append(model)
+        return model_list, selected_call_tree_nodes
 
     def renameCurrentModel(self, newName):
         index = self.model_selector.currentIndex()
@@ -197,7 +236,7 @@ class SelectorWidget(QWidget):
         #     generator = model._modeler
         self.main_widget.selector_widget.tree_model.valuesChanged()
 
-        self.main_widget.updateAllWidget()
+        self.main_widget.on_selection_changed()
         self.update()
 
     def model_rename(self):
@@ -214,7 +253,7 @@ class SelectorWidget(QWidget):
     def model_delete(self):
         reply = QMessageBox.question(self,
                                      'Delete Current Model',
-                                     "Are you sure to delete the model?",
+                                     "Are you sure to delete the current model?",
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
@@ -226,6 +265,30 @@ class SelectorWidget(QWidget):
             self.model_selector.removeItem(index)
             del experiment.modelers[index]
 
+    def delete_metric(self):
+        reply = QMessageBox.question(self,
+                                     'Delete Current Metric',
+                                     "Are you sure to delete the current metric?",
+                                     QMessageBox.Yes | QMessageBox.No,
+                                     QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            index = self.metric_selector.currentIndex()
+            metric = self.getSelectedMetric()
+            if index < 0:
+                return
+            experiment = self.main_widget.getExperiment()
+            self.metric_selector.removeItem(index)
+            experiment.metrics.remove(metric)
+            for callpath in experiment.callpaths:
+                key = (callpath, metric)
+                if key in experiment.measurements:
+                    del experiment.measurements[key]
+            for model_set in experiment.modelers:
+                for callpath in experiment.callpaths:
+                    key = (callpath, metric)
+                    if key in model_set.models:
+                        del model_set.models[key]
+
     @staticmethod
     def get_all_models(experiment):
         if experiment is None:
@@ -236,61 +299,54 @@ class SelectorWidget(QWidget):
         return models
 
     def metric_index_changed(self):
-        self.main_widget.metricIndexChanged()
+        self.main_widget.on_selection_changed()
         self.tree_model.on_metric_changed()
 
     def getParameterValues(self):
-        ''' This functions returns the parameter value list with the
+        """ This functions returns the parameter value list with the
             parameter values from the bottom of the calltree selection.
             This information is necessary for the evaluation of the model
-            functions, e.g. to colot the severity boxes.
-        '''
+            functions, e.g. to color the severity boxes.
+        """
         value_list = []
         for param in self.parameter_sliders:
             value_list.append(param.getValue())
         return value_list
 
-    def iterate_children(self, paramValueList, callpaths, metric):
-        ''' This is a helper function for getMinMaxValue.
+    def iterate_children(self, models, param_value_list, callpaths, metric):
+        """ This is a helper function for update_min_max_value.
             It iterates the calltree recursively.
-        '''
+        """
         value_list = list()
         for callpath in callpaths:
-            model = self.getCurrentModel().models.get((callpath.path, metric))
-            if model is None:
-                continue
-
-            formula = model.hypothesis.function
-            value = formula.evaluate(paramValueList)
-            if not math.isinf(value):
-                value_list.append(value)
+            model = models.get((callpath.path, metric))
+            if model is not None:
+                formula = model.hypothesis.function
+                value = formula.evaluate(param_value_list)
+                if not math.isinf(value) and not math.isnan(value):
+                    value_list.append(value)
             children = callpath.childs
-            value_list += self.iterate_children(paramValueList,
-                                                children, metric)
+            value_list += self.iterate_children(models, param_value_list, children, metric)
         return value_list
 
-    def getMinMaxValue(self):
-        ''' This function calculated the minimum and the maximum values that
+    def update_min_max_value(self):
+        """ This function calculated the minimum and the maximum values that
             appear in the call tree. This information is e.g. used to scale
             legends ot the color line at the bottom of the extrap window.
-        '''
-        value_list = list()
+        """
+        min_max_value = (0, 0)
         experiment = self.main_widget.getExperiment()
-        if experiment is None:
-            value_list.append(1)
-            return value_list
-        selectedMetric = self.getSelectedMetric()
-        if selectedMetric is None:
-            value_list.append(1)
-            return value_list
-        param_value_list = self.getParameterValues()
-        call_tree = experiment.call_tree
-        nodes = call_tree.get_nodes()
-        previous = numpy.seterr(divide='ignore', invalid='ignore')
-        value_list.extend(self.iterate_children(param_value_list,
-                                                nodes,
-                                                selectedMetric))
-        numpy.seterr(**previous)
-        if len(value_list) == 0:
-            value_list.append(1)
-        return value_list
+        if experiment:
+            selected_metric = self.getSelectedMetric()
+            model_set = self.getCurrentModel()
+            if selected_metric and model_set:
+                param_value_list = self.getParameterValues()
+                call_tree = experiment.call_tree
+                nodes = call_tree.get_nodes()
+                previous = numpy.seterr(divide='ignore', invalid='ignore')
+                value_list = self.iterate_children(model_set.models, param_value_list, nodes, selected_metric)
+                numpy.seterr(**previous)
+                if len(value_list) > 0:
+                    min_max_value = max(0.0, min(value_list)), max(0.0, max(value_list))
+        self.min_value, self.max_value = min_max_value
+        return min_max_value

@@ -14,7 +14,7 @@ from PySide2.QtCore import QRect, QItemSelectionModel
 from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
 
 from extrap.extrap import extrapgui
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
 from extrap.gui.MainWidget import MainWidget, QCoreApplication
 
@@ -47,11 +47,11 @@ class TestGuiCommon(unittest.TestCase):
 
     def test_line_graph(self):
         data_display = self.window.data_display
-        self.assertTrue(data_display.ifTabAlreadyOpened("Line graph"))
+        self.assertTrue(data_display.is_tab_already_opened("Line graph"))
         data_display.display_widget.tabBar().removeTab(0)
-        self.assertFalse(data_display.ifTabAlreadyOpened("Line graph"))
+        self.assertFalse(data_display.is_tab_already_opened("Line graph"))
         data_display.reloadTabs([0])
-        self.assertTrue(data_display.ifTabAlreadyOpened("Line graph"))
+        self.assertTrue(data_display.is_tab_already_opened("Line graph"))
 
 
 class TestGuiExperimentLoaded(TestGuiCommon):
@@ -59,7 +59,7 @@ class TestGuiExperimentLoaded(TestGuiCommon):
     def setUp(self) -> None:
         super().setUp()
 
-        exp = read_text_file('data/text/one_parameter_6.txt')
+        exp = TextFileReader().read_experiment('data/text/one_parameter_6.txt')
         self.window.model_experiment(exp)
 
     def test_graph_model_multiple_selected(self):
@@ -141,12 +141,12 @@ class TestGuiLoadExperiment(unittest.TestCase):
         _old_exception_handler = sys.excepthook
         try:
             window, app = extrapgui.main(test=True, args=[])
-            exp = read_text_file('data/text/one_parameter_1.txt')
-            self.assertIsNone(window.experiment)
+            exp = TextFileReader().read_experiment('data/text/one_parameter_1.txt')
+            self.assertIsNone(window.getExperiment())
 
             window.model_experiment(exp)
             QCoreApplication.processEvents()
-            self.assertIsNotNone(window.experiment)
+            self.assertIsNotNone(window.getExperiment())
             window.closeEvent = lambda e: e.accept()
             window.close()
         finally:
@@ -176,7 +176,7 @@ class TestGuiSelectedThenNoModelSelected(TestGuiExperimentLoaded):
     def setUp(self) -> None:
         super().setUp()
         self.test_graph_model_one_selected()
-        self.window.selector_widget.getCurrentModel = lambda: None
+        self.window.selector_widget.get_current_model_gen = lambda: None
 
 
 if __name__ == '__main__':
