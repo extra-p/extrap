@@ -1,0 +1,6 @@
+FROM dorowu/ubuntu-desktop-lxde-vnc:focal
+
+RUN apt update
+RUN apt install -y gcc make build-essential libssl-dev libffi-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev liblzma-dev git python3-pip qtbase5-dev qttools5-dev-tools qt5-default
+
+RUN pip3 install extrap
