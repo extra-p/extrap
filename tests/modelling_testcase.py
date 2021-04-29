@@ -41,11 +41,11 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
             kwargs['ctxt'] += '; MSG: ' + kwargs['msg']
             del kwargs['msg']
         self.assertApprox(function.constant_coefficient, other.constant_coefficient, **kwargs)
-        self.assertCountEqual(function.compound_terms, other.compound_terms)
+        self.assertEqual(len(function.compound_terms), len(other.compound_terms))
         if isinstance(function, MultiParameterFunction):
             function_pairs = {tuple(p for p, _ in t.parameter_term_pairs): t for t in function.compound_terms}
             other_pairs = {tuple(p for p, _ in t.parameter_term_pairs): t for t in other.compound_terms}
-            self.assertCountEqual(function_pairs, other_pairs)
+            self.assertEqual(len(function_pairs), len(other_pairs))
             for p in function_pairs:
                 self.assertApproxTerm(function_pairs[p], other_pairs[p], **kwargs)
         else:
@@ -55,11 +55,11 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
     def assertApproxTerm(self, tt: CompoundTerm, to: CompoundTerm, **kwargs):
         ctxt = kwargs.get('ctxt', '')
         if isinstance(tt, CompoundTerm):
-            self.assertCountEqual(tt.simple_terms, to.simple_terms)
+            self.assertEqual(len(tt.simple_terms), len(to.simple_terms))
             for stt, sto in zip(tt.simple_terms, to.simple_terms):
                 self.assertApproxSimpleTerm(stt, sto, **kwargs)
         elif isinstance(tt, MultiParameterTerm):
-            self.assertCountEqual(tt.parameter_term_pairs, to.parameter_term_pairs)
+            self.assertEqual(len(tt.parameter_term_pairs), len(to.parameter_term_pairs))
             for stt, sto in zip(sorted(tt.parameter_term_pairs, key=itemgetter(0)),
                                 sorted(to.parameter_term_pairs, key=itemgetter(0))):
                 self.assertEqual(stt[0], sto[0], msg=f"Parameters are not identical {sto[0]} != {stt[0]} {ctxt}")
