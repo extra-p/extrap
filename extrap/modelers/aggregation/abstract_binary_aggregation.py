@@ -59,12 +59,27 @@ class BinaryAggregationFunction(Function):
         """
         return self.operation_name + '(' + ', '.join(t.to_string(*parameters) for t in self.compound_terms) + ')'
 
+    def __eq__(self, other):
+        if not isinstance(other, BinaryAggregationFunction):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            return self.operation_name == other.operation_name and \
+                   self.compound_terms == other.compound_terms and \
+                   self.constant_coefficient == other.constant_coefficient
+
 
 class BinaryAggregation(Aggregation, ABC):
 
     @classproperty
     @abstractmethod
-    def NOT_CALCULABLE_TAG(cls) -> str:  # noqa
+    def TAG_DISABLED(cls) -> str:  # noqa
+        raise NotImplementedError
+
+    @classproperty
+    @abstractmethod
+    def TAG_USAGE_DISABLED(cls) -> str:  # noqa
         raise NotImplementedError
 
     @abstractmethod
@@ -80,7 +95,7 @@ class BinaryAggregation(Aggregation, ABC):
         progress_bar.total += len(models)
         result = {}
         for metric in metrics:
-            if self.NOT_CALCULABLE_TAG in metric.tags:
+            if metric.lookup_tag(self.TAG_DISABLED, False):
                 continue
             self.walk_nodes(result, calltree, models, metric, progress_bar=progress_bar)
 
@@ -94,26 +109,33 @@ class BinaryAggregation(Aggregation, ABC):
                 path = node.name
             else:
                 path = path + '->' + node.name
-        callpath = Callpath(path)
+
+        callpath = node.path if node.path else Callpath(path)
         key = (callpath, metric)
         if key in models:
-            agg_models.append(models[key])
+            own_model = models[key]
+            agg_models.append(own_model)
         else:
+            own_model = None
             progress_bar.total += 1
+
         for c in node:
             model = self.walk_nodes(result, c, models, metric, path, progress_bar)
             if model is not None:
                 agg_models.append(model)
 
-        if not agg_models or (node.path and self.NOT_CALCULABLE_TAG in node.path.tags):
+        if not agg_models:
             model = None
-        elif len(agg_models) == 1:
-            model = agg_models[0]
+        elif callpath.lookup_tag(self.TAG_DISABLED, False):
+            model = own_model
         else:
-            measurements = self.aggregate_measurements(agg_models, self.binary_operator)
-            model = self.aggregate_model(agg_models, callpath, measurements, metric, self.binary_operator,
-                                         self._OPERATION_NAME)
-            model.measurements = measurements
+            if len(agg_models) == 1:
+                model = agg_models[0]
+            else:
+                measurements = self.aggregate_measurements(agg_models, self.binary_operator)
+                model = self.aggregate_model(agg_models, callpath, measurements, metric, self.binary_operator,
+                                             self._OPERATION_NAME)
+                model.measurements = measurements
 
         if model is not None:
             if node.path == Callpath.EMPTY:
@@ -121,6 +143,14 @@ class BinaryAggregation(Aggregation, ABC):
             result[(node.path, metric)] = model
 
         progress_bar.update(1)
+
+        # check how model may be used in aggregated model of parent
+        usage_disabled = callpath.lookup_tag(self.TAG_USAGE_DISABLED, False)
+        if usage_disabled:
+            if usage_disabled == self.TAG_USAGE_DISABLED_agg_model:
+                return own_model
+            return None
+
         return model
 
     @staticmethod
