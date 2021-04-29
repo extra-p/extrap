@@ -18,6 +18,9 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
 class Aggregation(ABC):
+    TAG_DISABLED = 'agg__disabled'
+    TAG_USAGE_DISABLED = 'agg__usage_disabled'
+    TAG_USAGE_DISABLED_agg_model = 'only_agg_model'
 
     @abstractmethod
     def aggregate(self, models: Dict[Tuple[Callpath, Metric], Model], calltree: CallTree, metrics: Sequence[Metric],
@@ -25,7 +28,9 @@ class Aggregation(ABC):
         """ Creates an aggregated model for each model.
 
         This method is the core of the aggregation system.
-        It receives a thea call-tree and all models and returns aggregated versions of the models.
+        It receives a call-tree and all models and returns aggregated versions of the models.
+        It should honor the "agg__disabled" tag on metrics and callpaths,
+        thus it should not create aggregations for elements marked with this tag.
         """
         raise NotImplementedError
 

@@ -51,3 +51,42 @@ To enable options for your modeler, you must annotate your modeler class with `@
 To declare an option, you must use a class-level field which is assigned the result of `modeler_options.add(...)`
 Use the instance field normally to get or set a value for an option.
 Options may also be grouped using `modeler_options.group()`.
+
+Tags
+----
+
+Several entities in Extra-P support the annotation with tags. The tag system is build on the following conventions:
+
+* Tags are key-value pairs, where the key is always a string, and the value must be JSON-serializable.
+* Tags are arranged hierarchically by their keys. Two underscores (`__`) are used as path separator in the key. 
+* All keys should start with a prefix identifying the corresponding namespace/module.
+* If a specific path is not available, the `lookup_tag` function will return the value of a more general tag. 
+  The prefix on its own is generally not considered as a more general tag.
+  
+
+Aggregation
+-----------
+
+Similar to the modelers, one can also create new aggregation strategies by creating new classes derived from 
+`extrap.modelers.aggegation.Aggregation` within sub-modules of `extrap.modelers.aggegation`.
+
+The `extrap.modelers.aggregation.Aggregation.aggregate` method is the core of the aggregation system. 
+It receives a call-tree and all models and returns aggregated versions of the models for each model in the input.
+It should honor the <b>agg__*</b>-tags and especially the **agg__disabled**-tag on 
+metrics and call-paths, thus it should not create aggregations for elements marked with this tag.
+
+### Tags
+All tags that control the behavior or occur in context of aggregations should start with the __agg__-prefix.
+
+The predefined tags **agg__disabled** and **agg__usage_disabled** control whether the aggregation must ignore the 
+tagged entity. Children of the tagged entity will be regarded separately, so that these can get aggregated on their own.
+
+The value of **agg__disabled** is either `True` or `False`, or the tag is _not present_ at all:
+If the value is `True`, no aggregation will be calculated.
+
+**agg__usage_disabled** has one of three possible values, or the tag is _not present_:
+
+* `True`: the tagged entity will _not_ be used in an aggregated model for another entity (e.g., its parent).
+* `"only_agg_model_usage"`: the tagged entity's _own_ model, but _not_ its aggregated model, 
+  will be used in an aggregated model for another entity.
+* `False` or the tag is _not_ present: the model will be used normally.  

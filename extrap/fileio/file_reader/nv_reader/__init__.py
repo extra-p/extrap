@@ -12,6 +12,7 @@ from collections import defaultdict
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
+from typing import List
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -116,7 +117,8 @@ class NsightFileReader(FileReader):
                                 if kernelName:
                                     aggregated_values[
                                         (Callpath(callpath + "->" + syncType + "->OVERLAP",
-                                                  agg_gpu_overlap=True, agg_sum__not_calculable=True), metric)] = [0]
+                                                  gpu__overlap=True, gpu__overlap__agg=True, agg__usage__disabled=True),
+                                         metric)] = [0]
 
                                     overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
                                                           gpu_overlap=True, gpu_kernel=True)
@@ -127,7 +129,7 @@ class NsightFileReader(FileReader):
                                             Callpath(callpath + "->" + syncType), metric)].append(
                                             duration / 10 ** 9)
                                     aggregated_values[(
-                                        Callpath(callpath + "->" + syncType + "->WAIT", agg_sum__not_calculable=True),
+                                        Callpath(callpath + "->" + syncType + "->WAIT", agg__usage__disabled=True),
                                         metric)].append(
                                         other_duration / 10 ** 9)
                             elif kernelName:

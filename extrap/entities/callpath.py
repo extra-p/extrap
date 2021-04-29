@@ -70,5 +70,40 @@ class _EmptyCallpath(Callpath):
         raise NotImplementedError()
 
 
+class _EmptyCallpath(Callpath):
+
+    def __init__(self):
+        self.__is_init = True
+        super().__init__("")
+        self.__is_init = False
+
+    def __copy__(self):
+        raise NotImplementedError()
+
+    @property
+    def name(self):
+        return ""
+
+    def __hash__(self):
+        return 0
+
+    @name.setter
+    def name(self, val):
+        if not self.__is_init:
+            raise NotImplementedError()
+
+    @property
+    def tags(self):
+        return {}
+
+    @tags.setter
+    def tags(self, val):
+        if not self.__is_init:
+            raise NotImplementedError()
+
+    def concat(self, *other, copy_tags=False):
+        raise NotImplementedError()
+
+
 CallpathSchema = make_value_schema(Callpath, '_data')
 Callpath.EMPTY = _EmptyCallpath()

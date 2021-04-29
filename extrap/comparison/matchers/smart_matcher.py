@@ -64,7 +64,7 @@ class SmartMatcher(AbstractMatcher):
                     source_key = (s_node.path, s_metric)
                     name = f"[{s_name}] {node.name}"
                     agg_cp = origin_node.path.concat(name)
-                    agg_cp.tags = {'comparison_part_agg': True}
+                    agg_cp.tags = {'comparison__part_agg': True}
                     part_agg_node = Node(name, agg_cp)
                     origin_node.add_child_node(part_agg_node)
 
@@ -165,8 +165,8 @@ class SmartMatcher(AbstractMatcher):
 
         c_measurements = s_measurements.get((s_node.path, metric), None)
         if c_measurements is not None:
-            if not any(s_node.path.tags.get(tag, False) for tag in
-                       ['agg_sum__not_calculable', 'gpu_overlap', 'agg_gpu_overlap']):
+            if not (s_node.path.lookup_tag('agg__usage__disabled', False) or
+                    s_node.path.lookup_tag('gpu__overlap', False)):
                 for m in c_measurements:
                     measurements_out[m.coordinate].merge(m)
             measurements[cp, metric] = c_measurements
@@ -184,7 +184,7 @@ class SmartMatcher(AbstractMatcher):
             for node, source_nodes in experiment.call_tree_match.items():
                 models = []
                 progress_bar.update()
-                if node.path.tags.get('comparison_part_agg', False):
+                if node.path.tags.get('comparison__part_agg', False):
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None:
@@ -247,7 +247,7 @@ class SmartMatcher(AbstractMatcher):
         else:
             progress_bar.total += 1
         for c in node:
-            if not (c.path and 'agg_sum__not_calculable' in c.path.tags):
+            if not (c.path and c.path.lookup_tag('agg__disabled', False)):
                 self.walk_nodes(c, models, metric, path, progress_bar, agg_models)
 
         if not agg_models or (node.path and 'agg_sum__not_calculable' in node.path.tags):

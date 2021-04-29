@@ -33,10 +33,13 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
     #     self.assertApprox(200, 200.4999, places=3)
 
     def assertApproxFunction(self, function, other, **kwargs):
-        if len(kwargs) == 0:
+        if 'places' not in kwargs:
             kwargs['places'] = 6
 
         kwargs['ctxt'] = f"in {other} != {function}"
+        if 'msg' in kwargs and kwargs['msg']:
+            kwargs['ctxt'] += '; MSG: ' + kwargs['msg']
+            del kwargs['msg']
         self.assertApprox(function.constant_coefficient, other.constant_coefficient, **kwargs)
         self.assertEqual(len(function.compound_terms), len(other.compound_terms))
         if isinstance(function, MultiParameterFunction):

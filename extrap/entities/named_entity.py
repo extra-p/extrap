@@ -11,6 +11,8 @@ from typing import Iterator
 
 from extrap.util.classproperty import classproperty
 
+TAG_SEPARATOR = '__'
+
 
 class NamedEntity(ABC):
     @classproperty
@@ -75,6 +77,17 @@ class NamedEntityWithTags(NamedEntity, ABC):
             self.tags = json.loads(tag_string)
         else:
             self.name = val
+
+    def lookup_tag(self, tag: str, default=None, prefix=1):
+        if tag in self.tags:
+            return self.tags[tag]
+        else:
+            path = tag.split(TAG_SEPARATOR)
+            for i in range(-1, -len(path) + prefix, -1):
+                tag = TAG_SEPARATOR.join(path[:i])
+                if tag in self.tags:
+                    return self.tags[tag]
+            return default
 
     def __repr__(self):
         if self.tags:

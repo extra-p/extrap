@@ -5,7 +5,7 @@ import numpy as np
 
 from extrap.comparison.experiment_comparison import ComparisonExperiment, ComparisonModel, ComparisonFunction
 from extrap.comparison.matchers.minimum_matcher import MinimumMatcher
-from extrap.comparison.matchers.test_matcher import TestMatcher
+from extrap.comparison.matchers.smart_matcher import SmartMatcher
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
 from extrap.entities.coordinate import Coordinate
@@ -33,18 +33,20 @@ class TestComparison(TestCase):
     def test_smart_comparison_basic_output(self):
         experiment1 = read_experiment('data/comparison/lulesh_with_tags.extra-p')
         experiment2 = read_experiment('data/comparison/lulesh-cpu_demangled.extra-p')
-        experiment = ComparisonExperiment(experiment1, experiment2, TestMatcher())
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
         experiment.do_comparison()
         self.check_comparison_against_source(experiment, experiment1)
         self.check_comparison_against_source(experiment, experiment2)
 
     def test_smart_comparison_add_subtree_and_merge_measurements(self):
-        ct_parent = Node('[exp1] main', Callpath('->[Comparison]->[exp1] main', agg_sum__not_calculable=True))
+        ct_parent = Node('[exp1] main', Callpath('->[Comparison]->[exp1] main', agg__disabled=True))
 
-        cB = Node("cB", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cB", gpu_overlap=True, gpu_kernel=True), [])
-        cA = Node("cA", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cA", gpu_overlap=True, gpu_kernel=True), [])
-        overlap = Node("OVERLAP", Callpath("_start->main->sync->EVT_SYNC->OVERLAP", agg_gpu_overlap=True), [cA, cB])
-        wait = Node("WAIT", Callpath("_start->main->sync->EVT_SYNC->WAIT", agg_sum__not_calculable=True), [])
+        cB = Node("cB", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cB", gpu__overlap=True, gpu__kernel=True), [])
+        cA = Node("cA", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cA", gpu__overlap=True, gpu__kernel=True), [])
+        overlap = Node("OVERLAP", Callpath("_start->main->sync->EVT_SYNC->OVERLAP", agg__usage__disabled=True,
+                                           gpu__overlap='agg'), [cA, cB])
+        wait = Node("WAIT",
+                    Callpath("_start->main->sync->EVT_SYNC->WAIT", agg__usage__disabled=True, agg__disabled=True), [])
         evt_sync = Node("EVT_SYNC", Callpath("_start->main->sync->EVT_SYNC"), [wait, overlap])
         source_nodes = Node("sync", Callpath("_start->main->sync"), [evt_sync])
 
@@ -56,18 +58,19 @@ class TestComparison(TestCase):
         metric = Metric('time')
         # TestMatcher()._add_subtree_and_merge_measurements(ct_parent, source_nodes, s_measurements, 0, 2, metric,
         #                                                  measurement_out, new_matches, measurements)
-        r_cB = Node("cB", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP->cB", gpu_overlap=True,
-                                   gpu_kernel=True), [])
-        r_cA = Node("cA", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP->cA", gpu_overlap=True,
-                                   gpu_kernel=True), [])
+        r_cB = Node("cB", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP->cB", gpu__overlap=True,
+                                   gpu__kernel=True), [])
+        r_cA = Node("cA", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP->cA", gpu__overlap=True,
+                                   gpu__kernel=True), [])
         r_overlap = Node("OVERLAP",
-                         Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP", agg_gpu_overlap=True),
-                         [r_cA, r_cB])
+                         Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP", agg__usage__disabled=True,
+                                  gpu__overlap='agg'), [r_cA, r_cB])
         r_wait = Node("WAIT",
-                      Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->WAIT", agg_sum__not_calculable=True), [])
+                      Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->WAIT", agg__usage__disabled=True,
+                               agg__disabled=True), [])
         r_evt_sync = Node("EVT_SYNC", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC"), [r_wait, r_overlap])
         r_sync = Node("sync", Callpath("->[Comparison]->[exp1] main->sync"), [r_evt_sync])
-        expected_parent = Node('[exp1] main', Callpath('->[Comparison]->[exp1] main', agg_sum__not_calculable=True),
+        expected_parent = Node('[exp1] main', Callpath('->[Comparison]->[exp1] main', agg__disabled=True),
                                [r_sync])
         expected_measurement_out = {Coordinate(c): Measurement(Coordinate(c), None, None, v) for c, v in
                                     zip([64, 512, 4096, 32768, 262144], range(5, 10, 1))}
@@ -90,8 +93,8 @@ class TestComparison(TestCase):
                                               zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))]
                           }
         expected_s_measurements = copy.deepcopy(s_measurements)
-        TestMatcher()._add_subtree_and_merge_measurements(ct_parent, source_nodes, s_measurements, 0, 2, metric,
-                                                          measurement_out, new_matches, measurements)
+        SmartMatcher()._add_subtree_and_merge_measurements(ct_parent, source_nodes, s_measurements, 0, 2, metric,
+                                                           measurement_out, new_matches, measurements)
         expected_measurement_out = {Coordinate(c): Measurement(Coordinate(c), None, None, v) for c, v in
                                     zip([64, 512, 4096, 32768, 262144], [25, 46, 67, 88, 109])}
 
@@ -145,7 +148,7 @@ class TestComparison(TestCase):
         experiment2.call_tree = io_helper.create_call_tree(experiment2.callpaths)
         ModelGenerator(experiment1).model_all()
         ModelGenerator(experiment2).model_all()
-        experiment = ComparisonExperiment(experiment1, experiment2, TestMatcher())
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
         experiment.do_comparison()
         self.check_comparison_against_source(experiment, experiment1)
         self.check_comparison_against_source(experiment, experiment2)
@@ -215,7 +218,7 @@ class TestComparison(TestCase):
         experiment2.call_tree = io_helper.create_call_tree(experiment2.callpaths)
         ModelGenerator(experiment1).model_all()
         ModelGenerator(experiment2).model_all()
-        experiment = ComparisonExperiment(experiment1, experiment2, TestMatcher())
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
         experiment.do_comparison()
         self.check_comparison_against_source(experiment, experiment1)
         self.check_comparison_against_source(experiment, experiment2)
