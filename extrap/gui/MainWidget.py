@@ -22,6 +22,7 @@ from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.gui.AggregationWidget import AggregationWidget
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
