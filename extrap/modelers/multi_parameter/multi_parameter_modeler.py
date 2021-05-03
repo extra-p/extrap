@@ -143,9 +143,11 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             result_groups.append(groups)
 
         if self.single_parameter_point_selection == 'all' and not use_all:
-            warnings.warn(
-                "Could not use all measurement points. At least 25 measurements are needed; one for each "
-                "combination of parameters.")
+            if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn(
+                    "Could not use all measurement points. At least 25 measurements are needed; one for each "
+                    "combination of parameters.")
 
         previous = np.seterr(invalid='ignore')
         combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
@@ -201,8 +203,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn("Number of measurements for each parameter needs to be at least 5"
-                          " in order to create a performance model.")
+            if not (not (len(measurements) < 1) and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn("Number of measurements for each parameter needs to be at least 5"
+                              " in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling

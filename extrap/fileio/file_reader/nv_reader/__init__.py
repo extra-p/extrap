@@ -35,7 +35,7 @@ class NsightFileReader(FileReader):
     CMD_ARGUMENT = "--nsight"
     LOADS_FROM_DIRECTORY = True
 
-    def read_experiment(dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None, only_time=True):
+    def read_experiment(self, dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None, only_time=False):
         # read the paths of the nsight files in the given directory with dir_name
         path = Path(dir_name)
         if not path.is_dir():
@@ -117,11 +117,13 @@ class NsightFileReader(FileReader):
                                 if kernelName:
                                     aggregated_values[
                                         (Callpath(callpath + "->" + syncType + "->OVERLAP",
-                                                  gpu__overlap=True, gpu__overlap__agg=True, agg__usage__disabled=True),
+                                                  validation__ignore__num_measurements=True,
+                                                  gpu__overlap='agg', agg__usage__disabled=True),
                                          metric)] = [0]
 
                                     overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
-                                                          gpu_overlap=True, gpu_kernel=True)
+                                                          gpu__overlap=True, gpu__kernel=True,
+                                                          validation__ignore__num_measurements=True)
                                     aggregated_values[(overlap_cp, metric)].append(durationGPU / 10 ** 9)
                                 else:
                                     if duration:
@@ -137,7 +139,9 @@ class NsightFileReader(FileReader):
                                     aggregated_values[(Callpath(callpath + "->" + kernelName), metric)].append(
                                         duration / 10 ** 9)
                                 aggregated_values[
-                                    (Callpath(callpath + "->" + kernelName + "->GPU", gpu=True), metric)].append(
+                                    (
+                                        Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True),
+                                        metric)].append(
                                     durationGPU / 10 ** 9)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
@@ -147,6 +151,8 @@ class NsightFileReader(FileReader):
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
 
                         correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
+                        if not correponding_ncu_path.exists():
+                            correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
                         if correponding_ncu_path.exists() and not only_time:
                             if pool is None:
                                 pool = multiprocessing.Pool()
@@ -164,17 +170,17 @@ class NsightFileReader(FileReader):
             if pool:
                 pool.close()
 
-        pbar.step("Unify calltrees")
+        pbar.step("Unify call-trees")
         to_delete = []
         # determine common callpaths for common calltree
         # add common callpaths and metrics to experiment
         for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
             value: List[Measurement]
-            if len(value) < num_points and 'gpu_overlap' not in key[0].tags:
+            if len(value) < num_points and not key[0].lookup_tag('gpu__overlap', False):
                 to_delete.append(key)
             else:
                 (callpath, metric) = key
-                # if len(value) < num_points and 'gpu_overlap' in callpath.tags:
+                # if len(value) < num_points and 'gpu__overlap' in callpath.tags:
                 #     # construct empty measurements for overlap
                 #     measurements = {c: Measurement(c, callpath, metric, None) for c in experiment.coordinates}
                 #     for v in value:

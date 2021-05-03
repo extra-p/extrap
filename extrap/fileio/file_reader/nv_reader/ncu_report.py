@@ -38,25 +38,14 @@ class NcuReport:
                     self.result_blocks.append(results_raw.entry)
 
     def get_measurements(self, paths):
-        return self._convert_measurements(zip(self.result_blocks, paths))
-
-    @staticmethod
-    def _convert_measurements(data):
-        aggregated_values = defaultdict(int)
-        for raw, (name, _, _, _, callpath) in data:
-            res: ProfileResult = raw.parse()
-            assert res.KernelFunctionName == name
-            for mv in res.MetricResults:
-                aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += NcuReport.convertMetricValue(
-                    mv.MetricValue)
-        return aggregated_values
+        return _convert_measurements(zip(self.result_blocks, paths))
 
     def get_measurements_parallel(self, paths, pool):
         aggregated_values = defaultdict(int)
 
         data = zip(self.result_blocks, list(paths))
         chunk_length = int((len(self.result_blocks) + (os.cpu_count() - 1)) / os.cpu_count())
-        reduced = pool.imap_unordered(self._convert_measurements,
+        reduced = pool.imap_unordered(_convert_measurements,
                                       [islice(data, 0 + i, chunk_length + i) for i in
                                        range(0, len(self.result_blocks), chunk_length)],
                                       1)
@@ -66,20 +55,31 @@ class NcuReport:
 
         return aggregated_values
 
-    @staticmethod
-    def convertMetricValue(mv: MetricValueMessage):
-        if mv.HasField('DoubleValue'):
-            return mv.DoubleValue
-        if mv.HasField("FloatValue"):
-            return mv.FloatValue
-        if mv.HasField("Uint64Value"):
-            return mv.Uint64Value
-        if mv.HasField("Uint32Value"):
-            return mv.Uint32Value
-        return float('nan')
-
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.report_data = None
+
+
+def _convert_metric_value(mv: MetricValueMessage):
+    if mv.HasField('DoubleValue'):
+        return mv.DoubleValue
+    if mv.HasField("FloatValue"):
+        return mv.FloatValue
+    if mv.HasField("Uint64Value"):
+        return mv.Uint64Value
+    if mv.HasField("Uint32Value"):
+        return mv.Uint32Value
+    return float('nan')
+
+
+def _convert_measurements(data):
+    aggregated_values = defaultdict(int)
+    for raw, (name, _, _, _, callpath) in data:
+        res: ProfileResult = raw.parse()
+        assert res.KernelFunctionName == name
+        for mv in res.MetricResults:
+            aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += _convert_metric_value(
+                mv.MetricValue)
+    return aggregated_values

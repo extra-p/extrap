@@ -265,8 +265,10 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn(
-                "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
+            if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn("Number of measurements for a parameter needs to be at least 5 in order "
+                              "to create a performance model.")
             # return None
 
         # create a constant model

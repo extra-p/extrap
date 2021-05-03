@@ -51,8 +51,10 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < 5:
-            warnings.warn(
-                "Number of measurements needs to be at least 5 in order to create a performance model.")
+            if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn(
+                    "Number of measurements needs to be at least 5 in order to create a performance model.")
             # return None
 
         # compute a constant model
