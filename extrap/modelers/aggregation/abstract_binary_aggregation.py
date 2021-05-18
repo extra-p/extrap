@@ -38,6 +38,7 @@ class BinaryAggregationFunction(Function, ABC):
         self.compound_terms = function_terms
         self.simplify()
 
+    @abstractmethod
     def evaluate(self, parameter_value):
         """
         Evaluate the function according to the given value and return the result.
@@ -63,7 +64,6 @@ class BinaryAggregationFunction(Function, ABC):
     def to_string(self, *parameters: Union[str, Parameter]):
         pass
 
-    @abstractmethod
     def to_string_raw(self, *parameters: Union[str, Parameter]):
         """
         Return a string representation of the function.
@@ -89,14 +89,15 @@ class SumAggregationFunction(BinaryAggregationFunction):
         """
         return self.parsedFkt.to_string(*parameters)
 
-    def to_string_raw(self, *parameters: Union[str, Parameter]):
-        """
-        Return a string representation of the function.
-        """
-        return 'sum' + '(' + ', '.join(t.to_string(*parameters) for t in self.compound_terms) + ')'
+    def evaluate(self, parameter_value):
+        a = super().evaluate(parameter_value)
+        b = self.parsedFkt.evaluate(parameter_value)
+        
+        delta = a-b
+
+        return a
 
     def simplify(self):
-
         multi = False
         single = False
         const = 0
