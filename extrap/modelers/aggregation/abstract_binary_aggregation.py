@@ -13,11 +13,12 @@ import numpy
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node
-from extrap.entities.functions import Function
+from extrap.entities.functions import Function, SingleParameterFunction, MultiParameterFunction, ConstantFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
+from extrap.entities.terms import CompoundTerm
 from extrap.modelers.aggregation import Aggregation
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -25,7 +26,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 numeric_array_t = Union[Number, numpy.ndarray]
 
 
-class BinaryAggregationFunction(Function):
+class BinaryAggregationFunction(Function, ABC):
     def __init__(self, function_terms, binary_operator: Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray],
                  operation_name: str):
         """
@@ -35,6 +36,7 @@ class BinaryAggregationFunction(Function):
         self.operation_name = operation_name
         self.binary_operator = binary_operator
         self.compound_terms = function_terms
+        self.simplify()
 
     def evaluate(self, parameter_value):
         """
@@ -53,7 +55,16 @@ class BinaryAggregationFunction(Function):
             function_value = self.binary_operator(function_value, t.evaluate(parameter_value))
         return function_value
 
+    @abstractmethod
+    def simplify(self):
+        pass
+
+    @abstractmethod
     def to_string(self, *parameters: Union[str, Parameter]):
+        pass
+
+    @abstractmethod
+    def to_string_raw(self, *parameters: Union[str, Parameter]):
         """
         Return a string representation of the function.
         """
@@ -68,6 +79,65 @@ class BinaryAggregationFunction(Function):
             return self.operation_name == other.operation_name and \
                    self.compound_terms == other.compound_terms and \
                    self.constant_coefficient == other.constant_coefficient
+
+
+class SumAggregationFunction(BinaryAggregationFunction):
+
+    def to_string(self, *parameters: Union[str, Parameter]):
+        """
+        Return a string representation of the function.
+        """
+        return self.parsedFkt.to_string(*parameters)
+
+    def to_string_raw(self, *parameters: Union[str, Parameter]):
+        """
+        Return a string representation of the function.
+        """
+        return 'sum' + '(' + ', '.join(t.to_string(*parameters) for t in self.compound_terms) + ')'
+
+    def simplify(self):
+
+        multi = False
+        single = False
+        const = 0
+        term_map = {}
+
+        for t in self.compound_terms:
+            # aggregate constant term
+            const += t.constant_coefficient
+
+            # check for "highest" function type
+            multi = multi | isinstance(t, MultiParameterFunction)
+            single = single | isinstance(t, SingleParameterFunction)
+
+            for x in t.compound_terms:
+                key = ', '.join(y.to_string() for y in x.simple_terms)
+                if term_map.keys().__contains__(key):
+                    term_map[key].append(x)
+                else:
+                    term_map[key] = [x]
+
+                # if x.simple_terms not in distinct_terms:
+                #     distinct_terms.append(t.simple_terms)
+
+        if multi:
+            newFkt = MultiParameterFunction()
+        elif single:
+            newFkt = SingleParameterFunction()
+        else:
+            newFkt = ConstantFunction()
+
+        newFkt.constant_coefficient = const
+
+        for key in term_map.keys():
+            term = CompoundTerm()
+            term.simple_terms = term_map[key][0].simple_terms
+            term.coefficient = 0
+            for coeff in term_map[key]:
+                term.coefficient += coeff.coefficient
+            newFkt.add_compound_term(term)
+
+        self.parsedFkt = newFkt
 
 
 class BinaryAggregation(Aggregation, ABC):
@@ -156,7 +226,7 @@ class BinaryAggregation(Aggregation, ABC):
     @staticmethod
     def aggregate_model(agg_models, callpath: Callpath, measurements: Sequence[Measurement], metric: Metric,
                         operator: Callable[[numeric_array_t, numeric_array_t], numeric_array_t], operation_name: str):
-        function = BinaryAggregationFunction([m.hypothesis.function for m in agg_models], operator, operation_name)
+        function = SumAggregationFunction([m.hypothesis.function for m in agg_models], operator, operation_name)
         hypothesis_type = type(agg_models[0].hypothesis)
         hypothesis = hypothesis_type(function, agg_models[0].hypothesis._use_median)
         hypothesis.compute_cost(measurements)

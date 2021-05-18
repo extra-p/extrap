@@ -15,6 +15,8 @@ class SumAggregation(BinaryAggregation):
     def binary_operator(self, a, b):
         return a + b
 
+
+
     TAG_DISABLED = 'agg__disabled__sum'
     TAG_USAGE_DISABLED = 'agg__usage_disabled__sum'
     _OPERATION_NAME = 'sum'
