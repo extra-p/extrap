@@ -92,10 +92,10 @@ class SumAggregationFunction(BinaryAggregationFunction):
     def evaluate(self, parameter_value):
         a = super().evaluate(parameter_value)
         b = self.parsedFkt.evaluate(parameter_value)
-        
-        delta = a-b
 
-        return a
+        delta = abs(a-b)
+
+        return b
 
     def simplify(self):
         multi = False
@@ -111,6 +111,7 @@ class SumAggregationFunction(BinaryAggregationFunction):
             multi = multi | isinstance(t, MultiParameterFunction)
             single = single | isinstance(t, SingleParameterFunction)
 
+            # find immutable simple term combinations
             for x in t.compound_terms:
                 key = ', '.join(y.to_string() for y in x.simple_terms)
                 if term_map.keys().__contains__(key):
@@ -118,9 +119,7 @@ class SumAggregationFunction(BinaryAggregationFunction):
                 else:
                     term_map[key] = [x]
 
-                # if x.simple_terms not in distinct_terms:
-                #     distinct_terms.append(t.simple_terms)
-
+        # Result function
         if multi:
             newFkt = MultiParameterFunction()
         elif single:
@@ -130,6 +129,7 @@ class SumAggregationFunction(BinaryAggregationFunction):
 
         newFkt.constant_coefficient = const
 
+        # Aggregate a compound term for each immutable simple term combination
         for key in term_map.keys():
             term = CompoundTerm()
             term.simple_terms = term_map[key][0].simple_terms
