@@ -7,7 +7,7 @@
 
 from abc import ABC, abstractmethod
 from numbers import Number
-from typing import Callable, Union, List, Tuple, Dict, Sequence
+from typing import Callable, Union, List, Tuple, Dict, Sequence, Mapping
 
 import numpy
 
@@ -36,6 +36,7 @@ class BinaryAggregationFunction(Function, ABC):
         self.operation_name = operation_name
         self.binary_operator = binary_operator
         self.compound_terms = function_terms
+        self.raw_terms = function_terms
         self.simplify()
 
     @abstractmethod
@@ -43,7 +44,7 @@ class BinaryAggregationFunction(Function, ABC):
         """
         Evaluate the function according to the given value and return the result.
         """
-        rest = iter(self.compound_terms)
+        rest = iter(self.raw_terms)
         function_value = next(rest).evaluate(parameter_value)
 
         if isinstance(parameter_value, numpy.ndarray):
@@ -68,7 +69,7 @@ class BinaryAggregationFunction(Function, ABC):
         """
         Return a string representation of the function.
         """
-        return self.operation_name + '(' + ', '.join(t.to_string(*parameters) for t in self.compound_terms) + ')'
+        return self.operation_name + '(' + ', '.join(t.to_string(*parameters) for t in self.raw_terms) + ')'
 
     def __eq__(self, other):
         if not isinstance(other, BinaryAggregationFunction):
@@ -87,29 +88,41 @@ class SumAggregationFunction(BinaryAggregationFunction):
         """
         Return a string representation of the function.
         """
-        return self.parsedFkt.to_string(*parameters)
+        function_string = str(self.constant_coefficient)
+        for t in self.compound_terms:
+            function_string += ' + '
+            function_string += t.to_string(*parameters)
+        return function_string
 
     def evaluate(self, parameter_value):
-        a = super().evaluate(parameter_value)
-        b = self.parsedFkt.evaluate(parameter_value)
+        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
+            parameter_value = parameter_value[0]
 
-        delta = abs(a-b)
+        if isinstance(parameter_value, numpy.ndarray):
+            shape = parameter_value.shape
+            if len(shape) == 2:
+                shape = (shape[1],)
+            function_value = numpy.full(shape, self.constant_coefficient, dtype=float)
+        else:
+            function_value = self.constant_coefficient
+        for t in self.compound_terms:
+            function_value += t.evaluate(parameter_value)
 
-        return b
+        # a = super().evaluate(parameter_value)
+        # delta = abs(a - function_value)
+        # if (delta > 1e-9).all():
+        #     print("Ups")
+
+        return function_value
 
     def simplify(self):
-        multi = False
-        single = False
-        const = 0
+        self.constant_coefficient = 0
+        self.compound_terms = []
         term_map = {}
 
-        for t in self.compound_terms:
+        for t in self.raw_terms:
             # aggregate constant term
-            const += t.constant_coefficient
-
-            # check for "highest" function type
-            multi = multi | isinstance(t, MultiParameterFunction)
-            single = single | isinstance(t, SingleParameterFunction)
+            self.constant_coefficient += t.constant_coefficient
 
             # find immutable simple term combinations
             for x in t.compound_terms:
@@ -119,16 +132,6 @@ class SumAggregationFunction(BinaryAggregationFunction):
                 else:
                     term_map[key] = [x]
 
-        # Result function
-        if multi:
-            newFkt = MultiParameterFunction()
-        elif single:
-            newFkt = SingleParameterFunction()
-        else:
-            newFkt = ConstantFunction()
-
-        newFkt.constant_coefficient = const
-
         # Aggregate a compound term for each immutable simple term combination
         for key in term_map.keys():
             term = CompoundTerm()
@@ -136,9 +139,7 @@ class SumAggregationFunction(BinaryAggregationFunction):
             term.coefficient = 0
             for coeff in term_map[key]:
                 term.coefficient += coeff.coefficient
-            newFkt.add_compound_term(term)
-
-        self.parsedFkt = newFkt
+            self.add_compound_term(term)
 
 
 class BinaryAggregation(Aggregation, ABC):
