@@ -181,9 +181,8 @@ class BinaryAggregation(Aggregation, ABC):
             if len(agg_models) == 1:
                 model = agg_models[0]
             else:
-                measurements = self.aggregate_measurements(agg_models, self.binary_operator)
-                model = self.aggregate_model(agg_models, callpath, measurements, metric, self.binary_operator,
-                                             self._OPERATION_NAME)
+                measurements = self.aggregate_measurements(agg_models)
+                model = self.aggregate_model(agg_models, callpath, measurements, metric)
                 model.measurements = measurements
 
         if model is not None:
