@@ -27,49 +27,29 @@ numeric_array_t = Union[Number, numpy.ndarray]
 
 
 class BinaryAggregationFunction(Function, ABC):
-    def __init__(self, function_terms, binary_operator: Callable[[numpy.ndarray, numpy.ndarray], numpy.ndarray],
-                 operation_name: str):
+    def __init__(self, function_terms):
         """
         Initialize a Function object.
         """
         super().__init__()
-        self.operation_name = operation_name
-        self.binary_operator = binary_operator
         self.compound_terms = function_terms
         self.raw_terms = function_terms
-        self.simplify()
+        self.aggregate()
 
     @abstractmethod
     def evaluate(self, parameter_value):
-        """
-        Evaluate the function according to the given value and return the result.
-        """
-        rest = iter(self.raw_terms)
-        function_value = next(rest).evaluate(parameter_value)
-
-        if isinstance(parameter_value, numpy.ndarray):
-            shape = parameter_value.shape
-            if len(shape) == 2:
-                shape = (shape[1],)
-            function_value += numpy.zeros(shape, dtype=float)
-
-        for t in rest:
-            function_value = self.binary_operator(function_value, t.evaluate(parameter_value))
-        return function_value
+        raise NotImplementedError
 
     @abstractmethod
-    def simplify(self):
-        pass
+    def aggregate(self):
+        raise NotImplementedError
 
     @abstractmethod
     def to_string(self, *parameters: Union[str, Parameter]):
-        pass
-
-    def to_string_raw(self, *parameters: Union[str, Parameter]):
         """
         Return a string representation of the function.
         """
-        return self.operation_name + '(' + ', '.join(t.to_string(*parameters) for t in self.raw_terms) + ')'
+        raise NotImplementedError
 
     def __eq__(self, other):
         if not isinstance(other, BinaryAggregationFunction):
@@ -77,22 +57,12 @@ class BinaryAggregationFunction(Function, ABC):
         elif self is other:
             return True
         else:
-            return self.operation_name == other.operation_name and \
+            return self.raw_terms == other.raw_terms and \
                    self.compound_terms == other.compound_terms and \
                    self.constant_coefficient == other.constant_coefficient
 
 
 class SumAggregationFunction(BinaryAggregationFunction):
-
-    def to_string(self, *parameters: Union[str, Parameter]):
-        """
-        Return a string representation of the function.
-        """
-        function_string = str(self.constant_coefficient)
-        for t in self.compound_terms:
-            function_string += ' + '
-            function_string += t.to_string(*parameters)
-        return function_string
 
     def evaluate(self, parameter_value):
         if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
@@ -115,7 +85,7 @@ class SumAggregationFunction(BinaryAggregationFunction):
 
         return function_value
 
-    def simplify(self):
+    def aggregate(self):
         self.constant_coefficient = 0
         self.compound_terms = []
         term_map = {}
@@ -140,6 +110,13 @@ class SumAggregationFunction(BinaryAggregationFunction):
             for coeff in term_map[key]:
                 term.coefficient += coeff.coefficient
             self.add_compound_term(term)
+
+    def to_string(self, *parameters: Union[str, Parameter]):
+        function_string = str(self.constant_coefficient)
+        for t in self.compound_terms:
+            function_string += ' + '
+            function_string += t.to_string(*parameters)
+        return function_string
 
 
 class BinaryAggregation(Aggregation, ABC):
@@ -225,19 +202,11 @@ class BinaryAggregation(Aggregation, ABC):
 
         return model
 
-    @staticmethod
-    def aggregate_model(agg_models, callpath: Callpath, measurements: Sequence[Measurement], metric: Metric,
-                        operator: Callable[[numeric_array_t, numeric_array_t], numeric_array_t], operation_name: str):
-        function = SumAggregationFunction([m.hypothesis.function for m in agg_models], operator, operation_name)
-        hypothesis_type = type(agg_models[0].hypothesis)
-        hypothesis = hypothesis_type(function, agg_models[0].hypothesis._use_median)
-        hypothesis.compute_cost(measurements)
-        model = Model(hypothesis, callpath, metric)
-        return model
+    @abstractmethod
+    def aggregate_model(self, agg_models, callpath: Callpath, measurements: Sequence[Measurement], metric: Metric):
+        raise NotImplementedError
 
-    @staticmethod
-    def aggregate_measurements(agg_models: List[Model],
-                               binary_operator: Callable[[numeric_array_t, numeric_array_t], numeric_array_t]):
+    def aggregate_measurements(self, agg_models: List[Model]):
         rest = iter(agg_models)
         first = next(rest)
         data = {}
@@ -252,9 +221,9 @@ class BinaryAggregation(Aggregation, ABC):
         for model in rest:
             for m in model.measurements:
                 agg = data[m.coordinate]
-                agg.mean = binary_operator(agg.mean, m.mean)
-                agg.median = binary_operator(agg.median, m.median)
-                agg.maximum = binary_operator(agg.maximum, m.maximum)
-                agg.minimum = binary_operator(agg.minimum, m.minimum)
-                agg.std = binary_operator(agg.std, m.std)
+                agg.mean = self.binary_operator(agg.mean, m.mean)
+                agg.median = self.binary_operator(agg.median, m.median)
+                agg.maximum = self.binary_operator(agg.maximum, m.maximum)
+                agg.minimum = self.binary_operator(agg.minimum, m.minimum)
+                agg.std = self.binary_operator(agg.std, m.std)
         return list(data.values())

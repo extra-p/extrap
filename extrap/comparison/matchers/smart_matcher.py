@@ -14,6 +14,7 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregation
+from extrap.modelers.aggregation.basic_aggregations import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -255,9 +256,8 @@ class SmartMatcher(AbstractMatcher):
         elif len(agg_models) == 1:
             model = agg_models[0]
         else:
-            measurements = BinaryAggregation.aggregate_measurements(agg_models, lambda a, b: a + b)
-            model = BinaryAggregation.aggregate_model(agg_models, callpath, measurements, metric, lambda a, b: a + b,
-                                                      'sum')
+            measurements = SumAggregation().aggregate_measurements(agg_models)
+            model = SumAggregation().aggregate_model(agg_models, callpath, measurements, metric)
             model.callpaths = [m.callpath for m in agg_models]
             model.measurements = measurements
 
