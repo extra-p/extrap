@@ -30,9 +30,28 @@ class TestAggregation(TestCaseWithFunctionAssertions):
                    experiment1.modelers[0].models[ca.path, metric].hypothesis.function]
 
         test_value = experiment1.modelers[1].models[overlap.path, metric].hypothesis.function.compound_terms
-        self.assertCountEqual(correct, test_value)
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          experiment1.modelers[1].models[overlap.path, metric].hypothesis.function.constant_coefficient,
+                          5)
+
+        self.assertEqual(2, len(test_value))
+
+        # self.assertCountEqual(correct, test_value)
+        # for c in correct:
+        #     self.assertIn(c, test_value)
+
+        correct_sum = 0
         for c in correct:
-            self.assertIn(c, test_value)
+            correct_sum += c.evaluate(3.5)
+
+        test_sum = experiment1.modelers[1].models[overlap.path, metric].hypothesis.function.evaluate(3.5)
+
+        self.assertAlmostEqual(correct_sum, test_sum, 9)
 
         experiment2, _ = self.prepare_experiment(metric, agg__disabled__sum=True, agg__usage_disabled__sum=True)
         mg = ModelGenerator(experiment2)
