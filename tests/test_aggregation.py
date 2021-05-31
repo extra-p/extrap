@@ -4,9 +4,11 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
+from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
+from extrap.entities.terms import CompoundTerm, SimpleTerm
 from extrap.fileio import io_helper
 from extrap.modelers.aggregation.basic_aggregations import SumAggregation, MaxAggregation
 from extrap.modelers.model_generator import ModelGenerator
@@ -41,9 +43,14 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         self.assertEqual(2, len(test_value))
 
-        # self.assertCountEqual(correct, test_value)
-        # for c in correct:
-        #     self.assertIn(c, test_value)
+        # check model
+        term1 = correct[0].compound_terms[0]
+        term2 = CompoundTerm(SimpleTerm('logarithm', 1))
+        term2.coefficient = correct[1].compound_terms[0].coefficient + correct[2].compound_terms[0].coefficient
+        correct_function = SingleParameterFunction(term1, term2)
+        correct_function.constant_coefficient = coeff_sum
+        self.assertApproxFunction(correct_function,
+                                  experiment1.modelers[1].models[overlap.path, metric].hypothesis.function)
 
         correct_sum = 0
         for c in correct:
@@ -51,7 +58,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         test_sum = experiment1.modelers[1].models[overlap.path, metric].hypothesis.function.evaluate(3.5)
 
-        self.assertAlmostEqual(correct_sum, test_sum, 9)
+        self.assertAlmostEqual(correct_sum, float(test_sum), 9)
 
         experiment2, _ = self.prepare_experiment(metric, agg__disabled__sum=True, agg__usage_disabled__sum=True)
         mg = ModelGenerator(experiment2)
