@@ -37,15 +37,18 @@ class NcuReport:
                 for results_raw in block.payload.results:
                     self.result_blocks.append(results_raw.entry)
 
+    def get_measurements_unmapped(self):
+        return _convert_measurements(self.result_blocks)
+
     def get_measurements(self, paths):
-        return _convert_measurements(zip(self.result_blocks, paths))
+        return _convert_and_map_measurements(zip(self.result_blocks, paths))
 
     def get_measurements_parallel(self, paths, pool):
         aggregated_values = defaultdict(int)
 
         data = zip(self.result_blocks, list(paths))
         chunk_length = int((len(self.result_blocks) + (os.cpu_count() - 1)) / os.cpu_count())
-        reduced = pool.imap_unordered(_convert_measurements,
+        reduced = pool.imap_unordered(_convert_and_map_measurements,
                                       [islice(data, 0 + i, chunk_length + i) for i in
                                        range(0, len(self.result_blocks), chunk_length)],
                                       1)
@@ -74,12 +77,21 @@ def _convert_metric_value(mv: MetricValueMessage):
     return float('nan')
 
 
-def _convert_measurements(data):
+def _convert_and_map_measurements(data):
     aggregated_values = defaultdict(int)
     for raw, (name, _, _, _, callpath) in data:
         res: ProfileResult = raw.parse()
         assert res.KernelFunctionName == name
         for mv in res.MetricResults:
             aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += _convert_metric_value(
+                mv.MetricValue)
+    return aggregated_values
+
+def _convert_measurements(raw_data):
+    aggregated_values = defaultdict(int)
+    for raw in raw_data:
+        res: ProfileResult = raw.parse()
+        for mv in res.MetricResults:
+            aggregated_values[('main->' + res.KernelFunctionName, mv.NameId)] += _convert_metric_value(
                 mv.MetricValue)
     return aggregated_values

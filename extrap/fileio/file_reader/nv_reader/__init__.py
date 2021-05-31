@@ -42,51 +42,17 @@ class NsightFileReader(FileReader):
             raise FileFormatError(f'NV file path must point to a directory: {dir_name}')
         nv_files = list(path.glob('[!.]*.sqlite'))
         if not nv_files:
-            raise FileFormatError(f'No sqlite files were found in: {dir_name}')
+            ncu_files = list(path.glob('[!.]*.ncu-rep'))
+            if ncu_files:
+                return self.read_ncu_files(dir_name, ncu_files, pbar=DUMMY_PROGRESS, selected_metrics=None,
+                                           only_time=False)
+            else:
+                raise FileFormatError(f'No sqlite files were found in: {dir_name}')
         pbar.total += len(nv_files) + 6
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
 
-        pbar.step("Reading NV files")
-        parameter_names_initial = []
-        parameter_names = []
-        parameter_values = []
-        parameter_dict = defaultdict(set)
-        progress_step_size = 5 / len(nv_files)
-        for path_id, path in enumerate(nv_files):
-            pbar.update(progress_step_size)
-            folder_name = path.name
-            logging.debug(f"NV file: {path}")
-
-            # create the parameters
-            par_start = folder_name.find(".") + 1
-            par_end = folder_name.find(".r")
-            par_end = None if par_end == -1 else par_end
-            parameters = folder_name[par_start:par_end]
-            # parameters = folder_name.split(".")
-
-            param_list = re.split('([0-9.,]+)', parameters)
-
-            parameter_names = [n for i, n in enumerate(param_list) if i % 2 == 0]
-            parameter_value = [float(n.replace(',', '.').rstrip('.')) for i, n in enumerate(param_list) if i % 2 == 1]
-
-            # check if parameter already exists
-            if path_id == 0:
-                parameter_names_initial = parameter_names
-            elif parameter_names != parameter_names_initial:
-                raise FileFormatError(
-                    f"Parameters must be the same and in the same order: {parameter_names} is not {parameter_names_initial}.")
-
-            for n, v in zip(parameter_names, parameter_value):
-                parameter_dict[n].add(v)
-            parameter_values.append(parameter_value)
-
-        # determine non-constant parameters and add them to experiment
-        parameter_selection_mask = []
-        for i, p in enumerate(parameter_names):
-            if len(parameter_dict[p]) > 1:
-                experiment.add_parameter(Parameter(p))
-                parameter_selection_mask.append(i)
+        parameter_selection_mask, parameter_values = self.determine_parameter_values(experiment, nv_files, pbar)
 
         pbar.step("Reading sqlite files")
 
@@ -174,6 +140,109 @@ class NsightFileReader(FileReader):
         to_delete = []
         # determine common callpaths for common calltree
         # add common callpaths and metrics to experiment
+        for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
+            value: List[Measurement]
+            if len(value) < num_points and not key[0].lookup_tag('gpu__overlap', False):
+                to_delete.append(key)
+            else:
+                (callpath, metric) = key
+                # if len(value) < num_points and 'gpu__overlap' in callpath.tags:
+                #     # construct empty measurements for overlap
+                #     measurements = {c: Measurement(c, callpath, metric, None) for c in experiment.coordinates}
+                #     for v in value:
+                #         del measurements[v.coordinate]
+                #     value.extend(measurements.values())
+
+                experiment.add_callpath(callpath)
+                experiment.add_metric(metric)
+        for key in to_delete:
+            pbar.update(0)
+            del experiment.measurements[key]
+
+        # determine calltree
+        call_tree = io_helper.create_call_tree(experiment.callpaths, pbar, progress_scale=0.1)
+        experiment.call_tree = call_tree
+
+        io_helper.validate_experiment(experiment, pbar)
+        pbar.update()
+        return experiment
+
+    def determine_parameter_values(self, experiment, files, pbar):
+        pbar.step("Reading NV files")
+        parameter_names_initial = []
+        parameter_names = []
+        parameter_values = []
+        parameter_dict = defaultdict(set)
+        progress_step_size = 5 / len(files)
+        for path_id, path in enumerate(files):
+            pbar.update(progress_step_size)
+            folder_name = path.name
+            logging.debug(f"NV file: {path}")
+
+            # create the parameters
+            par_start = folder_name.find(".") + 1
+            par_end = folder_name.find(".r")
+            par_end = None if par_end == -1 else par_end
+            parameters = folder_name[par_start:par_end]
+            # parameters = folder_name.split(".")
+
+            param_list = re.split('([0-9.,]+)', parameters)
+
+            parameter_names = [n for i, n in enumerate(param_list) if i % 2 == 0]
+            parameter_value = [float(n.replace(',', '.').rstrip('.')) for i, n in enumerate(param_list) if i % 2 == 1]
+
+            # check if parameter already exists
+            if path_id == 0:
+                parameter_names_initial = parameter_names
+            elif parameter_names != parameter_names_initial:
+                raise FileFormatError(
+                    f"Parameters must be the same and in the same order: {parameter_names} is not {parameter_names_initial}.")
+
+            for n, v in zip(parameter_names, parameter_value):
+                parameter_dict[n].add(v)
+            parameter_values.append(parameter_value)
+        # determine non-constant parameters and add them to experiment
+        parameter_selection_mask = []
+        for i, p in enumerate(parameter_names):
+            if len(parameter_dict[p]) > 1:
+                experiment.add_parameter(Parameter(p))
+                parameter_selection_mask.append(i)
+        return parameter_selection_mask, parameter_values
+
+    def read_ncu_files(self, dir_name, ncu_files, pbar, selected_metrics, only_time):
+        pbar.total += len(ncu_files) + 6
+        # iterate over all folders and read the cube profiles in them
+        experiment = Experiment()
+
+        parameter_selection_mask, parameter_values = self.determine_parameter_values(experiment, ncu_files, pbar)
+
+        aggregated_values = defaultdict(list)
+
+        pool = None
+        num_points = 0
+        reordered_files = sorted(zip(ncu_files, parameter_values), key=itemgetter(1))
+        for parameter_value, point_group in groupby(reordered_files, key=itemgetter(1)):
+            num_points += 1
+            point_group = list(point_group)
+            # create coordinate
+            coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
+            experiment.add_coordinate(coordinate)
+
+            aggregated_values.clear()
+            for path, _ in point_group:
+                pbar.update()
+                with NcuReport(path) as ncuReport:
+                    measurements = ncuReport.get_measurements_unmapped()
+                    for (callpath, metricId), v in measurements.items():
+                        aggregated_values[
+                            (Callpath(callpath), Metric(ncuReport.string_table[metricId]))].append(v)
+
+            # add measurements to experiment
+            for (callpath, metric), values in aggregated_values.items():
+                pbar.update(0)
+                experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
+
+        to_delete = []
         for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
             value: List[Measurement]
             if len(value) < num_points and not key[0].lookup_tag('gpu__overlap', False):
