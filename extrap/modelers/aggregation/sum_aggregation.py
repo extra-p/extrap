@@ -8,9 +8,6 @@ from extrap.entities.parameter import Parameter
 class SumAggregationFunction(BinaryAggregationFunction):
 
     def evaluate(self, parameter_value):
-        # if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
-        #     parameter_value = parameter_value[0]
-
         if isinstance(parameter_value, numpy.ndarray):
             shape = parameter_value.shape
             if len(shape) == 2:
@@ -22,7 +19,12 @@ class SumAggregationFunction(BinaryAggregationFunction):
             if isinstance(t, MultiParameterTerm):
                 function_value += t.evaluate(parameter_value)
             else:
-                function_value += t.evaluate(parameter_value[0])
+                if hasattr(parameter_value, '__len__') and (
+                        len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
+                    value = parameter_value[0]
+                else:
+                    value = parameter_value
+                function_value += t.evaluate(value)
 
         return function_value
 
