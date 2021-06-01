@@ -8,13 +8,13 @@
 import numpy as np
 
 from extrap.entities.callpath import Callpath
-from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregation, numeric_array_t, \
-    SumAggregationFunction
+from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregation, numeric_array_t
 
 from typing import Callable, Union, List, Tuple, Dict, Sequence, Mapping
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
+from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction
 
 
 class SumAggregation(BinaryAggregation):
