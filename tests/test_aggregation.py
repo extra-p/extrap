@@ -10,8 +10,10 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, SimpleTerm
 from extrap.fileio import io_helper
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.aggregation.basic_aggregations import MaxAggregation, SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
@@ -76,6 +78,29 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         self.check_same(experiment3, metric, [cb.path, ca.path, work.path, wait.path])
         self.check_changed(experiment3, metric, [overlap.path, evt_sync.path, sync.path, main.path, start.path])
+
+    def testSumMultiParam(self):
+        experiment1 = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
+        metric = Metric('metr')
+
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        mg.aggregate(SumAggregation())
+
+        test_fkt = experiment1.modelers[1].models[Callpath("reg"), metric].hypothesis.function
+
+        # coeff_sum = 0
+        # for x in correct:
+        #     coeff_sum += x.constant_coefficient
+        #
+        # self.assertApprox(coeff_sum,
+        #                   experiment1.modelers[1].models[
+        #                       Callpath("reg"), metric].hypothesis.function.constant_coefficient,
+        #                   5)
+        #
+        # self.assertEqual(2, len(test_fkt.compound_terms))
+
+        pass
 
     def check_changed(self, experiment1, metric, paths):
         for cp in paths:
