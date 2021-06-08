@@ -1,3 +1,5 @@
+import numpy as np
+
 from extrap.entities.terms import CompoundTerm
 from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregationFunction
 import numpy
@@ -8,20 +10,17 @@ from extrap.entities.parameter import Parameter
 class MaxAggregationFunction(BinaryAggregationFunction):
 
     def evaluate(self, parameter_value):
-        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
-            parameter_value = parameter_value[0]
+        rest = iter(self.raw_terms)
+        function_value = next(rest).evaluate(parameter_value)
 
         if isinstance(parameter_value, numpy.ndarray):
             shape = parameter_value.shape
             if len(shape) == 2:
                 shape = (shape[1],)
-            function_value = numpy.full(shape, self.constant_coefficient, dtype=float)
-        else:
-            function_value = self.constant_coefficient
+            function_value += numpy.zeros(shape, dtype=float)
 
-        for t in self.raw_terms:
-            function_value += t.evaluate(parameter_value)
-
+        for t in rest:
+            function_value = np.maximum(function_value, t.evaluate(parameter_value))
         return function_value
 
     def aggregate(self):
