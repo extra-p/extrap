@@ -62,16 +62,16 @@ GROUP BY id
            (end - start) AS duration,
            CASE copyKind
                WHEN 0 THEN 'UNKNOWN'
-               WHEN 1 THEN 'HTOD'
-               WHEN 2 THEN 'DTOH'
-               WHEN 3 THEN 'HTOA'
-               WHEN 4 THEN 'ATOH'
-               WHEN 5 THEN 'ATOA'
-               WHEN 6 THEN 'ATOD'
-               WHEN 7 THEN 'DTOA'
-               WHEN 8 THEN 'DTOD'
-               WHEN 9 THEN 'HTOH'
-               WHEN 10 THEN 'PTOP'
+               WHEN 1 THEN 'HOST_TO_DEVICE'
+               WHEN 2 THEN 'DEVICE_TO_HOST'
+               WHEN 3 THEN 'HOST_TO_DEVICE_ARRAY'
+               WHEN 4 THEN 'DEVICE_ARRAY_TO_HOST'
+               WHEN 5 THEN 'DEVICE_ARRAY_TO_DEVICE_ARRAY'
+               WHEN 6 THEN 'DEVICE_ARRAY_TO_DEVICE'
+               WHEN 7 THEN 'DEVICE_TO_DEVICE_ARRAY'
+               WHEN 8 THEN 'DEVICE_TO_DEVICE'
+               WHEN 9 THEN 'HOST_TO_HOST'
+               WHEN 10 THEN 'PEER_TO_PEER'
                END       AS copyKind,
            bytes,
            NULL          AS shortName
@@ -81,16 +81,16 @@ GROUP BY id
                 duration,
                 CASE copyKind
                     WHEN 0 THEN 'UNKNOWN'
-                    WHEN 1 THEN 'HTOD'
-                    WHEN 2 THEN 'DTOH'
-                    WHEN 3 THEN 'HTOA'
-                    WHEN 4 THEN 'ATOH'
-                    WHEN 5 THEN 'ATOA'
-                    WHEN 6 THEN 'ATOD'
-                    WHEN 7 THEN 'DTOA'
-                    WHEN 8 THEN 'DTOD'
-                    WHEN 9 THEN 'HTOH'
-                    WHEN 10 THEN 'PTOP'
+                    WHEN 1 THEN 'HOST_TO_DEVICE'
+                    WHEN 2 THEN 'DEVICE_TO_HOST'
+                    WHEN 3 THEN 'HOST_TO_DEVICE_ARRAY'
+                    WHEN 4 THEN 'DEVICE_ARRAY_TO_HOST'
+                    WHEN 5 THEN 'DEVICE_ARRAY_TO_DEVICE_ARRAY'
+                    WHEN 6 THEN 'DEVICE_ARRAY_TO_DEVICE'
+                    WHEN 7 THEN 'DEVICE_TO_DEVICE_ARRAY'
+                    WHEN 8 THEN 'DEVICE_TO_DEVICE'
+                    WHEN 9 THEN 'HOST_TO_HOST'
+                    WHEN 10 THEN 'PEER_TO_PEER'
                     END AS copyKind,
                 NULL    AS bytes,
                 shortName
