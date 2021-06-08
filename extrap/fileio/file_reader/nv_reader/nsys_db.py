@@ -52,8 +52,111 @@ SELECT id,
 FROM resolved_callchains
 GROUP BY id
          """)
+
+    def get_mem_copies(self) -> List[Tuple[int, str, str, str, float, int, str, float]]:
+        if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMCPY'):
+            return []
+        c = self.db.cursor()
+        return list(c.execute("""WITH cupti_memory AS (
+    SELECT correlationId,
+           (end - start) AS duration,
+           CASE copyKind
+               WHEN 0 THEN 'UNKNOWN'
+               WHEN 1 THEN 'HTOD'
+               WHEN 2 THEN 'DTOH'
+               WHEN 3 THEN 'HTOA'
+               WHEN 4 THEN 'ATOH'
+               WHEN 5 THEN 'ATOA'
+               WHEN 6 THEN 'ATOD'
+               WHEN 7 THEN 'DTOA'
+               WHEN 8 THEN 'DTOD'
+               WHEN 9 THEN 'HTOH'
+               WHEN 10 THEN 'PTOP'
+               END       AS copyKind,
+           bytes,
+           NULL          AS shortName
+    FROM CUPTI_ACTIVITY_KIND_MEMCPY),
+     cupti_memory_overlap AS (
          SELECT correlationId,
+                duration,
+                CASE copyKind
                     WHEN 0 THEN 'UNKNOWN'
+                    WHEN 1 THEN 'HTOD'
+                    WHEN 2 THEN 'DTOH'
+                    WHEN 3 THEN 'HTOA'
+                    WHEN 4 THEN 'ATOH'
+                    WHEN 5 THEN 'ATOA'
+                    WHEN 6 THEN 'ATOD'
+                    WHEN 7 THEN 'DTOA'
+                    WHEN 8 THEN 'DTOD'
+                    WHEN 9 THEN 'HTOH'
+                    WHEN 10 THEN 'PTOP'
+                    END AS copyKind,
+                NULL    AS bytes,
+                shortName
+         FROM (SELECT correlationId, CAKK.end - CAKM.end AS duration, copyKind, shortName
+               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
+                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                   ON CAKK.start BETWEEN CAKM.start AND CAKM.end AND
+                                      CAKK.end NOT BETWEEN CAKM.start AND CAKM.end
+               UNION ALL
+               SELECT correlationId, CAKM.start - CAKK.start AS duration, copyKind, shortName
+               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
+                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                   ON CAKK.end BETWEEN CAKM.start AND CAKM.end AND
+                                      CAKK.start NOT BETWEEN CAKM.start AND CAKM.end
+               UNION ALL
+               SELECT correlationId, CAKM.end - CAKM.start - (CAKK.start - CAKK.end) AS duration, copyKind, shortName
+               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
+                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                   ON CAKK.end BETWEEN CAKM.start AND CAKM.end AND
+                                      CAKK.start BETWEEN CAKM.start AND CAKM.end
+               UNION ALL
+               SELECT correlationId, CAKM.end - CAKM.start AS duration, copyKind, shortName
+               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
+                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                   ON CAKK.end NOT BETWEEN CAKM.start AND CAKM.end AND
+                                      CAKK.start NOT BETWEEN CAKM.start AND CAKM.end
+              )
+     ),
+     cupti_activity AS (
+         SELECT callchainId,
+                value                                                               AS demangledName,
+                copyKind,
+                CUPTI_ACTIVITY_KIND_RUNTIME.end - CUPTI_ACTIVITY_KIND_RUNTIME.start AS duration,
+                bytes,
+                CA.duration                                                         AS other_duration
+         FROM CUPTI_ACTIVITY_KIND_RUNTIME
+                  INNER JOIN (SELECT *
+                              FROM cupti_memory
+                              --UNION ALL
+                              --SELECT *
+                              --FROM cupti_memory_overlap
+                              ) AS CA
+                             ON CUPTI_ACTIVITY_KIND_RUNTIME.correlationId = CA.correlationId
+                  LEFT JOIN StringIds ON nameId = StringIds.id
+     )
+SELECT paths.id,
+       path,
+       callpath,
+       demangledName       AS name,
+       SUM(duration)       AS duration,
+       SUM(bytes)          AS bytes,
+       copyKind,
+       SUM(other_duration) AS other_duration
+FROM (SELECT id,
+             path,
+             demangledName,
+             callpath,
+             duration,
+             copyKind,
+             other_duration,
+             bytes
+      FROM EXTRAP_RESOLVED_CALLPATHS
+               INNER JOIN cupti_activity ON (id - 1) = CUPTI_ACTIVITY.callchainId) AS paths
+GROUP BY path, demangledName, copyKind 
+    """))
+
     def get_synchronization(self) -> List[Tuple[int, str, str, str, float, float, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION'):
             return []

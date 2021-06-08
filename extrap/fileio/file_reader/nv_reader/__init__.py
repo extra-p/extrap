@@ -72,6 +72,7 @@ class NsightFileReader(FileReader):
 
                 aggregated_values.clear()
                 metric = Metric('time')
+                metric_bytes = Metric('bytes_transferred')
                 for path, _ in point_group:
                     pbar.update()
                     with NsysReport(path) as parsed:
@@ -111,6 +112,14 @@ class NsightFileReader(FileReader):
                                     durationGPU / 10 ** 9)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
+                        for id, _, callpath, name, duration, bytes, kind, durationCopy in parsed.get_mem_copies():
+                            pbar.update(0)
+                            if duration:
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
+                                aggregated_values[(Callpath(callpath + "->" + kind), metric)].append(
+                                    durationCopy / 10 ** 9)
+                                aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(
+                                    bytes)
                         for id, _, callpath, name, duration in parsed.get_os_runtimes():
                             pbar.update(0)
                             if duration:
