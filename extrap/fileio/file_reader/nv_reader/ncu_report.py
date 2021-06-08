@@ -8,6 +8,7 @@
 import os
 from collections import defaultdict
 from itertools import islice
+from typing import Set
 
 from extrap.fileio.file_reader.nv_reader.binary_parser.nsight_cuprof_report import NsightCuprofReport
 from extrap.fileio.file_reader.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult
@@ -37,8 +38,17 @@ class NcuReport:
                 for results_raw in block.payload.results:
                     self.result_blocks.append(results_raw.entry)
 
-    def get_measurements_unmapped(self):
-        return _convert_measurements(self.result_blocks)
+    def get_measurements_unmapped(self, *, ignore_metrics=None):
+        ignored_ids = self._calc_ignored_metric_ids(ignore_metrics)
+        return _convert_measurements(self.result_blocks, ignore_metric_ids=ignored_ids)
+
+    def _calc_ignored_metric_ids(self, ignore_metrics):
+        ignored_ids = set()
+        if ignore_metrics:
+            for id, s in enumerate(self.string_table):
+                if any(s.startswith(p) for p in ignore_metrics):
+                    ignored_ids.add(id)
+        return ignored_ids
 
     def get_measurements(self, paths):
         return _convert_and_map_measurements(zip(self.result_blocks, paths))
@@ -87,11 +97,16 @@ def _convert_and_map_measurements(data):
                 mv.MetricValue)
     return aggregated_values
 
-def _convert_measurements(raw_data):
+
+def _convert_measurements(raw_data, *, ignore_metric_ids=None):
+    if ignore_metric_ids is None:
+        ignore_metric_ids = set()
     aggregated_values = defaultdict(int)
     for raw in raw_data:
         res: ProfileResult = raw.parse()
         for mv in res.MetricResults:
+            if mv.NameId in ignore_metric_ids:
+                continue
             aggregated_values[('main->' + res.KernelFunctionName, mv.NameId)] += _convert_metric_value(
                 mv.MetricValue)
     return aggregated_values

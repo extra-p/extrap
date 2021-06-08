@@ -35,6 +35,8 @@ class NsightFileReader(FileReader):
     CMD_ARGUMENT = "--nsight"
     LOADS_FROM_DIRECTORY = True
 
+    ignore_device_attributes = True
+
     def read_experiment(self, dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None, only_time=False):
         # read the paths of the nsight files in the given directory with dir_name
         path = Path(dir_name)
@@ -241,7 +243,11 @@ class NsightFileReader(FileReader):
             for path, _ in point_group:
                 pbar.update()
                 with NcuReport(path) as ncuReport:
-                    measurements = ncuReport.get_measurements_unmapped()
+                    if self.ignore_device_attributes:
+                        measurements = ncuReport.get_measurements_unmapped(
+                            ignore_metrics=['device__attribute', 'nvlink__'])
+                    else:
+                        measurements = ncuReport.get_measurements_unmapped()
                     for (callpath, metricId), v in measurements.items():
                         aggregated_values[
                             (Callpath(callpath), Metric(ncuReport.string_table[metricId]))].append(v)
