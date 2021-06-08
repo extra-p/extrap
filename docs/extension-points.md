@@ -16,7 +16,7 @@ modeler. The description will be shown to the user in both the GUI and the CLI.
 The most important method of the modeler is the `model` method. It is called with the parameter `measurements`, a
 sequence of measurement point sequences. It must create a model for each sequence of measurement points. The optional
 second parameter `progress_bar` is intended for progress reporting using the `tqdm` package. The return value must be a
-Sequence of models. The index of each model must correspond to the index of the measurement point sequence
+sequence of models. The index of each model must correspond to the index of the measurement point sequence
 in `measurements`, which was used to create the model.
 
 ### Single-parameter modeler specifics
