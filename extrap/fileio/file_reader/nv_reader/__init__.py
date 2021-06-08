@@ -76,31 +76,31 @@ class NsightFileReader(FileReader):
                     pbar.update()
                     with NsysReport(path) as parsed:
                         # iterate over all callpaths and get time
-                        for id, _, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_kernel_runtimes():
+                        for id, _, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
                             pbar.update(0)
+                            if kernelName:
+                                aggregated_values[
+                                    (Callpath(callpath + "->" + syncType + "->OVERLAP",
+                                              validation__ignore__num_measurements=True,
+                                              gpu__overlap='agg', agg__usage__disabled=True),
+                                     metric)] = [0]
 
-                            if syncType:
-                                if kernelName:
-                                    aggregated_values[
-                                        (Callpath(callpath + "->" + syncType + "->OVERLAP",
-                                                  validation__ignore__num_measurements=True,
-                                                  gpu__overlap='agg', agg__usage__disabled=True),
-                                         metric)] = [0]
-
-                                    overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
-                                                          gpu__overlap=True, gpu__kernel=True,
-                                                          validation__ignore__num_measurements=True)
-                                    aggregated_values[(overlap_cp, metric)].append(durationGPU / 10 ** 9)
-                                else:
-                                    if duration:
-                                        aggregated_values[(
-                                            Callpath(callpath + "->" + syncType), metric)].append(
-                                            duration / 10 ** 9)
+                                overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
+                                                      gpu__overlap=True, gpu__kernel=True,
+                                                      validation__ignore__num_measurements=True)
+                                aggregated_values[(overlap_cp, metric)].append(durationGPU / 10 ** 9)
+                            else:
+                                if duration:
                                     aggregated_values[(
-                                        Callpath(callpath + "->" + syncType + "->WAIT", agg__usage__disabled=True),
-                                        metric)].append(
-                                        other_duration / 10 ** 9)
-                            elif kernelName:
+                                        Callpath(callpath + "->" + syncType), metric)].append(
+                                        duration / 10 ** 9)
+                                aggregated_values[(
+                                    Callpath(callpath + "->" + syncType + "->WAIT", agg__usage__disabled=True),
+                                    metric)].append(
+                                    other_duration / 10 ** 9)
+                        for id, _, callpath, kernelName, duration, durationGPU, other_duration in parsed.get_kernel_runtimes():
+                            pbar.update(0)
+                            if kernelName:
                                 if duration:
                                     aggregated_values[(Callpath(callpath + "->" + kernelName), metric)].append(
                                         duration / 10 ** 9)
