@@ -4,14 +4,15 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
-from extrap.entities.functions import SingleParameterFunction
+from extrap.entities.functions import SingleParameterFunction, MultiParameterFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm, SimpleTerm
+from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm, SingleParameterTerm
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.aggregation.basic_aggregations import MaxAggregation, SumAggregation
+from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
@@ -80,27 +81,43 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         self.check_changed(experiment3, metric, [overlap.path, evt_sync.path, sync.path, main.path, start.path])
 
     def testSumMultiParam(self):
-        experiment1 = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
-        metric = Metric('metr')
+        mp_term = MultiParameterTerm()  # 2 * p^2 * q^2
+        smpl_term = SimpleTerm("polynomial", 2)
+        mp_term.add_parameter_term_pair((0, smpl_term))
+        mp_term.add_parameter_term_pair((1, smpl_term))
+        mp_term.coefficient = 2
+        fkt1 = MultiParameterFunction(mp_term)
 
-        mg = ModelGenerator(experiment1)
-        mg.model_all()
-        mg.aggregate(SumAggregation())
+        res1 = fkt1.evaluate([2, 3])
+        self.assertEqual(res1, 72)
 
-        test_fkt = experiment1.modelers[1].models[Callpath("reg"), metric].hypothesis.function
+        mp_term = MultiParameterTerm()  # 4 * p^2 * q^2
+        smpl_term = SimpleTerm("polynomial", 2)
+        mp_term.add_parameter_term_pair((0, smpl_term))
+        mp_term.add_parameter_term_pair((1, smpl_term))
+        mp_term.coefficient = 4
+        fkt2 = MultiParameterFunction(mp_term)
 
-        # coeff_sum = 0
-        # for x in correct:
-        #     coeff_sum += x.constant_coefficient
-        #
-        # self.assertApprox(coeff_sum,
-        #                   experiment1.modelers[1].models[
-        #                       Callpath("reg"), metric].hypothesis.function.constant_coefficient,
-        #                   5)
-        #
-        # self.assertEqual(2, len(test_fkt.compound_terms))
+        res2 = fkt2.evaluate([2, 3])
+        self.assertEqual(res2, 144)
 
-        pass
+        mp_term_mixed = MultiParameterTerm()  # 1.4 * log2(p)^3 * q^2 + 4 * p^2 * q^2
+        smpl_term_log = SimpleTerm("logarithm", 3)
+        mp_term_mixed.add_parameter_term_pair((0, smpl_term_log))
+        mp_term_mixed.add_parameter_term_pair((1, smpl_term))
+        mp_term_mixed.coefficient = 1.4
+        fkt3 = MultiParameterFunction(mp_term_mixed)
+        fkt3.add_compound_term(mp_term)
+
+        res3 = fkt3.evaluate([2, 3])
+        self.assertEqual(res3, 156.6)
+
+        s = SumAggregationFunction([fkt1, fkt2, fkt3])
+        self.assertEqual(len(s.raw_terms), 3)
+        self.assertEqual(len(s.compound_terms), 2)
+
+        res_sum = s.evaluate([2, 3])
+        self.assertEqual(res_sum, res1 + res2 + res3)
 
     def check_changed(self, experiment1, metric, paths):
         for cp in paths:
