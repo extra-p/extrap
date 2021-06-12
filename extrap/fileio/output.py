@@ -5,8 +5,8 @@ import re
 
 def fmt_output(experiment:Experiment, printtype:str):
     pattern = r"\{(.*?)\}(\:\{(.*?)\})*"    # test!!!
+    printtype = printtype.upper()
 
-    # werden lowercase str auch akzeptiert?
     if re.fullmatch(r"ALL|CALLPATHS|METRICS|PARAMETERS|FUNCTIONS", printtype):
         options = [printtype]
     elif re.fullmatch(pattern, printtype):
@@ -20,13 +20,11 @@ def fmt_output(experiment:Experiment, printtype:str):
     # format_... ersetzen!!
     #
     # falls mehrere Elemente in options, und eines davon ist "ALL", werden
-    # die anderen nicht mehr betrachtet (?)
-    if "ALL" in options:
-        text += io.format_all(experiment)
-        return text
-
+    # die anderen nicht mehr betrachtet?
     for opt in options:
-        if opt == "CALLPATHS":
+        if opt == "ALL":
+            text += io.format_all(experiment)
+        elif opt == "CALLPATHS":
             text += (io.format_callpaths(experiment) + "\n" + "\t")
         elif opt == "METRICS":
             text += (io.format_metrics(experiment) + "\n" + "\t")
