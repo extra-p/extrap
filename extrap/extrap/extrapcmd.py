@@ -17,6 +17,7 @@ from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.io_helper import format_output
 from extrap.fileio.io_helper import save_output
+from extrap.fileio.output import fmt_output
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
@@ -171,7 +172,8 @@ def main(args=None, prog=None):
                 sys.exit(1)
 
         # format modeler output into text
-        text = format_output(experiment, printtype)
+        text = fmt_output(experiment, printtype)
+            # format_output(experiment, printtype)
 
         # print formatted output to command line
         print(text)
