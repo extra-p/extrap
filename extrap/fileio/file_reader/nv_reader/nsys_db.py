@@ -78,7 +78,7 @@ GROUP BY id
     FROM CUPTI_ACTIVITY_KIND_MEMCPY),
      cupti_memory_overlap AS (
          SELECT correlationId,
-                duration,
+                (MIN(CAKS.end, CAKK.end) - MAX(CAKS.start, CAKK.start)) AS duration,
                 CASE copyKind
                     WHEN 0 THEN 'UNKNOWN'
                     WHEN 1 THEN 'HOST_TO_DEVICE'
@@ -91,33 +91,12 @@ GROUP BY id
                     WHEN 8 THEN 'DEVICE_TO_DEVICE'
                     WHEN 9 THEN 'HOST_TO_HOST'
                     WHEN 10 THEN 'PEER_TO_PEER'
-                    END AS copyKind,
-                NULL    AS bytes,
+                    END                                                 AS copyKind,
+                NULL                                                    AS bytes,
                 shortName
-         FROM (SELECT correlationId, CAKK.end - CAKM.end AS duration, copyKind, shortName
-               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
-                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
-                                   ON CAKK.start BETWEEN CAKM.start AND CAKM.end AND
-                                      CAKK.end NOT BETWEEN CAKM.start AND CAKM.end
-               UNION ALL
-               SELECT correlationId, CAKM.start - CAKK.start AS duration, copyKind, shortName
-               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
-                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
-                                   ON CAKK.end BETWEEN CAKM.start AND CAKM.end AND
-                                      CAKK.start NOT BETWEEN CAKM.start AND CAKM.end
-               UNION ALL
-               SELECT correlationId, CAKM.end - CAKM.start - (CAKK.start - CAKK.end) AS duration, copyKind, shortName
-               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
-                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
-                                   ON CAKK.end BETWEEN CAKM.start AND CAKM.end AND
-                                      CAKK.start BETWEEN CAKM.start AND CAKM.end
-               UNION ALL
-               SELECT correlationId, CAKM.end - CAKM.start AS duration, copyKind, shortName
-               FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKM
-                        INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
-                                   ON CAKK.end NOT BETWEEN CAKM.start AND CAKM.end AND
-                                      CAKK.start NOT BETWEEN CAKM.start AND CAKM.end
-              )
+         FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKS
+                  INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                            ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
      ),
      cupti_activity AS (
          SELECT callchainId,
@@ -129,10 +108,10 @@ GROUP BY id
          FROM CUPTI_ACTIVITY_KIND_RUNTIME
                   INNER JOIN (SELECT *
                               FROM cupti_memory
-                              --UNION ALL
-                              --SELECT *
-                              --FROM cupti_memory_overlap
-                              ) AS CA
+                              UNION ALL
+                              SELECT *
+                              FROM cupti_memory_overlap
+         ) AS CA
                              ON CUPTI_ACTIVITY_KIND_RUNTIME.correlationId = CA.correlationId
                   LEFT JOIN StringIds ON nameId = StringIds.id
      )
