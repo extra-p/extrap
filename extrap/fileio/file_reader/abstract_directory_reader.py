@@ -64,14 +64,13 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             parameter_values.append(parameter_value)
 
         # determine and remove non-constant parameters
-        parameter_names_filtered = []
+
         for i in reversed(range(len(parameter_names))):
             p = parameter_names[i]
             if len(parameter_dict[p]) <= 1:
                 for pv in parameter_values:
                     del pv[i]
-            else:
-                parameter_names_filtered.append(p)
-        parameter_names = parameter_names_filtered
+
+        parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
 
         return parameter_names, parameter_values
