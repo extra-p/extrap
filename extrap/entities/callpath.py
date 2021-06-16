@@ -6,7 +6,6 @@
 # See the LICENSE file in the base directory for details.
 
 import itertools
-import json
 
 from extrap.entities.named_entity import NamedEntityWithTags
 from extrap.util.serialization_schema import make_value_schema
@@ -28,6 +27,19 @@ class Callpath(NamedEntityWithTags):
     """
     Empty callpath. Can be used as placeholder.
     """
+
+    @property
+    def mangled_name(self) -> str:
+        if '__mangled_name' not in self.tags:
+            return ''
+        return self.tags['__mangled_name']
+
+    @mangled_name.setter
+    def mangled_name(self, val: str):
+        if not val:
+            del self.tags['__mangled_name']
+        else:
+            self.tags['__mangled_name'] = val
 
 
 CallpathSchema = make_value_schema(Callpath, '_data')
