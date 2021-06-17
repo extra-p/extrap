@@ -70,7 +70,6 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                choices=["all", "callpaths", "metrics", "parameters", "functions"],
                                 help="Set which information should be displayed after modeling "
                                      "(default: all)")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
