@@ -38,8 +38,8 @@ class Function:
         self.add_compound_term(compound_term)
         return self
 
-    def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]]]) -> \
-    Union[Number, numpy.ndarray]:
+    def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
+                                              List[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
         """
         Evaluate the function according to the given value and return the result.
 

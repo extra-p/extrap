@@ -8,13 +8,11 @@ from extrap.entities.functions import SingleParameterFunction, MultiParameterFun
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm, SingleParameterTerm
+from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm
 from extrap.fileio import io_helper
-from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.aggregation.basic_aggregations import MaxAggregation, SumAggregation
 from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction
 from extrap.modelers.model_generator import ModelGenerator
-from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
@@ -119,10 +117,115 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         res_sum = s.evaluate([2, 3])
         self.assertEqual(res_sum, res1 + res2 + res3)
 
+    def testSum2(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        neB = Node("neB", Callpath("main->emptyA->emptyB->neA->neB"), [])
+        neA = Node("neA", Callpath("main->emptyA->emptyB->neA"), [neB])
+        emptyB = Node("emptyB", Callpath.EMPTY, [neA])
+        emptyA = Node("emptyA", Callpath.EMPTY, [emptyB])
+        main = Node("main", Callpath("main"), [emptyA])
+        experiment1.callpaths = [main.path, neA.path, neB.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (main.path, metric): [Measurement(Coordinate(c), None, None, 3 * c) for c in range(1, 6)],
+            (neB.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
+            (neA.path, metric): [Measurement(Coordinate(c), None, None, 1 * c) for c in range(1, 6)],
+        }
+
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        mg.aggregate(SumAggregation())
+
+        self.check_same(experiment1, metric, [neB.path])
+        self.check_changed(experiment1, metric,
+                           [main.path, Callpath("main->emptyA"), Callpath("main->emptyA->emptyB"), neA.path])
+
+        correct = [experiment1.modelers[0].models[main.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function.compound_terms
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          experiment1.modelers[1].models[main.path, metric].hypothesis.function.constant_coefficient,
+                          5)
+
+        self.assertEqual(1, len(test_value))
+
+
+    def testSum3(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        neB = Node("neB", Callpath("main->emptyA->emptyB->neA->neB"), [])
+        neA = Node("neA", Callpath("main->emptyA->emptyB->neA"), [neB])
+        emptyB = Node("emptyB", Callpath("main->emptyA->emptyB"), [neA])
+        emptyA = Node("emptyA", Callpath("main->emptyA"), [emptyB])
+        neC = Node("neC", Callpath("main->neC"), [])
+        main = Node("main", Callpath("main"), [emptyA, neC])
+        experiment1.callpaths = [main.path, neC.path, emptyA.path, emptyB.path, neA.path, neB.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (neB.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
+            (neA.path, metric): [Measurement(Coordinate(c), None, None, 1 * c) for c in range(1, 6)],
+            (neC.path, metric): [Measurement(Coordinate(c), None, None, 3 * c) for c in range(1, 6)],
+        }
+
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        mg.aggregate(SumAggregation())
+
+        self.check_same(experiment1, metric, [neB.path, neC.path])
+        self.check_changed(experiment1, metric, [main.path, emptyA.path, emptyB.path, neA.path])
+
+        correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neC.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function.compound_terms
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          experiment1.modelers[1].models[main.path, metric].hypothesis.function.constant_coefficient,
+                          5)
+
+        self.assertEqual(1, len(test_value))
+
+        correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.compound_terms
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.constant_coefficient,
+                          5)
+
+        self.assertEqual(1, len(test_value))
+
     def check_changed(self, experiment1, metric, paths):
         for cp in paths:
-            model = experiment1.modelers[0].models[cp, metric]
+            model = experiment1.modelers[0].models.get((cp, metric))
             model1 = experiment1.modelers[1].models[cp, metric]
+            if model is None:
+                self.assertIsNotNone(model1)
+                continue
             self.assertNotEqual(type(model.hypothesis.function), type(model1.hypothesis.function), msg=str(cp))
             self.assertRaises(AssertionError, self.assertApproxFunction, model.hypothesis.function,
                               model1.hypothesis.function, msg=str(cp))
