@@ -10,8 +10,8 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm
 from extrap.fileio import io_helper
-from extrap.modelers.aggregation.basic_aggregations import MaxAggregation, SumAggregation
-from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction
+from extrap.modelers.aggregation.max_aggregation import MaxAggregation
+from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction, SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
 

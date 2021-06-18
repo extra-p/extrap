@@ -7,7 +7,7 @@
 
 from abc import ABC, abstractmethod
 from numbers import Real
-from typing import Tuple, List, Union, Mapping
+from typing import Tuple, List, Union, Mapping, Sequence
 
 import numpy as np
 from marshmallow import fields, validate
@@ -184,7 +184,7 @@ class MultiParameterTerm(Term):
         for _, t in self.parameter_term_pairs:
             t.reset_coefficients()
 
-    def evaluate(self, parameter_values: Union[Tuple[float], Coordinate]):
+    def evaluate(self, parameter_values: Union[Sequence[float], Coordinate]):
         function_value = self.coefficient
         for param, term in self.parameter_term_pairs:
             parameter_value = parameter_values[param]

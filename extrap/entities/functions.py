@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 from numbers import Number
-from typing import List, Mapping, Union
+from typing import List, Mapping, Union, Sequence
 
 import numpy
 from marshmallow import fields
@@ -39,7 +39,7 @@ class Function:
         return self
 
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
-                                              List[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
+                                              Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
         """
         Evaluate the function according to the given value and return the result.
 

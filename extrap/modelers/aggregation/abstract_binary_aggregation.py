@@ -7,18 +7,17 @@
 
 from abc import ABC, abstractmethod
 from numbers import Number
-from typing import Callable, Union, List, Tuple, Dict, Sequence, Mapping
+from typing import Union, List, Tuple, Dict, Sequence
 
 import numpy
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node
-from extrap.entities.functions import Function, SingleParameterFunction, MultiParameterFunction, ConstantFunction
+from extrap.entities.functions import Function
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm
 from extrap.modelers.aggregation import Aggregation
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
