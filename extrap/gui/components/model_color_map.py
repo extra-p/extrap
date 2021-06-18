@@ -4,7 +4,8 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import logging
+import warnings
 from typing import Mapping, Dict
 
 from PySide2.QtGui import QColor
@@ -23,7 +24,11 @@ class ModelColorMap(Mapping[Node, str]):
         self.dict_callpath_color: Dict[Node, str] = {}
 
     def __getitem__(self, k):
-        return self.dict_callpath_color[k]
+        try:
+            return self.dict_callpath_color[k]
+        except KeyError:
+            logging.warning("ModelColorMap: Color not found. Using fallback.")
+            return '#FF00FF'
 
     def __len__(self):
         return len(self.dict_callpath_color)
