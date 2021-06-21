@@ -1,7 +1,9 @@
+import datetime
+
 license_header = """
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) {years}, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -9,6 +11,7 @@ license_header = """
 
 import glob
 import re
+import subprocess
 
 file_paths = glob.glob('../**/*.py', recursive=True)
 
@@ -30,7 +33,22 @@ for file_path in file_paths:
         data_str = data
 
     if data_str.strip():
-        data_str = license_header + data_str
+        last_commit = subprocess.check_output(
+            ['git', 'log', '--follow', '--date=iso', '--pretty=format:"%cd"', '-1', file_path])
+        first_commit = subprocess.check_output(
+            ['git', 'log', '--follow', '--date=iso', '--pretty=format:"%cd"', '--diff-filter=A', file_path])
+        is_changed = subprocess.check_output(['git', 'status', '--porcelain', file_path])
+        last_commit_year = last_commit[1:5].decode()
+        first_commit_year = first_commit[1:5].decode()
+        if first_commit_year == last_commit_year:
+            if not last_commit_year:
+                last_commit_year = datetime.datetime.now().year
+            years = last_commit_year
+        else:
+            if is_changed:
+                last_commit_year = str(datetime.datetime.now().year)
+            years = first_commit_year + '-' + last_commit_year
+        data_str = license_header.format(years=years) + data_str
     else:
         data_str = data_str.strip()
     # print(data_str)
