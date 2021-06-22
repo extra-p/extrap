@@ -89,4 +89,22 @@ If the value is `True`, no aggregation will be calculated.
 * `True`: the tagged entity will _not_ be used in an aggregated model for another entity (e.g., its parent).
 * `"only_agg_model_usage"`: the tagged entity's _own_ model, but _not_ its aggregated model, 
   will be used in an aggregated model for another entity.
-* `False` or the tag is _not_ present: the model will be used normally.  
+* `False` or the tag is _not_ present: the model will be used normally.
+
+FileReader
+-----------
+By default, Extra-P supports several file formats through their corresponding interface. 
+However, new files can be supported by implementing a corresponding interface. The interface must be placed
+in the `fileio.file_reader` subpackage. The python module must inherit `FileReader` and implement its requirements.
+It will then be automatically visible in the GUI and also usable in the console application.
+
+To implement the interface you must set the class-level field `NAME` which is used to identify 
+the reader internally. For console usage, you must set the `CMD_ARGUMENT` field. It determines the cmd command
+that triggers the interface. For GUI usage you should set `GUI_ACTION` and `DESCRIPTION` which provide 
+text to the drop-down option and the file explorer header, respectively. For further usability you can set the
+`FILTER` field, which will determine which files are shown in the file explorer.
+
+To enable the interface to load a file, you must implement the `read_experiment` method. The call to 
+this method will provide you with the path to the file `path`, and a progress bar `progress_bar`. You should provide the 
+progress bar with an iterable, so it can be correctly shown in the GUI. The method must return an Experiment that holds 
+the data from the file.
