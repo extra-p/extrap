@@ -12,6 +12,7 @@ from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm, 
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.aggregation.basic_aggregations import MaxAggregation, SumAggregation
+from extrap.modelers.aggregation.max_aggregation import MaxAggregationFunction
 from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
@@ -81,6 +82,8 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         self.check_changed(experiment3, metric, [overlap.path, evt_sync.path, sync.path, main.path, start.path])
 
     def testSumMultiParam(self):
+        x = [2, 3]
+
         mp_term = MultiParameterTerm()  # 2 * p^2 * q^2
         smpl_term = SimpleTerm("polynomial", 2)
         mp_term.add_parameter_term_pair((0, smpl_term))
@@ -88,7 +91,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         mp_term.coefficient = 2
         fkt1 = MultiParameterFunction(mp_term)
 
-        res1 = fkt1.evaluate([2, 3])
+        res1 = fkt1.evaluate(x)
         self.assertEqual(res1, 72)
 
         mp_term = MultiParameterTerm()  # 4 * p^2 * q^2
@@ -98,7 +101,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         mp_term.coefficient = 4
         fkt2 = MultiParameterFunction(mp_term)
 
-        res2 = fkt2.evaluate([2, 3])
+        res2 = fkt2.evaluate(x)
         self.assertEqual(res2, 144)
 
         mp_term_mixed = MultiParameterTerm()  # 1.4 * log2(p)^3 * q^2 + 4 * p^2 * q^2
@@ -109,15 +112,54 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         fkt3 = MultiParameterFunction(mp_term_mixed)
         fkt3.add_compound_term(mp_term)
 
-        res3 = fkt3.evaluate([2, 3])
+        res3 = fkt3.evaluate(x)
         self.assertEqual(res3, 156.6)
 
         s = SumAggregationFunction([fkt1, fkt2, fkt3])
         self.assertEqual(len(s.raw_terms), 3)
         self.assertEqual(len(s.compound_terms), 2)
 
-        res_sum = s.evaluate([2, 3])
+        res_sum = s.evaluate(x)
         self.assertEqual(res_sum, res1 + res2 + res3)
+
+    def testMaxMultiParam(self):
+        small_x = [2, 3]
+        large_x = [5, 6]
+
+        mp_term = MultiParameterTerm()  # 2 * p^2 * q^2 +8
+        smpl_term = SimpleTerm("polynomial", 2)
+        mp_term.add_parameter_term_pair((0, smpl_term))
+        mp_term.add_parameter_term_pair((1, smpl_term))
+        mp_term.coefficient = 2
+        fkt1 = MultiParameterFunction(mp_term)
+        fkt1.constant_coefficient = 113
+
+        small_res1 = fkt1.evaluate(small_x)
+        self.assertEqual(small_res1, 185)
+        large_res1 = fkt1.evaluate(large_x)
+        self.assertEqual(large_res1, 1913)
+
+        mp_term = MultiParameterTerm()  #  4 * p^2 * q^2
+        smpl_term = SimpleTerm("polynomial", 2)
+        mp_term.add_parameter_term_pair((0, smpl_term))
+        mp_term.add_parameter_term_pair((1, smpl_term))
+        mp_term.coefficient = 4
+        fkt2 = MultiParameterFunction(mp_term)
+
+        small_res2 = fkt2.evaluate(small_x)
+        self.assertEqual(small_res2, 144)
+        large_res2 = fkt2.evaluate(large_x)
+        self.assertEqual(large_res2, 3600)
+
+        s = MaxAggregationFunction([fkt1, fkt2])
+        self.assertEqual(len(s.raw_terms), 2)
+        self.assertEqual(len(s.compound_terms), 0)
+
+        res_sum = s.evaluate(small_x)
+        self.assertEqual(res_sum, 185)
+        res_sum = s.evaluate(large_x)
+        self.assertEqual(res_sum, 3600)
+
 
     def check_changed(self, experiment1, metric, paths):
         for cp in paths:
