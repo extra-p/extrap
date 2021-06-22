@@ -1,3 +1,10 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2021, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 from __future__ import annotations
 
 import re
@@ -13,8 +20,7 @@ from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregation
-from extrap.modelers.aggregation.basic_aggregations import SumAggregation
+from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -35,8 +41,8 @@ class SmartMatcher(AbstractMatcher):
     def match_call_tree(self, *call_tree: CallTree, progress_bar=DUMMY_PROGRESS):
         root = CallTree()
         matches = {}
-        self._update_tree_paths(call_tree[0])
-        self._update_tree_paths(call_tree[1])
+        call_tree[0].ensure_callpaths_exist()
+        call_tree[1].ensure_callpaths_exist()
         main_node0 = self._find_main(call_tree[0])
         main_node1 = self._find_main(call_tree[1])
         n = Node(self._normalizeName(main_node0.name), Callpath('main'))
@@ -139,19 +145,6 @@ class SmartMatcher(AbstractMatcher):
                 if n:
                     return n
             return None
-
-    def _update_tree_paths(self, node, parent_path=''):
-        if node.name:
-            if parent_path == "":
-                path = node.name
-            else:
-                path = parent_path + '->' + node.name
-            if node.path == Callpath.EMPTY:
-                node.path = Callpath(path)
-        else:
-            path = parent_path
-        for child in node:
-            self._update_tree_paths(child, path)
 
     def _add_subtree_and_merge_measurements(self, ct_parent: Node, s_node: Node, s_measurements, i, total, metric,
                                             measurements_out: Dict[Coordinate, Measurement], new_matches, measurements):

@@ -68,6 +68,24 @@ class Node:
             return self.name == other.name and self.path.exactly_equal(other.path) and all(
                 a.exactly_equal(b) for a, b in zip(self.childs, other.childs))
 
+    def ensure_callpaths_exist(self, parent_path: str):
+        """ Ensures that every call tree node has a call path object.
+        If no call path is associated with a node the function will create a new call path object for that node."""
+        if self.name:
+            if self.path == Callpath.EMPTY:
+                if parent_path == "":
+                    path = self.name
+                else:
+                    path = parent_path + '->' + self.name
+                self.path = Callpath(path)
+            else:
+                path = self.path.name
+        else:
+            path = parent_path
+        for child in self:
+            child.ensure_callpaths_exist(path)
+
+
 class CallTree(Node):
     """
     Represents a calltree with nodes containing the corresponding callpaths
@@ -113,3 +131,6 @@ class CallTree(Node):
             else:
                 # do nothing
                 pass
+
+    def ensure_callpaths_exist(self, parent_path: str = ''):
+        super(CallTree, self).ensure_callpaths_exist(parent_path)

@@ -7,18 +7,17 @@
 
 from abc import ABC, abstractmethod
 from numbers import Number
-from typing import Callable, Union, List, Tuple, Dict, Sequence, Mapping
+from typing import Union, List, Tuple, Dict, Sequence
 
 import numpy
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node
-from extrap.entities.functions import Function, SingleParameterFunction, MultiParameterFunction, ConstantFunction
+from extrap.entities.functions import Function
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm
 from extrap.modelers.aggregation import Aggregation
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -84,6 +83,7 @@ class BinaryAggregation(Aggregation, ABC):
         raise NotImplementedError
 
     def aggregate(self, models, calltree, metrics, progress_bar=DUMMY_PROGRESS):
+        calltree.ensure_callpaths_exist()
         progress_bar.total += len(models)
         result = {}
         for metric in metrics:
@@ -96,13 +96,7 @@ class BinaryAggregation(Aggregation, ABC):
     def walk_nodes(self, result: Dict[Tuple[Callpath, Metric], Model], node: Node,
                    models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS):
         agg_models: List[Model] = []
-        if node.name:
-            if path == "":
-                path = node.name
-            else:
-                path = path + '->' + node.name
-
-        callpath = node.path if node.path else Callpath(path)
+        callpath = node.path if node.path else Callpath.EMPTY
         key = (callpath, metric)
         if key in models:
             own_model = models[key]
@@ -129,8 +123,6 @@ class BinaryAggregation(Aggregation, ABC):
                 model.measurements = measurements
 
         if model is not None:
-            if node.path == Callpath.EMPTY:
-                node.path = callpath
             result[(node.path, metric)] = model
 
         progress_bar.update(1)
