@@ -6,10 +6,12 @@
 # See the LICENSE file in the base directory for details.
 
 import logging
+import warnings
 from itertools import chain
 from typing import List, Dict, Tuple
 
 from marshmallow import fields, validate, pre_load
+from packaging.version import Version
 
 import extrap
 from extrap.entities.callpath import Callpath, CallpathSchema
@@ -118,6 +120,18 @@ class ExperimentSchema(Schema):
 
     @pre_load
     def add_progress(self, data, **kwargs):
+        file_version = data.get(extrap.__title__)
+        if file_version:
+            prog_version = Version(extrap.__version__)
+            file_version = Version(file_version)
+            if prog_version < file_version:
+                if prog_version.major != file_version.major or prog_version.minor != file_version.minor:
+                    warnings.warn(
+                        f"The loaded experiment was created with a newer version ({file_version}) of Extra-P. "
+                        f"This Extra-P version ({prog_version}) might not work correctly with this experiment.")
+                else:
+                    logging.info(
+                        f"The loaded experiment was created with a newer version ({file_version}) of Extra-P. ")
         if 'progress_bar' in self.context:
             pbar = self.context['progress_bar']
             models = 0
