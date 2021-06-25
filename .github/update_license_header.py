@@ -18,7 +18,7 @@ file_paths = glob.glob('../**/*.py', recursive=True)
 license_header = license_header.strip()
 license_header += '\n\n'
 
-find_license_comment = re.compile(r"\s*(?:#.*?\n)+(?:#.*?Copyright.*?\n)(?:#.*?\n)+\s*")
+find_license_comment = re.compile(r"\s*(?:#.*?\n)+(?:#.*?Copyright.*?(\d\d\d\d).*?\n)(?:#.*?\n)+\s*")
 
 for file_path in file_paths:
     if file_path.endswith('update_license_header.py'):
@@ -33,20 +33,28 @@ for file_path in file_paths:
         data_str = data
 
     if data_str.strip():
-        last_commit = subprocess.check_output(
-            ['git', 'log', '--follow', '--date=iso', '--pretty=format:"%cd"', '-1', file_path])
-        first_commit = subprocess.check_output(
-            ['git', 'log', '--follow', '--date=iso', '--pretty=format:"%cd"', '--diff-filter=A', file_path])
         is_changed = subprocess.check_output(['git', 'status', '--porcelain', file_path])
-        last_commit_year = last_commit[1:5].decode()
-        first_commit_year = first_commit[1:5].decode()
+        if is_changed:
+            last_commit_year = str(datetime.datetime.now().year)
+        else:
+            last_commit = subprocess.check_output(
+                ['git', 'log', '--follow', '--date=iso', '--pretty=format:"%cd"', '-1', file_path])
+            last_commit_year = last_commit[1:5].decode()
+
+        if not occurrences:
+            first_commit = subprocess.check_output(
+                ['git', 'log', '--follow', '--date=iso', '--pretty=format:"%cd"', '--diff-filter=A', file_path])
+            first_commit_year = first_commit[1:5].decode()
+            if not first_commit_year:
+                first_commit_year = last_commit_year
+        else:
+            first_commit_year = occurrences[1]
+
         if first_commit_year == last_commit_year:
             if not last_commit_year:
                 last_commit_year = datetime.datetime.now().year
             years = last_commit_year
         else:
-            if is_changed:
-                last_commit_year = str(datetime.datetime.now().year)
             years = first_commit_year + '-' + last_commit_year
         data_str = license_header.format(years=years) + data_str
     else:
