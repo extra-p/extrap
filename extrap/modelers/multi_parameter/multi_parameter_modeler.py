@@ -195,6 +195,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # model all single parameter experiments using only the selected points from the step before
         # parameters = list(range(measurements[0].coordinate.dimensions))
+        if 'perf_taint__depends_on_params' in measurements[0].callpath.tags:
+            dependent_params = measurements[0].callpath.tags['perf_taint__depends_on_params']
+            measurements_sp = [m for i, m in enumerate(measurements_sp) if i in dependent_params]
 
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]

@@ -55,6 +55,8 @@ class PerfTaintReader(CubeFileReader2):
     FILTER = "perf-taint file (*.json *.ll.json);;All Files (*)"
     LOADS_FROM_DIRECTORY = False
 
+    use_inclusive_measurements = True
+
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         path = Path(path)
         if path.is_dir():
@@ -85,7 +87,9 @@ class PerfTaintReader(CubeFileReader2):
                         node = self._find_mangled_name(node,
                                                        perf_taint_data['functions_mangled_names'][c], 10)
                         for c in call_iter:
-                            node = self._find_mangled_name(node, perf_taint_data['functions_mangled_names'][c], 1)
+                            new_node = self._find_mangled_name(node, perf_taint_data['functions_mangled_names'][c], 1)
+                            if new_node:
+                                node = new_node
                         print("->".join((perf_taint_data['functions_mangled_names'][c] for c in callstack)))
                         node = self._find_mangled_name(node, mangled_name, 1)
                         if not node:
@@ -105,7 +109,7 @@ class PerfTaintReader(CubeFileReader2):
                             if p in parameter_map:
                                 depends_on_params.append(parameter_map[p])
                     node.path.tags['perf_taint__depends_on_params'] = depends_on_params
-
+        self._set_dependend_params_on_rest_of_calltree(experiment.call_tree)
         progress_bar.update()
         return experiment
 
@@ -121,6 +125,12 @@ class PerfTaintReader(CubeFileReader2):
                 if n:
                     return n
         return None
+
+    def _set_dependend_params_on_rest_of_calltree(self, node: Node):
+        if node.path and 'perf_taint__depends_on_params' not in node.path.tags:
+            node.path.tags['perf_taint__depends_on_params'] = []
+        for child in node:
+            self._set_dependend_params_on_rest_of_calltree(child)
 
     @deprecated
     def read_cube_file(self, dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics=None):
