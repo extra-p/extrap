@@ -92,12 +92,19 @@ class PerfTaintReader(CubeFileReader2):
                             warnings.warn(f"Function could not be found: {perf_taint_data['functions_names'][c]}")
                             continue
 
-                    not_found_params = []
-                    if loop['not_found_params']:
-                        for p in loop['not_found_params']:
+                    # not_found_params = node.path.tags.get('perf_taint__not_found_params', [])
+                    # if loop['not_found_params']:
+                    #     for p in loop['not_found_params']:
+                    #         if p in parameter_map:
+                    #             not_found_params.append(parameter_map[p])
+                    # node.path.tags['perf_taint__not_found_params'] = not_found_params
+
+                    depends_on_params = node.path.tags.get('perf_taint__depends_on_params', [])
+                    for p_list in loop['deps']:
+                        for p in p_list:
                             if p in parameter_map:
-                                not_found_params.append(parameter_map[p])
-                    node.path.tags['perf_taint__not_found_params'] = not_found_params
+                                depends_on_params.append(parameter_map[p])
+                    node.path.tags['perf_taint__depends_on_params'] = depends_on_params
 
         progress_bar.update()
         return experiment
