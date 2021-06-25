@@ -6,11 +6,13 @@
 #  See the LICENSE file in the base directory for details.
 import json
 import sys
+import warnings
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Optional
 
 from extrap.entities.callpath import Callpath
+from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.deprecation import deprecated
@@ -24,10 +26,10 @@ else:
 
 
 class PerfTaintLoop(TypedDict):
-    callstack: List[List[int]]
+    callstack: List[Optional[List[int]]]
     data: List
     deps: List[List[str]]
-    not_found_params: List[str]
+    not_found_params: Optional[List[str]]
 
 
 class PerfTaintFunction(TypedDict):
@@ -38,7 +40,11 @@ class PerfTaintFunction(TypedDict):
 
 
 class PerfTaintData(TypedDict):
-    functions: List[PerfTaintFunction]
+    functions: Dict[str, PerfTaintFunction]
+    functions_demangled_names: List[str]
+    functions_mangled_names: List[str]
+    functions_names: List[str]
+    parameters: List[str]
 
 
 class PerfTaintReader(CubeFileReader2):
@@ -60,12 +66,54 @@ class PerfTaintReader(CubeFileReader2):
                 raise FileFormatError("Perf-taint file error: " + str(error)) from error
 
         experiment = super().read_experiment(path.parent, progress_bar)
-        for func in perf_taint_data['functions']:
+        parameter_map = {p.name: i for i, p in enumerate(experiment.parameters)}
+
+        for func_name, func in perf_taint_data['functions'].items():
             for loop in func['loops']:
-                pass
+                for callstack in loop['callstack']:
+                    node = experiment.call_tree
+                    mangled_name = perf_taint_data['functions_mangled_names'][func['func_idx']]
+                    if not callstack:
+                        node = self._find_mangled_name(node, mangled_name, 10)
+                        if not node:
+                            warnings.warn(
+                                f"Function could not be found: {perf_taint_data['functions_names'][func['func_idx']]}")
+                            continue
+                    else:
+                        call_iter = iter(callstack)
+                        c = next(call_iter)
+                        node = self._find_mangled_name(node,
+                                                       perf_taint_data['functions_mangled_names'][c], 10)
+                        for c in call_iter:
+                            node = self._find_mangled_name(node, perf_taint_data['functions_mangled_names'][c], 1)
+                        print("->".join((perf_taint_data['functions_mangled_names'][c] for c in callstack)))
+                        node = self._find_mangled_name(node, mangled_name, 1)
+                        if not node:
+                            warnings.warn(f"Function could not be found: {perf_taint_data['functions_names'][c]}")
+                            continue
+
+                    not_found_params = []
+                    if loop['not_found_params']:
+                        for p in loop['not_found_params']:
+                            if p in parameter_map:
+                                not_found_params.append(parameter_map[p])
+                    node.path.tags['perf_taint__not_found_params'] = not_found_params
 
         progress_bar.update()
         return experiment
+
+    def _find_mangled_name(self, node: Node, mangled_name: str, depth: int = 1):
+        if not node:
+            return None
+        if node.mangled_name and mangled_name == node.mangled_name:
+            return node
+        elif depth > 0:
+            depth -= 1
+            for child in node:
+                n = self._find_mangled_name(child, mangled_name, depth)
+                if n:
+                    return n
+        return None
 
     @deprecated
     def read_cube_file(self, dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics=None):

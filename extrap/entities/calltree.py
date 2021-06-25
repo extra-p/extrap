@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from typing import cast
+from typing import cast, Optional
 
 from extrap.entities.callpath import Callpath
 
@@ -15,7 +15,23 @@ class Node:
     def __init__(self, name: str, path: Callpath):
         self.name = name
         self.childs = []
+        self._path = None
+        self.mangled_name: Optional[str] = None
         self.path = path
+
+    @property
+    def path(self) -> Callpath:
+        return self._path
+
+    @path.setter
+    def path(self, path):
+        self._path = path
+        if path and path.mangled_name:
+            pos = path.mangled_name.rfind("->")
+            if pos >= 0:
+                self.mangled_name = path.mangled_name[(pos + 2):]
+            else:
+                self.mangled_name = path.mangled_name
 
     def add_child_node(self, child_node):
         self.childs.append(child_node)
