@@ -49,6 +49,7 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 * numpy
 * pycubexr
 * marshmallow
+* packaging
 * tqdm
 * PySide2 (for GUI)
 * matplotlib (for GUI)
