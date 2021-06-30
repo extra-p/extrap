@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import copy
 import json
 from abc import abstractmethod, ABC
