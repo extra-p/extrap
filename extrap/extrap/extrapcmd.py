@@ -172,7 +172,6 @@ def main(args=None, prog=None):
 
         # format modeler output into text
         text = fmt_output(experiment, printtype)
-            # fmt_output(experiment, printtype)
             # format_output(experiment, printtype)
 
         # print formatted output to command line

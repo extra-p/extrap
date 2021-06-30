@@ -9,6 +9,7 @@ individuals who have contributed code to this repository:
 * Marc-Andre Hermanns (m.a.hermanns@fz-juelich.de)
 * Jonas Klesy (jonas.klesy@googlemail.com)
 * Christof Jugel (christof.jugel@stud.tu-darmstadt.de)
+* Samuel Lokadjaja (samuel.lokadjaja@stud.tu-darmstadt.de)
 * Daniel Lorenz (lorenz@cs.tu-darmstadt.de
 * Benedikt Naumann (benedikt.naumann@gmx.de)
 * Nicolas Ollagnier (ncls_olg@yahoo.fr)
