@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -50,6 +50,6 @@ setup(
     ],
     python_requires='>=3.7',
     install_requires=["pyside2~=5.13", "numpy~=1.18", "matplotlib~=3.2", "tqdm~=4.47", "pycubexr~=1.1",
-                      "marshmallow~=3.7", "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'",
+                      "marshmallow~=3.7", "packaging~=20.0", "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'",
                       "kaitaistruct~=0.9", "protobuf~=3.14", "itanium_demangler~=1.0"]
 )

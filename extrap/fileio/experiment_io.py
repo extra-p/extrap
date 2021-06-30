@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -20,7 +20,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 EXPERIMENT_DATA_FILE = 'experiment.json'
 
 
-def read_experiment(path, progress_bar=DUMMY_PROGRESS):
+def read_experiment(path, progress_bar=DUMMY_PROGRESS) -> Experiment:
     progress_bar.total += 3
     schema = ExperimentSchema()
     schema.set_progress_bar(progress_bar)
@@ -43,7 +43,7 @@ class ExperimentReader(FileReader):
     NAME = 'experiment'
     CMD_ARGUMENT = '--experiment'
     GUI_ACTION = '&Open experiment'
-    DESCRIPTION = 'Load experiment file'
+    DESCRIPTION = 'Load Extra-P experiment'
     FILTER = 'Experiments (*.extra-p)'
     GENERATE_MODELS_AFTER_LOAD = False
 
