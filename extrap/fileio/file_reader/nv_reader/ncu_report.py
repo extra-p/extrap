@@ -8,7 +8,7 @@
 import os
 from collections import defaultdict
 from itertools import islice
-from typing import Set
+from typing import Set, List
 
 from extrap.fileio.file_reader.nv_reader.binary_parser.nsight_cuprof_report import NsightCuprofReport
 from extrap.fileio.file_reader.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult
@@ -19,7 +19,7 @@ class NcuReport:
 
     def __init__(self, name):
 
-        self.string_table = []
+        self.string_table:List[str] = []
         self.source_blocks = []
         self.result_blocks = []
         self.report_data = NsightCuprofReport.from_file(name)

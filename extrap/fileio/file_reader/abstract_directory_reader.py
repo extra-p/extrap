@@ -10,6 +10,7 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
+from typing import List, Tuple
 
 from extrap.fileio.file_reader import FileReader
 from extrap.util.exceptions import FileFormatError
@@ -18,7 +19,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 
 class AbstractDirectoryReader(FileReader, abc.ABC):
 
-    def _find_files_in_directory(self, path, glob_pattern, progress_bar=DUMMY_PROGRESS):
+    def _find_files_in_directory(self, path, glob_pattern, progress_bar=DUMMY_PROGRESS) -> List[Path]:
         path = Path(path)
         if not path.is_dir():
             raise FileFormatError(f'{self.NAME.capitalize()} file path must point to a directory: {path}')
@@ -29,7 +30,7 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
         return files
 
     @staticmethod
-    def _determine_parameters_from_paths(paths, progress_bar=DUMMY_PROGRESS):
+    def _determine_parameters_from_paths(paths, progress_bar=DUMMY_PROGRESS) -> Tuple[List[str], List[List[float]]]:
         parameter_names_initial = []
         parameter_names = []
         parameter_values = []

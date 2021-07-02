@@ -21,20 +21,21 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
-from extrap.fileio.file_reader import FileReader
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
 from extrap.fileio.file_reader.nv_reader.ncu_report import NcuReport
 from extrap.fileio.file_reader.nv_reader.nsys_db import NsysReport
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
-class NsightFileReader(FileReader):
+class NsightFileReader(AbstractDirectoryReader):
     NAME = "nsight"
     GUI_ACTION = "Open set of &Nsight files"
     DESCRIPTION = "Load a set of Nsight Systems files and generate a new experiment"
     CMD_ARGUMENT = "--nsight"
     LOADS_FROM_DIRECTORY = True
 
+    legacy_format = False
     ignore_device_attributes = True
 
     def read_experiment(self, dir_name, pbar=DUMMY_PROGRESS, selected_metrics=None, only_time=False):
@@ -42,19 +43,31 @@ class NsightFileReader(FileReader):
         path = Path(dir_name)
         if not path.is_dir():
             raise FileFormatError(f'NV file path must point to a directory: {dir_name}')
-        nv_files = list(path.glob('[!.]*.sqlite'))
+        if self.legacy_format:
+            nv_files = list(path.glob('[!.]*.sqlite'))
+        else:
+            nv_files = list(path.glob('*/[!.]*.sqlite'))
         if not nv_files:
-            ncu_files = list(path.glob('[!.]*.ncu-rep'))
+            if self.legacy_format:
+                ncu_files = list(path.glob('[!.]*.ncu-rep'))
+            else:
+                ncu_files = list(path.glob('*/[!.]*.ncu-rep'))
             if ncu_files:
                 return self.read_ncu_files(dir_name, ncu_files, pbar=DUMMY_PROGRESS, selected_metrics=None,
                                            only_time=False)
             else:
-                raise FileFormatError(f'No sqlite files were found in: {dir_name}')
+                raise FileFormatError(f'No sqlite or ncu-rep files were found in: {dir_name}')
         pbar.total += len(nv_files) + 6
-        # iterate over all folders and read the cube profiles in them
+        # iterate over all folders and read the nv profiles in them
         experiment = Experiment()
 
-        parameter_selection_mask, parameter_values = self.determine_parameter_values(experiment, nv_files, pbar)
+        pbar.step("Reading NV files")
+        if self.legacy_format:
+            parameter_names, parameter_values = self._determine_parameter_values_legacy(nv_files, pbar)
+        else:
+            parameter_names, parameter_values = self._determine_parameters_from_paths(nv_files, pbar)
+        for p in parameter_names:
+            experiment.add_parameter(Parameter(p))
 
         pbar.step("Reading sqlite files")
 
@@ -69,7 +82,7 @@ class NsightFileReader(FileReader):
                 num_points += 1
                 point_group = list(point_group)
                 # create coordinate
-                coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
+                coordinate = Coordinate(parameter_value)
                 experiment.add_coordinate(coordinate)
 
                 aggregated_values.clear()
@@ -178,7 +191,7 @@ class NsightFileReader(FileReader):
         pbar.update()
         return experiment
 
-    def determine_parameter_values(self, experiment, files, pbar):
+    def _determine_parameter_values_legacy(self, files, pbar):
         pbar.step("Reading NV files")
         parameter_names_initial = []
         parameter_names = []
@@ -213,19 +226,27 @@ class NsightFileReader(FileReader):
                 parameter_dict[n].add(v)
             parameter_values.append(parameter_value)
         # determine non-constant parameters and add them to experiment
-        parameter_selection_mask = []
-        for i, p in enumerate(parameter_names):
-            if len(parameter_dict[p]) > 1:
-                experiment.add_parameter(Parameter(p))
-                parameter_selection_mask.append(i)
-        return parameter_selection_mask, parameter_values
+        for i in reversed(range(len(parameter_names))):
+            p = parameter_names[i]
+            if len(parameter_dict[p]) <= 1:
+                for pv in parameter_values:
+                    del pv[i]
+
+        parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
+
+        return parameter_names, parameter_values
 
     def read_ncu_files(self, dir_name, ncu_files, pbar, selected_metrics, only_time):
         pbar.total += len(ncu_files) + 6
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
 
-        parameter_selection_mask, parameter_values = self.determine_parameter_values(experiment, ncu_files, pbar)
+        if self.legacy_format:
+            parameter_names, parameter_values = self._determine_parameter_values_legacy(ncu_files, pbar)
+        else:
+            parameter_names, parameter_values = self._determine_parameters_from_paths(ncu_files, pbar)
+        for p in parameter_names:
+            experiment.add_parameter(Parameter(p))
 
         aggregated_values = defaultdict(list)
 
@@ -236,7 +257,7 @@ class NsightFileReader(FileReader):
             num_points += 1
             point_group = list(point_group)
             # create coordinate
-            coordinate = Coordinate(parameter_value[i] for i in parameter_selection_mask)
+            coordinate = Coordinate(parameter_value)
             experiment.add_coordinate(coordinate)
 
             aggregated_values.clear()
@@ -249,6 +270,7 @@ class NsightFileReader(FileReader):
                     else:
                         measurements = ncuReport.get_measurements_unmapped()
                     for (callpath, metricId), v in measurements.items():
+                        pbar.update(0)
                         aggregated_values[
                             (Callpath(callpath), Metric(ncuReport.string_table[metricId]))].append(v)
 
