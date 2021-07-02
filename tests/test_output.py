@@ -1,5 +1,5 @@
-import unittest
 import contextlib
+import unittest
 from io import StringIO
 
 from extrap.extrap import extrapcmd as extrap
@@ -34,6 +34,16 @@ class TestOutput(unittest.TestCase):
     def test_invalid(self):
         with self.assertRaises(ValueError):
             extrap.main(['--print', '{metric}, {a}', '--text', 'data/text/two_parameter_3.txt'])
+
+    def test_basic_output(self):
+        self.assertOutputRegex(
+            r"time\s+flops",
+            extrap.main,
+            ['--print', '{metric}', '--text', 'data/text/two_parameter_3.txt'])
+        self.assertOutputRegex(
+            r"merge\s+sort",
+            extrap.main,
+            ['--print', '{callpath}', '--text', 'data/text/two_parameter_3.txt'])
 
     def assertOutputRegex(self, regex, command, *args, **kwargs):
         temp_stdout = StringIO()

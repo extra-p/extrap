@@ -1,6 +1,7 @@
-from extrap.entities.experiment import Experiment
-import extrap.fileio.io_helper as io
 import re
+
+import extrap.fileio.io_helper as io
+from extrap.entities.experiment import Experiment
 
 
 def format_coordinates(experiment: Experiment):
@@ -34,34 +35,34 @@ def fmt_output(experiment: Experiment, printtype: str):
             temp = print_str
 
             for o in options:
-                if o == "callpaths":
-                    temp = temp.replace("{callpaths}", m.callpath.name)
-                elif o == "!callpaths":  # not sure
+                if o == "callpath":
+                    temp = temp.replace("{callpath}", m.callpath.name)
+                elif o == "?callpath":  # not sure
                     if not callpath_list or callpath_list[-1] != m.callpath.name:
-                        temp = temp.replace("{!callpaths}", m.callpath.name)
+                        temp = temp.replace("{?callpath}", m.callpath.name)
                     else:
-                        temp = temp.replace("{!callpaths}", " " * len(m.callpath.name))
+                        temp = temp.replace("{?callpath}", " " * len(m.callpath.name))
                     callpath_list.append(m.callpath.name)
-                elif o == "metrics":
-                    temp = temp.replace("{metrics}", m.metric.name)
-                elif o == "!metrics":  # not sure
+                elif o == "metric":
+                    temp = temp.replace("{metric}", m.metric.name)
+                elif o == "?metric":  # not sure
                     if not metric_list or metric_list[-1] != m.metric.name:
-                        temp = temp.replace("{!metrics}", m.metric.name)
+                        temp = temp.replace("{?metric}", m.metric.name)
                     else:
-                        temp = temp.replace("{!metrics}", " " * len(m.metric.name))
+                        temp = temp.replace("{?metric}", " " * len(m.metric.name))
                     metric_list.append(m.metric.name)
                 elif o == "model":
                     temp = temp.replace("{model}",
                                         m.hypothesis.function.to_string(*experiment.parameters))
-                elif o == "coordinates":
+                elif o == "points":
                     coordinate_text = format_coordinates(experiment)
-                    temp = temp.replace("{coordinates}", coordinate_text)
-                elif o == "!coordinates":  # not sure
+                    temp = temp.replace("{points}", coordinate_text)
+                elif o == "?points":  # not sure
                     coordinate_text = format_coordinates(experiment)
                     if print_coord:
-                        temp = temp.replace("{!coordinates}", coordinate_text)
+                        temp = temp.replace("{?points}", coordinate_text)
                     else:
-                        temp = temp.replace("{!coordinates}", " " * len(coordinate_text))
+                        temp = temp.replace("{?points}", " " * len(coordinate_text))
                     print_coord = False
                 elif o == "measurements":  # not sure
                     coordinates = experiment.coordinates
@@ -74,18 +75,18 @@ def fmt_output(experiment: Experiment, printtype: str):
                         mean = 0 if measurement is None else measurement.mean
                         median = 0 if measurement is None else measurement.median
                         measurement_text += "Measurement point: (" + ",".join(coordinate) + ") " + \
-                                            f"Mean: {mean:.2E} Median: {median:.2E}\n"
+                                            f"Mean: {mean:.2E} Median: {median:.2E} "
 
                     temp = temp.replace("{measurements}", measurement_text)
                 elif o == "parameters":
                     param_string = " ".join([p.name for p in experiment.parameters])
                     temp = temp.replace("{parameters}", param_string)
-                elif o == "!parameters":  # not sure
+                elif o == "?parameters":  # not sure
                     param_string = " ".join([p.name for p in experiment.parameters])
                     if print_param:
-                        temp = temp.replace("{!parameters}", param_string)
+                        temp = temp.replace("{?parameters}", param_string)
                     else:
-                        temp = temp.replace("{!parameters}", " " * len(param_string))
+                        temp = temp.replace("{?parameters}", " " * len(param_string))
                     print_param = False
                 elif o == "smape":
                     temp = temp.replace("{smape}", "{:.2E}".format(m.hypothesis.SMAPE))
