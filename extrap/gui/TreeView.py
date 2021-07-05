@@ -9,7 +9,6 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.entities.model import Model
 from extrap.gui.TreeModel import TreeModel
 
 
@@ -32,11 +31,11 @@ class TreeView(QTreeView):
                 selectedModel = model.getSelectedModel(selectedCallpath.path)
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
-                # showCommentsAction = menu.addAction("Show Comments")
-                # showCommentsAction.setEnabled(
-                #     selectedModel is not None and len(selectedModel.getComments()) > 0)
-                # showCommentsAction.triggered.connect(
-                #     lambda: self.showComments(selectedModel))
+                showCommentsAction = menu.addAction("Show Comments")
+                showCommentsAction.setEnabled(
+                    selectedModel is not None and bool(selectedModel.comments))
+                showCommentsAction.triggered.connect(
+                    lambda: self.showComments(selectedModel))
                 showDataPointsAction = menu.addAction("Show data points")
                 showDataPointsAction.setDisabled(selectedModel is None)
                 showDataPointsAction.triggered.connect(
@@ -59,8 +58,8 @@ class TreeView(QTreeView):
         msg.setIcon(QMessageBox.Information)
         msg.setText(
             "Model has the following comments attached (text can be copied to the clipboard using the context menu):")
-        allComments = '\n'.join(("– " + c.getMessage())
-                                for c in model.getComments())
+        allComments = '\n'.join(("– " + c)
+                                for c in model.comments)
         msg.setInformativeText(allComments)
         msg.setWindowTitle("Model Comments")
         # msg.setDetailedText("The details are as follows:")

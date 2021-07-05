@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -185,6 +185,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         """
         Create a multi-parameter model using the given measurements.
         """
+
+        comments = []
+
         if self.single_parameter_point_selection == 'auto' \
                 or self.single_parameter_point_selection == 'all':
             measurements_sp = self.find_best_measurement_points(measurements)
@@ -198,6 +201,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         if 'perf_taint__depends_on_params' in measurements[0].callpath.tags:
             dependent_params = measurements[0].callpath.tags['perf_taint__depends_on_params']
             measurements_sp = [m for i, m in enumerate(measurements_sp) if i in dependent_params]
+            comments.append("Depends on the following parameters: " + str(sorted(set(dependent_params))))
 
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
@@ -206,6 +210,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         if len(measurements) < self.min_measurement_points:
             warnings.warn("Number of measurements for each parameter needs to be at least 5"
                           " in order to create a performance model.")
+            comments.append("Number of measurements for each parameter needs to be at least 5"
+                            " in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling
@@ -236,7 +242,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             constant_function.constant_coefficient = meanModel
             constant_hypothesis = ConstantHypothesis(constant_function, self.use_median)
             constant_hypothesis.compute_cost(measurements)
-            return Model(constant_hypothesis)
+            return Model(constant_hypothesis, comments=comments)
 
         # in case is only one parameter, make a single parameter function
         elif len(compound_term_pairs) == 1:
@@ -250,7 +256,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_median)
             multi_parameter_hypothesis.compute_coefficients(measurements)
             multi_parameter_hypothesis.compute_cost(measurements)
-            return Model(multi_parameter_hypothesis)
+            return Model(multi_parameter_hypothesis, comments=comments)
 
         # create multiplicative multi parameter term
         mult = MultiParameterTerm(*compound_term_pairs)
@@ -379,7 +385,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                 best_hypothesis = copy.deepcopy(hypotheses[i])
 
         # add the best found hypothesis to the model list
-        model = Model(best_hypothesis)
+        model = Model(best_hypothesis, comments=comments)
 
         logging.info(f"best hypothesis: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
                      f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -18,13 +18,18 @@ from extrap.util.caching import cached_property
 from extrap.util.serialization_schema import Schema
 
 
+class Comment(str):
+    pass
+
+
 class Model:
 
-    def __init__(self, hypothesis, callpath=None, metric=None):
+    def __init__(self, hypothesis, callpath=None, metric=None, comments=None):
         self.hypothesis: Hypothesis = hypothesis
         self.callpath = callpath
         self.metric = metric
         self.measurements: Optional[List[Measurement]] = None
+        self.comments: Optional[List[Comment]] = comments
 
     @cached_property
     def predictions(self):

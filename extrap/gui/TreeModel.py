@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from enum import Enum, auto
 from typing import Optional, TYPE_CHECKING, List, Callable
 
@@ -19,8 +20,6 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
-
-import re
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
@@ -111,8 +110,8 @@ class TreeModel(QAbstractItemModel):
             else:
                 return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
-            # if len(model.getComments()) > 0:
-            #     return len(model.getComments())
+            if model.comments:
+                return len(model.comments)
             return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
@@ -149,11 +148,9 @@ class TreeModel(QAbstractItemModel):
             if elem == ">":
                 depth -= 1
                 if start != -1 and depth == 0:
-                    name = name[0:start:] + "<…>" + self.remove_method_parameters(name[i+1:len(name):])
+                    name = name[0:start:] + "<…>" + self.remove_method_parameters(name[i + 1:len(name):])
                     return re.sub(r"\(.*\)", "(…)", name)
         return re.sub(r"\(.*\)", "(…)", name)
-
-
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()

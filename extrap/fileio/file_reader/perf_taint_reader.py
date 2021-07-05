@@ -1,12 +1,14 @@
-#  This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-#  Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021, Technical University of Darmstadt, Germany
 #
-#  This software may be modified and distributed under the terms of a BSD-style license.
-#  See the LICENSE file in the base directory for details.
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 import json
 import sys
 import warnings
+from itertools import chain
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Union, Dict, List, Optional
@@ -18,6 +20,8 @@ from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.deprecation import deprecated
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import ProgressBar, DUMMY_PROGRESS
+
+PERF_TAINT__DEPENDS_ON_PARAMS = 'perf_taint__depends_on_params'
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -56,6 +60,7 @@ class PerfTaintReader(CubeFileReader2):
     LOADS_FROM_DIRECTORY = False
 
     use_inclusive_measurements = True
+    scaling_type = 'weak'
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         path = Path(path)
@@ -69,47 +74,57 @@ class PerfTaintReader(CubeFileReader2):
 
         experiment = super().read_experiment(path.parent, progress_bar)
         parameter_map = {p.name: i for i, p in enumerate(experiment.parameters)}
+        functions_not_found = set()
+        try:
+            for func_name, func in perf_taint_data['functions'].items():
+                for loop in func['loops']:
+                    for callstack in loop['callstack']:
+                        node = experiment.call_tree
+                        mangled_name = perf_taint_data['functions_mangled_names'][func['func_idx']]
+                        if not callstack:
+                            node = self._find_mangled_name(node, mangled_name, 10)
+                            if not node:
+                                warnings.warn(
+                                    f"Function could not be found: {perf_taint_data['functions_names'][func['func_idx']]}")
+                                continue
+                        else:
+                            extended_callstack = chain(callstack, [func['func_idx']])
+                            call_iter = iter(callstack)
+                            c = next(call_iter)
+                            node = self._find_mangled_name(node,
+                                                           perf_taint_data['functions_mangled_names'][c], 10)
+                            for c in call_iter:
+                                new_node = self._find_mangled_name(node, perf_taint_data['functions_mangled_names'][c],
+                                                                   1)
+                                if new_node:
+                                    node = new_node
+                            print("->".join((perf_taint_data['functions_mangled_names'][c] for c in
+                                             chain(callstack, [func['func_idx']]))))
+                            node = self._find_mangled_name(node, mangled_name, 1)
+                            if not node:
+                                functions_not_found.add(
+                                    '->'.join((perf_taint_data['functions_names'][c] for c in extended_callstack)))
+                                continue
 
-        for func_name, func in perf_taint_data['functions'].items():
-            for loop in func['loops']:
-                for callstack in loop['callstack']:
-                    node = experiment.call_tree
-                    mangled_name = perf_taint_data['functions_mangled_names'][func['func_idx']]
-                    if not callstack:
-                        node = self._find_mangled_name(node, mangled_name, 10)
-                        if not node:
-                            warnings.warn(
-                                f"Function could not be found: {perf_taint_data['functions_names'][func['func_idx']]}")
-                            continue
-                    else:
-                        call_iter = iter(callstack)
-                        c = next(call_iter)
-                        node = self._find_mangled_name(node,
-                                                       perf_taint_data['functions_mangled_names'][c], 10)
-                        for c in call_iter:
-                            new_node = self._find_mangled_name(node, perf_taint_data['functions_mangled_names'][c], 1)
-                            if new_node:
-                                node = new_node
-                        print("->".join((perf_taint_data['functions_mangled_names'][c] for c in callstack)))
-                        node = self._find_mangled_name(node, mangled_name, 1)
-                        if not node:
-                            warnings.warn(f"Function could not be found: {perf_taint_data['functions_names'][c]}")
-                            continue
+                        # not_found_params = node.path.tags.get('perf_taint__not_found_params', [])
+                        # if loop['not_found_params']:
+                        #     for p in loop['not_found_params']:
+                        #         if p in parameter_map:
+                        #             not_found_params.append(parameter_map[p])
+                        # node.path.tags['perf_taint__not_found_params'] = not_found_params
 
-                    # not_found_params = node.path.tags.get('perf_taint__not_found_params', [])
-                    # if loop['not_found_params']:
-                    #     for p in loop['not_found_params']:
-                    #         if p in parameter_map:
-                    #             not_found_params.append(parameter_map[p])
-                    # node.path.tags['perf_taint__not_found_params'] = not_found_params
-
-                    depends_on_params = node.path.tags.get('perf_taint__depends_on_params', [])
-                    for p_list in loop['deps']:
-                        for p in p_list:
-                            if p in parameter_map:
-                                depends_on_params.append(parameter_map[p])
-                    node.path.tags['perf_taint__depends_on_params'] = depends_on_params
+                        depends_on_params = node.path.tags.get(PERF_TAINT__DEPENDS_ON_PARAMS, [])
+                        for p_list in loop['deps']:
+                            for p in p_list:
+                                if p in parameter_map:
+                                    depends_on_params.append(parameter_map[p])
+                        node.path.tags[PERF_TAINT__DEPENDS_ON_PARAMS] = depends_on_params
+        except KeyError as err:
+            raise FileFormatError("Could not read perf-taint file: " + str(err)) from err
         self._set_dependend_params_on_rest_of_calltree(experiment.call_tree)
+        warnings.warn(
+            f"Perf-taint found the following functions which are not present the measurements:\n" + ',\n'.join(
+                functions_not_found))
         progress_bar.update()
         return experiment
 
@@ -127,8 +142,8 @@ class PerfTaintReader(CubeFileReader2):
         return None
 
     def _set_dependend_params_on_rest_of_calltree(self, node: Node):
-        if node.path and 'perf_taint__depends_on_params' not in node.path.tags:
-            node.path.tags['perf_taint__depends_on_params'] = []
+        if node.path and (PERF_TAINT__DEPENDS_ON_PARAMS) not in node.path.tags:
+            node.path.tags[PERF_TAINT__DEPENDS_ON_PARAMS] = []
         for child in node:
             self._set_dependend_params_on_rest_of_calltree(child)
 
