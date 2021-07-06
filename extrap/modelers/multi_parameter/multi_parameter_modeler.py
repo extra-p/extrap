@@ -199,14 +199,16 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # model all single parameter experiments using only the selected points from the step before
         # parameters = list(range(measurements[0].coordinate.dimensions))
         dependent_params = None
-        if 'perf_taint__depends_on_params' in measurements[0].callpath.tags:
+        has_param_dependency_info = bool(measurements[0].callpath) and \
+                                    'perf_taint__depends_on_params' in measurements[0].callpath.tags
+        if has_param_dependency_info:
             dependent_params = measurements[0].callpath.tags['perf_taint__depends_on_params']
             measurements_sp = [m for i, m in enumerate(measurements_sp) if i in dependent_params]
             comments.append("Depends on the following parameters: " + str(dependent_params))
 
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
-        if 'perf_taint__depends_on_params' in measurements[0].callpath.tags:
+        if has_param_dependency_info:
             param_function_mapping = zip(dependent_params, functions)
         else:
             param_function_mapping = enumerate(functions)

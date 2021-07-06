@@ -31,7 +31,7 @@ class TreeView(QTreeView):
                 selectedModel = model.getSelectedModel(selectedCallpath.path)
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
-                showCommentsAction = menu.addAction("Show Comments")
+                showCommentsAction = menu.addAction("Show comments")
                 showCommentsAction.setEnabled(
                     selectedModel is not None and bool(selectedModel.comments))
                 showCommentsAction.triggered.connect(
