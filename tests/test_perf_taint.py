@@ -6,8 +6,10 @@
 # See the LICENSE file in the base directory for details.
 
 import unittest
+from typing import cast
 
 from extrap.entities.parameter import Parameter
+from extrap.entities.terms import MultiParameterTerm
 from extrap.fileio.file_reader.perf_taint_reader import PerfTaintReader
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import FileFormatError
@@ -31,14 +33,23 @@ class PerfTaintTest(TestCaseWithFunctionAssertions):
         'lulesh2.0->int main(int, char**)->void CommSend(Domain&, int, Index_t, Real_t& (Domain::**)(Index_t), Index_t, Index_t, Index_t, bool, bool)->MPI_Waitall'
     ]
     no_params_check = [
-
+        'lulesh2.0->int main(int, char**)->MPI_Init',
+        'lulesh2.0->int main(int, char**)->MPI_Finalize'
     ]
 
-    def test_loading(self):
+    @classmethod
+    def setUpClass(cls) -> None:
+        reader = PerfTaintReader()
+        reader.scaling_type = 'weak'
+        cls.experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
+
+    def test_loading_fails(self):
         reader = PerfTaintReader()
         reader.scaling_type = 'weak'
         self.assertRaises(FileFormatError, reader.read_experiment, 'data/perf_taint/lulesh')
-        experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
+
+    def test_loading(self):
+        experiment = self.experiment
         self.assertListEqual([Parameter('p'), Parameter('size')], experiment.parameters)
         all_params_counter, size_params_counter, p_params_counter, no_params_counter = 0, 0, 0, 0
         for callpath in experiment.callpaths:
@@ -67,10 +78,18 @@ class PerfTaintTest(TestCaseWithFunctionAssertions):
         self.assertEqual(len(self.no_params_check), no_params_counter, 'Not all checks for "no_params" were done')
 
     def test_model(self):
-        reader = PerfTaintReader()
-        reader.scaling_type = 'weak'
-        experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
+        experiment = self.experiment
         ModelGenerator(experiment).model_all()
+
+        models = experiment.modelers[0].models
+
+        for (callpath, _), model in models.items():
+            self.assertIn('perf_taint__depends_on_params', callpath.tags)
+            depends_on_params = callpath.tags['perf_taint__depends_on_params']
+            used_params = [p for t in model.hypothesis.function.compound_terms
+                           for p, _ in cast(MultiParameterTerm, t).parameter_term_pairs]
+            for p in used_params:
+                self.assertIn(p, depends_on_params)
 
 
 if __name__ == '__main__':
