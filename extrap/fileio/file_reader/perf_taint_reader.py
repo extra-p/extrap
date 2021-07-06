@@ -7,6 +7,7 @@
 
 import bisect
 import json
+import logging
 import sys
 import warnings
 from itertools import chain
@@ -55,7 +56,7 @@ class PerfTaintData(TypedDict):
 class PerfTaintReader(CubeFileReader2):
     NAME = "perf-taint"
     GUI_ACTION = "Open per&f-taint file"
-    DESCRIPTION = "Load a perf-taint file and a set of CUBE files to generate a new experiment"
+    DESCRIPTION = "Load data from a perf-taint JSON file and the accompanying set of CUBE files"
     CMD_ARGUMENT = "--perf-taint"
     FILTER = "perf-taint file (*.json *.ll.json);;All Files (*)"
     LOADS_FROM_DIRECTORY = False
@@ -82,8 +83,9 @@ class PerfTaintReader(CubeFileReader2):
                     for callstack in loop['callstack']:
                         node = experiment.call_tree
                         mangled_name = perf_taint_data['functions_mangled_names'][func['func_idx']]
+                        parent_nodes = []
                         if not callstack:
-                            node = self._find_mangled_name(node, mangled_name, 10)
+                            node = self._find_mangled_name(node, mangled_name, 10, parents=parent_nodes)
                             if not node:
                                 functions_not_found.add(perf_taint_data['functions_names'][func['func_idx']])
                                 continue
@@ -98,39 +100,39 @@ class PerfTaintReader(CubeFileReader2):
                                                                    1)
                                 if new_node:
                                     node = new_node
-                            print("->".join((perf_taint_data['functions_mangled_names'][c] for c in
-                                             chain(callstack, [func['func_idx']]))))
+                            logging.debug("perf-taint: processing " + "->".join(
+                                (perf_taint_data['functions_mangled_names'][c] for c in
+                                 chain(callstack, [func['func_idx']]))))
                             node = self._find_mangled_name(node, mangled_name, 1)
                             if not node:
                                 functions_not_found.add(
                                     '->'.join((perf_taint_data['functions_names'][c] for c in extended_callstack)))
                                 continue
 
-                        # not_found_params = node.path.tags.get('perf_taint__not_found_params', [])
-                        # if loop['not_found_params']:
-                        #     for p in loop['not_found_params']:
-                        #         if p in parameter_map:
-                        #             not_found_params.append(parameter_map[p])
-                        # node.path.tags['perf_taint__not_found_params'] = not_found_params
-
-                        depends_on_params = node.path.tags.get(PERF_TAINT__DEPENDS_ON_PARAMS, [])
-                        for p_list in loop['deps']:
-                            for p in p_list:
-                                if p in parameter_map:
-                                    if parameter_map[p] not in depends_on_params:
-                                        bisect.insort(depends_on_params, parameter_map[p])
-
-                        node.path.tags[PERF_TAINT__DEPENDS_ON_PARAMS] = depends_on_params
+                        self._add_dependency(loop, node, parameter_map)
+                        for node in parent_nodes:
+                            if node.path:
+                                self._add_dependency(loop, node, parameter_map)
         except KeyError as err:
             raise FileFormatError("Could not read perf-taint file: " + str(err)) from err
         self._set_dependend_params_on_rest_of_calltree(experiment.call_tree)
-        warnings.warn(
-            f"Perf-taint found the following functions which are not present the measurements:\n" + ',\n'.join(
-                functions_not_found))
+        if functions_not_found:
+            warnings.warn(
+                f"Perf-taint found the following functions which are not present the measurements:\n" + ',\n'.join(
+                    functions_not_found))
         progress_bar.update()
         return experiment
 
-    def _find_mangled_name(self, node: Node, mangled_name: str, depth: int = 1):
+    def _add_dependency(self, loop, node, parameter_map):
+        depends_on_params = node.path.tags.get(PERF_TAINT__DEPENDS_ON_PARAMS, [])
+        for p_list in loop['deps']:
+            for p in p_list:
+                if p in parameter_map:
+                    if parameter_map[p] not in depends_on_params:
+                        bisect.insort(depends_on_params, parameter_map[p])
+        node.path.tags[PERF_TAINT__DEPENDS_ON_PARAMS] = depends_on_params
+
+    def _find_mangled_name(self, node: Node, mangled_name: str, depth: int = 1, parents: Optional[List] = None):
         if not node:
             return None
         if node.mangled_name and mangled_name == node.mangled_name:
@@ -138,8 +140,10 @@ class PerfTaintReader(CubeFileReader2):
         elif depth > 0:
             depth -= 1
             for child in node:
-                n = self._find_mangled_name(child, mangled_name, depth)
+                n = self._find_mangled_name(child, mangled_name, depth, parents)
                 if n:
+                    if parents is not None:
+                        parents.append(node)
                     return n
         return None
 

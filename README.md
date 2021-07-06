@@ -103,6 +103,7 @@ The Extra-P command line interface has the following options.
 | `--cube`                                                             | Load a set of CUBE files and generate a new experiment
 | `--extra-p-3`                                                        | Load data from Extra-P 3 (legacy) experiment
 | `--json`                                                             | Load data from JSON or JSON Lines input file
+| `--perf-taint`                                                       | Load data from a perf-taint JSON file and the accompanying set of CUBE files
 | `--talpas`                                                           | Load data from Talpas data format
 | `--text`                                                             | Load data from text input file
 | `--experiment`                                                       | Load Extra-P experiment and generate new models
