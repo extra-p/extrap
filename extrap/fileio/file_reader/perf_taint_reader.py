@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import bisect
 import json
 import sys
 import warnings
@@ -84,8 +85,7 @@ class PerfTaintReader(CubeFileReader2):
                         if not callstack:
                             node = self._find_mangled_name(node, mangled_name, 10)
                             if not node:
-                                warnings.warn(
-                                    f"Function could not be found: {perf_taint_data['functions_names'][func['func_idx']]}")
+                                functions_not_found.add(perf_taint_data['functions_names'][func['func_idx']])
                                 continue
                         else:
                             extended_callstack = chain(callstack, [func['func_idx']])
@@ -117,7 +117,9 @@ class PerfTaintReader(CubeFileReader2):
                         for p_list in loop['deps']:
                             for p in p_list:
                                 if p in parameter_map:
-                                    depends_on_params.append(parameter_map[p])
+                                    if parameter_map[p] not in depends_on_params:
+                                        bisect.insort(depends_on_params, parameter_map[p])
+
                         node.path.tags[PERF_TAINT__DEPENDS_ON_PARAMS] = depends_on_params
         except KeyError as err:
             raise FileFormatError("Could not read perf-taint file: " + str(err)) from err

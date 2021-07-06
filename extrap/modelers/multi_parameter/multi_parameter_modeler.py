@@ -198,15 +198,20 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # model all single parameter experiments using only the selected points from the step before
         # parameters = list(range(measurements[0].coordinate.dimensions))
+        dependent_params = None
         if 'perf_taint__depends_on_params' in measurements[0].callpath.tags:
             dependent_params = measurements[0].callpath.tags['perf_taint__depends_on_params']
             measurements_sp = [m for i, m in enumerate(measurements_sp) if i in dependent_params]
-            comments.append("Depends on the following parameters: " + str(sorted(set(dependent_params))))
+            comments.append("Depends on the following parameters: " + str(dependent_params))
 
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
+        if 'perf_taint__depends_on_params' in measurements[0].callpath.tags:
+            param_function_mapping = zip(dependent_params, functions)
+        else:
+            param_function_mapping = enumerate(functions)
 
-        # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
+        # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
             warnings.warn("Number of measurements for each parameter needs to be at least 5"
                           " in order to create a performance model.")
@@ -229,7 +234,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # find out which parameters should be kept
         compound_term_pairs = []
 
-        for i, function in enumerate(functions):
+        for i, function in param_function_mapping:
             terms = function.compound_terms
             if len(terms) > 0:
                 compound_term = terms[0]

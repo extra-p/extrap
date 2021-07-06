@@ -18,11 +18,18 @@ class PerfTaintTest(unittest.TestCase):
         reader.scaling_type = 'weak'
         self.assertRaises(FileFormatError, reader.read_experiment, 'data/perf_taint/lulesh')
         experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
+        experiment = reader.read_experiment('data/perf_taint/milc/milc.ll.json')
 
     def test_model(self):
         reader = PerfTaintReader()
         reader.scaling_type = 'weak'
         experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
+        ModelGenerator(experiment).model_all()
+
+    def test_model2(self):
+        reader = PerfTaintReader()
+        reader.scaling_type = 'weak'
+        experiment = reader.read_experiment('data/perf_taint/milc/milc.ll.json')
         ModelGenerator(experiment).model_all()
 
 
