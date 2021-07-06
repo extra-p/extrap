@@ -7,29 +7,69 @@
 
 import unittest
 
+from extrap.entities.parameter import Parameter
 from extrap.fileio.file_reader.perf_taint_reader import PerfTaintReader
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import FileFormatError
+from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
-class PerfTaintTest(unittest.TestCase):
+class PerfTaintTest(TestCaseWithFunctionAssertions):
+    all_params_check = [
+        'lulesh2.0',
+        'lulesh2.0->int main(int, char**)',
+        'lulesh2.0->int main(int, char**)->void CommSyncPosVel(Domain&)',
+        'lulesh2.0->int main(int, char**)->void CommSend(Domain&, int, Index_t, Real_t& (Domain::**)(Index_t), Index_t, Index_t, Index_t, bool, bool)'
+    ]
+    size_params_check = [
+        'lulesh2.0->int main(int, char**)->void CalcAccelerationForNodes(Domain&, Index_t)',
+        'lulesh2.0->int main(int, char**)->void CalcTimeConstraintsForElems(Domain&)->void CalcHydroConstraintForElems(Domain&, Index_t, Index_t*, Real_t, Real_t&)'
+    ]
+    p_params_check = [
+        'lulesh2.0->int main(int, char**)->void TimeIncrement(Domain&)',
+        'lulesh2.0->int main(int, char**)->void TimeIncrement(Domain&)->MPI_Allreduce',
+        'lulesh2.0->int main(int, char**)->void CommSend(Domain&, int, Index_t, Real_t& (Domain::**)(Index_t), Index_t, Index_t, Index_t, bool, bool)->MPI_Waitall'
+    ]
+    no_params_check = [
+
+    ]
+
     def test_loading(self):
         reader = PerfTaintReader()
         reader.scaling_type = 'weak'
         self.assertRaises(FileFormatError, reader.read_experiment, 'data/perf_taint/lulesh')
         experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
-        experiment = reader.read_experiment('data/perf_taint/milc/milc.ll.json')
+        self.assertListEqual([Parameter('p'), Parameter('size')], experiment.parameters)
+        all_params_counter, size_params_counter, p_params_counter, no_params_counter = 0, 0, 0, 0
+        for callpath in experiment.callpaths:
+            self.assertIn('perf_taint__depends_on_params', callpath.tags)
+            depends_on_params = callpath.tags['perf_taint__depends_on_params']
+            self.assertLessEqual(len(depends_on_params), len(experiment.parameters))
+            if depends_on_params:
+                self.assertLess(max(depends_on_params), len(experiment.parameters))
+                self.assertGreaterEqual(min(depends_on_params), 0)
+                self.assertListEqual(sorted(set(depends_on_params)), depends_on_params)
+            if callpath.name in self.all_params_check:
+                self.assertListEqual([0, 1], depends_on_params, callpath)
+                all_params_counter += 1
+            elif callpath.name in self.size_params_check:
+                self.assertListEqual([1], depends_on_params, callpath)
+                size_params_counter += 1
+            elif callpath.name in self.p_params_check:
+                self.assertListEqual([0], depends_on_params, callpath)
+                p_params_counter += 1
+            elif callpath.name in self.no_params_check:
+                self.assertListEqual([], depends_on_params)
+                no_params_counter += 1
+        self.assertEqual(len(self.all_params_check), all_params_counter, 'Not all checks for "all_params" were done')
+        self.assertEqual(len(self.size_params_check), size_params_counter, 'Not all checks for "size_params" were done')
+        self.assertEqual(len(self.p_params_check), p_params_counter, 'Not all checks for "p_params" were done')
+        self.assertEqual(len(self.no_params_check), no_params_counter, 'Not all checks for "no_params" were done')
 
     def test_model(self):
         reader = PerfTaintReader()
         reader.scaling_type = 'weak'
         experiment = reader.read_experiment('data/perf_taint/lulesh/lulesh.ll.json')
-        ModelGenerator(experiment).model_all()
-
-    def test_model2(self):
-        reader = PerfTaintReader()
-        reader.scaling_type = 'weak'
-        experiment = reader.read_experiment('data/perf_taint/milc/milc.ll.json')
         ModelGenerator(experiment).model_all()
 
 
