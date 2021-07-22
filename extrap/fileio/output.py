@@ -2,6 +2,14 @@ import re
 
 import extrap.fileio.io_helper as io
 from extrap.entities.experiment import Experiment
+from extrap.util.exceptions import RecoverableError
+
+
+class OutputFormatError(RecoverableError):
+    NAME = 'Output Format Error'
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
 
 
 def format_parameters(input_str: str, experiment: Experiment):
@@ -9,11 +17,11 @@ def format_parameters(input_str: str, experiment: Experiment):
     param_format = ""
     param_sep = " "
 
-    # single quotes not allowed in format or sep
-    if re.search(r"format\s*:\s*\'(.*?)\'", input_str):
-        param_format = re.search(r"format\s*:\s*\'(.*?)\'", input_str).group(1)
-    if re.search(r"sep\s*:\s*\'(.*?)\'", input_str):
-        param_sep = re.search(r"sep\s*:\s*\'(.*?)\'", input_str).group(1)
+    sep_options, format_options = _parse_options(input_str)
+    if sep_options:
+        param_sep = sep_options
+    if format_options:
+        param_format = format_options
 
     if param_format != "":
         param_list = [param_format.replace("{parameter}", p) for p in param_list]
@@ -22,21 +30,19 @@ def format_parameters(input_str: str, experiment: Experiment):
     return param_str
 
 
-def format_points(input_str: str, experiment: Experiment):
+def format_points(options: str, experiment: Experiment):
     points_sep = " | "
     points_format = ""
     point_sep = ", "
     point_format = ""
 
-    # single quotes not allowed in format or sep
-    sep_pattern = r"points\s*\:\s*sep\s*:\s*\'(.*?)\'"
-    format_pattern = r"points\s*\:\s*(sep\s*:\s*\'.*?\'\;\s*)?format\s*\:\s*\'(.*)\'"
+    sep_options, format_options = _parse_options(options)
+    if sep_options:
+        points_sep = sep_options
 
-    if re.search(sep_pattern, input_str):
-        points_sep = re.search(sep_pattern, input_str).group(1)
-
-    if re.search(format_pattern, input_str):
-        points_format = re.search(format_pattern, input_str).group(2)
+    if format_options:
+        points_format = format_options
+        # TODO change the following to precompiled regex
         if re.search(r"sep\s*:\s*\'(.*?)\'", points_format):
             point_sep = re.search(r"sep\s*:\s*\'(.*?)\'", points_format).group(1)
         if re.search(r"format\s*:\s*\'(.*?)\'", points_format):
@@ -47,21 +53,27 @@ def format_points(input_str: str, experiment: Experiment):
     param_list = [p.name for p in experiment.parameters]
 
     for p in points:
-        point = ["{:.2E}".format(value) for value in p]  # list contains a single point/coordinate
-        if point_format != "":
-            point = [point_format.replace("{parameter}", param_list[i]).replace("{coordinate}", point[i])
-                     for i in range(len(point))]
+        point = format_point(p, param_list, point_format)
         if points_format != "":
             placeholder = parse_outer_brackets(points_format)
-            final_text += points_format.replace("{%s}" % placeholder[0], point_sep.join(point)) + points_sep
+            final_text += points_format.replace(f"{{{placeholder[0]}}}", point_sep.join(point)) + points_sep
         else:
-            print(points_sep)
             final_text += "(" + point_sep.join(point) + ")" + points_sep
     final_text = final_text[:-1]
 
     return final_text
 
 
+def format_point(p, param_list, point_format):
+    if point_format != "":
+        point = [point_format.format(parameter=param, coordinate=value)
+                 for param, value in zip(param_list, p)]
+    else:
+        point = ["{:.2E}".format(value) for value in p]  # list contains a single point/coordinate
+    return point
+
+
+# TODO change the following method to use precompiled regex (see format_points)
 def format_measurements(input_str: str, experiment: Experiment, model):
     final_text = "\n"
     points = experiment.coordinates
@@ -71,26 +83,21 @@ def format_measurements(input_str: str, experiment: Experiment, model):
     point_sep = " "
     m_format = ""
     point_format = ""
-
+    # TODO use _parse_options instead of the following
     # single quotes not allowed in format or sep
-    sep_pattern = r"measurements\s*\:\s*sep\s*:\s*\'(.*?)\'"
-    format_pattern = r"measurements\s*\:\s*(sep\s*:\s*\'.*?\'\;\s*)?format\s*\:\s*\'(.*)\'"
+    sep_options, format_options = _parse_options(input_str)
+    if sep_options:
+        m_sep = sep_options
 
-    if re.search(sep_pattern, input_str):
-        m_sep = re.search(sep_pattern, input_str).group(1)
-
-    if re.search(format_pattern, input_str):
-        m_format = re.search(format_pattern, input_str).group(2)
+    if format_options:
+        m_format = format_options
         if re.search(r"sep\s*:\s*\'(.*?)\'", m_format):
             point_sep = re.search(r"sep\s*:\s*\'(.*?)\'", m_format).group(1)
         if re.search(r"format\s*:\s*\'(.*?)\'", m_format):
             point_format = re.search(r"format\s*:\s*\'(.*?)\'", m_format).group(1)
 
     for p in points:
-        point = ["{:.2E}".format(value) for value in p]  # list contains a single point/coordinate
-        if point_format != "":
-            point = [point_format.replace("{parameter}", param_list[i]).replace("{coordinate}", point[i])
-                     for i in range(len(point))]
+        point = format_point(p, param_list, point_format)
 
         measurements = experiment.measurements[(model.callpath, model.metric)]
         measurement = next((me for me in measurements if me.coordinate == p), None)
@@ -103,6 +110,7 @@ def format_measurements(input_str: str, experiment: Experiment, model):
 
         if m_format != "":
             point_string = next((str for str in parse_outer_brackets(m_format) if "point" in str), "")
+            # TODO allow string formatting for below values
             final_text += m_format.replace("{%s}" % point_string, point_sep.join(point)) \
                               .replace("{mean}", "{:.2E}".format(mean)) \
                               .replace("{median}", "{:.2E}".format(median)) \
@@ -136,6 +144,28 @@ def parse_outer_brackets(input_str):
     return result
 
 
+# single quotes are allowed in format or sep if they are escaped
+re_format = re.compile(r"format:\s*'((?:{.*}|\\'|.*?)*)';?\s*")
+re_sep = re.compile(r"sep:\s*'((?:\\'|.*?)*)';?\s*")
+
+
+def _parse_options(options):
+    """Parses the attributes of the placeholders"""
+    if options is None:
+        return None, None
+
+    format_result = re_format.search(options)
+    if format_result:
+        format_result = format_result.group(1)
+        options = re_format.sub('', options)
+
+    sep_result = re_sep.search(options)
+    if sep_result:
+        sep_result = sep_result.group(1)
+
+    return sep_result, format_result
+
+
 def fmt_output(experiment: Experiment, printtype: str):
     print_str = printtype.lower()
     models = experiment.modelers[0].models
@@ -149,6 +179,7 @@ def fmt_output(experiment: Experiment, printtype: str):
     callpath_list = []
     metric_list = []
 
+    # TODO use precompiled regex
     # backward compatibility
     if re.fullmatch(r"all|callpaths|metrics|parameters|functions", print_str):
         text = io.format_output(experiment, print_str.upper())
@@ -176,56 +207,42 @@ def fmt_output(experiment: Experiment, printtype: str):
                 elif o == "model":
                     temp = temp.replace("{model}",
                                         m.hypothesis.function.to_string(*experiment.parameters))
-                elif re.fullmatch(
-                        r"(\?)?points\s*(:)?\s*(sep\s*:\s*\'(.*?)\')?\s*(;)?\s*(format\s*:\s*\'(.*?)\')?",
-                        o):  # points
-                    # remove duplicates with leading "?"
+                    # TODO use precompiled regex
+                elif re.fullmatch(r"(\?)?points(\s*:\s*(.*?))?", o):  # points
+                    data = re.fullmatch(r"(\?)?points(?:\s*:\s*(.*?))?", o)
+                    coordinate_text = format_points(data.group(2), experiment)
+                    temp, print_coord = _remove_duplicates_with_leading_question_mark(o, coordinate_text, print_coord,
+                                                                                      temp)
 
-                    coordinate_text = format_points(o, experiment)
-                    if o[0] == '?':
-                        if print_coord:
-                            temp = temp.replace("{%s}" % o, coordinate_text)
-                        else:
-                            temp = temp.replace("{%s}" % o, " " * len(coordinate_text))
-                        print_coord = False
-                    else:
-                        temp = temp.replace("{%s}" % o, coordinate_text)
+                elif re.fullmatch(r"measurements(\s*:\s*(.*?))?", o):  # measurements
+                    data = re.fullmatch(r"measurements(\s*:\s*(.*?))?", o)
+                    measurement_text = format_measurements(data.group(2), experiment, m)
+                    temp = temp.replace(f"{{{o}}}", measurement_text)
 
-                elif re.fullmatch(
-                        r"measurements\s*(:)?\s*(sep\s*:\s*\'(.*?)\')?\s*(;)?\s*(format\s*:\s*\'(.*?)\')?",
-                        o):  # measurements
+                elif re.fullmatch(r"(\?)?parameters(\s*:\s*(.*?))?", o):  # parameters
+                    data = re.fullmatch(r"(\?)?parameters(\s*:\s*(.*?))?", o)
+                    param_text = format_parameters(data.group(2), experiment)
+                    temp, print_param = _remove_duplicates_with_leading_question_mark(o, param_text, print_param, temp)
 
-                    measurement_text = format_measurements(o, experiment, m)
-                    temp = temp.replace("{%s}" % o, measurement_text)
-
-                elif re.fullmatch(
-                        r"(\?)?parameters\s*(:)?\s*(sep\s*:\s*\'(.*?)\')?\s*(;)?\s*(format\s*:\s*\'(.*?)\')?",
-                        o):  # parameters
-                    # remove duplicates with leading "?"
-
-                    param_text = format_parameters(o, experiment)
-                    if o[0] == '?':
-                        if print_param:
-                            temp = temp.replace("{%s}" % o, param_text)
-                        else:
-                            temp = temp.replace("{%s}" % o, " " * len(param_text))
-                        print_param = False
-                    else:
-                        temp = temp.replace("{%s}" % o, param_text)
-
-                elif o == "smape":
-                    temp = temp.replace("{smape}", "{:.2E}".format(m.hypothesis.SMAPE))
-                elif o == "rrss":
-                    temp = temp.replace("{rrss}", "{:.2E}".format(m.hypothesis.rRSS))
-                elif o == "rss":
-                    temp = temp.replace("{rss}", "{:.2E}".format(m.hypothesis.RSS))
-                elif o == "ar2":
-                    temp = temp.replace("{ar2}", "{:.2E}".format(m.hypothesis.AR2))
-                elif o == "re":
-                    temp = temp.replace("{re}", "{:.2E}".format(m.hypothesis.RE))
+                elif any(o.startswith(m) for m in ("smape", "rrss", "rss", "ar2", "re")):
+                    continue
                 else:
-                    raise ValueError("invalid input")
-
+                    raise OutputFormatError(f"Invalid placeholder: {o}")
+            temp = temp.format(smape=m.hypothesis.SMAPE, rrss=m.hypothesis.rRSS, rss=m.hypothesis.RSS,
+                               ar2=m.hypothesis.AR2, re=m.hypothesis.RE)
             text += (temp + "\n")
 
     return text
+
+
+def _remove_duplicates_with_leading_question_mark(o, text, is_print_enabled, temp):
+    braced_o = f"{{{o}}}"
+    if o[0] == '?':
+        if is_print_enabled:
+            temp = temp.replace(braced_o, text)
+        else:
+            temp = temp.replace(braced_o, " " * len(text))
+        is_print_enabled = False
+    else:
+        temp = temp.replace(braced_o, text)
+    return temp, is_print_enabled
