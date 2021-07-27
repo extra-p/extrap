@@ -64,11 +64,15 @@ class SmartMatcher(AbstractMatcher):
         from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME
         measurements = {}
         new_matches = {}
+        comparison_nodes = {}
         for metric, source_metrics in experiment.metrics_match.items():
             for node, source_nodes in call_tree_match.items():
                 node: Node
                 source_nodes: Sequence[Node]
-                origin_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
+                # create or get the comparison node
+                comparison_node = comparison_nodes.get(node)
+                if not comparison_node:
+                    comparison_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
                 for i, (s_node, s_metric, s_measurements, s_name) in enumerate(
                         zip(source_nodes, source_metrics, source_measurements, experiment.experiment_names)):
 
@@ -77,18 +81,30 @@ class SmartMatcher(AbstractMatcher):
 
                     source_key = (s_node.path, s_metric)
                     name = f"[{s_name}] {node.name}"
-                    agg_cp = origin_node.path.concat(name)
-                    agg_cp.tags = {'comparison__part_agg': True}
-                    part_agg_node = Node(name, agg_cp)
-                    origin_node.add_child_node(part_agg_node)
+                    # create or get the aggregation node for the comparison
+                    part_agg_node = comparison_node.find_child(name)
+                    if not part_agg_node:
+                        agg_cp = comparison_node.path.concat(name)
+                        agg_cp.tags = {'comparison__part_agg': True}
+                        part_agg_node = Node(name, agg_cp)
+                        comparison_node.add_child_node(part_agg_node)
+                    else:
+                        agg_cp = part_agg_node.path
 
-                    part_cp = agg_cp.concat(node.name)
-                    part_node = Node(node.name, part_cp)
-                    part_agg_node.add_child_node(part_node)
+                    # create or get the root node for the aggregated subtree
+                    part_node = part_agg_node.find_child(node.name)
+                    if not part_node:
+                        part_cp = part_agg_node.path.concat(node.name)
+                        part_node = Node(node.name, part_cp)
+                        part_agg_node.add_child_node(part_node)
+                    else:
+                        part_cp = part_node.path
 
+                    # group measurements for merging
                     t_measurements: Dict[Coordinate, Measurement] = {
                         coordinate: Measurement(coordinate, agg_cp, metric, 0) for coordinate in
                         experiment.coordinates}
+                    # merge measurements
                     if source_key in s_measurements:
                         for m in s_measurements[source_key]:
                             new_m = t_measurements.get(m.coordinate)
@@ -102,6 +118,7 @@ class SmartMatcher(AbstractMatcher):
                             s_child = call_tree_match[child][i]
                             children.remove(s_child)
 
+                    # create aggregated subtree
                     for s_child in children:
                         self._add_subtree_and_merge_measurements(part_node, s_child, s_measurements, i,
                                                                  len(source_measurements), metric,
@@ -114,9 +131,11 @@ class SmartMatcher(AbstractMatcher):
                     measurements[part_cp, metric] = s_measurements
                     measurements[agg_cp, metric] = list(t_measurements.values())
 
-                if origin_node.childs:
-                    node.childs.insert(0, origin_node)
+                if comparison_node.childs and node not in comparison_nodes:
+                    # add comparison node to the calltree
+                    node.childs.insert(0, comparison_node)
                     node.path.tags['comparison'] = True
+                    comparison_nodes[node] = comparison_node
 
         call_tree_match.update(new_matches)
         return measurements
@@ -155,14 +174,18 @@ class SmartMatcher(AbstractMatcher):
 
     def _add_subtree_and_merge_measurements(self, ct_parent: Node, s_node: Node, s_measurements, i, total, metric,
                                             measurements_out: Dict[Coordinate, Measurement], new_matches, measurements):
-        cp = ct_parent.path.concat(s_node.name)
-        cp.tags = s_node.path.tags.copy()
-        node = Node(s_node.name, cp)
-        ct_parent.add_child_node(node)
+        node = ct_parent.find_child(s_node.name)
+        if not node:
+            cp = ct_parent.path.concat(s_node.name)
+            cp.tags = s_node.path.tags.copy()
+            node = Node(s_node.name, cp)
+            ct_parent.add_child_node(node)
 
-        new_match: List[Optional[Node]] = [None] * total
-        new_match[i] = s_node
-        new_matches[node] = new_match
+            new_match: List[Optional[Node]] = [None] * total
+            new_match[i] = s_node
+            new_matches[node] = new_match
+        else:
+            cp = node.path
 
         c_measurements = s_measurements.get((s_node.path, metric), None)
         if c_measurements is not None:

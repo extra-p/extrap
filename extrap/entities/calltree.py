@@ -5,16 +5,18 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from typing import cast
+from __future__ import annotations
+
+from typing import cast, Optional, List
 
 from extrap.entities.callpath import Callpath
 
 
 class Node:
 
-    def __init__(self, name: str, path: Callpath, childs=None):
-        self.name = name
-        self.childs = [] if childs is None else childs
+    def __init__(self, name: str, path: Callpath, childs: Optional[List[Node]] = None):
+        self.name: str = name
+        self.childs: List[Node] = [] if childs is None else childs
         self.path = path
 
     def add_child_node(self, child_node):
@@ -23,13 +25,13 @@ class Node:
     def get_childs(self):
         return self.childs
 
-    def find_child(self, child_node_name):
+    def find_child(self, child_node_name: str):
         for child in self.childs:
             if child.name == child_node_name:
                 return child
         return None
 
-    def child_exists(self, child_node_name):
+    def child_exists(self, child_node_name: str):
         for i in range(len(self.childs)):
             child_name = self.childs[i].name
             if child_name == child_node_name:

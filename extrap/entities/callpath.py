@@ -28,7 +28,7 @@ class Callpath(NamedEntityWithTags):
     Empty callpath. Can be used as placeholder.
     """
 
-    def concat(self, *other, copy_tags=False):
+    def concat(self, *other: str, copy_tags=False):
         cp = Callpath('->'.join(itertools.chain((self.name,), other)))
         if copy_tags:
             cp.tags = self.tags.copy()
