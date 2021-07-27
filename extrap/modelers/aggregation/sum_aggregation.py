@@ -54,8 +54,10 @@ class SumAggregationFunction(BinaryAggregationFunction):
             for x in t.compound_terms:
                 if isinstance(x, MultiParameterTerm):
                     key = 'Multi' + ', '.join(str(y[0]) + y[1].to_string() for y in x.parameter_term_pairs)
-                else:
+                elif hasattr(x, 'simple_terms'):
                     key = ', '.join(y.to_string() for y in x.simple_terms)
+                else:
+                    key = 'Compat' + x.to_string()
                 if term_map.keys().__contains__(key):
                     term_map[key].append(x)
                 else:
@@ -63,6 +65,9 @@ class SumAggregationFunction(BinaryAggregationFunction):
 
         # Aggregate a compound term for each immutable simple term combination
         for key in term_map.keys():
+            if key.startswith('Compat'):
+                self.add_compound_term(term_map[key][0])
+                continue
             if key.startswith('Multi'):
                 term = MultiParameterTerm()
                 term.parameter_term_pairs = term_map[key][0].parameter_term_pairs

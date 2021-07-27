@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Sequence, Mapping, Tuple, Optional
 
 from extrap.comparison.matches import MutableAbstractMatches, AbstractMatches
+from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.metric import Metric
 from extrap.modelers.model_generator import ModelGenerator
@@ -20,7 +21,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 class AbstractMatcher(ABC):
     @abstractmethod
     def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
-        Sequence[Metric], AbstractMatches[Metric]]:
+        Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
         pass
 
     @abstractmethod

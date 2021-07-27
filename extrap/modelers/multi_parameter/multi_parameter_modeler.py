@@ -213,13 +213,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
         # use all available additional points for modeling the multi-parameter models
-        constantCost = 0
-        meanModel = 0
-
-        for m in measurements:
-            meanModel += m.value(self.use_median) / float(len(measurements))
-        for m in measurements:
-            constantCost += (m.value(self.use_median) - meanModel) * (m.value(self.use_median) - meanModel)
+        meanModel, constantCost = ConstantHypothesis.calculate_constant_indicators(measurements, self.use_median)
 
         # find out which parameters should be kept
         compound_term_pairs = []

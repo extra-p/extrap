@@ -30,6 +30,10 @@ class Hypothesis:
         self._costs_are_calculated = False
 
     @property
+    def use_median(self):
+        return self._use_median
+
+    @property
     def RSS(self):
         """
         Return the RSS.
@@ -133,6 +137,33 @@ class Hypothesis:
             return True
         else:
             return self.__dict__ == other.__dict__
+
+    @staticmethod
+    def calculate_constant_indicators(measurements, use_median):
+        mean_model = 0
+        constant_cost = 0
+        for m in measurements:
+            mean_model += m.value(use_median) / float(len(measurements))
+        for m in measurements:
+            constant_cost += (m.value(use_median) - mean_model) * (m.value(use_median) - mean_model)
+        return mean_model, constant_cost
+
+    @staticmethod
+    def infer_best_type(hypotheses):
+        has_constant = False
+        has_single = False
+        for h in hypotheses:
+            if isinstance(h, MultiParameterHypothesis):
+                return MultiParameterHypothesis
+            elif isinstance(h, SingleParameterHypothesis):
+                has_single = True
+            elif isinstance(h, ConstantHypothesis):
+                has_constant = True
+        if has_single:
+            return SingleParameterHypothesis
+        if has_constant:
+            return ConstantHypothesis
+        return Hypothesis
 
 
 MAX_HYPOTHESIS = Hypothesis(Function(), False)

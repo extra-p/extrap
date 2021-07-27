@@ -12,6 +12,7 @@ from typing import Sequence, Tuple, Mapping, List, Optional, Dict, TYPE_CHECKING
 
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import AbstractMatches, IdentityMatches, MutableAbstractMatches
+from extrap.comparison.metric_conversion import AbstractMetricConverter, all_conversions
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
@@ -33,10 +34,16 @@ class SmartMatcher(AbstractMatcher):
     DESCRIPTION = 'Tries to find the common call tree and integrates the remaining call paths into this call tree.'
 
     def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
-        Sequence[Metric], AbstractMatches[Metric]]:
+        Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
         # preliminary, TODO we need to add new matches for hw counters, etc.
         metrics = [m for m in progress_bar(metric[0]) if m in metric[1]]
-        return metrics, IdentityMatches(2, metrics)
+        converters = []
+        for converter_class in all_conversions.values():
+            converter = converter_class.try_create(metric[0], metric[1])
+            if converter:
+                metrics.append(converter.new_metric)
+                converters.append(converter)
+        return metrics, IdentityMatches(2, metrics), converters
 
     def match_call_tree(self, *call_tree: CallTree, progress_bar=DUMMY_PROGRESS):
         root = CallTree()

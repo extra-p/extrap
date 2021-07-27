@@ -10,6 +10,7 @@ from typing import Sequence, Mapping, Tuple
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import AbstractMatches
 from extrap.comparison.matches import IdentityMatches
+from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.metric import Metric
 from extrap.modelers.model_generator import ModelGenerator
@@ -21,10 +22,10 @@ class MinimumMatcher(AbstractMatcher):
     DESCRIPTION = 'Selects the minimal common values in all comparisons.'
 
     def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
-        Sequence[Metric], AbstractMatches[Metric]]:
+        Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
 
         metrics = [m for m in progress_bar(metric[0], 0) if m in metric[1]]
-        return metrics, IdentityMatches(2, metrics)
+        return metrics, IdentityMatches(2, metrics), []
 
     def match_call_tree(self, *call_tree: CallTree, progress_bar=DUMMY_PROGRESS):
         root = CallTree()

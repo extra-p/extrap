@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+import copy
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -62,6 +63,72 @@ class Measurement:
                    self.callpath == other.callpath and \
                    self.mean == other.mean and \
                    self.median == other.median
+
+    def __add__(self, other):
+        if isinstance(other, Measurement):
+            result = copy.copy(self)
+            result.merge(other)
+        else:
+            result = copy.copy(self)
+            result.median += other
+            result.mean += other
+            result.minimum += other
+            result.maximum += other
+            result.std = self.std
+        return result
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        return self.__add__(other * -1)
+
+    def __rsub__(self, other):
+        return (self * -1).__add__(other)
+
+    def __mul__(self, other):
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            result = copy.copy(self)
+            result.median *= other.median
+            result.mean *= other.mean
+            result.minimum *= other.minimum
+            result.maximum *= other.maximum
+            # Var(XY) = E(X²Y²) − (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
+            self_var, other_var = self.std ** 2, other.std ** 2
+            variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
+            result.std = np.sqrt(variance)
+        else:
+            result = copy.copy(self)
+            result.median *= other
+            result.mean *= other
+            result.minimum *= other
+            result.maximum *= other
+            result.std *= abs(other)
+        return result
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __pow__(self, other):
+        result = copy.copy(self)
+        result.median **= other
+        result.mean **= other
+        result.minimum **= other
+        result.maximum **= other
+        variance = (self.std ** 2 + self.mean ** 2) ** other - (self.mean ** 2) ** other
+        result.std = np.sqrt(variance)
+        return result
+
+    def __truediv__(self, other):
+        return self.__mul__(other ** -1)
+
+    def __rtruediv__(self, other):
+        return (self ** -1).__mul__(other)
+
+    def __neg__(self):
+        return self * -1
 
 
 class MeasurementSchema(Schema):

@@ -12,6 +12,7 @@ import numpy as np
 
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
+from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.functions import Function
@@ -164,8 +165,10 @@ class ComparisonExperiment(Experiment):
         return True
 
     def do_metrics_merge(self, progress_bar=DUMMY_PROGRESS):
-        self.metrics, self.metrics_match = self.matcher.match_metrics(self.exp1.metrics, self.exp2.metrics,
-                                                                      progress_bar)
+        self.metrics, self.metrics_match, converters = self.matcher.match_metrics(self.exp1.metrics, self.exp2.metrics,
+                                                                                  progress_bar=progress_bar)
+        if converters:
+            self._apply_metric_converters(converters)
 
     def do_call_tree_merge(self, progress_bar=DUMMY_PROGRESS):
         self.call_tree, self.call_tree_match = self.matcher.match_call_tree(self.exp1.call_tree, self.exp2.call_tree)
@@ -210,7 +213,7 @@ class ComparisonExperiment(Experiment):
 
     def do_model_set_merge(self, progress_bar=DUMMY_PROGRESS):
         self.modelers_match = self.matcher.match_modelers(self.exp1.modelers, self.exp2.modelers)
-        if hasattr(self.matcher, 'make_measurements_and_update_call_tree'):
+        if hasattr(self.matcher, 'make_model_generator'):
             self.modelers = [self.matcher.make_model_generator(self, k, match, progress_bar) for k, match in
                              self.modelers_match.items()]
         else:
@@ -233,3 +236,16 @@ class ComparisonExperiment(Experiment):
                 elif len(models) > 1:
                     mg.models[node.path, metric] = ComparisonModel(node.path, metric, models)
         return mg
+
+    def _apply_metric_converters(self, converters: Sequence[AbstractMetricConverter]):
+        for converter in converters:
+            for i, exp in enumerate([self.exp1, self.exp2]):
+                for callpath in exp.callpaths:
+                    measurements = converter.convert_measurements(i, [
+                        exp.measurements[callpath, metric] for metric in
+                        converter.get_required_metrics(i)])
+                    exp.measurements[callpath, converter.new_metric] = measurements
+                    for model_set in exp.modelers:
+                        model_set.models[callpath, converter.new_metric] = converter.convert_models(i, [
+                            model_set.models[callpath, metric] for metric in
+                            converter.get_required_metrics(i)], measurements)

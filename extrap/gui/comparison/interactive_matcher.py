@@ -6,18 +6,17 @@
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
+
 from asyncio import Event
-from threading import Thread
 from typing import Sequence, Mapping, Tuple, TYPE_CHECKING
 
-from PySide2.QtCore import QEventLoop, QWaitCondition
-from PySide2.QtWidgets import QWizardPage, QApplication
+from PySide2.QtWidgets import QWizardPage
 
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import MutableAbstractMatches, AbstractMatches
+from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.metric import Metric
-from extrap.gui.components.worker import Worker, MTWorker
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -92,15 +91,18 @@ class InteractiveMatcher(AbstractMatcher):
         else:
             return self._call_tree_page_id
 
-    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[Sequence[Metric], AbstractMatches[Metric]]:
+    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
+        Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
         matches = self._metrics_page.get_matches(*metric)
-        return [], matches
+        return [], matches, []
 
-    def match_call_tree(self, *call_tree: Sequence[CallTree], progress_bar=DUMMY_PROGRESS) -> Tuple[CallTree, MutableAbstractMatches[Node]]:
+    def match_call_tree(self, *call_tree: Sequence[CallTree], progress_bar=DUMMY_PROGRESS) -> Tuple[
+        CallTree, MutableAbstractMatches[Node]]:
         matches = self._call_tree_page.get_matches(*call_tree)
         return CallTree(), matches
 
-    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[str, Sequence[ModelGenerator]]:
+    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[
+        str, Sequence[ModelGenerator]]:
         return self._model_set_page.get_matches(*mg)
 
     NAME = 'Interactive'
