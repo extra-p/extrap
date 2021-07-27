@@ -5,7 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from extrap.comparison.metric_conversion import CalculationFunction
+from extrap.comparison.metric_conversion import CalculationFunction, CalculatedFunctionAddition, \
+    CalculatedFunctionMultiplication, CalculatedFunctionSubtraction
 from extrap.comparison.metric_conversion.cpu_gpu import FlopsDP
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -209,3 +210,55 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
         test_function = (ConstantFunction(3) / CalculationFunction(function1))
         for i in range(1, 10):
             self.assertAlmostEqual(3 / function1.evaluate(i), test_function.evaluate(i))
+
+    def test_function_calculation_optimisation(self):
+        function1 = SingleParameterFunction(CompoundTerm.create(1, 2, 1))
+        function1.constant_coefficient = 3
+        function2 = SingleParameterFunction(CompoundTerm.create(1, 3, 2))
+        function2.constant_coefficient = 2
+        constant = ConstantFunction()
+        constant0 = ConstantFunction(0)
+
+        add_function = CalculationFunction(function1) + CalculationFunction(constant)
+        self.assertNotEqual(CalculatedFunctionAddition, type(add_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(function1.evaluate(i) + 1, add_function.evaluate(i))
+
+        add_function = CalculationFunction(constant) + CalculationFunction(function1)
+        self.assertNotEqual(CalculatedFunctionAddition, type(add_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(function1.evaluate(i) + 1, add_function.evaluate(i))
+
+        add_function = CalculationFunction(constant) + CalculationFunction(function1) * CalculationFunction(function2)
+        self.assertNotEqual(CalculatedFunctionAddition, type(add_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(function1.evaluate(i) * function2.evaluate(i) + 1, add_function.evaluate(i))
+
+        sub_function = CalculationFunction(function1) - CalculationFunction(constant)
+        self.assertNotEqual(CalculatedFunctionSubtraction, type(sub_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(function1.evaluate(i) - 1, sub_function.evaluate(i))
+
+        mul_function = CalculationFunction(constant0) * CalculationFunction(function1)
+        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(0, mul_function.evaluate(i))
+
+        mul_function = CalculationFunction(function1) * CalculationFunction(constant0)
+        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(0, mul_function.evaluate(i))
+
+        mul_function = (CalculationFunction(function1) + CalculationFunction(function2)) * CalculationFunction(
+            constant0)
+        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(0, mul_function.evaluate(i))
+
+        mul_function = (CalculationFunction(function1) + CalculationFunction(function2)) * (CalculationFunction(
+            constant0) + 2 * CalculationFunction(
+            constant0))
+        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        for i in range(1, 10):
+            self.assertAlmostEqual(0, mul_function.evaluate(i))
+        print(mul_function.to_string())

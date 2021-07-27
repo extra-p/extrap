@@ -88,7 +88,14 @@ class CalculationFunction(Function):
 
     def __add__(self, other):
         if isinstance(other, Function):
-            return CalculatedFunctionAddition(*self.unwrap_functions(self, other))
+            target, other = self.unwrap_functions(self, other)
+            if isinstance(other, ConstantFunction):
+                return self.__add__(other.constant_coefficient)
+            elif isinstance(target, ConstantFunction):
+                result = copy.copy(other)
+                result.constant_coefficient += target.constant_coefficient
+                return CalculationFunction(result)
+            return CalculatedFunctionAddition(target, other)
         elif isinstance(other, Real):
             if type(self) == CalculationFunction:
                 assert self.constant_coefficient == 0
@@ -104,7 +111,10 @@ class CalculationFunction(Function):
 
     def __sub__(self, other):
         if isinstance(other, Function):
-            return CalculatedFunctionSubtraction(*self.unwrap_functions(self, other))
+            target, other = self.unwrap_functions(self, other)
+            if isinstance(other, ConstantFunction):
+                return self.__sub__(other.constant_coefficient)
+            return CalculatedFunctionSubtraction(target, other)
         elif isinstance(other, Real):
             if type(self) == CalculationFunction:
                 assert self.constant_coefficient == 0
@@ -120,20 +130,30 @@ class CalculationFunction(Function):
 
     def __mul__(self, other):
         if isinstance(other, Function):
-            return CalculatedFunctionMultiplication(*self.unwrap_functions(self, other))
+            target, other = self.unwrap_functions(self, other)
+            if isinstance(other, ConstantFunction) and other.constant_coefficient == 0:
+                return CalculationFunction(other)
+            elif isinstance(target, ConstantFunction) and target.constant_coefficient == 0:
+                return self
+            return CalculatedFunctionMultiplication(target, other)
         elif isinstance(other, Real):
-            if type(self) == CalculationFunction:
-                assert self.constant_coefficient == 0
-                return CalculatedFunctionFactor(other, self._function)
-            else:
-                return CalculatedFunctionFactor(other, self)
+            if other == 0:
+                return CalculationFunction(ConstantFunction(0))
+            target = self.unwrap_functions(self)
+            if isinstance(target, ConstantFunction) and target.constant_coefficient == 0:
+                return self
+            return CalculatedFunctionFactor(other, target)
+
 
         else:
             return NotImplemented
 
     def __truediv__(self, other):
         if isinstance(other, Function):
-            return CalculatedFunctionDivision(*self.unwrap_functions(self, other))
+            target, other = self.unwrap_functions(self, other)
+            if isinstance(other, ConstantFunction):
+                return self.__truediv__(other.constant_coefficient)
+            return CalculatedFunctionDivision(target, other)
         elif isinstance(other, Real):
             if type(self) == CalculationFunction:
                 assert self.constant_coefficient == 0
@@ -145,12 +165,18 @@ class CalculationFunction(Function):
 
     def __radd__(self, other):
         if isinstance(other, Function):
-            return CalculatedFunctionAddition(*self.unwrap_functions(other, self))
+            other, target = self.unwrap_functions(other, self)
+            if isinstance(other, ConstantFunction):
+                return self.__add__(other.constant_coefficient)
+            return CalculatedFunctionAddition(other, target)
         return self.__add__(other)
 
     def __rmul__(self, other):
         if isinstance(other, Function):
-            return CalculatedFunctionMultiplication(*self.unwrap_functions(other, self))
+            other, target = self.unwrap_functions(other, self)
+            if isinstance(other, ConstantFunction) and other.constant_coefficient == 0:
+                return CalculationFunction(other)
+            return CalculatedFunctionMultiplication(other, target)
         return self.__mul__(other)
 
     def __rsub__(self, other):
@@ -175,13 +201,15 @@ class CalculationFunction(Function):
         return self * -1
 
     @staticmethod
-    def unwrap_functions(target, other):
+    def unwrap_functions(target, other=None):
         if type(target) == CalculationFunction:
             assert target.constant_coefficient == 0
             target = cast(CalculationFunction, target)._function
         if type(other) == CalculationFunction:
             assert other.constant_coefficient == 0
             other = cast(CalculationFunction, other)._function
+        if other is None:
+            return target
         return target, other
 
 
@@ -347,7 +375,7 @@ class AbstractMetricConverter(ABC):
         functions = [CalculationFunction(m.hypothesis.function) for m in model_sets]
         function = conversion_function(self, *functions)
         if type(function) == CalculationFunction:
-            function = CalculationFunction.unwrap_functions(function, None)[0]
+            function = CalculationFunction.unwrap_functions(function)
         model = next(iter(model_sets))
         hypothesis_class = Hypothesis.infer_best_type([m.hypothesis for m in model_sets])
         hypothesis = hypothesis_class(function, model.hypothesis.use_median)
