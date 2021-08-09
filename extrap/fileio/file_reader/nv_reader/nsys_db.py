@@ -51,9 +51,9 @@ WHERE name = 'correlationId'""").fetchone() is None:
         if self._check_table_exists('NVTX_EVENTS'):
             # if possible use extra_prof data
             domain_id = self.db.execute(
-                "SELECT domain_id FROM NVTX_EVENTS  WHERE text='de.tu-darmstadt.parallel.extra_prof'").fetchone()
+                "SELECT domainId FROM NVTX_EVENTS WHERE text='de.tu-darmstadt.parallel.extra_prof'").fetchone()
             if domain_id:
-                domain_id = domain_id[0]
+                domain_id = int(domain_id[0])
                 self._prepare_callpaths_from_extra_prof(domain_id)
                 return
 
@@ -86,6 +86,69 @@ GROUP BY correlationId
          """)
 
     def _prepare_callpaths_from_extra_prof(self, domain_id):
+
+        self.db.execute(f"""CREATE TEMP TABLE EXTRAP_TEMP_CALLPATHS AS
+WITH nvtx AS (
+    SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
+    FROM NVTX_EVENTS
+             LEFT JOIN StringIds ON textId = StringIds.id
+    WHERE eventType = 59
+      AND domainId = {domain_id}
+      AND textId IS NOT NULL
+)
+SELECT *
+         FROM nvtx
+         WHERE depth = 0""")
+
+        max_depth = self.db.execute("""SELECT MAX(uint32Value) AS max_depth
+FROM NVTX_EVENTS
+WHERE eventType = 59
+  AND domainId = ?
+  AND textId IS NOT NULL""", [domain_id]).fetchone()
+        max_depth = int(max_depth[0])
+
+        for depth in range(max_depth + 1):
+            self.db.execute("""WITH nvtx AS (
+    SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
+    FROM NVTX_EVENTS
+             LEFT JOIN StringIds ON textId = StringIds.id
+    WHERE eventType = 59
+      AND domainId = ?
+      AND textId IS NOT NULL
+)
+INSERT
+INTO EXTRAP_TEMP_CALLPATHS
+SELECT nvtx.start,
+       nvtx.end,
+       EXTRAP_TEMP_CALLPATHS.value || '->' || nvtx.value,
+       nvtx.depth,
+       EXTRAP_TEMP_CALLPATHS.path || ',' || nvtx.path,
+       EXTRAP_TEMP_CALLPATHS.globalTid
+FROM nvtx
+         JOIN EXTRAP_TEMP_CALLPATHS
+              ON EXTRAP_TEMP_CALLPATHS.start < nvtx.start AND nvtx.end < EXTRAP_TEMP_CALLPATHS.end AND
+                 EXTRAP_TEMP_CALLPATHS.globalTid = nvtx.globalTid
+WHERE EXTRAP_TEMP_CALLPATHS.depth = ?
+  AND nvtx.depth = ?""", [domain_id, depth, depth + 1])
+
+        self.db.execute(f"""CREATE TABLE EXTRAP_RESOLVED_CALLPATHS AS
+SELECT correlationId,
+       path || ',' || nameId                                  AS path,
+       EXTRAP_TEMP_CALLPATHS.value || '->' || StringIds.value AS callpath,
+       MAX(depth) + 1                                         AS stackDepth,
+       CA.end - CA.start                                      AS duration
+FROM EXTRAP_TEMP_CALLPATHS
+         INNER JOIN main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
+                    ON EXTRAP_TEMP_CALLPATHS.start < CA.start AND CA.end < EXTRAP_TEMP_CALLPATHS.end AND
+                       CA.globalTid = EXTRAP_TEMP_CALLPATHS.globalTid
+         LEFT JOIN StringIds ON nameId = id
+GROUP BY correlationId
+UNION ALL
+SELECT NULL AS correlationId, path, value AS callpath, depth AS stackDepth, SUM(end - start) AS duration
+FROM EXTRAP_TEMP_CALLPATHS
+GROUP BY path""")
+
+    def _prepare_callpaths_from_extra_prof_slow(self, domain_id):
         self.db.execute(f"""CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
 WITH nvtx AS (
     SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
@@ -122,8 +185,8 @@ FROM nvtxrec
          LEFT JOIN StringIds ON nameId = id
 GROUP BY correlationId
 UNION ALL
-SELECT NULL AS correlationId, path, value AS callpath, depth AS stackDepth, end - start AS duration
-FROM nvtxrec""")
+SELECT NULL AS correlationId, path, value AS callpath, depth AS stackDepth, SUM(end - start) AS duration
+FROM nvtxrec GROUP BY path""")
 
     def get_mem_copies(self) -> List[Tuple[int, str, str, str, float, int, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMCPY'):
