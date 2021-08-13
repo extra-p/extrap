@@ -268,6 +268,9 @@ FROM nvtxrec GROUP BY path""")
                WHEN 8 THEN 'DEVICE_TO_DEVICE'
                WHEN 9 THEN 'HOST_TO_HOST'
                WHEN 10 THEN 'PEER_TO_PEER'
+               WHEN 11 THEN 'UMA_HOST_TO_DEVICE'
+               WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
+               ELSE 'UNKNOWN_COPY_KIND_' || copyKind
                END       AS copyKind,
            bytes,
            NULL          AS shortName
@@ -287,6 +290,9 @@ FROM nvtxrec GROUP BY path""")
                     WHEN 8 THEN 'DEVICE_TO_DEVICE'
                     WHEN 9 THEN 'HOST_TO_HOST'
                     WHEN 10 THEN 'PEER_TO_PEER'
+                    WHEN 11 THEN 'UMA_HOST_TO_DEVICE'
+                    WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
+                    ELSE 'UNKNOWN_COPY_KIND_' || copyKind
                     END                                                 AS copyKind,
                 NULL                                                    AS bytes,
                 shortName

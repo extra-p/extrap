@@ -131,6 +131,7 @@ class NsightFileReader(AbstractDirectoryReader):
                             pbar.update(0)
                             if duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
+                            if durationCopy:
                                 aggregated_values[(Callpath(callpath + "->" + kind), metric)].append(
                                     durationCopy / 10 ** 9)
                                 aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(
