@@ -6,12 +6,15 @@
 # See the LICENSE file in the base directory for details.
 
 import sqlite3
+import warnings
 from pathlib import Path
 from sqlite3 import Cursor
 from typing import Tuple, List
 
 from extrap.util.deprecation import deprecated
 from extrap.util.exceptions import FileFormatError
+
+_FILE_FORMAT_VERSION = 1
 
 
 class NsysReport:
@@ -38,26 +41,54 @@ class NsysReport:
             "SELECT name FROM sqlite_master WHERE (type='table' OR type='view') AND name=?",
             [name]).fetchone() is not None
 
+    def _get_extrap_format_version(self):
+        if not self._check_table_exists('EXTRAP_FORMAT'):
+            return 0
+        return self.db.execute("SELECT version FROM EXTRAP_FORMAT").fetchone()[0]
+
+    def _update_extrap_format_version(self, version=1):
+        if self._check_table_exists('EXTRAP_FORMAT'):
+            self.db.execute(f"""DROP VIEW EXTRAP_FORMAT""")
+        self.db.execute(f"""CREATE VIEW EXTRAP_FORMAT AS
+                    SELECT {_FILE_FORMAT_VERSION} AS version
+                    FROM sqlite_master
+                    LIMIT 1""")
+
     def _prepare_shared(self):
-        if self._check_table_exists('EXTRAP_RESOLVED_CALLPATHS'):
-            # if necessary upgrade to newer view
-            if self.db.execute("""SELECT name AS CNTREC
-FROM pragma_table_info('EXTRAP_RESOLVED_CALLPATHS')
-WHERE name = 'correlationId'""").fetchone() is None:
-                self.db.execute("DROP VIEW EXTRAP_RESOLVED_CALLPATHS")
+        with self.db:
+            if self._check_table_exists('EXTRAP_RESOLVED_CALLPATHS'):
+                # if necessary upgrade to newer view
+                if self.db.execute("""SELECT name AS CNTREC
+                    FROM pragma_table_info('EXTRAP_RESOLVED_CALLPATHS')
+                    WHERE name = 'correlationId'""").fetchone() is None:
+                    self.db.execute("DROP VIEW EXTRAP_RESOLVED_CALLPATHS")
+                elif self._get_extrap_format_version() < 1:
+                    self.db.execute("""-- Add uncorrelated node to callpaths
+                    INSERT INTO EXTRAP_RESOLVED_CALLPATHS (correlationId, path, callpath, stackDepth)
+                    VALUES (0, '0', '[Uncorrelated]', 0)""")
+                    self._convert_to_exclusive()
+                    self._update_extrap_format_version()
+                    return
+                elif self._get_extrap_format_version() > _FILE_FORMAT_VERSION:
+                    warnings.warn(f"Version {self._get_extrap_format_version()} of the Extra-P callpath data is "
+                                  "not supported by this Extra-P version, this may cause problems.")
+                    return
+                else:
+                    return
+
+            if self._check_table_exists('NVTX_EVENTS'):
+                # if possible use extra_prof data
+                domain_id = self.db.execute(
+                    "SELECT domainId FROM NVTX_EVENTS WHERE text='de.tu-darmstadt.parallel.extra_prof'").fetchone()
+                if domain_id:
+                    domain_id = int(domain_id[0])
+                    self._prepare_callpaths_from_extra_prof(domain_id)
+                    self._convert_to_exclusive()
+                    self._update_extrap_format_version()
+                    return
             else:
-                return
-
-        if self._check_table_exists('NVTX_EVENTS'):
-            # if possible use extra_prof data
-            domain_id = self.db.execute(
-                "SELECT domainId FROM NVTX_EVENTS WHERE text='de.tu-darmstadt.parallel.extra_prof'").fetchone()
-            if domain_id:
-                domain_id = int(domain_id[0])
-                self._prepare_callpaths_from_extra_prof(domain_id)
-                return
-
-        self._prepare_callpaths_from_nsys_tracing()
+                self._prepare_callpaths_from_nsys_tracing()
+                self._update_extrap_format_version()
 
     def _prepare_callpaths_from_nsys_tracing(self):
         self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
@@ -93,14 +124,15 @@ WITH nvtx AS (
     FROM NVTX_EVENTS
              LEFT JOIN StringIds ON textId = StringIds.id
     WHERE eventType = 59
-      AND domainId = {domain_id}
+      AND domainId = ?
       AND textId IS NOT NULL
 )
 SELECT *
          FROM nvtx
-         WHERE depth = 0""")
+         WHERE depth = 0""", [domain_id])
 
-        max_depth = self.db.execute("""SELECT MAX(uint32Value) AS max_depth
+        max_depth = self.db.execute("""-- Determines max. callpath length
+SELECT MAX(uint32Value) AS max_depth
 FROM NVTX_EVENTS
 WHERE eventType = 59
   AND domainId = ?
@@ -123,7 +155,8 @@ SELECT nvtx.start,
        EXTRAP_TEMP_CALLPATHS.value || '->' || nvtx.value,
        nvtx.depth,
        EXTRAP_TEMP_CALLPATHS.path || ',' || nvtx.path,
-       EXTRAP_TEMP_CALLPATHS.globalTid
+       EXTRAP_TEMP_CALLPATHS.globalTid, 
+       nvtx.duration
 FROM nvtx
          JOIN EXTRAP_TEMP_CALLPATHS
               ON EXTRAP_TEMP_CALLPATHS.start < nvtx.start AND nvtx.end < EXTRAP_TEMP_CALLPATHS.end AND
@@ -131,7 +164,8 @@ FROM nvtx
 WHERE EXTRAP_TEMP_CALLPATHS.depth = ?
   AND nvtx.depth = ?""", [domain_id, depth, depth + 1])
 
-        self.db.execute(f"""CREATE TABLE EXTRAP_RESOLVED_CALLPATHS AS
+        self.db.execute(f"""-- Create result table including the correlations
+CREATE TABLE EXTRAP_RESOLVED_CALLPATHS AS
 SELECT correlationId,
        path || ',' || nameId                                  AS path,
        EXTRAP_TEMP_CALLPATHS.value || '->' || StringIds.value AS callpath,
@@ -148,8 +182,35 @@ SELECT NULL AS correlationId, path, value AS callpath, depth AS stackDepth, SUM(
 FROM EXTRAP_TEMP_CALLPATHS
 GROUP BY path""")
 
+        self.db.execute("""-- Add uncorrelated node to callpaths
+INSERT INTO EXTRAP_RESOLVED_CALLPATHS (correlationId, path, callpath, stackDepth)
+VALUES (0, '0', '[Uncorrelated]', 0)""")
+
+    def _convert_to_exclusive(self):
+        max_depth = self.db.execute("""-- Determines max. callpath length
+SELECT MAX(stackDepth) AS max_depth
+FROM EXTRAP_RESOLVED_CALLPATHS""").fetchone()
+        max_depth = int(max_depth[0])
+
+        for depth in range(max_depth + 1):
+            self.db.execute("""UPDATE EXTRAP_RESOLVED_CALLPATHS
+SET duration=duration -(
+    SELECT SUM(temp.duration)
+    FROM EXTRAP_RESOLVED_CALLPATHS AS temp
+    WHERE temp.stackDepth = ?
+      AND temp.path LIKE EXTRAP_RESOLVED_CALLPATHS.path || '%'
+)
+WHERE EXTRAP_RESOLVED_CALLPATHS.stackDepth = ?
+  AND EXISTS(
+        SELECT duration
+        FROM EXTRAP_RESOLVED_CALLPATHS AS temp
+        WHERE temp.stackDepth = ?
+          AND temp.path LIKE EXTRAP_RESOLVED_CALLPATHS.path || '%'
+    )""", [depth + 1, depth, depth + 1])
+
     def _prepare_callpaths_from_extra_prof_slow(self, domain_id):
-        self.db.execute(f"""CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
+        self.db.execute(f"""-- SQL only recursive algorithm
+CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
 WITH nvtx AS (
     SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
     FROM NVTX_EVENTS
@@ -417,6 +478,13 @@ FROM cupti_activity
          LEFT JOIN EXTRAP_RESOLVED_CALLPATHS ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId
 
     """)
+
+    def get_peak_flops(self):
+        return self.db.execute("""-- Calculates peak FLOPs
+SELECT SUM(numThreadsPerWarp * coreClockRate * maxIPC * numMultiprocessors)
+           AS peak_flops
+FROM TARGET_INFO_CUDA_GPU
+        """).fetchone()[0]
 
     @deprecated
     def get_os_runtimes(self) -> List[Tuple[int, str, str, str, float, float, str, float]]:
