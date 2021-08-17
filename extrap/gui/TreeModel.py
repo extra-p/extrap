@@ -20,8 +20,6 @@ from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
-import re
-
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
 
@@ -137,23 +135,30 @@ class TreeModel(QAbstractItemModel):
         return None
 
     def remove_method_parameters(self, name):
-        depth = 0
-        start = -1
-        re.escape("()")
-        for i in range(0, len(name)):
-            elem = name[i]
-            if elem == "<":
-                depth += 1
-                if start == -1:
-                    start = i
-            if elem == ">":
-                depth -= 1
-                if start != -1 and depth == 0:
-                    name = name[0:start:] + "<…>" + self.remove_method_parameters(name[i+1:len(name):])
-                    return re.sub(r"\(.*\)", "(…)", name)
-        return re.sub(r"\(.*\)", "(…)", name)
+        def _replace_braces(name, lb, rb):
+            depth = 0
+            start = -1
+            replacement = lb + '…' + rb
+            i = 0
+            while i < len(name):
+                elem = name[i]
+                if elem == lb:
+                    depth += 1
+                    if start == -1:
+                        start = i
+                elif elem == rb:
+                    depth -= 1
+                    if start != -1 and depth == 0:
+                        if start + 1 != i:
+                            name = name[0:start:] + replacement + name[i + 1:len(name):]
+                            i = start + len(replacement) - 1
+                        start = -1
+                i += 1
+            return name
 
-
+        name = _replace_braces(name, '<', '>')
+        name = _replace_braces(name, '(', ')')
+        return name
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()
