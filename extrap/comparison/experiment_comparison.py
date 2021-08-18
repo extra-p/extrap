@@ -44,30 +44,30 @@ class PlaceholderModeler(AbstractModeler):
 class ComparisonFunction(Function):
     def __init__(self, functions):
         super().__init__()
-        self.compound_terms = functions
+        self.compound_terms = functions  # HACK to preserve compatibility with standard function interface
         self.functions = functions
 
     def evaluate(self, parameter_value):
         """
         Evaluate the function according to the given value and return the result.
         """
-        if isinstance(parameter_value, Mapping):
-            pos_hash = self._pos_hash(sum(parameter_value.values()))
-        else:
-            pos_hash = self._pos_hash(parameter_value)
+        # if isinstance(parameter_value, Mapping):
+        #     pos_hash = self._pos_hash(sum(parameter_value.values()))
+        # else:
+        #     pos_hash = self._pos_hash(parameter_value)
         function_value = [f.evaluate(parameter_value) for f in self.functions]
-        if isinstance(parameter_value, np.ndarray):
-            function_value = np.array(function_value)
-            if len(parameter_value.shape) == 2:
-                pos_hash = self._pos_hash(np.sum(parameter_value, axis=0))
+        # if isinstance(parameter_value, np.ndarray):
+        #     function_value = np.array(function_value)
+        #     if len(parameter_value.shape) == 2:
+        #         pos_hash = self._pos_hash(np.sum(parameter_value, axis=0))
 
-        selected_function = pos_hash % len(self.functions)
-        if isinstance(function_value, np.ndarray):
-            if len(function_value.shape) == 2:
-                return function_value[selected_function, :]
-            else:
-                return function_value[selected_function]
-        return function_value[int(selected_function)]
+        # selected_function = np.linalg.norm(pos_hash) % len(self.functions)
+        # if isinstance(function_value, np.ndarray):
+        #     if len(function_value.shape) == 2:
+        #         return function_value[selected_function, :]
+        #     else:
+        #         return function_value[selected_function]
+        return np.max(function_value)
 
     def _pos_hash(self, pos):
         pos = np.cast['int32'](pos)
@@ -86,7 +86,7 @@ class ComparisonFunction(Function):
         """
         Return a string representation of the function.
         """
-        return '(' + ', '.join(t.to_string(*parameters) for t in self.compound_terms) + ')'
+        return '(' + ', '.join(t.to_string(*parameters) for t in self.functions) + ')'
 
 
 class ComparisonModel(Model):

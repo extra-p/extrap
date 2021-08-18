@@ -96,7 +96,7 @@ class ProgressPage(QWizardPage):
 
         self.progress_indicator.setMaximum(pbar.total)
         if pbar.postfix:
-            self.label.setText(self.postfix + '\n\n' + time_str)
+            self.label.setText(pbar.postfix + '\n\n' + time_str)
         else:
             self.label.setText(time_str)
         self.progress_indicator.setValue(pbar.n)

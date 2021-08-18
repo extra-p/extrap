@@ -45,6 +45,18 @@ class TestComparison(TestCase):
         self.check_comparison_against_source(experiment, experiment1)
         self.check_comparison_against_source(experiment, experiment2)
 
+    def test_minimal_comparison_basic_output(self):
+        experiment1 = TextFileReader().read_experiment('data/text/two_parameter_5.txt')
+        ModelGenerator(experiment1).model_all()
+        experiment2 = TextFileReader().read_experiment('data/text/two_parameter_6.txt')
+        ModelGenerator(experiment2).model_all()
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
+        experiment.do_comparison()
+        self.check_comparison_against_source(experiment, experiment1)
+        self.check_comparison_against_source(experiment, experiment2)
+        self.assertNotEqual([], experiment.modelers)
+        self.assertNotEqual([], experiment.modelers[0].models)
+
     def test_smart_comparison_add_subtree_and_merge_measurements(self):
         ct_parent = Node('[exp1] main', Callpath('->[Comparison]->[exp1] main', agg__disabled=True))
 

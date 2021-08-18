@@ -202,7 +202,7 @@ class SmartMatcher(AbstractMatcher):
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar):
         from extrap.comparison.experiment_comparison import PlaceholderModeler, ComparisonModel
-        mg = ModelGenerator(experiment, PlaceholderModeler(False), name, modelers[0].modeler.use_median)
+        mg = ModelGenerator(experiment, NotImplemented, name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in experiment.metrics_match.items():
             for node, source_nodes in experiment.call_tree_match.items():

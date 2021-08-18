@@ -111,7 +111,8 @@ class FileLoadingPage(ProgressPage):
         wizard: ComparisonWizard = self.wizard()
         wizard.experiment2 = wizard.file_reader().read_experiment(wizard.file_name, pbar)
         if wizard.file_reader.GENERATE_MODELS_AFTER_LOAD:
-            ModelGenerator(wizard.experiment2).model_all(pbar)
+            from extrap.gui.MainWidget import DEFAULT_MODEL_NAME
+            ModelGenerator(wizard.experiment2, name=DEFAULT_MODEL_NAME).model_all(pbar)
 
 
 class ComparingPage(ProgressPage):

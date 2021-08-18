@@ -36,6 +36,8 @@ from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
 
+DEFAULT_MODEL_NAME = "Default Model"
+
 
 class CallPathEnum(Enum):
     constant = "constant"
@@ -370,7 +372,7 @@ class MainWidget(QMainWindow):
 
     def model_experiment(self, experiment):
         # initialize model generator
-        model_generator = ModelGenerator(experiment, use_median=self.median, name="Default Model")
+        model_generator = ModelGenerator(experiment, use_median=self.median, name=DEFAULT_MODEL_NAME)
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)
