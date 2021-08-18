@@ -134,6 +134,16 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(truth, output.fmt_output(self.exp, "{callpath},{metric}:{points:format:'{point:sep:';';"
                                                             "format:'{parameter}{coordinate:.3f}'}'}"))
 
+    def test_point_formatting7(self):
+        truth = "(2.00E+01, 1.00E+00) | (2.00E+01, 2.00E+00) | (2.00E+01, 3.00E+00) | (2.00E+01, 4.00E+00) | " \
+                "(2.00E+01, 5.00E+00) | (3.00E+01, 1.00E+00) | (3.00E+01, 2.00E+00) | (3.00E+01, 3.00E+00) | " \
+                "(3.00E+01, 4.00E+00) | (3.00E+01, 5.00E+00) | (4.00E+01, 1.00E+00) | (4.00E+01, 2.00E+00) | " \
+                "(4.00E+01, 3.00E+00) | (4.00E+01, 4.00E+00) | (4.00E+01, 5.00E+00) | (5.00E+01, 1.00E+00) | " \
+                "(5.00E+01, 2.00E+00) | (5.00E+01, 3.00E+00) | (5.00E+01, 4.00E+00) | (5.00E+01, 5.00E+00) | " \
+                "(6.00E+01, 1.00E+00) | (6.00E+01, 2.00E+00) | (6.00E+01, 3.00E+00) | (6.00E+01, 4.00E+00) | " \
+                "(6.00E+01, 5.00E+00)\n\t3.12E+02:x y\n" * 4
+        self.assertEqual(truth, output.fmt_output(self.exp, "{points}\n\t{rss}:{parameters}"))
+
     def test_measurement_formatting(self):
         truth = self._make_expected(
             "x20.000;y1.000:9.99E-01|x20.000;y2.000:8.11E+01|x20.000;y3.000:1.28E+02|x20.000;y4.000:1.62E+02|"
@@ -181,6 +191,8 @@ class TestOutput(unittest.TestCase):
                           output.fmt_output, self.exp, "{{{callpath}}")
         self.assertRaises(OutputFormatError,
                           output.fmt_output, self.exp, "{callpath")
+        self.assertRaises(OutputFormatError,
+                          output.fmt_output, self.exp, "{smapee}")
 
     def assertOutputRegex(self, regex, command, *args, **kwargs):
         temp_stdout = StringIO()
