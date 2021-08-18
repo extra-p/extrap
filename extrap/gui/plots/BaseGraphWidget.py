@@ -18,6 +18,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 
+from extrap.comparison.experiment_comparison import ComparisonModel
+
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
 
@@ -143,6 +145,22 @@ class GraphDisplayWindow(FigureCanvas):
         if maxY < lower_max:
             maxY = lower_max
         return maxX, maxY
+
+    def _get_models_to_draw(self):
+        model_list1, selected_call_nodes1 = self.main_widget.get_selected_models()
+        if not model_list1:
+            return None, None
+        model_list = []
+        selected_call_nodes = []
+        for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
+            if isinstance(model, ComparisonModel):
+                for m in model.models:
+                    model_list.append(m)
+                    selected_call_nodes.append(call_node)
+            else:
+                model_list.append(model)
+                selected_call_nodes.append(call_node)
+        return model_list, selected_call_nodes
 
 
 class BaseContourGraph(GraphDisplayWindow):

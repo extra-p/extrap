@@ -29,7 +29,7 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
           This function draws the graph
         """
         # Get data
-        model_list, selected_callpaths = self.main_widget.get_selected_models()
+        model_list, selected_callpaths = self._get_models_to_draw()
         if model_list is None:
             return
 

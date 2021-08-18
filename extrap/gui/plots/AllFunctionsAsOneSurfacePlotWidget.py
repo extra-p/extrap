@@ -4,7 +4,6 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 
@@ -22,7 +21,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         """
 
         # Get data
-        model_list, selected_callpaths = self.main_widget.get_selected_models()
+        model_list, selected_call_nodes = self._get_models_to_draw()
         if model_list is None:
             return
 
@@ -63,7 +62,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
             '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
         for i in range(len(Z_List)):
             ax_all.plot_surface(
-                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])
+                X, Y, Z_List[i], color=dict_callpath_color[selected_call_nodes[i]])
 
         # draw legend
         self.draw_legend(ax_all, dict_callpath_color)
