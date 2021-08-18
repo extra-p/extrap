@@ -155,8 +155,7 @@ SELECT nvtx.start,
        EXTRAP_TEMP_CALLPATHS.value || '->' || nvtx.value,
        nvtx.depth,
        EXTRAP_TEMP_CALLPATHS.path || ',' || nvtx.path,
-       EXTRAP_TEMP_CALLPATHS.globalTid, 
-       nvtx.duration
+       EXTRAP_TEMP_CALLPATHS.globalTid
 FROM nvtx
          JOIN EXTRAP_TEMP_CALLPATHS
               ON EXTRAP_TEMP_CALLPATHS.start < nvtx.start AND nvtx.end < EXTRAP_TEMP_CALLPATHS.end AND
