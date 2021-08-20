@@ -82,7 +82,7 @@ class NsysReport:
             if self._check_table_exists('NVTX_EVENTS'):
                 # if possible use extra_prof data
                 domain_id = self.db.execute(
-                    "SELECT domainId FROM NVTX_EVENTS WHERE text='de.tu-darmstadt.parallel.extra_prof'").fetchone()
+                    "SELECT domainId FROM NVTX_EVENTS WHERE eventType=75 AND text='de.tu-darmstadt.parallel.extra_prof' LIMIT 1").fetchone()
                 if domain_id:
                     domain_id = int(domain_id[0])
                     self._prepare_callpaths_from_extra_prof(domain_id)
@@ -116,27 +116,34 @@ GROUP BY correlationId
          """)
 
     def _prepare_callpaths_from_extra_prof(self, domain_id):
-
-        self.db.execute(f"""CREATE TEMP TABLE EXTRAP_TEMP_CALLPATHS AS
+        self.db.execute("""-- Create index for fast correlation
+                CREATE INDEX IF NOT EXISTS EXTRAP_NVTX_INDEX
+                ON NVTX_EVENTS (globalTid, start, end);
+                """)
+        self.db.execute(f"""CREATE TEMP VIEW EXTRAP_TEMP_CALLPATHS AS
 SELECT start, end, text AS callpath, uint32Value AS depth, globalTid
 FROM NVTX_EVENTS
 WHERE eventType = 59
-  AND domainId = ?
+  AND domainId = {domain_id}
   AND text IS NOT NULL
-""", [domain_id])
+""")
 
         self.db.execute(f"""-- Create result table including the correlations
 CREATE TABLE EXTRAP_RESOLVED_CALLPATHS AS
 SELECT correlationId,
        callpath || char(31) || '->' || value AS callpath,
-       MAX(depth) + 1                        AS stackDepth,
+       depth + 1                             AS stackDepth,
        CA.end - CA.start                     AS duration
-FROM EXTRAP_TEMP_CALLPATHS
-         INNER JOIN main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
-                    ON EXTRAP_TEMP_CALLPATHS.start < CA.start AND CA.end < EXTRAP_TEMP_CALLPATHS.end AND
-                       CA.globalTid = EXTRAP_TEMP_CALLPATHS.globalTid
+FROM main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
+         INNER JOIN EXTRAP_TEMP_CALLPATHS
+                    ON CA.globalTid = EXTRAP_TEMP_CALLPATHS.globalTid AND
+                       EXTRAP_TEMP_CALLPATHS.start = (SELECT MAX(TP.start)
+                                                      FROM EXTRAP_TEMP_CALLPATHS AS TP
+                                                      WHERE CA.globalTid = TP.globalTid
+                                                        AND TP.start < CA.start
+                                                        AND CA.end < TP.end
+                       )
          LEFT JOIN StringIds ON nameId = id
-GROUP BY correlationId
 UNION ALL
 SELECT NULL AS correlationId, callpath, depth AS stackDepth, SUM(END - start) AS duration
 FROM EXTRAP_TEMP_CALLPATHS
