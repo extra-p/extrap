@@ -92,7 +92,9 @@ class NsightFileReader(AbstractDirectoryReader):
                     pbar.update()
                     with NsysReport(path) as parsed:
                         # iterate over all callpaths and get time
-                        for id, _, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
+                        for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
+
+                            callpath=parsed.decode_callpath(callpath)
                             pbar.update(0)
                             if kernelName:
                                 aggregated_values[
@@ -114,7 +116,8 @@ class NsightFileReader(AbstractDirectoryReader):
                                     Callpath(callpath + "->" + syncType + "->WAIT", agg__usage__disabled=True),
                                     metric)].append(
                                     other_duration / 10 ** 9)
-                        for id, _, callpath, kernelName, duration, durationGPU, other_duration in parsed.get_kernel_runtimes():
+                        for id, callpath, kernelName, duration, durationGPU, other_duration in parsed.get_kernel_runtimes():
+                            callpath = parsed.decode_callpath(callpath)
                             pbar.update(0)
                             if kernelName:
                                 if duration:
@@ -127,7 +130,8 @@ class NsightFileReader(AbstractDirectoryReader):
                                     durationGPU / 10 ** 9)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
-                        for id, _, callpath, name, duration, bytes, kind, durationCopy in parsed.get_mem_copies():
+                        for id, callpath, name, duration, bytes, kind, durationCopy in parsed.get_mem_copies():
+                            callpath = parsed.decode_callpath(callpath)
                             pbar.update(0)
                             if duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
@@ -136,7 +140,8 @@ class NsightFileReader(AbstractDirectoryReader):
                                     durationCopy / 10 ** 9)
                                 aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(
                                     bytes)
-                        for id, _, callpath, name, duration in parsed.get_os_runtimes():
+                        for id, callpath, name, duration in parsed.get_os_runtimes():
+                            callpath = parsed.decode_callpath(callpath)
                             pbar.update(0)
                             if duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)

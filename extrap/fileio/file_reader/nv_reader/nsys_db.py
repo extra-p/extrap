@@ -11,10 +11,11 @@ from pathlib import Path
 from sqlite3 import Cursor
 from typing import Tuple, List
 
+from extrap.util.caching import cached_property
 from extrap.util.deprecation import deprecated
 from extrap.util.exceptions import FileFormatError
 
-_FILE_FORMAT_VERSION = 1
+_FILE_FORMAT_VERSION = 2
 
 
 class NsysReport:
@@ -93,20 +94,16 @@ class NsysReport:
     def _prepare_callpaths_from_nsys_tracing(self):
         self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
 WITH resolved_callchains AS (
-    SELECT CUDA_CALLCHAINS.id, symbol, stackDepth, VALUE AS NAME
+    SELECT CUDA_CALLCHAINS.id, symbol, stackDepth, value AS name
     FROM CUDA_CALLCHAINS
              LEFT JOIN StringIds ON symbol = StringIds.id
     WHERE unresolved IS NULL
     ORDER BY CUDA_CALLCHAINS.id, stackDepth DESC
 ),
-     callchains AS (SELECT id,
-                           GROUP_CONCAT(symbol, ',') AS path,
-                           MAX(stackDepth)           AS stackDepth,
-                           GROUP_CONCAT(name, '->')  AS callpath
+     callchains AS (SELECT id, MAX(stackDepth) AS stackDepth, GROUP_CONCAT(name, '->') AS callpath
                     FROM resolved_callchains
                     GROUP BY id)
 SELECT correlationId,
-       path || ',' || nameId                          AS path,
        callchains.callpath || '->' || StringIds.value AS callpath,
        stackDepth + 1                                 AS stackDepth,
        CA.end - CA.start                              AS duration
@@ -119,57 +116,19 @@ GROUP BY correlationId
     def _prepare_callpaths_from_extra_prof(self, domain_id):
 
         self.db.execute(f"""CREATE TEMP TABLE EXTRAP_TEMP_CALLPATHS AS
-WITH nvtx AS (
-    SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
-    FROM NVTX_EVENTS
-             LEFT JOIN StringIds ON textId = StringIds.id
-    WHERE eventType = 59
-      AND domainId = ?
-      AND textId IS NOT NULL
-)
-SELECT *
-         FROM nvtx
-         WHERE depth = 0""", [domain_id])
-
-        max_depth = self.db.execute("""-- Determines max. callpath length
-SELECT MAX(uint32Value) AS max_depth
+SELECT start, end, text AS callpath, uint32Value AS depth, globalTid
 FROM NVTX_EVENTS
 WHERE eventType = 59
   AND domainId = ?
-  AND textId IS NOT NULL""", [domain_id]).fetchone()
-        max_depth = int(max_depth[0])
-
-        for depth in range(max_depth + 1):
-            self.db.execute("""WITH nvtx AS (
-    SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
-    FROM NVTX_EVENTS
-             LEFT JOIN StringIds ON textId = StringIds.id
-    WHERE eventType = 59
-      AND domainId = ?
-      AND textId IS NOT NULL
-)
-INSERT
-INTO EXTRAP_TEMP_CALLPATHS
-SELECT nvtx.start,
-       nvtx.end,
-       EXTRAP_TEMP_CALLPATHS.value || '->' || nvtx.value,
-       nvtx.depth,
-       EXTRAP_TEMP_CALLPATHS.path || ',' || nvtx.path,
-       EXTRAP_TEMP_CALLPATHS.globalTid
-FROM nvtx
-         JOIN EXTRAP_TEMP_CALLPATHS
-              ON EXTRAP_TEMP_CALLPATHS.start < nvtx.start AND nvtx.end < EXTRAP_TEMP_CALLPATHS.end AND
-                 EXTRAP_TEMP_CALLPATHS.globalTid = nvtx.globalTid
-WHERE EXTRAP_TEMP_CALLPATHS.depth = ?
-  AND nvtx.depth = ?""", [domain_id, depth, depth + 1])
+  AND text IS NOT NULL
+""", [domain_id])
 
         self.db.execute(f"""-- Create result table including the correlations
 CREATE TABLE EXTRAP_RESOLVED_CALLPATHS AS
 SELECT correlationId,
-       path || ',' || nameId                                  AS path,
-       EXTRAP_TEMP_CALLPATHS.value || '->' || StringIds.value AS callpath,
-       MAX(depth) + 1                                         AS stackDepth,
-       CA.end - CA.start                                      AS duration
+       callpath || '|->' || value AS callpath,
+       MAX(depth) + 1             AS stackDepth,
+       CA.end - CA.start          AS duration
 FROM EXTRAP_TEMP_CALLPATHS
          INNER JOIN main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
                     ON EXTRAP_TEMP_CALLPATHS.start < CA.start AND CA.end < EXTRAP_TEMP_CALLPATHS.end AND
@@ -177,13 +136,13 @@ FROM EXTRAP_TEMP_CALLPATHS
          LEFT JOIN StringIds ON nameId = id
 GROUP BY correlationId
 UNION ALL
-SELECT NULL AS correlationId, path, value AS callpath, depth AS stackDepth, SUM(end - start) AS duration
+SELECT NULL AS correlationId, callpath, depth AS stackDepth, SUM(END - start) AS duration
 FROM EXTRAP_TEMP_CALLPATHS
-GROUP BY path""")
+GROUP BY callpath""")
 
         self.db.execute("""-- Add uncorrelated node to callpaths
-INSERT INTO EXTRAP_RESOLVED_CALLPATHS (correlationId, path, callpath, stackDepth)
-VALUES (0, '0', '[Uncorrelated]', 0)""")
+INSERT INTO EXTRAP_RESOLVED_CALLPATHS (correlationId, callpath, stackDepth)
+VALUES (0, '[Uncorrelated]', 0)""")
 
     def _convert_to_exclusive(self):
         max_depth = self.db.execute("""-- Determines max. callpath length
@@ -193,60 +152,44 @@ FROM EXTRAP_RESOLVED_CALLPATHS""").fetchone()
 
         for depth in range(max_depth + 1):
             self.db.execute("""UPDATE EXTRAP_RESOLVED_CALLPATHS
-SET duration=duration -(
+SET duration=duration - (
     SELECT SUM(temp.duration)
     FROM EXTRAP_RESOLVED_CALLPATHS AS temp
     WHERE temp.stackDepth = ?
-      AND temp.path LIKE EXTRAP_RESOLVED_CALLPATHS.path || '%'
+      AND temp.callpath LIKE EXTRAP_RESOLVED_CALLPATHS.callpath || '%'
 )
 WHERE EXTRAP_RESOLVED_CALLPATHS.stackDepth = ?
   AND EXISTS(
         SELECT duration
         FROM EXTRAP_RESOLVED_CALLPATHS AS temp
-        WHERE temp.stackDepth = ?
-          AND temp.path LIKE EXTRAP_RESOLVED_CALLPATHS.path || '%'
+        WHERE correlationId IS NULL
+          AND temp.stackDepth = ?
+          AND temp.callpath LIKE EXTRAP_RESOLVED_CALLPATHS.callpath || '%'
     )""", [depth + 1, depth, depth + 1])
 
-    def _prepare_callpaths_from_extra_prof_slow(self, domain_id):
-        self.db.execute(f"""-- SQL only recursive algorithm
-CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
-WITH nvtx AS (
-    SELECT start, end, value, uint32Value AS depth, textId AS path, globalTid
-    FROM NVTX_EVENTS
-             LEFT JOIN StringIds ON textId = StringIds.id
-    WHERE eventType = 59
-      AND domainId = {domain_id}
-      AND textId IS NOT NULL
-),
-     nvtxrec AS (
-         SELECT *
-         FROM nvtx
-         WHERE depth = 0
-         UNION ALL
-         SELECT nvtx.start,
-                nvtx.end,
-                nvtxrec.value || '->' || nvtx.value,
-                nvtx.depth,
-                nvtxrec.path || ',' || nvtx.path,
-                nvtxrec.globalTid
-         FROM nvtxrec
-                  INNER JOIN nvtx ON nvtxrec.start < nvtx.start AND nvtx.end < nvtxrec.end AND
-                                     nvtxrec.depth = nvtx.depth - 1 AND nvtxrec.globalTid = nvtx.globalTid
-         ORDER BY nvtx.start
-     )
-SELECT correlationId,
-       path || ',' || nameId                    AS path,
-       nvtxrec.value || '->' || StringIds.value AS callpath,
-       MAX(depth) + 1                           AS stackDepth,
-       CA.end - CA.start                        AS duration
-FROM nvtxrec
-         INNER JOIN main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
-                    ON nvtxrec.start < CA.start AND CA.end < nvtxrec.end AND CA.globalTid = nvtxrec.globalTid
-         LEFT JOIN StringIds ON nameId = id
-GROUP BY correlationId
-UNION ALL
-SELECT NULL AS correlationId, path, value AS callpath, depth AS stackDepth, SUM(end - start) AS duration
-FROM nvtxrec GROUP BY path""")
+    @cached_property
+    def _symbol_table(self):
+        table = self.db.execute("""SELECT SUBSTR(value, 4, pos - 5) AS ptr, SUBSTR(value, pos) AS name
+FROM (SELECT *, INSTR(SUBSTR(value, 4), '|') + 4 AS pos
+      FROM StringIds
+      WHERE id BETWEEN (SELECT id FROM StringIds WHERE value = "EXTRA_PROF_SYMBOLS")
+          AND (SELECT id FROM StringIds WHERE value = "EXTRA_PROF_SYMBOLS_END")
+        AND VALUE LIKE "EP|%")""")
+        return dict(table)
+
+    def decode_callpath(self, callpath):
+        if callpath[0] != '|':
+            return callpath
+        ptrs = callpath[1:].split('|')
+        rest = None
+        if ptrs[-1][0] == '-':
+            rest = ptrs[-1]
+            ptrs = ptrs[:-1]
+
+        callpath = "->".join([self._symbol_table[p] for p in ptrs])
+        if rest:
+            callpath += rest
+        return callpath
 
     def get_mem_copies(self) -> List[Tuple[int, str, str, str, float, int, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMCPY'):
@@ -254,7 +197,7 @@ FROM nvtxrec GROUP BY path""")
         c = self.db.cursor()
         return list(c.execute("""WITH cupti_memory AS (
     SELECT correlationId,
-           (END - START) AS duration,
+           (end - start) AS duration,
            CASE copyKind
                WHEN 0 THEN 'UNKNOWN'
                WHEN 1 THEN 'HOST_TO_DEVICE'
@@ -296,7 +239,7 @@ FROM nvtxrec GROUP BY path""")
                 NULL                                                    AS bytes,
                 shortName
          FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKS
-                  INNER JOIN (SELECT start, END, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                  INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
                              ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
      ),
      cupti_activity AS (
@@ -313,7 +256,6 @@ FROM nvtxrec GROUP BY path""")
               ) AS CA
      )
 SELECT paths.correlationId,
-       path,
        callpath,
        demangledName       AS name,
        SUM(duration)       AS duration,
@@ -321,9 +263,8 @@ SELECT paths.correlationId,
        copyKind,
        SUM(other_duration) AS other_duration
 FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
-             path,
-             demangledName,
              callpath,
+             demangledName,
              duration,
              copyKind,
              other_duration,
@@ -331,7 +272,7 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
       FROM EXTRAP_RESOLVED_CALLPATHS
                INNER JOIN cupti_activity
                           ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
-GROUP BY path, demangledName, copyKind 
+GROUP BY callpath, demangledName, copyKind 
     """))
 
     def get_synchronization(self) -> List[Tuple[int, str, str, str, float, float, str, float]]:
@@ -382,7 +323,6 @@ GROUP BY path, demangledName, copyKind
                   LEFT JOIN StringIds ON shortName = StringIds.id
      )
 SELECT paths.correlationId,
-       path,
        callpath,
        demangledName       AS kernelName,
        SUM(duration)       AS duration,
@@ -390,9 +330,8 @@ SELECT paths.correlationId,
        syncType,
        SUM(other_duration) AS other_duration
 FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
-             path,
-             demangledName,
              callpath,
+             demangledName,
              duration,
              durationGPU,
              syncType,
@@ -400,7 +339,7 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
       FROM EXTRAP_RESOLVED_CALLPATHS
                INNER JOIN cupti_activity
                           ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
-GROUP BY path, demangledName, syncType 
+GROUP BY callpath, demangledName, syncType 
     """))
 
     def get_kernel_runtimes(self) -> List[Tuple[int, str, str, str, float, float, float]]:
@@ -410,7 +349,7 @@ GROUP BY path, demangledName, syncType
         return list(c.execute("""WITH cupti_kernel AS (
     SELECT correlationId,
            NULL                                                     AS duration,
-           (END - START)                                            AS durationGPU,
+           (end - start)                                            AS durationGPU,
            shortName,
            ('(' || gridX || ',' || gridY || ',' || gridZ || ')')    AS grid,
            ('(' || blockX || ',' || blockY || ',' || blockZ || ')') AS block,
@@ -429,24 +368,22 @@ GROUP BY path, demangledName, syncType
                   LEFT JOIN StringIds ON shortName = StringIds.id
      )
 SELECT paths.correlationId,
-       path,
        callpath,
        demangledName       AS kernelName,
        SUM(duration)       AS duration,
        SUM(durationGPU)    AS durationGPU,
        SUM(other_duration) AS other_duration
 FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
-             path,
+             callpath,
              demangledName,
              --(demangledName|| '<<<' || grid || ',' || block || ',' || sharedMemoryExecuted || '>>>') AS demangledName,
-             callpath,
              duration,
              durationGPU,
              other_duration
       FROM EXTRAP_RESOLVED_CALLPATHS
                LEFT JOIN cupti_activity
                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
-GROUP BY path, demangledName 
+GROUP BY callpath, demangledName 
 """))
 
     def get_kernelid_paths(self) -> Cursor:
@@ -455,7 +392,7 @@ GROUP BY path, demangledName
         return c.execute("""WITH cupti_kernel AS (
     SELECT correlationId,
            gridId,
-           (END - START)                                            AS durationGPU,
+           (end - start)                                            AS durationGPU,
            shortName,
            ('(' || gridX || ',' || gridY || ',' || gridZ || ')')    AS grid,
            ('(' || blockX || ',' || blockY || ',' || blockZ || ')') AS block,
@@ -465,7 +402,7 @@ GROUP BY path, demangledName
      cupti_activity AS (
          SELECT correlationId,
                 gridId,
-                value                                                               AS demangledName,
+                value AS demangledName,
                 grid,
                 block,
                 sharedMemoryExecuted,
