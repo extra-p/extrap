@@ -15,6 +15,8 @@ from extrap.util.caching import cached_property
 from extrap.util.deprecation import deprecated
 from extrap.util.exceptions import FileFormatError
 
+UNIT_SEPARATOR = '\x1F'
+
 _FILE_FORMAT_VERSION = 2
 
 
@@ -126,9 +128,9 @@ WHERE eventType = 59
         self.db.execute(f"""-- Create result table including the correlations
 CREATE TABLE EXTRAP_RESOLVED_CALLPATHS AS
 SELECT correlationId,
-       callpath || '|->' || value AS callpath,
-       MAX(depth) + 1             AS stackDepth,
-       CA.end - CA.start          AS duration
+       callpath || char(31) || '->' || value AS callpath,
+       MAX(depth) + 1                        AS stackDepth,
+       CA.end - CA.start                     AS duration
 FROM EXTRAP_TEMP_CALLPATHS
          INNER JOIN main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
                     ON EXTRAP_TEMP_CALLPATHS.start < CA.start AND CA.end < EXTRAP_TEMP_CALLPATHS.end AND
@@ -169,20 +171,21 @@ WHERE EXTRAP_RESOLVED_CALLPATHS.stackDepth = ?
 
     @cached_property
     def _symbol_table(self):
-        table = self.db.execute("""SELECT SUBSTR(value, 4, pos - 5) AS ptr, SUBSTR(value, pos) AS name
-FROM (SELECT *, INSTR(SUBSTR(value, 4), '|') + 4 AS pos
+        table = self.db.execute("""-- Extracts symbol table from StringIds
+SELECT SUBSTR(value, 4, pos - 5) AS ptr, SUBSTR(value, pos) AS name
+FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
       FROM StringIds
       WHERE id BETWEEN (SELECT id FROM StringIds WHERE value = "EXTRA_PROF_SYMBOLS")
           AND (SELECT id FROM StringIds WHERE value = "EXTRA_PROF_SYMBOLS_END")
-        AND VALUE LIKE "EP|%")""")
+        AND VALUE LIKE "EP" || char(31) || "%")""")
         return dict(table)
 
     def decode_callpath(self, callpath):
-        if callpath[0] != '|':
+        if callpath[0] != UNIT_SEPARATOR:
             return callpath
-        ptrs = callpath[1:].split('|')
+        ptrs = callpath[1:].split(UNIT_SEPARATOR)
         rest = None
-        if ptrs[-1][0] == '-':
+        if ptrs[-1].startswith('->'):
             rest = ptrs[-1]
             ptrs = ptrs[:-1]
 
