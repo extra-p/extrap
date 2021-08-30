@@ -94,7 +94,7 @@ class NsightFileReader(AbstractDirectoryReader):
                         # iterate over all callpaths and get time
                         for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
 
-                            callpath=parsed.decode_callpath(callpath)
+                            callpath = parsed.decode_callpath(callpath)
                             pbar.update(0)
                             if kernelName:
                                 aggregated_values[
@@ -140,6 +140,13 @@ class NsightFileReader(AbstractDirectoryReader):
                                     durationCopy / 10 ** 9)
                                 aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(
                                     bytes)
+                        for callpath, duration in parsed.get_gpu_idle():
+                            callpath = parsed.decode_callpath(callpath)
+                            pbar.update(0)
+                            if duration:
+                                aggregated_values[
+                                    (Callpath(callpath + '->GPU IDLE', agg__usage__disabled=True, gpu__idle=True),
+                                     metric)].append(duration / 10 ** 9)
                         for id, callpath, name, duration in parsed.get_os_runtimes():
                             callpath = parsed.decode_callpath(callpath)
                             pbar.update(0)

@@ -76,22 +76,33 @@ class NsysReport:
                     warnings.warn(f"Version {self._get_extrap_format_version()} of the Extra-P callpath data is "
                                   "not supported by this Extra-P version, this may cause problems.")
                     return
+                elif not self._check_table_exists('EXTRAP_GPU_IDLE') and self._check_table_exists('NVTX_EVENTS'):
+                    domain_id = self._ep_nvtx_domain_id()
+                    if domain_id:
+                        self._prepare_gpu_idle(domain_id)
                 else:
                     return
 
             if self._check_table_exists('NVTX_EVENTS'):
                 # if possible use extra_prof data
-                domain_id = self.db.execute(
-                    "SELECT domainId FROM NVTX_EVENTS WHERE eventType=75 AND text='de.tu-darmstadt.parallel.extra_prof' LIMIT 1").fetchone()
+                domain_id = self._ep_nvtx_domain_id()
                 if domain_id:
-                    domain_id = int(domain_id[0])
                     self._prepare_callpaths_from_extra_prof(domain_id)
                     self._convert_to_exclusive()
                     self._update_extrap_format_version()
+                    self._prepare_gpu_idle(domain_id)
                     return
             else:
                 self._prepare_callpaths_from_nsys_tracing()
                 self._update_extrap_format_version()
+
+    def _ep_nvtx_domain_id(self):
+        domain_id = self.db.execute(
+            "SELECT domainId FROM NVTX_EVENTS WHERE eventType=75 AND text='de.tu-darmstadt.parallel.extra_prof' LIMIT 1").fetchone()
+        if domain_id:
+            return int(domain_id[0])
+        else:
+            return None
 
     def _prepare_callpaths_from_nsys_tracing(self):
         self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
@@ -117,9 +128,18 @@ GROUP BY correlationId
 
     def _prepare_callpaths_from_extra_prof(self, domain_id):
         self.db.execute("""-- Create index for fast correlation
-                CREATE INDEX IF NOT EXISTS EXTRAP_NVTX_INDEX
-                ON NVTX_EVENTS (globalTid, start, end);
+CREATE INDEX IF NOT EXISTS EXTRAP_NVTX_INDEX_START
+    ON NVTX_EVENTS (domainId, eventType, start);
                 """)
+        self.db.execute("""-- Create index for fast correlation
+CREATE INDEX IF NOT EXISTS EXTRAP_NVTX_INDEX_END
+    ON NVTX_EVENTS (domainId, eventType, end);
+                        """)
+        self.db.execute("""-- Create index for fast correlation
+CREATE INDEX IF NOT EXISTS EXTRAP_NVTX_INDEX
+    ON NVTX_EVENTS (globalTid, start, end);
+                                """)
+
         self.db.execute(f"""CREATE TEMP VIEW EXTRAP_TEMP_CALLPATHS AS
 SELECT start, end, text AS callpath, uint32Value AS depth, globalTid
 FROM NVTX_EVENTS
@@ -175,6 +195,76 @@ WHERE EXTRAP_RESOLVED_CALLPATHS.stackDepth = ?
           AND temp.stackDepth = ?
           AND temp.callpath LIKE EXTRAP_RESOLVED_CALLPATHS.callpath || '%'
     )""", [depth + 1, depth, depth + 1])
+
+    def _prepare_gpu_idle(self, domain_id):
+        self.db.execute(f"""CREATE TEMP VIEW IF NOT EXISTS EXTRAP_TEMP_CALLPATHS AS
+SELECT start, end, text AS callpath, uint32Value AS depth, globalTid
+FROM NVTX_EVENTS
+WHERE eventType = 59
+  AND domainId = {domain_id}
+  AND text IS NOT NULL
+            """)
+        self.db.execute("""CREATE TABLE IF NOT EXISTS EXTRAP_GPU_IDLE AS
+WITH steps AS (
+    SELECT ROW_NUMBER() OVER ( ORDER BY e_step ) RowNum, *
+    FROM (SELECT NVTX_EVENTS.start AS e_step, correlationId
+          FROM NVTX_EVENTS
+                   INNER JOIN CUPTI_ACTIVITY_KIND_KERNEL AS CAKK
+                              ON (NVTX_EVENTS.start BETWEEN CAKK.start AND CAKK.end)
+          WHERE domainId = :domainId
+            AND eventType = 59
+          UNION ALL
+          SELECT NVTX_EVENTS.end AS e_step, correlationId
+          FROM NVTX_EVENTS
+                   INNER JOIN CUPTI_ACTIVITY_KIND_KERNEL AS CAKK ON (NVTX_EVENTS.end BETWEEN CAKK.start AND CAKK.end)
+          WHERE domainId = :domainId
+            AND eventType = 59
+          UNION ALL
+          SELECT DISTINCT CAKK.start AS e_step, correlationId
+          FROM NVTX_EVENTS
+                   INNER JOIN CUPTI_ACTIVITY_KIND_KERNEL AS CAKK
+                              ON (NVTX_EVENTS.start BETWEEN CAKK.start AND CAKK.end) OR
+                                 (NVTX_EVENTS.end BETWEEN CAKK.start AND CAKK.end)
+          WHERE domainId = :domainId
+            AND eventType = 59
+          UNION ALL
+          SELECT DISTINCT CAKK.end AS e_step, correlationId
+          FROM NVTX_EVENTS
+                   INNER JOIN CUPTI_ACTIVITY_KIND_KERNEL AS CAKK
+                              ON (NVTX_EVENTS.start BETWEEN CAKK.start AND CAKK.end) OR
+                                 (NVTX_EVENTS.end BETWEEN CAKK.start AND CAKK.end)
+          WHERE domainId = :domainId
+            AND eventType = 59
+         )),
+     split_up_kernels AS (
+         SELECT steps.e_step AS start, steps2.e_step AS END, steps.correlationId AS correlationId
+         FROM steps
+                  INNER JOIN steps AS steps2
+                             ON steps.RowNum + 1 = steps2.RowNum AND steps.correlationId = steps2.correlationId),
+     gpu_busy AS (
+         SELECT start, end, correlationId
+         FROM CUPTI_ACTIVITY_KIND_KERNEL
+         WHERE CUPTI_ACTIVITY_KIND_KERNEL.correlationId NOT IN
+               (SELECT split_up_kernels.correlationId FROM split_up_kernels)
+         UNION ALL
+         SELECT *
+         FROM split_up_kernels),
+     gpu_busy_agg AS (
+         SELECT callpath, SUM(gpu_busy.end - gpu_busy.start) AS duration
+         FROM EXTRAP_TEMP_CALLPATHS
+                  INNER JOIN gpu_busy ON EXTRAP_TEMP_CALLPATHS.start <= gpu_busy.start
+             AND gpu_busy.end <= EXTRAP_TEMP_CALLPATHS.end AND
+                                         EXTRAP_TEMP_CALLPATHS.start = (SELECT MAX(EXTRAP_TEMP_CALLPATHS.start)
+                                                                        FROM EXTRAP_TEMP_CALLPATHS
+                                                                        WHERE EXTRAP_TEMP_CALLPATHS.start <= gpu_busy.start
+                                                                          AND gpu_busy.end <= EXTRAP_TEMP_CALLPATHS.end)
+         GROUP BY EXTRAP_TEMP_CALLPATHS.callpath)
+SELECT EXTRAP_RESOLVED_CALLPATHS.callpath, EXTRAP_RESOLVED_CALLPATHS.duration - gpu_busy_agg.duration AS duration
+FROM EXTRAP_RESOLVED_CALLPATHS
+         INNER JOIN gpu_busy_agg ON gpu_busy_agg.callpath = EXTRAP_RESOLVED_CALLPATHS.callpath
+WHERE correlationId IS NULL
+  AND gpu_busy_agg.duration < EXTRAP_RESOLVED_CALLPATHS.duration
+      """, {"domainId": 1})
 
     @cached_property
     def _symbol_table(self):
@@ -395,6 +485,11 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
 GROUP BY callpath, demangledName 
 """))
+
+    def get_gpu_idle(self) -> List[Tuple[str, int]]:
+        if not self._check_table_exists('EXTRAP_GPU_IDLE'):
+            return []
+        return list(self.db.execute("""SELECT * FROM EXTRAP_GPU_IDLE"""))
 
     def get_kernelid_paths(self) -> Cursor:
 
