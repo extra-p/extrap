@@ -8,8 +8,7 @@
 import sqlite3
 import warnings
 from pathlib import Path
-from sqlite3 import Cursor
-from typing import Tuple, List
+from typing import Tuple, List, Generator
 
 from extrap.util.caching import cached_property
 from extrap.util.deprecation import deprecated
@@ -277,7 +276,7 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
         AND VALUE LIKE "EP" || char(31) || "%")""")
         return dict(table)
 
-    def decode_callpath(self, callpath):
+    def decode_callpath(self, callpath: str) -> str:
         if callpath[0] != UNIT_SEPARATOR:
             return callpath
         ptrs = callpath[1:].split(UNIT_SEPARATOR)
@@ -291,11 +290,10 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
             callpath += rest
         return callpath
 
-    def get_mem_copies(self) -> List[Tuple[int, str, str, str, float, int, str, float]]:
+    def get_mem_copies(self) -> List[Tuple[int, str, str, float, int, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMCPY'):
             return []
-        c = self.db.cursor()
-        return list(c.execute("""WITH cupti_memory AS (
+        query_result = self.db.execute("""WITH cupti_memory AS (
     SELECT correlationId,
            (end - start) AS duration,
            CASE copyKind
@@ -373,13 +371,14 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
                INNER JOIN cupti_activity
                           ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
 GROUP BY callpath, demangledName, copyKind 
-    """))
+    """)
+        return [(correlation_id, self.decode_callpath(callpath), name, duration, bytes, copyKind, other_duration)
+                for correlation_id, callpath, name, duration, bytes, copyKind, other_duration in query_result]
 
-    def get_synchronization(self) -> List[Tuple[int, str, str, str, float, float, str, float]]:
+    def get_synchronization(self) -> List[Tuple[int, str, str, float, float, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION'):
             return []
-        c = self.db.cursor()
-        return list(c.execute("""WITH cupti_synchronization AS (
+        result = self.db.execute("""WITH cupti_synchronization AS (
     SELECT correlationId,
            (END - START) AS duration,
            NULL          AS durationGPU,
@@ -440,13 +439,14 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
                INNER JOIN cupti_activity
                           ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
 GROUP BY callpath, demangledName, syncType 
-    """))
+    """)
+        return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
+                for correlation_id, callpath, name, duration, durationGPU, syncType, other_duration in result]
 
     def get_kernel_runtimes(self) -> List[Tuple[int, str, str, str, float, float, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_KERNEL'):
             return []
-        c = self.db.cursor()
-        return list(c.execute("""WITH cupti_kernel AS (
+        result = self.db.execute("""WITH cupti_kernel AS (
     SELECT correlationId,
            NULL                                                     AS duration,
            (end - start)                                            AS durationGPU,
@@ -484,17 +484,18 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
                LEFT JOIN cupti_activity
                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
 GROUP BY callpath, demangledName 
-"""))
+""")
+        return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
+                for correlation_id, callpath, name, duration, durationGPU, syncType, other_duration in result]
 
     def get_gpu_idle(self) -> List[Tuple[str, int]]:
         if not self._check_table_exists('EXTRAP_GPU_IDLE'):
             return []
-        return list(self.db.execute("""SELECT * FROM EXTRAP_GPU_IDLE"""))
+        result = self.db.execute("""SELECT * FROM EXTRAP_GPU_IDLE""")
+        return [(self.decode_callpath(callpath), duration) for callpath, duration in result]
 
-    def get_kernelid_paths(self) -> Cursor:
-
-        c = self.db.cursor()
-        return c.execute("""WITH cupti_kernel AS (
+    def get_kernelid_paths(self) -> Generator[Tuple[str, str, str, int, str], None, None]:
+        result = self.db.execute("""WITH cupti_kernel AS (
     SELECT correlationId,
            gridId,
            (end - start)                                            AS durationGPU,
@@ -525,8 +526,10 @@ FROM cupti_activity
          LEFT JOIN EXTRAP_RESOLVED_CALLPATHS ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId
 
     """)
+        return ((name, grid, block, sharedMem, self.decode_callpath(callpath))
+                for (name, grid, block, sharedMem, callpath) in result)
 
-    def get_peak_flops(self):
+    def get_peak_flops(self) -> float:
         return self.db.execute("""-- Calculates peak FLOPs
 SELECT SUM(numThreadsPerWarp * coreClockRate * maxIPC * numMultiprocessors)
            AS peak_flops
