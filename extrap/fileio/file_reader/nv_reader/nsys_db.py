@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
 
 import sqlite3
 import warnings
@@ -66,8 +67,8 @@ class NsysReport:
                     self.db.execute("DROP VIEW EXTRAP_RESOLVED_CALLPATHS")
                 elif self._get_extrap_format_version() < 1:
                     self.db.execute("""-- Add uncorrelated node to callpaths
-                    INSERT INTO EXTRAP_RESOLVED_CALLPATHS (correlationId, path, callpath, stackDepth)
-                    VALUES (0, '0', '[Uncorrelated]', 0)""")
+                    INSERT INTO EXTRAP_RESOLVED_CALLPATHS (correlationId, callpath, stackDepth)
+                    VALUES (0, '[Uncorrelated]', 0)""")
                     self._convert_to_exclusive()
                     self._update_extrap_format_version()
                     return
