@@ -92,6 +92,13 @@ class NsightFileReader(AbstractDirectoryReader):
                     pbar.update()
                     with NsysReport(path) as parsed:
                         # iterate over all callpaths and get time
+                        for callpath, duration in parsed.get_gpu_idle():
+                            pbar.update(0)
+                            if duration:
+                                aggregated_values[
+                                    (Callpath(callpath + '->GPU IDLE', agg__usage__disabled=True, gpu__idle=True,
+                                              validation__ignore__num_measurements=True),
+                                     metric)].append(duration / 10 ** 9)
                         for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
                             pbar.update(0)
                             if kernelName:
@@ -136,12 +143,6 @@ class NsightFileReader(AbstractDirectoryReader):
                                     durationCopy / 10 ** 9)
                                 aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(
                                     bytes)
-                        for callpath, duration in parsed.get_gpu_idle():
-                            pbar.update(0)
-                            if duration:
-                                aggregated_values[
-                                    (Callpath(callpath + '->GPU IDLE', agg__usage__disabled=True, gpu__idle=True),
-                                     metric)].append(duration / 10 ** 9)
                         for id, callpath, name, duration in parsed.get_os_runtimes():
                             pbar.update(0)
                             if duration:
@@ -173,7 +174,9 @@ class NsightFileReader(AbstractDirectoryReader):
         # add common callpaths and metrics to experiment
         for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
             value: List[Measurement]
-            if len(value) < num_points and not key[0].lookup_tag('gpu__overlap', False):
+
+            if len(value) < num_points and (
+                    not key[0].lookup_tag('validation__ignore__num_measurements', False) or len(value) <= 1):
                 to_delete.append(key)
             else:
                 (callpath, metric) = key
