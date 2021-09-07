@@ -454,7 +454,7 @@ GROUP BY callpath, demangledName, syncType
         return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
                 for correlation_id, callpath, name, duration, durationGPU, syncType, other_duration in result]
 
-    def get_kernel_runtimes(self) -> List[Tuple[int, str, str, str, float, float, float]]:
+    def get_kernel_runtimes(self) -> List[Tuple[int, str, str, float, float, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_KERNEL'):
             return []
         result = self.db.execute("""WITH cupti_kernel AS (
@@ -496,8 +496,8 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
 GROUP BY callpath, demangledName 
 """)
-        return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
-                for correlation_id, callpath, name, duration, durationGPU, syncType, other_duration in result]
+        return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, other_duration)
+                for correlation_id, callpath, name, duration, durationGPU, other_duration in result]
 
     def get_gpu_idle(self) -> List[Tuple[str, int]]:
         if not self._check_table_exists('EXTRAP_GPU_IDLE'):
