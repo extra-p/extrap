@@ -18,10 +18,10 @@ class TestOutput(unittest.TestCase):
 
     def test_print(self):
         self.assertOutputRegex(
-            "time,\s+merge\:\s+errors\:\s+3\.12E\+02,\s+7\.83E\-02\s+"
-            "time,\s+sort\:\s+errors\:\s+3\.12E\+02,\s+7\.83E\-02\s+"
-            "flops,\s+merge\:\s+errors\:\s+3\.12E\+02,\s+7\.83E\-02\s+"
-            "flops,\s+sort\:\s+errors\:\s+3\.12E\+02,\s+7\.83E\-02",
+            "time,\s+merge\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
+            "time,\s+sort\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
+            "flops,\s+merge\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
+            "flops,\s+sort\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s*",
             extrap.main,
             ['--print', '{metric}, {callpath}: Errors: {rss}, {re}', '--text', 'data/text/two_parameter_3.txt'])
 
@@ -34,10 +34,10 @@ class TestOutput(unittest.TestCase):
             extrap.main, ['--print', '{measurements}', '--text', 'data/text/one_parameter_1.txt'])
 
         self.assertOutputRegex(
-            "time,\s+merge\:\s+3\.12E\+02\/6\.64E\+00\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
-            "time,\s+sort\:\s+3\.12E\+02\/6\.64E\+00\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
-            "flops,\s+merge\:\s+3\.12E\+02\/6\.64E\+00\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
-            "flops,\s+sort\:\s+3\.12E\+02\/6\.64E\+00\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)",
+            "time,\s+merge\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            "time,\s+sort\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            "flops,\s+merge\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            "flops,\s+sort\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)",
             extrap.main,
             ['--print', '{metric}, {callpath}: {rss}/{smape} {model}', '--text', 'data/text/two_parameter_3.txt'])
 
@@ -141,7 +141,7 @@ class TestOutput(unittest.TestCase):
                 "(4.00E+01, 3.00E+00) | (4.00E+01, 4.00E+00) | (4.00E+01, 5.00E+00) | (5.00E+01, 1.00E+00) | " \
                 "(5.00E+01, 2.00E+00) | (5.00E+01, 3.00E+00) | (5.00E+01, 4.00E+00) | (5.00E+01, 5.00E+00) | " \
                 "(6.00E+01, 1.00E+00) | (6.00E+01, 2.00E+00) | (6.00E+01, 3.00E+00) | (6.00E+01, 4.00E+00) | " \
-                "(6.00E+01, 5.00E+00)\n\t3.12E+02:x y\n" * 4
+                "(6.00E+01, 5.00E+00)\n\t312.47721968273464:x y\n" * 4
         self.assertEqual(truth, output.fmt_output(self.exp, "{points}\n\t{rss}:{parameters}"))
 
     def test_measurement_formatting(self):
@@ -183,6 +183,18 @@ class TestOutput(unittest.TestCase):
         self.assertEqual("mergea\nsorta\nmergea\nsorta\n", output.fmt_output(self.exp, "{callpath}a"))
         self.assertEqual("merge{a}\nsort{a}\nmerge{a}\nsort{a}\n", output.fmt_output(self.exp, "{callpath}{{a}}"))
         self.assertEqual("{merge}\n{sort}\n{merge}\n{sort}\n", output.fmt_output(self.exp, "{{{callpath}}}"))
+        self.assertEqual("{312.48}:time:merge"
+                         "{312.48}:time:sort"
+                         "{312.48}:flops:merge"
+                         "{312.48}:flops:sort", output.fmt_output(self.exp, "{{{rss:.2f}}}:{metric}:{callpath}"))
+        self.assertEqual("{312.48:time}:merge"
+                         "{312.48:time}:sort"
+                         "{312.48:flops}:merge"
+                         "{312.48:flops}:sort", output.fmt_output(self.exp, "{{{rss:.2f}:{metric}}}:{callpath}"))
+        self.assertEqual("{{312.48:time:merge"
+                         "{{312.48:time:sort"
+                         "{{312.48:flops:merge"
+                         "{{312.48:flops:sort", output.fmt_output(self.exp, "{{{{{rss:.2f}:{metric}:{callpath}"))
 
     def test_error_message(self):
         self.assertRaises(OutputFormatError,
@@ -191,8 +203,6 @@ class TestOutput(unittest.TestCase):
                           output.fmt_output, self.exp, "{{{callpath}}")
         self.assertRaises(OutputFormatError,
                           output.fmt_output, self.exp, "{callpath")
-        self.assertRaises(OutputFormatError,
-                          output.fmt_output, self.exp, "{smapee}")
 
     def assertOutputRegex(self, regex, command, *args, **kwargs):
         temp_stdout = StringIO()

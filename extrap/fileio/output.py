@@ -12,6 +12,11 @@ class OutputFormatError(RecoverableError):
         super().__init__(*args)
 
 
+class SafeDict(dict):
+    def __missing__(self, key):
+        return '{' + key + '}'
+
+
 def format_parameters(input_str: str, experiment: Experiment):
     param_list = [p.name for p in experiment.parameters]
 
@@ -43,6 +48,10 @@ def format_points(options: str, experiment: Experiment):
         point = format_point(p, param_list, point_format)
         if points_format != "":
             placeholder = parse_outer_brackets(points_format)
+            if placeholder:
+                while placeholder[0][0] == "{" and placeholder[0][-1] == "}":
+                    placeholder = parse_outer_brackets(placeholder[0])
+
             if len(placeholder) == 1 and re_point.search(*placeholder) is not None:
                 final_text += points_format.replace(f"{{{placeholder[0]}}}", point_sep.join(point)) + points_sep
             else:
@@ -90,12 +99,11 @@ def format_measurements(input_str: str, experiment: Experiment, model):
 
         if m_format != "":
             point_string = next((str for str in parse_outer_brackets(m_format) if "point" in str), "")
-
-            m_string = m_format.replace("{mean}", "{:.2E}".format(mean)) \
-                .replace("{median}", "{:.2E}".format(median)) \
-                .replace("{std}", "{:.2E}".format(std)) \
-                .replace("{min}", "{:.2E}".format(min)) \
-                .replace("{max}", "{:.2E}".format(max))
+            print(m_format)
+            m_string = m_format.format_map(SafeDict(mean=mean, median=median, std=std, min=min, max=max))  # TODO does not work
+            # .replace("{mean}", "{:.2E}".format(mean)).replace("{median}", "{:.2E}".format(median)) \
+            # .replace("{std}", "{:.2E}".format(std)).replace("{min}", "{:.2E}".format(min)) \
+            # .replace("{max}", "{:.2E}".format(max))
 
             if point_string != "":
                 m_string = m_string.replace("{%s}" % point_string, point_sep.join(point))
@@ -184,6 +192,7 @@ def fmt_output(experiment: Experiment, printtype: str):
     print_str = parse_apostrophe(print_str)
     models = experiment.modelers[0].models
 
+    # TODO how to implement brace escape?
     options = parse_outer_brackets(print_str)  # convert from input string to list
     text = ""
 
@@ -236,16 +245,14 @@ def fmt_output(experiment: Experiment, printtype: str):
                     param_text = format_parameters(data.group(2), experiment)
                     temp, print_param = _remove_duplicates_with_leading_question_mark(o, param_text, print_param, temp)
 
-                elif any(o == m for m in ("smape", "rrss", "rss", "ar2", "re")):
+                elif any(m in o for m in ("smape", "rrss", "rss", "ar2", "re")):
                     continue
                 else:
                     raise OutputFormatError(f"Invalid placeholder: {o}")
 
-            temp = temp.replace("{smape}", "{:.2E}".format(m.hypothesis.SMAPE)).replace("{rrss}", "{:.2E}".format(
-                m.hypothesis.rRSS)).replace("{rss}", "{:.2E}".format(m.hypothesis.RSS)).replace("{ar2}",
-                                                                                                "{:.2E}".format(
-                                                                                                    m.hypothesis.AR2)).replace(
-                "{re}", "{:.2E}".format(m.hypothesis.RE))
+            temp = temp.format_map(SafeDict(smape=m.hypothesis.SMAPE, rrss=m.hypothesis.rRSS, rss=m.hypothesis.RSS,
+                               ar2=m.hypothesis.AR2, re=m.hypothesis.RE))
+                                # TODO does not work
 
             text += (temp + "\n")
 
