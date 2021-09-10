@@ -18,10 +18,10 @@ class TestOutput(unittest.TestCase):
 
     def test_print(self):
         self.assertOutputRegex(
-            "time,\s+merge\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
-            "time,\s+sort\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
-            "flops,\s+merge\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
-            "flops,\s+sort\:\s+errors\:\s+312.47721968273464,\s+0.07834117602360756\s*",
+            "time,\s+merge\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
+            "time,\s+sort\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
+            "flops,\s+merge\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
+            "flops,\s+sort\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s*",
             extrap.main,
             ['--print', '{metric}, {callpath}: Errors: {rss}, {re}', '--text', 'data/text/two_parameter_3.txt'])
 
@@ -157,7 +157,7 @@ class TestOutput(unittest.TestCase):
         self.assertEqual(truth, output.fmt_output(self.exp,
                                                   "{callpath},{metric}:"
                                                   "{measurements: format: "
-                                                  "'{point:sep:';'; format:'{parameter}{coordinate:.3f}'}:{mean}';"
+                                                  "'{point:sep:';'; format:'{parameter}{coordinate:.3f}'}:{mean:.2E}';"
                                                   "sep:'|'}"))
 
     def test_brace_escape_parameter(self):
@@ -172,29 +172,29 @@ class TestOutput(unittest.TestCase):
              "{2.84E+02}{q},{3.64E+02}{q},{4.21E+02}{q},{9.89E-01}{q},{3.18E+02}{q},{5.09E+02}{q},{6.43E+02}{q},"
              "{7.44E+02}{q},{1.00E+00}{q},{5.02E+02}{q},{7.95E+02}{q},{1.00E+03}{q},{1.17E+03}{q},{1.00E+00}{q},"
              "{7.26E+02}{q},{1.14E+03}{q},{1.44E+03}{q},{1.66E+03}{q} 312.47721968273464\n") * 4,
-            output.fmt_output(self.exp, "{measurements: sep:',' format:'{{{mean}}}{{q}}'} {rss}"))
+            output.fmt_output(self.exp, "{measurements: sep:',' format:'{{{mean:.2E}}}{{q}}'} {rss}"))
         self.assertEqual(
             ("{9.99E-01},{8.11E+01},{1.28E+02},{1.62E+02},{1.87E+02},{1.00E+00},{1.82E+02},{2.84E+02},{3.64E+02},"
              "{4.21E+02},{9.89E-01},{3.18E+02},{5.09E+02},{6.43E+02},{7.44E+02},{1.00E+00},{5.02E+02},{7.95E+02},"
              "{1.00E+03},{1.17E+03},{1.00E+00},{7.26E+02},{1.14E+03},{1.44E+03},{1.66E+03}\n") * 4,
-            output.fmt_output(self.exp, "{measurements: sep:',' format:'{{{mean}}}'}"))
+            output.fmt_output(self.exp, "{measurements: sep:',' format:'{{{mean:.2E}}}'}"))
 
     def test_brace_escape(self):
         self.assertEqual("mergea\nsorta\nmergea\nsorta\n", output.fmt_output(self.exp, "{callpath}a"))
         self.assertEqual("merge{a}\nsort{a}\nmerge{a}\nsort{a}\n", output.fmt_output(self.exp, "{callpath}{{a}}"))
         self.assertEqual("{merge}\n{sort}\n{merge}\n{sort}\n", output.fmt_output(self.exp, "{{{callpath}}}"))
-        self.assertEqual("{312.48}:time:merge"
-                         "{312.48}:time:sort"
-                         "{312.48}:flops:merge"
-                         "{312.48}:flops:sort", output.fmt_output(self.exp, "{{{rss:.2f}}}:{metric}:{callpath}"))
-        self.assertEqual("{312.48:time}:merge"
-                         "{312.48:time}:sort"
-                         "{312.48:flops}:merge"
-                         "{312.48:flops}:sort", output.fmt_output(self.exp, "{{{rss:.2f}:{metric}}}:{callpath}"))
-        self.assertEqual("{{312.48:time:merge"
-                         "{{312.48:time:sort"
-                         "{{312.48:flops:merge"
-                         "{{312.48:flops:sort", output.fmt_output(self.exp, "{{{{{rss:.2f}:{metric}:{callpath}"))
+        self.assertEqual("{312.48}:time:merge\n"
+                         "{312.48}:time:sort\n"
+                         "{312.48}:flops:merge\n"
+                         "{312.48}:flops:sort\n", output.fmt_output(self.exp, "{{{rss:.2f}}}:{metric}:{callpath}"))
+        self.assertEqual("{312.48:time}:merge\n"
+                         "{312.48:time}:sort\n"
+                         "{312.48:flops}:merge\n"
+                         "{312.48:flops}:sort\n", output.fmt_output(self.exp, "{{{rss:.2f}:{metric}}}:{callpath}"))
+        self.assertEqual("{{312.48:time:merge\n"
+                         "{{312.48:time:sort\n"
+                         "{{312.48:flops:merge\n"
+                         "{{312.48:flops:sort\n", output.fmt_output(self.exp, "{{{{{rss:.2f}:{metric}:{callpath}"))
 
     def test_error_message(self):
         self.assertRaises(OutputFormatError,
@@ -209,7 +209,14 @@ class TestOutput(unittest.TestCase):
         with contextlib.redirect_stdout(temp_stdout):
             command(*args, **kwargs)
         output = temp_stdout.getvalue().strip()
-        self.assertRegex(output, regex)
+        try:
+            self.assertRegex(output, regex)
+        except Exception:
+            print()
+            print("####### ORIGINAL OUTPUT #######")
+            print(output)
+            print("####### END OF ORIGINAL OUTPUT #######")
+            raise
 
     def assertOutput(self, expected, command, *args, **kwargs):
         temp_stdout = StringIO()

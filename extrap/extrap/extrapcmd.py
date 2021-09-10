@@ -83,7 +83,7 @@ def main(args=None, prog=None):
     # set log level
     loglevel = logging.getLevelName(arguments.log_level.upper())
     # set output print type
-    printtype = arguments.print_type.upper()
+    printtype = arguments.print_type
 
     # set log format location etc.
     if loglevel == logging.DEBUG:
