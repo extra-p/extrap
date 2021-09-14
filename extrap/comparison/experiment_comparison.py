@@ -6,7 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 from functools import reduce
-from typing import List, Sequence, Union, Mapping
+from typing import List, Sequence, Union
 
 import numpy as np
 
@@ -23,6 +23,7 @@ from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.util.unique_list import UniqueList
 
 COMPARISON_NODE_NAME = '[Comparison]'
 
@@ -149,12 +150,13 @@ class ComparisonExperiment(Experiment):
     def do_initial_checks(self):
         if self.exp1.parameters != self.exp2.parameters:
             raise ComparisonError("Parameters do not match.")
-        if self.exp1.coordinates != self.exp2.coordinates:
-            raise ComparisonError("Coordinates do not match.")
+        # if self.exp1.coordinates != self.exp2.coordinates:
+        #     raise ComparisonError("Coordinates do not match.")
         if self.exp1.scaling is not None and self.exp2.scaling is not None and self.exp1.scaling != self.exp2.scaling:
             raise ComparisonError("Scaling does not match.")
         self.parameters = self.exp1.parameters
-        self.coordinates = self.exp1.coordinates
+        self.coordinates = UniqueList(self.exp1.coordinates)
+        self.coordinates.extend(self.exp2.coordinates)
         self.scaling = self.exp1.scaling
 
     def try_metric_merge(self):

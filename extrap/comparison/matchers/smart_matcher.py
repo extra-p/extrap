@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import re
+import warnings
 from typing import Sequence, Tuple, Mapping, List, Optional, Dict, TYPE_CHECKING
 
 from extrap.comparison.matchers import AbstractMatcher
@@ -52,10 +53,15 @@ class SmartMatcher(AbstractMatcher):
         call_tree[1].ensure_callpaths_exist()
         main_node0 = self._find_main(call_tree[0])
         main_node1 = self._find_main(call_tree[1])
-        n = Node(self._normalizeName(main_node0.name), Callpath('main'))
-        matches[n] = [main_node0, main_node1]
-        root.add_child_node(n)
-        self._merge_call_trees(n, main_node0, main_node1, 'main', matches, progress_bar)
+        if main_node0 and main_node1:
+            n = Node(self._normalizeName(main_node0.name), Callpath('main'))
+            matches[n] = [main_node0, main_node1]
+            root.add_child_node(n)
+            self._merge_call_trees(n, main_node0, main_node1, 'main', matches, progress_bar)
+        else:
+            warnings.warn(
+                "Method main could not be found in one or both call-trees. Extra-P will continue with direct match.")
+            self._merge_call_trees(root, call_tree[0], call_tree[1], 'main', matches, progress_bar)
         return root, matches
 
     def make_measurements_and_update_call_tree(self, experiment: ComparisonExperiment,
@@ -116,6 +122,8 @@ class SmartMatcher(AbstractMatcher):
                     for child in node:
                         if child in call_tree_match:
                             s_child = call_tree_match[child][i]
+                            if s_child not in children:
+                                continue
                             children.remove(s_child)
 
                     # create aggregated subtree
@@ -201,7 +209,7 @@ class SmartMatcher(AbstractMatcher):
 
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar):
-        from extrap.comparison.experiment_comparison import PlaceholderModeler, ComparisonModel
+        from extrap.comparison.experiment_comparison import ComparisonModel
         mg = ModelGenerator(experiment, NotImplemented, name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in experiment.metrics_match.items():

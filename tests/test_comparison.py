@@ -45,6 +45,14 @@ class TestComparison(TestCase):
         self.check_comparison_against_source(experiment, experiment1)
         self.check_comparison_against_source(experiment, experiment2)
 
+    def test_differing_coordinate_sets(self):
+        experiment1 = TextFileReader().read_experiment('data/text/one_parameter_1.txt')
+        experiment2 = TextFileReader().read_experiment('data/comparison/one_parameter_1_other_coordinates.txt')
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
+        experiment.do_comparison()
+        # self.check_comparison_against_source(experiment, experiment1)
+        # self.check_comparison_against_source(experiment, experiment2)
+
     def test_minimal_comparison_basic_output(self):
         experiment1 = TextFileReader().read_experiment('data/text/two_parameter_5.txt')
         ModelGenerator(experiment1).model_all()
