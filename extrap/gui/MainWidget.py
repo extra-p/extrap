@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -128,27 +128,11 @@ class MainWidget(QMainWindow):
             if reader is CubeFileReader2:
                 file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
             else:
-                file_mode = None
+                file_mode = QFileDialog.FileMode.Directory if reader.LOADS_FROM_DIRECTORY else None
                 file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION,
                                      self._make_import_func(reader.DESCRIPTION, reader().read_experiment,
                                                             filter=reader.FILTER, file_mode=file_mode,
                                                             model=reader.GENERATE_MODELS_AFTER_LOAD)))
-        #
-        # file_imports = [
-        #     ('Open set of &CUBE files', 'Open a set of CUBE files for single-parameter models and generate data points '
-        #                                 'for a new experiment from them', self.open_cube_file),
-        #     ('Open &text input', 'Open text input file',
-        #      self._make_import_func('Open a Text Input File', read_text_file,
-        #                             filter="Text Files (*.txt);;All Files (*)")),
-        #     ('Open &JSON input', 'Open JSON or JSON Lines input file',
-        #      self._make_import_func('Open a JSON or JSON Lines Input File', read_json_file,
-        #                             filter="JSON (Lines) Files (*.json *.jsonl);;All Files (*)")),
-        #     ('Open Tal&pas input', 'Open Talpas input file',
-        #      self._make_import_func('Open a Talpas Input File', read_talpas_file,
-        #                             filter="Talpas Files (*.txt);;All Files (*)")),
-        #     ('Open Extra-P &3 experiment', 'Opens legacy experiment file',
-        #      self._make_import_func('Open an Extra-P 3 Experiment', read_extrap3_experiment, model=False))
-        # ]
 
         open_experiment_action = QAction('&Open experiment', self)
         open_experiment_action.setStatusTip('Opens experiment file')

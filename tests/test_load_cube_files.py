@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -62,6 +62,30 @@ class TestCubeFileLoader(unittest.TestCase):
                             set(experiment.metrics))
         CubeFileReader2().read_cube_file('data/cubeset/single_parameter', 'strong')
 
+    def test_single_parameter_inclusive(self):
+        reader = CubeFileReader2()
+        reader.use_inclusive_measurements = True
+        reader.scaling_type = 'weak'
+        experiment = reader.read_experiment('data/cubeset/single_parameter')
+        experiment_reference = CubeFileReader2().read_cube_file('data/cubeset/single_parameter', 'weak')
+        self.assertListEqual([Parameter('x')], experiment.parameters)
+        self.assertSetEqual({Coordinate(1), Coordinate(10), Coordinate(25), Coordinate(50), Coordinate(100),
+                             Coordinate(250), Coordinate(500), Coordinate(1000), Coordinate(2000)
+                             }, set(experiment.coordinates))
+        self.assertSetEqual({Callpath('main'), Callpath('main->init_mat'), Callpath('main->zero_mat'),
+                             Callpath('main->mat_mul')}, set(experiment.callpaths))
+        self.assertSetEqual({Metric('visits'), Metric('time'), Metric('min_time'), Metric('max_time'),
+                             Metric('PAPI_FP_OPS'), Metric('PAPI_L3_TCM'), Metric('PAPI_L2_TCM')},
+                            set(experiment.metrics))
+        self.assertListEqual(experiment_reference.parameters, experiment.parameters)
+        self.assertListEqual(experiment_reference.coordinates, experiment.coordinates)
+        self.assertListEqual(experiment_reference.callpaths, experiment.callpaths)
+        self.assertListEqual(experiment_reference.metrics, experiment.metrics)
+        self.assertNotEqual(experiment_reference.measurements[Callpath('main'), Metric('time')],
+                            experiment.measurements[Callpath('main'), Metric('time')])
+        reader.scaling_type = 'strong'
+        reader.read_experiment('data/cubeset/single_parameter')
+
     def test_extra_files_folders(self):
         CubeFileReader2().read_cube_file('data/cubeset/extra_folder', 'weak')
         CubeFileReader2().read_cube_file('data/cubeset/extra_file', 'weak')
@@ -81,7 +105,8 @@ class TestCubeFileLoader(unittest.TestCase):
         self.assertRaises(FileFormatError, CubeFileReader2().read_cube_file, 'data/cubeset', 'strong')
 
     def test_strong_scaling_warning(self):
-        self.assertWarnsRegex(UserWarning, 'Strong scaling', CubeFileReader2().read_cube_file, 'data/cubeset/multi_parameter', 'strong')
+        self.assertWarnsRegex(UserWarning, 'Strong scaling', CubeFileReader2().read_cube_file,
+                              'data/cubeset/multi_parameter', 'strong')
 
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter('ignore', DeprecationWarning)

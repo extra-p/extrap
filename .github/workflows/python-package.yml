@@ -5,9 +5,9 @@ name: Test extrap package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, vNext ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, vNext ]
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,6 +13,7 @@ from itertools import chain
 
 import extrap
 from extrap.fileio import experiment_io
+from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.io_helper import format_output
@@ -49,6 +50,8 @@ def main(args=None, prog=None):
     for reader in all_readers.values():
         group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
                            help=reader.DESCRIPTION)
+    group.add_argument(ExperimentReader.CMD_ARGUMENT, action="store_true", default=False, dest=ExperimentReader.NAME,
+                       help='Load Extra-P experiment and generate new models')
     input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
                                choices=["weak", "strong"],
                                help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
@@ -75,6 +78,10 @@ def main(args=None, prog=None):
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
                                 help="Saves the experiment including all models as Extra-P experiment "
                                      "(if no extension is specified, '.extra-p' is appended)")
+    output_options.add_argument("--model-set-name", action="store", metavar="NAME", default='New model',
+                                dest="model_name", type=str,
+                                help="Sets the name of the generated set of models when outputting an "
+                                     "experiment (default: 'New model')")
 
     positional_arguments.add_argument("path", metavar="FILEPATH", type=str, action="store",
                                       help="Specify a file path for Extra-P to work with")
@@ -118,12 +125,14 @@ def main(args=None, prog=None):
 
     if arguments.path is not None:
         with ProgressBar(desc='Loading file') as pbar:
-            for reader in all_readers.values():
+            for reader in chain(all_readers.values(), [ExperimentReader]):
                 if getattr(arguments, reader.NAME):
                     file_reader = reader()
-                    if reader is CubeFileReader2:
+                    if reader.LOADS_FROM_DIRECTORY:
                         if os.path.isdir(arguments.path):
-                            file_reader.scaling_type = arguments.scaling_type
+                            if reader is CubeFileReader2:
+                                file_reader.scaling_type = arguments.scaling_type
+                            experiment = file_reader.read_experiment(arguments.path, pbar)
                         else:
                             logging.error("The given path is not valid. It must point to a directory.")
                             sys.exit(1)
@@ -137,7 +146,7 @@ def main(args=None, prog=None):
 
         # initialize model generator
         model_generator = ModelGenerator(
-            experiment, modeler=arguments.modeler, use_median=use_median)
+            experiment, modeler=arguments.modeler, name=arguments.model_name, use_median=use_median)
 
         # apply modeler options
         modeler = model_generator.modeler
