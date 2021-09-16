@@ -41,5 +41,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: pytest-results-${{ matrix.python-version }}
-        path: /home/runner/work/pycubexr/pycubexr/test/junit/test-results-${{ matrix.python-version }}.xml
+        path: /home/runner/work/extrap/extrap/tests/junit/test-results-${{ matrix.python-version }}.xml
       if: ${{ always() }}
