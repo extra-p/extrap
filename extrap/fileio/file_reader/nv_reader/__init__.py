@@ -155,7 +155,11 @@ class NsightFileReader(AbstractDirectoryReader):
                             if pool is None:
                                 pool = multiprocessing.Pool()
                             with NcuReport(correponding_ncu_path) as ncuReport:
-                                measurements = ncuReport.get_measurements_parallel(parsed.get_kernelid_paths(), pool)
+                                ignore_metrics = None
+                                if self.ignore_device_attributes:
+                                    ignore_metrics = ['device__attribute', 'nvlink__']
+                                measurements = ncuReport.get_measurements_parallel(parsed.get_kernelid_paths(), pool,
+                                                                                   ignore_metrics=ignore_metrics)
                                 for (callpath, metricId), v in measurements.items():
                                     aggregated_values[
                                         (Callpath(callpath), Metric(ncuReport.string_table[metricId]))].append(v)

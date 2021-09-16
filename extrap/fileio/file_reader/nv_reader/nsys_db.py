@@ -60,10 +60,12 @@ class NsysReport:
     def _prepare_shared(self):
         with self.db:
             if self._check_table_exists('EXTRAP_RESOLVED_CALLPATHS'):
-                # if necessary upgrade to newer view
-                if self.db.execute("""SELECT name AS CNTREC
-                    FROM pragma_table_info('EXTRAP_RESOLVED_CALLPATHS')
-                    WHERE name = 'correlationId'""").fetchone() is None:
+                # if necessary upgrade to newer table
+                if self.db.execute("""SELECT name AS CNTREC FROM pragma_table_info('EXTRAP_RESOLVED_CALLPATHS')
+                                        WHERE name = 'correlationId'""").fetchone() is None:
+                    self.db.execute("DROP VIEW EXTRAP_RESOLVED_CALLPATHS")
+                elif self.db.execute("""SELECT name FROM sqlite_master WHERE type = 'view'
+                                            AND name = 'EXTRAP_RESOLVED_CALLPATHS'""").fetchone() is not None:
                     self.db.execute("DROP VIEW EXTRAP_RESOLVED_CALLPATHS")
                 elif self._get_extrap_format_version() < 1:
                     self.db.execute("""-- Add uncorrelated node to callpaths
@@ -94,6 +96,7 @@ class NsysReport:
                     return
             else:
                 self._prepare_callpaths_from_nsys_tracing()
+                self._convert_to_exclusive()
                 self._update_extrap_format_version()
 
     def _ep_nvtx_domain_id(self):
@@ -105,7 +108,7 @@ class NsysReport:
             return None
 
     def _prepare_callpaths_from_nsys_tracing(self):
-        self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
+        self.db.execute("""CREATE TABLE IF NOT EXISTS EXTRAP_RESOLVED_CALLPATHS AS
 WITH resolved_callchains AS (
     SELECT CUDA_CALLCHAINS.id, symbol, stackDepth, value AS name
     FROM CUDA_CALLCHAINS
@@ -113,11 +116,11 @@ WITH resolved_callchains AS (
     WHERE unresolved IS NULL
     ORDER BY CUDA_CALLCHAINS.id, stackDepth DESC
 ),
-     callchains AS (SELECT id, MAX(stackDepth) AS stackDepth, GROUP_CONCAT(name, '->') AS callpath
+     callchains AS (SELECT id, MAX(stackDepth) AS stackDepth, GROUP_CONCAT(REPLACE(name,'->','- >'), '->') AS callpath
                     FROM resolved_callchains
                     GROUP BY id)
 SELECT correlationId,
-       callchains.callpath || '->' || StringIds.value AS callpath,
+       callchains.callpath || '->' || REPLACE(StringIds.value,'->','- >') AS callpath,
        stackDepth + 1                                 AS stackDepth,
        CA.end - CA.start                              AS duration
 FROM callchains
@@ -279,7 +282,7 @@ DROP INDEX IF EXISTS EXTRAP_NVTX_INDEX_END;
     @cached_property
     def _symbol_table(self):
         table = self.db.execute("""-- Extracts symbol table from StringIds
-SELECT SUBSTR(value, 4, pos - 5) AS ptr, SUBSTR(value, pos) AS name
+SELECT SUBSTR(value, 4, pos - 5) AS ptr, REPLACE(SUBSTR(value, pos),'->','- >') AS name
 FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
       FROM StringIds
       WHERE id BETWEEN (SELECT id FROM StringIds WHERE value = "EXTRA_PROF_SYMBOLS")

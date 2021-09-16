@@ -8,7 +8,7 @@
 import os
 from collections import defaultdict
 from itertools import islice
-from typing import Set, List
+from typing import List
 
 from extrap.fileio.file_reader.nv_reader.binary_parser.nsight_cuprof_report import NsightCuprofReport
 from extrap.fileio.file_reader.nv_reader.pb_parser.ProfilerReport_pb2 import ProfileResult
@@ -19,7 +19,7 @@ class NcuReport:
 
     def __init__(self, name):
 
-        self.string_table:List[str] = []
+        self.string_table: List[str] = []
         self.source_blocks = []
         self.result_blocks = []
         self.report_data = NsightCuprofReport.from_file(name)
@@ -53,8 +53,9 @@ class NcuReport:
     def get_measurements(self, paths):
         return _convert_and_map_measurements(zip(self.result_blocks, paths))
 
-    def get_measurements_parallel(self, paths, pool):
+    def get_measurements_parallel(self, paths, pool, *, ignore_metrics=None):
         aggregated_values = defaultdict(int)
+        ignored_ids = self._calc_ignored_metric_ids(ignore_metrics)
 
         data = zip(self.result_blocks, list(paths))
         chunk_length = int((len(self.result_blocks) + (os.cpu_count() - 1)) / os.cpu_count())
@@ -64,6 +65,8 @@ class NcuReport:
                                       1)
         for partition in reduced:
             for key, value in partition.items():
+                if key[1] in ignored_ids:
+                    continue
                 aggregated_values[key] += value
 
         return aggregated_values
