@@ -250,7 +250,7 @@ class NsightFileReader(AbstractDirectoryReader):
 
         return parameter_names, parameter_values
 
-    def read_ncu_files(self, dir_name, ncu_files, pbar, selected_metrics, only_time):
+    def read_ncu_files(self, dir_name, ncu_files, pbar=DUMMY_PROGRESS, selected_metrics=None, only_time=False):
         pbar.total += len(ncu_files) + 6
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
