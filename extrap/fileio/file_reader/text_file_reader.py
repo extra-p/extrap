@@ -73,7 +73,10 @@ class TextFileReader(FileReader):
                     experiment.add_metric(metric)
                     last_metric = metric
                 else:
-                    last_metric = metric
+                    for metric in experiment.metrics:
+                        if metric == test_metric:
+                            last_metric = metric
+                            break
                 # reset the coordinate id, since moving to a new region
                 coordinate_id = 0
 
