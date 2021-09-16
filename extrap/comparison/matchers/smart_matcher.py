@@ -239,6 +239,8 @@ class SmartMatcher(AbstractMatcher):
                             for child in node:
                                 if child in experiment.call_tree_match:
                                     s_child = experiment.call_tree_match[child][i]
+                                    if s_child not in t_node.childs:
+                                        continue
                                     t_node.childs.remove(s_child)
 
                             model = self.walk_nodes(t_node, s_modeler.models, metric,
