@@ -156,7 +156,7 @@ class CubeFileReader2(AbstractDirectoryReader):
                         name = str(demangled)
                 except NotImplementedError as e:
                     pass
-            return name
+            return name.replace('->', '- >')
 
         def walk_tree(parent_cnode, parent_name):
             for cnode in parent_cnode.get_children():
