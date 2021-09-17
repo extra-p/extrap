@@ -6,13 +6,14 @@
 # See the LICENSE file in the base directory for details.
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from numbers import Number
-from typing import Union, List, Tuple, Dict, Sequence
+from typing import Union, List, Tuple, Dict, Sequence, Optional
 
 import numpy
 
 from extrap.entities.callpath import Callpath
-from extrap.entities.calltree import Node
+from extrap.entities.calltree import Node, CallTree
 from extrap.entities.functions import Function
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
@@ -95,35 +96,60 @@ class BinaryAggregation(Aggregation, ABC):
 
     def walk_nodes(self, result: Dict[Tuple[Callpath, Metric], Model], node: Node,
                    models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS):
-        agg_models: List[Model] = []
+        agg_models: Dict[Optional[str], List[Model]] = defaultdict(list)
         callpath = node.path if node.path else Callpath.EMPTY
+        own_category = callpath.lookup_tag(self.TAG_CATEGORY)
+
         key = (callpath, metric)
         if key in models:
             own_model = models[key]
-            agg_models.append(own_model)
+            agg_models[own_category].append(own_model)
         else:
             own_model = None
             progress_bar.total += 1
 
         for c in node:
-            model = self.walk_nodes(result, c, models, metric, path, progress_bar)
-            if model is not None:
-                agg_models.append(model)
+            res_models = self.walk_nodes(result, c, models, metric, path, progress_bar)
+            for category, model in res_models.items():
+                if model is not None:
+                    agg_models[category].append(model)
 
-        if not agg_models:
-            model = None
-        elif callpath.lookup_tag(self.TAG_DISABLED, False):
-            model = own_model
-        else:
-            if len(agg_models) == 1:
-                model = agg_models[0]
+        res_models: Dict[Optional[str], Optional[Model]] = {}
+        for category in agg_models.keys():
+            if not agg_models[category]:
+                res_models[category] = None
+            elif callpath.lookup_tag(self.TAG_DISABLED, False):
+                res_models[category] = own_model
             else:
-                measurements = self.aggregate_measurements(agg_models)
-                model = self.aggregate_model(agg_models, callpath, measurements, metric)
-                model.measurements = measurements
+                if len(agg_models[category]) == 1:
+                    res_models[category] = agg_models[category][0]
+                else:
+                    measurements = self.aggregate_measurements(agg_models[category])
+                    res_models[category] = self.aggregate_model(agg_models[category], callpath, measurements, metric)
+                    res_models[category].measurements = measurements
 
-        if model is not None:
-            result[(node.path, metric)] = model
+        if res_models[own_category] is not None:
+            result[(node.path, metric)] = res_models[own_category]
+
+        for category, model in res_models.items():
+            if category is None:
+                continue
+            elif category == own_category:
+                continue
+            elif res_models[category] is None:
+                continue
+
+            category_node = node.find_child(category)
+            if not category_node:
+                if isinstance(node, CallTree):
+                    category_path = Callpath(category, agg__category=category)
+                else:
+                    category_path = node.path.concat(category)
+                    category_path.tags['agg__category'] = category
+                category_node = Node(category, category_path)
+                node.add_child_node(category_node)
+
+            result[(category_node.path, metric)] = res_models[category]
 
         progress_bar.update(1)
 
@@ -131,10 +157,10 @@ class BinaryAggregation(Aggregation, ABC):
         usage_disabled = callpath.lookup_tag(self.TAG_USAGE_DISABLED, False)
         if usage_disabled:
             if usage_disabled == self.TAG_USAGE_DISABLED_agg_model:
-                return own_model
-            return None
+                return {own_category: own_model}
+            return {}
 
-        return model
+        return res_models
 
     @abstractmethod
     def aggregate_model(self, agg_models, callpath: Callpath, measurements: Sequence[Measurement], metric: Metric):

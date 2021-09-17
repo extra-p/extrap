@@ -21,6 +21,7 @@ class Aggregation(ABC):
     TAG_DISABLED = 'agg__disabled'
     TAG_USAGE_DISABLED = 'agg__usage_disabled'
     TAG_USAGE_DISABLED_agg_model = 'only_agg_model'
+    TAG_CATEGORY = 'agg__category'
 
     @abstractmethod
     def aggregate(self, models: Dict[Tuple[Callpath, Metric], Model], calltree: CallTree, metrics: Sequence[Metric],

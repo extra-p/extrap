@@ -76,10 +76,14 @@ It should honor the <b>agg__*</b>-tags and especially the **agg__disabled**-tag 
 metrics and call-paths, thus it should not create aggregations for elements marked with this tag.
 
 ### Tags
+
 All tags that control the behavior or occur in context of aggregations should start with the __agg__-prefix.
 
-The predefined tags **agg__disabled** and **agg__usage_disabled** control whether the aggregation must ignore the 
-tagged entity. Children of the tagged entity will be regarded separately, so that these can get aggregated on their own.
+The tag **agg__category** assign categories to the tagged entity, only entities within the same category get aggregated.
+Each category will be treated individually.
+
+The predefined tags **agg__disabled** and **agg__usage_disabled** control whether the aggregation must ignore the tagged
+entity. Children of the tagged entity will be regarded separately, so that these can get aggregated on their own.
 
 The value of **agg__disabled** is either `True` or `False`, or the tag is _not present_ at all:
 If the value is `True`, no aggregation will be calculated.
@@ -87,8 +91,8 @@ If the value is `True`, no aggregation will be calculated.
 **agg__usage_disabled** has one of three possible values, or the tag is _not present_:
 
 * `True`: the tagged entity will _not_ be used in an aggregated model for another entity (e.g., its parent).
-* `"only_agg_model_usage"`: the tagged entity's _own_ model, but _not_ its aggregated model, 
-  will be used in an aggregated model for another entity.
+* `"only_agg_model"`: the tagged entity's _own_ model, but _not_ its aggregated model, will be used in an aggregated
+  model for another entity.
 * `False` or the tag is _not_ present: the model will be used normally.
 
 FileReader

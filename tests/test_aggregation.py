@@ -143,7 +143,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         large_res1 = fkt1.evaluate(large_x)
         self.assertEqual(large_res1, 1913)
 
-        mp_term = MultiParameterTerm()  #  4 * p^2 * q^2
+        mp_term = MultiParameterTerm()  # 4 * p^2 * q^2
         smpl_term = SimpleTerm("polynomial", 2)
         mp_term.add_parameter_term_pair((0, smpl_term))
         mp_term.add_parameter_term_pair((1, smpl_term))
@@ -207,6 +207,71 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         self.assertEqual(1, len(test_value))
 
+    def testSumCategory(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        categoryB = Node("cat", Callpath("main->emptyA->emptyB->neA->neB->cat", agg__category='cat'), [])
+        neB = Node("neB", Callpath("main->emptyA->emptyB->neA->neB"), [categoryB])
+        neA = Node("neA", Callpath("main->emptyA->emptyB->neA"), [neB])
+        emptyB = Node("emptyB", Callpath("main->emptyA->emptyB"), [neA])
+        emptyA = Node("emptyA", Callpath("main->emptyA"), [emptyB])
+        categoryC = Node("cat", Callpath("main->neC->cat", agg__category='cat'), [])
+        neC = Node("neC", Callpath("main->neC"), [categoryC])
+        main = Node("main", Callpath("main"), [emptyA, neC])
+        experiment1.callpaths = [main.path, neC.path, emptyA.path, emptyB.path, neA.path, neB.path, categoryC.path,
+                                 categoryB.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (neB.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
+            (neA.path, metric): [Measurement(Coordinate(c), None, None, 1 * c) for c in range(1, 6)],
+            (neC.path, metric): [Measurement(Coordinate(c), None, None, 3 * c) for c in range(1, 6)],
+
+            (categoryC.path, metric): [Measurement(Coordinate(c), None, None, 3 * c ** (3 / 2)) for c in range(1, 6)],
+            (categoryB.path, metric): [Measurement(Coordinate(c), None, None, 3 * c ** (3 / 2)) for c in range(1, 6)],
+        }
+
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        mg.aggregate(SumAggregation())
+
+        self.check_same(experiment1, metric, [neB.path, neC.path, categoryB.path, categoryC.path])
+        self.check_changed(experiment1, metric, [main.path, emptyA.path, emptyB.path, neA.path])
+
+        correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neC.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function.compound_terms
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          experiment1.modelers[1].models[main.path, metric].hypothesis.function.constant_coefficient,
+                          5)
+
+        self.assertEqual(1, len(test_value))
+
+        correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.compound_terms
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.constant_coefficient,
+                          5)
+
+        self.assertEqual(1, len(test_value))
+        self.assertIn((main.path.concat('cat'), metric), experiment1.modelers[1].models)
+        self.assertIn((Callpath('cat'), metric), experiment1.modelers[1].models)
 
     def testSum3(self):
         metric = Metric('time')
