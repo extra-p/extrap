@@ -96,7 +96,7 @@ class NsightFileReader(AbstractDirectoryReader):
                             pbar.update(0)
                             if duration:
                                 aggregated_values[
-                                    (Callpath(callpath + '->GPU IDLE', agg__usage__disabled=True, gpu__idle=True,
+                                    (Callpath(callpath + '->GPU IDLE', gpu__idle=True, agg_category='GPU IDLE',
                                               validation__ignore__num_measurements=True),
                                      metric)].append(duration / 10 ** 9)
                         for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
@@ -129,7 +129,8 @@ class NsightFileReader(AbstractDirectoryReader):
                                         duration / 10 ** 9)
                                 aggregated_values[
                                     (
-                                        Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True),
+                                        Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True,
+                                                 agg_category='GPU'),
                                         metric)].append(
                                     durationGPU / 10 ** 9)
                             elif duration:
@@ -296,7 +297,8 @@ class NsightFileReader(AbstractDirectoryReader):
         to_delete = []
         for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
             value: List[Measurement]
-            if len(value) < num_points and not key[0].lookup_tag('gpu__overlap', False):
+            if len(value) < num_points and (
+                    not key[0].lookup_tag('validation__ignore__num_measurements', False) or len(value) <= 1):
                 to_delete.append(key)
             else:
                 (callpath, metric) = key
