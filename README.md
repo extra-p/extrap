@@ -116,7 +116,7 @@ The Extra-P command line interface has the following options.
 | `--help-modeler` {`default`, `basic`, `refining`, `multi-parameter`} | Show help for modeler options and exit       
 | **Output options**                                                   |                                              
 | `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results  
-| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`} | Set which information should be displayed after modeling (default: `all`) 
+| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`, _FORMAT_STRING_} | Set which information should be displayed after modeling. Use one of {all (default), callpaths, metrics, parameters, functions} or specify a formatting string using placeholders (see [docs/output-formatting.md](docs/output-formatting.md)).
 | `--save-experiment` <i>EXPERIMENT_PATH</i>                           | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) 
 | `--model-set-name` _NAME_                                            | Set the name of the generated set of models when outputting an experiment (default: “New model”)
 

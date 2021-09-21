@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 def format_callpaths(experiment):
     """
-    This method formats the ouput so that only the callpaths are shown.
+    This method formats the output so that only the callpaths are shown.
     """
     callpaths = experiment.callpaths
     text = ""
@@ -36,7 +36,7 @@ def format_callpaths(experiment):
 
 def format_metrics(experiment):
     """
-    This method formats the ouput so that only the metrics are shown.
+    This method formats the output so that only the metrics are shown.
     """
     metrics = experiment.metrics
     text = ""
@@ -49,7 +49,7 @@ def format_metrics(experiment):
 
 def format_parameters(experiment):
     """
-    This method formats the ouput so that only the parameters are shown.
+    This method formats the output so that only the parameters are shown.
     """
     parameters = experiment.parameters
     text = ""
@@ -62,7 +62,7 @@ def format_parameters(experiment):
 
 def format_functions(experiment):
     """
-    This method formats the ouput so that only the functions are shown.
+    This method formats the output so that only the functions are shown.
     """
     modeler = experiment.modelers[0]
     models = modeler.models
@@ -77,7 +77,7 @@ def format_functions(experiment):
 
 def format_all(experiment):
     """
-    This method formats the ouput so that all information is shown.
+    This method formats the output so that all information is shown.
     """
     coordinates = experiment.coordinates
     callpaths = experiment.callpaths
@@ -132,7 +132,7 @@ def format_all(experiment):
 
 def format_output(experiment, printtype):
     """
-    This method formats the ouput of the modeler to a string that can be printed in the console
+    This method formats the output of the modeler to a string that can be printed in the console
     or to a file. Depending on the given options only parts of the modelers output get printed.
     """
     if printtype == "ALL":
