@@ -18,6 +18,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 import extrap
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
+from extrap.entities.measurement import Measure
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.file_reader import all_readers
@@ -28,9 +29,9 @@ from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
-from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.components import file_dialog
+from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
 
@@ -59,9 +60,9 @@ class MainWidget(QMainWindow):
         self.initUI()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-        # switch for using mean or median measurement values for modeling
+        # switch for selecting measure of measurement values for modeling
         # is used when loading the data from a file and then modeling directly
-        self.median = False
+        self.measure = Measure.MEAN
 
     # noinspection PyAttributeOutsideInit
     def initUI(self):
@@ -346,7 +347,7 @@ class MainWidget(QMainWindow):
 
     def model_experiment(self, experiment):
         # initialize model generator
-        model_generator = ModelGenerator(experiment, use_median=self.median, name="Default Model")
+        model_generator = ModelGenerator(experiment, use_measure=self.measure, name="Default Model")
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)

@@ -11,25 +11,29 @@ from typing import Sequence, Optional
 
 from marshmallow import fields
 
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.model import Model
 from extrap.util.classproperty import classproperty
+from extrap.util.deprecation import deprecated
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from extrap.util.serialization_schema import BaseSchema
+from extrap.util.serialization_schema import BaseSchema, EnumField, CompatibilityField
 
 
 class AbstractModeler(ABC):
-    def __init__(self, use_median: bool):
+    def __init__(self, use_measure: Measure):
         # use mean or median measurement values to calculate models
-        self._use_median = use_median
+        if isinstance(use_measure, bool):
+            deprecated.code('use_median is deprecated use use_measure instead')
+            use_measure = Measure.from_use_median(use_measure)
+        self._use_measure = use_measure
 
     @property
-    def use_median(self) -> bool:
-        return self._use_median
+    def use_measure(self) -> Measure:
+        return self._use_measure
 
-    @use_median.setter
-    def use_median(self, value: bool):
-        self._use_median = value
+    @use_measure.setter
+    def use_measure(self, value: Measure):
+        self._use_measure = value
 
     @abstractmethod
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
@@ -70,23 +74,31 @@ class SingularModeler(AbstractModeler, ABC):
 
 class MultiParameterModeler(AbstractModeler, ABC):
 
-    def __init__(self, use_median, single_parameter_modeler):
-        super().__init__(use_median)
-        single_parameter_modeler.use_median = use_median
+    def __init__(self, use_measure, single_parameter_modeler):
+        super().__init__(use_measure)
+        single_parameter_modeler.use_measure = use_measure
         self._default_single_parameter_modeler = single_parameter_modeler
         self.single_parameter_modeler: AbstractModeler = copy.copy(single_parameter_modeler)
 
     def reset_single_parameter_modeler(self):
         self.single_parameter_modeler = copy.copy(self._default_single_parameter_modeler)
 
-    @AbstractModeler.use_median.setter
-    def use_median(self, value):
-        self._use_median = value
-        self.single_parameter_modeler.use_median = value
+    @AbstractModeler.use_measure.setter
+    def use_measure(self, value):
+        super(MultiParameterModeler, self.__class__).use_measure.fset(self, value)
+        self.single_parameter_modeler.use_measure = value
 
 
 class ModelerSchema(BaseSchema):
-    use_median = fields.Bool()
+    use_median = CompatibilityField(fields.Bool(),
+                                    lambda value, attr, obj, **kwargs: obj._use_measure == Measure.MEDIAN)  # noqa
+    use_measure = EnumField(Measure, required=False)
 
     def create_object(self):
         raise NotImplementedError()
+
+    def preprocess_object_data(self, data):
+        if 'use_measure' not in data:
+            data['use_measure'] = Measure.from_use_median(data['use_median'])
+        del data['use_median']
+        return data

@@ -4,6 +4,12 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
+
+import enum
+import numbers
+from collections.abc import Iterable
+from typing import Union, Generator
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -12,6 +18,29 @@ from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.coordinate import Coordinate, CoordinateSchema
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.util.serialization_schema import Schema, NumberField
+
+
+class Measure(enum.Enum):
+    UNKNOWN = -1
+    MEAN = 0
+    MEDIAN = 1
+    MINIMUM = enum.auto()
+    MAXIMUM = enum.auto()
+
+    @classmethod
+    def from_str(cls, name: str):
+        return cls[name.upper()]
+
+    @classmethod
+    def from_use_median(cls, use_median: bool):
+        if use_median:
+            return Measure.MEDIAN
+        else:
+            return Measure.MEAN
+
+    @classmethod
+    def choices(cls):
+        return [m for m in Measure if m != cls.UNKNOWN]
 
 
 class Measurement:
@@ -35,8 +64,21 @@ class Measurement:
         self.maximum: float = np.max(values)
         self.std: float = np.std(values)
 
-    def value(self, use_median):
-        return self.median if use_median else self.mean
+    def value(self, measure: Union[bool, Measure]):
+        if measure == Measure.MEAN:
+            return self.mean
+        elif measure == Measure.MEDIAN:
+            return self.median
+        elif measure == Measure.MINIMUM:
+            return self.minimum
+        elif measure == Measure.MAXIMUM:
+            return self.maximum
+        elif measure is True:
+            return self.median
+        elif measure is False:
+            return self.mean
+        else:
+            raise ValueError("Unknown measure.")
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
@@ -62,6 +104,23 @@ class Measurement:
                    self.callpath == other.callpath and \
                    self.mean == other.mean and \
                    self.median == other.median
+
+    @staticmethod
+    def select_measure(measurements: Iterable[Measurement], measure: Union[bool, Measure]) -> Generator[numbers.Real]:
+        if measure == Measure.MEAN:
+            return (m.mean for m in measurements)
+        elif measure == Measure.MEDIAN:
+            return (m.median for m in measurements)
+        elif measure == Measure.MINIMUM:
+            return (m.minimum for m in measurements)
+        elif measure == Measure.MAXIMUM:
+            return (m.maximum for m in measurements)
+        elif measure is True:
+            return (m.median for m in measurements)
+        elif measure is False:
+            return (m.mean for m in measurements)
+        else:
+            raise ValueError("Unknown measure.")
 
 
 class MeasurementSchema(Schema):

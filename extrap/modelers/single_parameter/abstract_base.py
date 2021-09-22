@@ -13,7 +13,7 @@ import numpy
 
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import Hypothesis, SingleParameterHypothesis, MAX_HYPOTHESIS, ConstantHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.parameter import Parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.modeler_options import modeler_options
@@ -34,8 +34,8 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
 
-    def __init__(self, use_median: bool):
-        super().__init__(use_median)
+    def __init__(self, use_measure: Union[bool, Measure]):
+        super().__init__(use_measure)
         self.epsilon = 0.0005  # value for the minimum term contribution
 
     def compare_hypotheses(self, old: Hypothesis, new: SingleParameterHypothesis, measurements: Sequence[Measurement]):
@@ -70,11 +70,12 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         Creates a constant model that fits the data using a ConstantFunction.
         """
         # compute the constant coefficient
-        mean_model = sum(m.value(self.use_median) / len(measurements) for m in measurements)
+        mean_model = numpy.mean(
+            numpy.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements)))
 
         # create a constant function
         constant_function = ConstantFunction(mean_model)
-        constant_hypothesis = ConstantHypothesis(constant_function, self.use_median)
+        constant_hypothesis = ConstantHypothesis(constant_function, self.use_measure)
 
         # compute cost of the constant model
         constant_hypothesis.compute_cost(measurements)

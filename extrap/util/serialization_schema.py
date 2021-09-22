@@ -11,6 +11,7 @@ from abc import abstractmethod, ABC
 from collections.abc import Mapping
 from typing import Union, Sequence
 
+import marshmallow
 from marshmallow import post_load, fields, ValidationError, EXCLUDE
 from marshmallow.fields import Field
 from marshmallow.schema import Schema as _Schema
@@ -34,8 +35,12 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
     def postprocess_object(self, obj):
         return obj
 
+    def preprocess_object_data(self, data):
+        return data
+
     @post_load
     def unpack_to_object(self, data, **kwargs):
+        data = self.preprocess_object_data(data)
         obj = self.create_object()
         try:
             for k, v in data.items():
@@ -206,3 +211,49 @@ class NumberField(fields.Number):
         else:
             ret = super()._format_num(value)
         return self._to_string(ret) if self.as_string else ret
+
+
+class EnumField(fields.Field):
+    def __init__(self, enum, *args, **kwargs):
+        self.enum = enum
+        super(EnumField, self).__init__(*args, **kwargs)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        return value.name
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            return self.enum[value]
+        except ValueError as error:
+            raise ValidationError(f"{value} is no correct value of enum {self.enum.__name__}.") from error
+
+
+class CompatibilityField(fields.Field):
+    _CHECK_ATTRIBUTE = False
+
+    def __init__(self, field, serialize=None, deserialize=None, *args, **kwargs):
+        self.field: fields.Field = field
+        self._serialize_func = serialize
+        self._deserialize_func = deserialize
+        super().__init__(*args, **kwargs)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        serialize_func = self._serialize_func
+        if isinstance(serialize_func, str):
+            serialize_func = marshmallow.utils.callable_or_raise(
+                getattr(self.parent, serialize_func, None)
+            )
+        if serialize_func:
+            value = serialize_func(value, attr, obj, **kwargs)
+        return self.field._serialize(value, attr, obj, **kwargs)
+
+    def _deserialize(self, value, attr, obj, **kwargs):
+        value = self.field._deserialize(value, attr, obj, **kwargs)
+        deserialize_func = self._deserialize_func
+        if isinstance(deserialize_func, str):
+            deserialize_func = marshmallow.utils.callable_or_raise(
+                getattr(self.parent, deserialize_func, None)
+            )
+        if deserialize_func:
+            value = deserialize_func(value, attr, obj, **kwargs)
+        return value

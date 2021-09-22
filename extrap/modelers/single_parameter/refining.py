@@ -14,6 +14,7 @@ from typing import List, Tuple, Sequence
 from extrap.entities.fraction import Fraction
 from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
+from extrap.entities.measurement import Measure
 from extrap.entities.model import Model
 from extrap.entities.terms import CompoundTerm
 from extrap.modelers.abstract_modeler import SingularModeler
@@ -24,8 +25,8 @@ SearchState = namedtuple('SearchState', ['left', 'center', 'right'])
 
 class SingleParameterRefiningHypothesis(SingleParameterHypothesis):
 
-    def __init__(self, function, use_median, partition_index):
-        super().__init__(function, use_median)
+    def __init__(self, function, use_measure, partition_index):
+        super().__init__(function, use_measure)
         self.partition_index = partition_index
 
 
@@ -37,7 +38,7 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
     DESCRIPTION = "Modeler for single-parameter models; refines the search-space iteratively."
 
     def __init__(self):
-        super().__init__(use_median=False)
+        super().__init__(use_measure=Measure.MEAN)
         self.epsilon = 0.0005
 
         # init variables for the hypothesis creation
@@ -177,7 +178,7 @@ class RefiningModeler(SingularModeler, AbstractSingleParameterModeler):
 
         def build_hypothesis(p, l, i):
             simple_function = SingleParameterFunction(CompoundTerm.create(p, l))
-            return SingleParameterRefiningHypothesis(simple_function, self.use_median, i)
+            return SingleParameterRefiningHypothesis(simple_function, self.use_measure, i)
 
         if len(p_partition) > 1:
             l = l_partition[0]
