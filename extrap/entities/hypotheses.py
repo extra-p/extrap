@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import abc
 from typing import Sequence
 
 import numpy
@@ -176,6 +175,7 @@ class ConstantHypothesis(Hypothesis):
         """
         Computes the cost of the constant hypothesis using all data points.
         """
+        self._AR2 = 1  # TODO: should this be calculated?
         smape = 0
         for measurement in measurements:
             predicted = self.function.constant_coefficient
