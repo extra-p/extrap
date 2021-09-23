@@ -74,9 +74,10 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                help=f"Set which information should be displayed after modeling. Use one of "
-                                     f"{{all (default), callpaths, metrics, parameters, functions}} or specify a "
-                                     f"formatting string using placeholders "
+                                metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
+                                help="Set which information should be displayed after modeling. Use one of "
+                                     "{all, callpaths, metrics, parameters, functions} or specify a "
+                                     "formatting string using placeholders "
                                      f"(see {extrap.__documentation_link__}/output-formatting.md).")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
                                 help="Saves the experiment including all models as Extra-P experiment "
