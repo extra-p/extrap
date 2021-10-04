@@ -9,6 +9,7 @@ import argparse
 import logging
 import os
 import sys
+import warnings
 from itertools import chain
 
 import extrap
@@ -16,8 +17,8 @@ from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
-from extrap.fileio.io_helper import format_output
 from extrap.fileio.io_helper import save_output
+from extrap.fileio.output import format_output
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
@@ -32,7 +33,8 @@ def main(args=None, prog=None):
     # argparse
     modelers_list = list(set(k.lower() for k in
                              chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
-    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False)
+    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False,
+                                     formatter_class=WideHelpFormatter)
     positional_arguments = parser.add_argument_group("Positional arguments")
     basic_arguments = parser.add_argument_group("Optional arguments")
     basic_arguments.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -72,9 +74,11 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                choices=["all", "callpaths", "metrics", "parameters", "functions"],
-                                help="Set which information should be displayed after modeling "
-                                     "(default: all)")
+                                metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
+                                help="Set which information should be displayed after modeling. Use one of "
+                                     "{all, callpaths, metrics, parameters, functions} or specify a "
+                                     "formatting string using placeholders "
+                                     f"(see {extrap.__documentation_link__}/output-formatting.md).")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
                                 help="Saves the experiment including all models as Extra-P experiment "
                                      "(if no extension is specified, '.extra-p' is appended)")
@@ -90,7 +94,7 @@ def main(args=None, prog=None):
     # set log level
     loglevel = logging.getLevelName(arguments.log_level.upper())
     # set output print type
-    printtype = arguments.print_type.upper()
+    printtype = arguments.print_type
 
     # set log format location etc.
     if loglevel == logging.DEBUG:
@@ -192,6 +196,18 @@ def main(args=None, prog=None):
     else:
         logging.error("No file path given to load files.")
         sys.exit(1)
+
+
+class WideHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs['width'] = 100
+            super().__init__(*args, **kwargs)
+        except TypeError:
+            warnings.warn("Wide argparse help formatter failed, falling back.")
+            del kwargs['width']
+            super().__init__(*args, **kwargs)
 
 
 if __name__ == "__main__":
