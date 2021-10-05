@@ -18,7 +18,7 @@ from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
-from extrap.modelers.aggregation import Aggregation, AggregatedModel
+from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.modeler_options import modeler_options
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -109,7 +109,7 @@ class ModelGenerator:
     def restore_from_exp(self, experiment):
         self.experiment = experiment
         for key, model in self.models.items():
-            model.measurements = experiment.measurements[key]
+            model.measurements = experiment.measurements.get(key)
 
 
 class AggregateModelGenerator(ModelGenerator):
@@ -130,8 +130,8 @@ class AggregateModelGenerator(ModelGenerator):
     def restore_from_exp(self, experiment):
         self.experiment = experiment
         for key, model in self.models.items():
-            if not isinstance(model, AggregatedModel):
-                model.measurements = experiment.measurements[key]
+            if not model.measurements:
+                model.measurements = experiment.measurements.get(key)
 
 
 class ModelGeneratorSchema(BaseSchema):

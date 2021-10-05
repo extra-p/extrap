@@ -190,6 +190,8 @@ class BinaryAggregation(Aggregation, ABC):
             agg.std = m.std
             data[m.coordinate] = agg
         for model in rest:
+            if not model.measurements:
+                continue
             for m in model.measurements:
                 agg = data[m.coordinate]
                 agg.mean = self.binary_operator(agg.mean, m.mean)
