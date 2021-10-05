@@ -12,10 +12,11 @@ import numpy
 from extrap.entities.callpath import Callpath
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
-from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm
-from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, BinaryAggregation
+from extrap.modelers.aggregation import AggregatedModel
+from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, BinaryAggregation, \
+    BinaryAggregationFunctionSchema
 
 
 class SumAggregationFunction(BinaryAggregationFunction):
@@ -87,6 +88,11 @@ class SumAggregationFunction(BinaryAggregationFunction):
         return function_string
 
 
+class SumAggregationFunctionSchema(BinaryAggregationFunctionSchema):
+    def create_object(self):
+        return SumAggregationFunction([])
+
+
 class SumAggregation(BinaryAggregation):
     NAME = 'Sum'
 
@@ -98,7 +104,7 @@ class SumAggregation(BinaryAggregation):
         hypothesis_type = type(agg_models[0].hypothesis)
         hypothesis = hypothesis_type(function, agg_models[0].hypothesis._use_median)
         hypothesis.compute_cost(measurements)
-        model = Model(hypothesis, callpath, metric)
+        model = AggregatedModel(hypothesis, callpath, metric)
         return model
 
     TAG_DISABLED = 'agg__disabled__sum'

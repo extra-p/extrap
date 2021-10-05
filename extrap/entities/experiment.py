@@ -169,9 +169,7 @@ class ExperimentSchema(BaseSchema):
 
         obj.call_tree = io_helper.create_call_tree(obj.callpaths)
         for modeler in obj.modelers:
-            modeler.experiment = obj
-            for key, model in modeler.models.items():
-                model.measurements = obj.measurements[key]
+            modeler.restore_from_exp(obj)
             pbar.update()
 
         return obj

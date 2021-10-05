@@ -9,15 +9,16 @@ from functools import reduce
 from typing import List, Sequence, Union
 
 import numpy as np
+from marshmallow import fields
 
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
-from extrap.entities.functions import Function
+from extrap.entities.functions import Function, FunctionSchema
 from extrap.entities.measurement import Measurement
-from extrap.entities.model import Model
+from extrap.entities.model import Model, ModelSchema
 from extrap.entities.parameter import Parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.model_generator import ModelGenerator
@@ -90,8 +91,18 @@ class ComparisonFunction(Function):
         return '(' + ', '.join(t.to_string(*parameters) for t in self.functions) + ')'
 
 
+class ComparisonFunctionSchema(FunctionSchema):
+    def create_object(self):
+        return ComparisonFunction(None)
+
+    functions = fields.List(fields.Nested(FunctionSchema))
+
+
 class ComparisonModel(Model):
     def __init__(self, callpath, metric, models: Sequence[Model]):
+        if models is None:
+            super().__init__(None)
+            return
         super().__init__(self._make_comparison_hypothesis(models), callpath, metric)
         self.models = models
 
@@ -110,6 +121,13 @@ class ComparisonModel(Model):
         hypothesis._SMAPE = reduce(lambda a, b: a * b, (m.hypothesis.SMAPE for m in models)) ** (1 / len(models))
         hypothesis._costs_are_calculated = True
         return hypothesis
+
+
+class ComparisonModelSchema(ModelSchema):
+    def create_object(self):
+        return ComparisonModel(None, None, None)
+
+    models = fields.List(fields.Nested(ModelSchema))
 
 
 class ComparisonExperiment(Experiment):

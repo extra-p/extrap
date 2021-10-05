@@ -50,11 +50,15 @@ class BaseSchema(Schema):
     type_field = '$type'
 
     def create_object(self):
-        raise NotImplementedError()
+        raise NotImplementedError(f"{type(self)} has no create object method.")
 
     def __init_subclass__(cls, **kwargs):
         if not cls.__is_direct_subclass(cls, BaseSchema):
-            cls._subclasses[type(cls().create_object()).__name__] = cls
+            obj = cls().create_object()
+            if isinstance(obj, tuple) and obj[0] == NotImplemented:
+                cls._subclasses[obj[1].__name__] = cls
+            else:
+                cls._subclasses[type(cls().create_object()).__name__] = cls
         else:
             cls._subclasses = {}
         super().__init_subclass__(**kwargs)

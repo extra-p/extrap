@@ -11,15 +11,16 @@ from numbers import Number
 from typing import Union, List, Tuple, Dict, Sequence, Optional
 
 import numpy
+from marshmallow import fields
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
-from extrap.entities.functions import Function
+from extrap.entities.functions import Function, FunctionSchema
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
-from extrap.modelers.aggregation import Aggregation
+from extrap.modelers.aggregation import Aggregation, AggregatedModel
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -62,6 +63,13 @@ class BinaryAggregationFunction(Function, ABC):
                    self.constant_coefficient == other.constant_coefficient
 
 
+class BinaryAggregationFunctionSchema(FunctionSchema):
+    raw_terms = fields.List(fields.Nested(FunctionSchema))
+
+    def create_object(self):
+        return NotImplemented, BinaryAggregationFunction
+
+
 class BinaryAggregation(Aggregation, ABC):
 
     @classproperty
@@ -91,6 +99,8 @@ class BinaryAggregation(Aggregation, ABC):
             if metric.lookup_tag(self.TAG_DISABLED, False):
                 continue
             self.walk_nodes(result, calltree, models, metric, progress_bar=progress_bar)
+            if (None, metric) in result:
+                del result[(None, metric)]
 
         return result
 
@@ -128,7 +138,7 @@ class BinaryAggregation(Aggregation, ABC):
                     res_models[category] = self.aggregate_model(agg_models[category], callpath, measurements, metric)
                     res_models[category].measurements = measurements
 
-        if res_models[own_category] is not None:
+        if res_models.get(own_category) is not None:
             result[(node.path, metric)] = res_models[own_category]
 
         for category, model in res_models.items():
@@ -163,7 +173,8 @@ class BinaryAggregation(Aggregation, ABC):
         return res_models
 
     @abstractmethod
-    def aggregate_model(self, agg_models, callpath: Callpath, measurements: Sequence[Measurement], metric: Metric):
+    def aggregate_model(self, agg_models, callpath: Callpath, measurements: Sequence[Measurement],
+                        metric: Metric) -> AggregatedModel:
         raise NotImplementedError
 
     def aggregate_measurements(self, agg_models: List[Model]):

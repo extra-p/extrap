@@ -10,13 +10,14 @@ import numpy as np
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
 from extrap.entities.coordinate import Coordinate
-from extrap.entities.experiment import Experiment
+from extrap.entities.experiment import Experiment, ExperimentSchema
 from extrap.entities.functions import SingleParameterFunction, MultiParameterFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm
 from extrap.fileio import io_helper
+from extrap.modelers import aggregation
 from extrap.modelers.aggregation.max_aggregation import MaxAggregation, MaxAggregationFunction
 from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction, SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
@@ -381,14 +382,37 @@ class TestAggregation(TestCaseWithFunctionAssertions):
                                  main.path, start.path]
         experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
         experiment1.measurements = {
-            (evt_sync.path, metric): [Measurement(Coordinate(c), None, None, 1 * c ** 2) for c in range(1, 6)],
-            (wait.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
-            (overlap.path, metric): [Measurement(Coordinate(c), None, None, 7 * c) for c in range(1, 6)],
-            (cb.path, metric): [Measurement(Coordinate(c), None, None, 10 * np.log2(c)) for c in range(1, 6)],
-            (ca.path, metric): [Measurement(Coordinate(c), None, None, 20 * np.log2(c)) for c in range(1, 6)],
-            (sync.path, metric): [Measurement(Coordinate(c), None, None, 5 * c) for c in range(1, 6)],
-            (work.path, metric): [Measurement(Coordinate(c), None, None, 3 * c ** 2) for c in range(1, 6)],
-            (main.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
-            (start.path, metric): [Measurement(Coordinate(c), None, None, 1 * c) for c in range(1, 6)],
+            (evt_sync.path, metric): [Measurement(Coordinate(c), evt_sync.path, metric, 1 * c ** 2) for c in
+                                      range(1, 6)],
+            (wait.path, metric): [Measurement(Coordinate(c), wait.path, metric, 2 * c) for c in range(1, 6)],
+            (overlap.path, metric): [Measurement(Coordinate(c), overlap.path, metric, 7 * c) for c in range(1, 6)],
+            (cb.path, metric): [Measurement(Coordinate(c), cb.path, metric, 10 * np.log2(c)) for c in range(1, 6)],
+            (ca.path, metric): [Measurement(Coordinate(c), ca.path, metric, 20 * np.log2(c)) for c in range(1, 6)],
+            (sync.path, metric): [Measurement(Coordinate(c), sync.path, metric, 5 * c) for c in range(1, 6)],
+            (work.path, metric): [Measurement(Coordinate(c), work.path, metric, 3 * c ** 2) for c in range(1, 6)],
+            (main.path, metric): [Measurement(Coordinate(c), main.path, metric, 2 * c) for c in range(1, 6)],
+            (start.path, metric): [Measurement(Coordinate(c), start.path, metric, 1 * c) for c in range(1, 6)],
         }
         return experiment1, (ca, cb, evt_sync, main, overlap, start, sync, wait, work)
+
+    def test_serialization(self):
+        metric = Metric('time')
+        experiment1, _ = self.prepare_experiment(metric, agg__disabled=True, agg__usage_disabled=True)
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        for aggregation_cls in aggregation.all_aggregations.values():
+            mg.aggregate(aggregation_cls())
+
+        schema = ExperimentSchema()
+        ser_exp = schema.dump(experiment1)
+
+        reconstructed = schema.load(ser_exp)
+        self.assertListEqual(experiment1.parameters, reconstructed.parameters)
+        self.assertListEqual(experiment1.coordinates, reconstructed.coordinates)
+        self.assertListEqual(experiment1.metrics, reconstructed.metrics)
+        self.assertSetEqual(set(experiment1.callpaths), set(reconstructed.callpaths))
+        self.assertDictEqual(experiment1.measurements, reconstructed.measurements)
+        for modeler, modeler_reconstructed in zip(experiment1.modelers, reconstructed.modelers):
+            self.assertEqual(modeler, modeler_reconstructed,
+                             f"Model Generator {modeler.name} was not reconstructed correctly .")
+        self.assertListEqual(experiment1.modelers, reconstructed.modelers)

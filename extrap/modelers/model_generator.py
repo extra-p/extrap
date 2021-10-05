@@ -10,7 +10,7 @@ from __future__ import annotations
 import itertools
 from typing import Dict, Union, Tuple, TYPE_CHECKING
 
-from marshmallow import fields
+from marshmallow import fields, pre_dump
 
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.metric import Metric, MetricSchema
@@ -18,10 +18,11 @@ from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
-from extrap.modelers.aggregation import Aggregation
+from extrap.modelers.aggregation import Aggregation, AggregatedModel
 from extrap.modelers.modeler_options import modeler_options
+from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from extrap.util.serialization_schema import Schema, TupleKeyDict
+from extrap.util.serialization_schema import TupleKeyDict, BaseSchema
 
 if TYPE_CHECKING:
     from extrap.entities.experiment import Experiment
@@ -89,8 +90,8 @@ class ModelGenerator:
         self.experiment.add_modeler(self)
 
     def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS):
-        mg = ModelGenerator(self.experiment, self._modeler, aggregation.NAME + ' ' + self.name,
-                            self._modeler.use_median)
+        mg = AggregateModelGenerator(self.experiment, aggregation, self._modeler, aggregation.NAME + ' ' + self.name,
+                                     self._modeler.use_median)
         mg.models = aggregation.aggregate(self.models, self.experiment.call_tree, self.experiment.metrics, progress_bar)
         self.experiment.add_modeler(mg)
 
@@ -105,8 +106,35 @@ class ModelGenerator:
                    self._modeler.use_median == other._modeler.use_median and \
                    modeler_options.equal(self._modeler, other._modeler)
 
+    def restore_from_exp(self, experiment):
+        self.experiment = experiment
+        for key, model in self.models.items():
+            model.measurements = experiment.measurements[key]
 
-class ModelGeneratorSchema(Schema):
+
+class AggregateModelGenerator(ModelGenerator):
+
+    def __init__(self, experiment: Experiment, aggregation: Aggregation,
+                 modeler: Union[AbstractModeler, str] = "Default",
+                 name: str = "New Modeler",
+                 use_median: bool = False):
+        super().__init__(experiment, modeler, name, use_median)
+        self.aggregation = aggregation
+
+    def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS):
+        raise RecoverableError("Aggregation is not supported using an aggregated model set.")
+
+    def model_all(self, progress_bar=DUMMY_PROGRESS):
+        raise RecoverableError("Modelling is not supported using an aggregated model set.")
+
+    def restore_from_exp(self, experiment):
+        self.experiment = experiment
+        for key, model in self.models.items():
+            if not isinstance(model, AggregatedModel):
+                model.measurements = experiment.measurements[key]
+
+
+class ModelGeneratorSchema(BaseSchema):
     name = fields.Str()
     _modeler = fields.Nested(ModelerSchema, data_key='modeler')
     models = TupleKeyDict(keys=(fields.Nested(CallpathSchema), fields.Nested(MetricSchema)),
@@ -120,3 +148,12 @@ class ModelGeneratorSchema(Schema):
             m.callpath = callpath
             m.metric = metric
         return obj
+
+
+class AggregateModelGeneratorSchema(ModelGeneratorSchema):
+    def create_object(self):
+        return AggregateModelGenerator(None, None, NotImplemented)
+
+    @pre_dump
+    def intercept(self, data, many, **kwargs):
+        return data

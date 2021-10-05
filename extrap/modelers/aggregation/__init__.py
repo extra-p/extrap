@@ -6,15 +6,40 @@
 # See the LICENSE file in the base directory for details.
 
 from abc import abstractmethod, ABC
-from typing import Sequence, Dict, Tuple, Optional
+from typing import Sequence, Dict, Tuple, Optional, Union
+
+from marshmallow import fields, post_dump, pre_load
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree
+from extrap.entities.measurement import MeasurementSchema
 from extrap.entities.metric import Metric
-from extrap.entities.model import Model
+from extrap.entities.model import Model, ModelSchema
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
 from extrap.util.progress_bar import DUMMY_PROGRESS
+
+
+class AggregatedModel(Model):
+    pass
+
+
+class AggregatedModelSchema(ModelSchema):
+    measurements = fields.List(fields.Nested(MeasurementSchema))
+
+    def create_object(self):
+        return AggregatedModel(None)
+
+    def report_progress(self, data, **kwargs):
+        return data
+
+    @post_dump
+    def intercept(self, data, many, **kwargs):
+        return data
+
+    @pre_load
+    def intercept2(self, data, many, **kwargs):
+        return data
 
 
 class Aggregation(ABC):
@@ -25,7 +50,7 @@ class Aggregation(ABC):
 
     @abstractmethod
     def aggregate(self, models: Dict[Tuple[Callpath, Metric], Model], calltree: CallTree, metrics: Sequence[Metric],
-                  progress_bar=DUMMY_PROGRESS) -> Dict[Tuple[Callpath, Metric], Model]:
+                  progress_bar=DUMMY_PROGRESS) -> Dict[Tuple[Callpath, Metric], Union[Model, AggregatedModel]]:
         """ Creates an aggregated model for each model.
 
         This method is the core of the aggregation system.
