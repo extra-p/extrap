@@ -13,12 +13,29 @@ from extrap.entities.model import Model
 from extrap.gui.TreeModel import TreeModel
 
 
+# TODO Expand largest, Collapse subtree
+
 class TreeView(QTreeView):
 
     def __init__(self, parent):
         super(TreeView, self).__init__(parent)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setAnimated(True)
+
+    def collapseRecursively(self, index):
+        if not index.isValid():
+            return
+
+        childCount = index.model().rowCount(parent=index)
+        for i in range(0, childCount):
+            child = index.child(i, 0)
+            self.collapseRecursively(child)
+
+        if not self.collapsed(index):  # does not work (how to test if item is collapsed?)
+            self.collapse(index)
+
+    def expand_largest(self):
+        return
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -32,6 +49,16 @@ class TreeView(QTreeView):
                 selectedModel = model.getSelectedModel(selectedCallpath.path)
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
+                expandSubtree = menu.addAction("Expand subtree")
+                expandSubtree.triggered.connect(
+                    lambda: self.expandRecursively(self.selectedIndexes()[0]))
+                expandLargest = menu.addAction("Expand largest")
+                # expandLargest.triggered.connect(lambda: self.expand_largest(...))
+                collapseAction = menu.addAction("Collapse all")
+                collapseAction.triggered.connect(self.collapseAll)
+                collapseSubtree = menu.addAction("Collapse subtree")
+                collapseSubtree.triggered.connect(
+                    lambda: self.collapseRecursively(self.selectedIndexes()[0]))
                 # showCommentsAction = menu.addAction("Show Comments")
                 # showCommentsAction.setEnabled(
                 #     selectedModel is not None and len(selectedModel.getComments()) > 0)
