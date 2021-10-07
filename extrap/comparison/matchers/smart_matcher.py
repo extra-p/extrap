@@ -23,7 +23,7 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.modelers.aggregation.sum_aggregation import SumAggregation
-from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 if TYPE_CHECKING:
@@ -227,7 +227,8 @@ class SmartMatcher(AbstractMatcher):
                             t_node = Node(s_node.name, s_node.path, [c for c in s_node.childs if c in allowed_s_childs])
                             model = self.walk_nodes(t_node, s_modeler.models, metric,
                                                     path=s_node.path.name.rpartition('->')[0],
-                                                    progress_bar=progress_bar)
+                                                    progress_bar=progress_bar,
+                                                    already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
                                 models.append(model)
 
@@ -245,7 +246,8 @@ class SmartMatcher(AbstractMatcher):
 
                             model = self.walk_nodes(t_node, s_modeler.models, metric,
                                                     path=s_node.path.name.rpartition('->')[0],
-                                                    progress_bar=progress_bar)
+                                                    progress_bar=progress_bar,
+                                                    already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
                                 models.append(model)
                             else:
@@ -266,7 +268,7 @@ class SmartMatcher(AbstractMatcher):
 
     def walk_nodes(self, node: Node,
                    models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS,
-                   agg_models=None):
+                   agg_models=None, already_aggregated=False):
         if agg_models is None:
             agg_models: List[Model] = []
         if node.name:
@@ -286,7 +288,7 @@ class SmartMatcher(AbstractMatcher):
 
         if not agg_models or (node.path and 'agg_sum__not_calculable' in node.path.tags):
             model = None
-        elif len(agg_models) == 1:
+        elif len(agg_models) == 1 or already_aggregated:
             model = agg_models[0]
         else:
             measurements = SumAggregation().aggregate_measurements(agg_models)
