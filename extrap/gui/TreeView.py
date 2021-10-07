@@ -9,7 +9,6 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.entities.model import Model
 from extrap.gui.TreeModel import TreeModel
 
 
@@ -25,14 +24,13 @@ class TreeView(QTreeView):
     def collapseRecursively(self, index):
         if not index.isValid():
             return
+        
+        self.collapse(index)
 
         childCount = index.model().rowCount(parent=index)
         for i in range(0, childCount):
             child = index.child(i, 0)
             self.collapseRecursively(child)
-
-        if not self.collapsed(index):  # does not work (how to test if item is collapsed?)
-            self.collapse(index)
 
     def expand_largest(self):
         return

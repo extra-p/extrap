@@ -92,11 +92,7 @@ class TreeModel(QAbstractItemModel):
             '''
 
             # added for two-parameter models here
-            parameters = self.selector_widget.getParameterValues()
-            formula = model.hypothesis.function
-            previous = numpy.seterr(divide='ignore', invalid='ignore')
-            value = formula.evaluate(parameters)
-            numpy.seterr(**previous)
+            value = self.get_comparison_value(model)
 
             # convert value to relative value between 0 and 1
             relativeValue = max(0.0, (value - self.main_widget.min_value) / delta)
@@ -133,6 +129,14 @@ class TreeModel(QAbstractItemModel):
         elif index.column() == 7:
             return formatNumber(str(model.hypothesis.RE))
         return None
+
+    def get_comparison_value(self, model):
+        parameters = self.selector_widget.getParameterValues()
+        formula = model.hypothesis.function
+        previous = numpy.seterr(divide='ignore', invalid='ignore')
+        value = formula.evaluate(parameters)
+        numpy.seterr(**previous)
+        return value
 
     def remove_method_parameters(self, name):
         def _replace_braces(name, lb, rb):
