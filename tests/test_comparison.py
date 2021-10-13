@@ -220,7 +220,7 @@ class TestComparison(TestCase):
         sync = Node("sync", Callpath("_start->main->sync"), [evt_sync])
         wA = Node("wA", Callpath("_start->main->work->wA"), [])
         wBB = Node("wBB", Callpath("_start->main->work->wB->wBB"), [])
-        wB = Node("wA", Callpath("_start->main->work"), [wBB])
+        wB = Node("wA", Callpath("_start->main->work->wB"), [wBB])
         work = Node("work", Callpath("_start->main->work"), [wA, wB])
         main = Node("main", Callpath("_start->main"), [sync, work])
         start = Node("_start", Callpath("_start"), [main])

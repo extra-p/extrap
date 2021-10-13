@@ -65,9 +65,15 @@ class BinaryAggregationFunction(Function, ABC):
 
 class BinaryAggregationFunctionSchema(FunctionSchema):
     raw_terms = fields.List(fields.Nested(FunctionSchema))
+    compound_terms = fields.Constant(None, load_only=True, dump_only=True)
+    constant_coefficient = fields.Constant(None, load_only=True, dump_only=True)
 
     def create_object(self):
         return NotImplemented, BinaryAggregationFunction
+
+    def postprocess_object(self, obj: BinaryAggregationFunction) -> BinaryAggregationFunction:
+        obj.aggregate()
+        return obj
 
 
 class BinaryAggregation(Aggregation, ABC):

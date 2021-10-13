@@ -9,7 +9,7 @@ import collections
 import math
 from abc import abstractmethod, ABC
 from collections.abc import Mapping
-from typing import Union, Sequence
+from typing import Union, Sequence, Tuple, Type
 
 from marshmallow import post_load, fields, ValidationError, EXCLUDE
 from marshmallow.fields import Field
@@ -28,10 +28,10 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
         unknown = EXCLUDE
 
     @abstractmethod
-    def create_object(self):
+    def create_object(self) -> Union[object, Tuple[type(NotImplemented), Type]]:
         raise NotImplementedError()
 
-    def postprocess_object(self, obj):
+    def postprocess_object(self, obj: object) -> object:
         return obj
 
     @post_load
