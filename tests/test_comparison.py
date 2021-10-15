@@ -11,18 +11,20 @@ from unittest import TestCase
 import numpy as np
 
 from extrap.comparison.experiment_comparison import ComparisonExperiment, ComparisonModel, ComparisonFunction
+from extrap.comparison.matchers import all_matchers
 from extrap.comparison.matchers.minimum_matcher import MinimumMatcher
 from extrap.comparison.matchers.smart_matcher import SmartMatcher
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
 from extrap.entities.coordinate import Coordinate
-from extrap.entities.experiment import Experiment
+from extrap.entities.experiment import Experiment, ExperimentSchema
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
+from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
 
 
@@ -275,6 +277,113 @@ class TestComparison(TestCase):
                          model2.hypothesis.function)
         self.assertNotEqual(model.hypothesis.function.to_string(),
                             '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
+
+    def test_smart_comparison_measurements_format(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        wA = Node("wA", Callpath("_start->main->work->wA"), [])
+        wB = Node("wA", Callpath("_start->main->work->wB"), [])
+        work = Node("work", Callpath("_start->main->work"), [wA, wB])
+        main = Node("main", Callpath("_start->main"), [work])
+        start = Node("_start", Callpath("_start"), [main])
+        root = CallTree()
+        root.add_child_node(start)
+        experiment1.callpaths = [work.path, wA.path, start.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (work.path, metric): [Measurement(Coordinate(c), None, None, 10 * c ** 2) for c in range(1, 6)],
+            (wA.path, metric): [Measurement(Coordinate(c), None, None, 10 * c) for c in range(1, 6)],
+            (start.path, metric): [Measurement(Coordinate(c), None, None, 5 * c) for c in range(1, 6)]
+        }
+        experiment2 = copy.deepcopy(experiment1)
+        experiment2.measurements = {
+            (work.path, metric): [Measurement(Coordinate(c), None, None, 10 * c ** 3) for c in range(1, 6)],
+            (wB.path, metric): [Measurement(Coordinate(c), None, None, 10 * c ** 2) for c in range(1, 6)],
+            (start.path, metric): [Measurement(Coordinate(c), None, None, 5 * c ** 2) for c in range(1, 6)]
+        }
+        experiment2.callpaths = [work.path, wB.path, start.path]
+        experiment2.call_tree = io_helper.create_call_tree(experiment2.callpaths)
+        mg1 = ModelGenerator(experiment1)
+        mg1.model_all()
+        mg2 = ModelGenerator(experiment2)
+        mg2.model_all()
+
+        for name, matcher_class in all_matchers.items():
+            print("Testing:", name)
+            experiment = ComparisonExperiment(experiment1, experiment2, matcher_class())
+            experiment.do_comparison()
+            self.check_comparison_against_source(experiment, experiment1)
+            self.check_comparison_against_source(experiment, experiment2)
+
+            for c in experiment.callpaths:
+                self.assertIsInstance(c, Callpath)
+
+            for m in experiment.metrics:
+                self.assertIsInstance(m, Metric)
+
+            for k, ms in experiment.measurements.items():
+                self.assertIsInstance(ms, list)
+                for m in ms:
+                    self.assertIsInstance(m, Measurement)
+
+    def test_smart_comparison_of_aggregated_models_serialization(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        wA = Node("wA", Callpath("_start->main->work->wA"), [])
+        wB = Node("wA", Callpath("_start->main->work->wB"), [])
+        work = Node("work", Callpath("_start->main->work"), [wA, wB])
+        main = Node("main", Callpath("_start->main"), [work])
+        start = Node("_start", Callpath("_start"), [main])
+        root = CallTree()
+        root.add_child_node(start)
+        experiment1.callpaths = [work.path, wA.path, start.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (work.path, metric): [Measurement(Coordinate(c), work.path, metric, 10 * c ** 2) for c in range(1, 6)],
+            (wA.path, metric): [Measurement(Coordinate(c), wA.path, metric, 10 * c) for c in range(1, 6)],
+            (start.path, metric): [Measurement(Coordinate(c), start.path, metric, 5 * c) for c in range(1, 6)]
+        }
+        experiment2 = copy.deepcopy(experiment1)
+        experiment2.measurements = {
+            (work.path, metric): [Measurement(Coordinate(c), work.path, metric, 10 * c ** 3) for c in range(1, 6)],
+            (wB.path, metric): [Measurement(Coordinate(c), wB.path, metric, 10 * c ** 2) for c in range(1, 6)],
+            (start.path, metric): [Measurement(Coordinate(c), start.path, metric, 5 * c ** 2) for c in range(1, 6)]
+        }
+        experiment2.callpaths = [work.path, wB.path, start.path]
+        experiment2.call_tree = io_helper.create_call_tree(experiment2.callpaths)
+        mg1 = ModelGenerator(experiment1)
+        mg1.model_all()
+        mg1.aggregate(SumAggregation())
+        mg2 = ModelGenerator(experiment2)
+        mg2.model_all()
+        mg2.aggregate(SumAggregation())
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
+        experiment.do_comparison()
+        self.check_comparison_against_source(experiment, experiment1)
+        self.check_comparison_against_source(experiment, experiment2)
+
+        schema = ExperimentSchema()
+        data = schema.dump(experiment)
+        reconstructed = schema.load(data)
+
+        self.assertListEqual(experiment.parameters, reconstructed.parameters)
+        self.assertEqual(len(experiment.measurements), len(reconstructed.measurements))
+        # for key in experiment.measurements:
+        #     print(key)
+        #     self.assertEqual(experiment.measurements[key], reconstructed.measurements[key])
+        # self.assertDictEqual(experiment.measurements, reconstructed.measurements)
+        self.assertListEqual(experiment.coordinates, reconstructed.coordinates)
+        self.assertListEqual(experiment.callpaths, reconstructed.callpaths)
+        self.assertListEqual(experiment.metrics, reconstructed.metrics)
+        self.assertEqual(experiment.call_tree, reconstructed.call_tree)
+        self.assertListEqual(experiment.modelers, reconstructed.modelers)
+        self.assertEqual(experiment.scaling, reconstructed.scaling)
 
     def check_comparison_against_source(self, experiment, experiment1):
         self.assertSetEqual(set(experiment.coordinates), set(experiment1.coordinates))

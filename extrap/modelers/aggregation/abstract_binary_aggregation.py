@@ -33,7 +33,6 @@ class BinaryAggregationFunction(Function, ABC):
         Initialize a Function object.
         """
         super().__init__()
-        self.compound_terms = function_terms
         self.raw_terms = function_terms
         self.aggregate()
 

@@ -17,11 +17,10 @@ from extrap.comparison.metric_conversion import AbstractMetricConverter, all_con
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
-from extrap.entities.functions import ConstantFunction
-from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
-from extrap.entities.model import Model
+from extrap.entities.model import Model, NULL_MODEL
+from extrap.modelers.abstract_modeler import EMPTY_MODELER
 from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -136,7 +135,10 @@ class SmartMatcher(AbstractMatcher):
                     new_match[i] = s_node
                     new_matches[part_node] = new_match
                     new_matches[part_agg_node] = new_match
-                    measurements[part_cp, metric] = s_measurements
+                    part_measurements = s_measurements.get((s_node.path, metric))
+                    if part_measurements:
+                        # TODO create Measurement opject with correct callpath
+                        measurements[part_cp, metric] = part_measurements
                     measurements[agg_cp, metric] = list(t_measurements.values())
 
                 if comparison_node.childs and node not in comparison_nodes:
@@ -210,7 +212,7 @@ class SmartMatcher(AbstractMatcher):
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar):
         from extrap.comparison.experiment_comparison import ComparisonModel
-        mg = ModelGenerator(experiment, NotImplemented, name, modelers[0].modeler.use_median)
+        mg = ModelGenerator(experiment, EMPTY_MODELER, name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in experiment.metrics_match.items():
             for node, source_nodes in experiment.call_tree_match.items():
@@ -251,9 +253,7 @@ class SmartMatcher(AbstractMatcher):
                             if model:
                                 models.append(model)
                             else:
-                                hypothesis = ConstantHypothesis(ConstantFunction(0), False)
-                                hypothesis.compute_cost([])
-                                models.append(Model(hypothesis))
+                                models.append(NULL_MODEL)
                 else:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):

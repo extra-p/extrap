@@ -11,6 +11,7 @@ from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import AbstractMatches
 from extrap.comparison.matches import IdentityMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter
+from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.metric import Metric
 from extrap.modelers.model_generator import ModelGenerator
@@ -43,7 +44,11 @@ class MinimumMatcher(AbstractMatcher):
         for n1 in parent1.childs:
             n2 = parent2.find_child(n1.name)
             if n2:
-                n = Node(n1.name, n1.path.copy())
+                if n1.path == Callpath.EMPTY:
+                    path = parent.path.concat(n1.name)
+                else:
+                    path = n1.path.copy()
+                n = Node(n1.name, path)
                 matches[n] = [n1, n2]
                 parent.add_child_node(n)
                 self._merge_call_trees(n, n1, n2, matches, progress_bar)

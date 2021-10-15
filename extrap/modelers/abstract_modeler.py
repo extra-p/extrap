@@ -93,3 +93,26 @@ class ModelerSchema(BaseSchema):
 
     def create_object(self):
         raise NotImplementedError()
+
+
+class _EmptyModeler(AbstractModeler):
+    NAME = "<Empty>"
+
+    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
+        raise NotImplementedError()
+
+    def __eq__(self, o: object) -> bool:
+        return o is self or isinstance(o, _EmptyModeler)
+
+
+EMPTY_MODELER = _EmptyModeler(False)
+
+
+class _EmptyModelerSchema(ModelerSchema):
+    use_median = fields.Constant(False, load_only=True, dump_only=True)
+
+    def unpack_to_object(self, data, **kwargs):
+        return EMPTY_MODELER
+
+    def create_object(self):
+        return EMPTY_MODELER

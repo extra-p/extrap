@@ -4,7 +4,6 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
 from functools import reduce
 from typing import List, Sequence, Union
 
@@ -17,10 +16,9 @@ from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.functions import Function, FunctionSchema
-from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model, ModelSchema
 from extrap.entities.parameter import Parameter
-from extrap.modelers.abstract_modeler import AbstractModeler
+from extrap.modelers.abstract_modeler import EMPTY_MODELER
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -33,20 +31,9 @@ class ComparisonError(RecoverableError):
     NAME = "Experiment Comparison Error"
 
 
-class PlaceholderModeler(AbstractModeler):
-    NAME = "<Placeholder>"
-
-    def __init__(self, use_median: bool):
-        super().__init__(use_median)
-
-    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
-        raise NotImplementedError()
-
-
 class ComparisonFunction(Function):
     def __init__(self, functions):
         super().__init__()
-        self.compound_terms = functions  # HACK to preserve compatibility with standard function interface
         self.functions = functions
 
     def evaluate(self, parameter_value):
@@ -92,6 +79,9 @@ class ComparisonFunction(Function):
 
 
 class ComparisonFunctionSchema(FunctionSchema):
+    compound_terms = fields.Constant(None, load_only=True, dump_only=True)
+    constant_coefficient = fields.Constant(None, load_only=True, dump_only=True)
+
     def create_object(self):
         return ComparisonFunction(None)
 
@@ -247,7 +237,7 @@ class ComparisonExperiment(Experiment):
             self.modelers = [self._make_model_generator(k, match) for k, match in self.modelers_match.items()]
 
     def _make_model_generator(self, name: str, modelers: Sequence[ModelGenerator]):
-        mg = ModelGenerator(self, PlaceholderModeler(False), name, modelers[0].modeler.use_median)
+        mg = ModelGenerator(self, EMPTY_MODELER, name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in self.metrics_match.items():
             for node, source_nodes in self.call_tree_match.items():

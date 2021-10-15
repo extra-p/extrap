@@ -11,11 +11,12 @@ import numpy
 from marshmallow import fields, post_load
 
 from extrap.entities.callpath import CallpathSchema
-from extrap.entities.hypotheses import Hypothesis, HypothesisSchema
+from extrap.entities.functions import ConstantFunction
+from extrap.entities.hypotheses import Hypothesis, HypothesisSchema, ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import MetricSchema
 from extrap.util.caching import cached_property
-from extrap.util.serialization_schema import Schema, BaseSchema
+from extrap.util.serialization_schema import BaseSchema
 
 
 class Model:
@@ -56,3 +57,28 @@ class ModelSchema(BaseSchema):
     hypothesis = fields.Nested(HypothesisSchema)
     callpath = fields.Nested(CallpathSchema)
     metric = fields.Nested(MetricSchema)
+
+
+class _NullModel(Model):
+    def __init__(self):
+        hypothesis = ConstantHypothesis(ConstantFunction(0), False)
+        hypothesis.compute_cost([])
+        super(_NullModel, self).__init__(hypothesis)
+
+    def __eq__(self, o: object) -> bool:
+        return o is self or isinstance(o, _NullModel)
+
+
+NULL_MODEL = _NullModel()
+
+
+class _NullModelSchema(ModelSchema):
+    callpath = fields.Constant(None, dump_only=True, load_only=True)
+    metric = fields.Constant(None, dump_only=True, load_only=True)
+    hypothesis = fields.Constant(None, dump_only=True, load_only=True)
+
+    def unpack_to_object(self, data, **kwargs):
+        return NULL_MODEL
+
+    def create_object(self):
+        return NULL_MODEL

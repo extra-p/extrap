@@ -10,14 +10,14 @@ from __future__ import annotations
 import itertools
 from typing import Dict, Union, Tuple, TYPE_CHECKING
 
-from marshmallow import fields, pre_dump
+from marshmallow import fields, post_dump, pre_load
 
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
+from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema, EMPTY_MODELER
 from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.modeler_options import modeler_options
 from extrap.util.exceptions import RecoverableError
@@ -63,8 +63,8 @@ class ModelGenerator:
             except KeyError:
                 raise ValueError(
                     f'Modeler with name "{modeler}" does not exist.')
-        elif modeler is NotImplemented:
-            return NotImplemented
+        elif modeler is NotImplemented or modeler == EMPTY_MODELER:
+            result_modeler = EMPTY_MODELER
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
                 # single-parameter model generator init here...
@@ -149,11 +149,19 @@ class ModelGeneratorSchema(BaseSchema):
             m.metric = metric
         return obj
 
+    @pre_load
+    def intercept(self, val, **kwargs):
+        return val
+
 
 class AggregateModelGeneratorSchema(ModelGeneratorSchema):
     def create_object(self):
         return AggregateModelGenerator(None, None, NotImplemented)
 
-    @pre_dump
+    @pre_load
     def intercept(self, data, many, **kwargs):
         return data
+
+    @post_dump
+    def intercept2(self, val, **kwargs):
+        return val
