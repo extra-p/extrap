@@ -12,7 +12,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 from extrap.gui.TreeModel import TreeModel
 
 
-# TODO Expand largest, Collapse subtree
+# TODO Expand largest
 
 class TreeView(QTreeView):
 
@@ -24,7 +24,7 @@ class TreeView(QTreeView):
     def collapseRecursively(self, index):
         if not index.isValid():
             return
-        
+
         self.collapse(index)
 
         childCount = index.model().rowCount(parent=index)
@@ -32,11 +32,57 @@ class TreeView(QTreeView):
             child = index.child(i, 0)
             self.collapseRecursively(child)
 
-    def expand_largest(self):
-        return
+    # TODO: does not work yet
+    def expand_largest(self, model):
+        # search for largest value in tree
+        root = model.root_item.child_items[0]
+        max_value = self.find_max(model, root)
+
+        # find path to node with largest value and expand along path
+        arr = []
+        if self.has_path(model, root, arr, max_value):
+            for a in arr:
+                self.expand(model.index(a.row(), 0, a.parent_item))  #####
+
+    def find_max(self, model, node):
+        """ find maximum value in tree """
+        if node is None:
+            return float('-inf')
+
+        val = self.get_value_from_node(model, node)
+        children = [self.find_max(model, c) for c in node.child_items]
+        children.append(val)
+
+        return max(children)
+
+    def has_path(self, model, node, arr, x):  # arr: list containing nodes along path, x: searched value
+        """ checks if the tree has a path to the node containing value x
+            and fills arr with the path """
+        if node is None:
+            return False
+
+        arr.append(node)
+
+        if self.get_value_from_node(model, node) == x:
+            return True
+
+        contains_x = [self.has_path(model, c, arr, x) for c in node.child_items]
+        if True in contains_x:
+            return True
+
+        del arr[-1]
+        return False
+
+    def get_value_from_node(self, tree_model, node):
+        index = tree_model.index(node.row(), 0, node.parent())  #####
+        callpath = tree_model.getValue(index).path
+        node_model = tree_model.getSelectedModel(callpath)
+        return tree_model.get_comparison_value(node_model)
 
     def contextMenuEvent(self, event):
         menu = QMenu()
+        expand_submenu = menu.addMenu("Expand")
+        collapse_submenu = menu.addMenu("Collapse")
         model: TreeModel = self.model()
         if model is not None:
             if self.selectedIndexes():
@@ -45,16 +91,16 @@ class TreeView(QTreeView):
                 if selectedCallpath is None:
                     return
                 selectedModel = model.getSelectedModel(selectedCallpath.path)
-                expandAction = menu.addAction("Expand all")
+                expandAction = expand_submenu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
-                expandSubtree = menu.addAction("Expand subtree")
+                expandSubtree = expand_submenu.addAction("Expand subtree")
                 expandSubtree.triggered.connect(
                     lambda: self.expandRecursively(self.selectedIndexes()[0]))
-                expandLargest = menu.addAction("Expand largest")
-                # expandLargest.triggered.connect(lambda: self.expand_largest(...))
-                collapseAction = menu.addAction("Collapse all")
+                expandLargest = expand_submenu.addAction("Expand largest")
+                expandLargest.triggered.connect(lambda: self.expand_largest(model))
+                collapseAction = collapse_submenu.addAction("Collapse all")
                 collapseAction.triggered.connect(self.collapseAll)
-                collapseSubtree = menu.addAction("Collapse subtree")
+                collapseSubtree = collapse_submenu.addAction("Collapse subtree")
                 collapseSubtree.triggered.connect(
                     lambda: self.collapseRecursively(self.selectedIndexes()[0]))
                 # showCommentsAction = menu.addAction("Show Comments")
