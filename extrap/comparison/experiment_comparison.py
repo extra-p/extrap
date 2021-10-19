@@ -13,8 +13,9 @@ from marshmallow import fields
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter
+from extrap.entities.callpath import CallpathSchema
 from extrap.entities.calltree import Node
-from extrap.entities.experiment import Experiment
+from extrap.entities.experiment import Experiment, ExperimentSchema
 from extrap.entities.functions import Function, FunctionSchema
 from extrap.entities.model import Model, ModelSchema
 from extrap.entities.parameter import Parameter
@@ -85,6 +86,9 @@ class ComparisonFunctionSchema(FunctionSchema):
     def create_object(self):
         return ComparisonFunction(None)
 
+    def postprocess_object(self, obj: object) -> object:
+        return obj
+
     functions = fields.List(fields.Nested(FunctionSchema))
 
 
@@ -118,6 +122,9 @@ class ComparisonModelSchema(ModelSchema):
         return ComparisonModel(None, None, None)
 
     models = fields.List(fields.Nested(ModelSchema))
+
+    def postprocess_object(self, obj: object) -> object:
+        return obj
 
 
 class ComparisonExperiment(Experiment):
@@ -266,3 +273,14 @@ class ComparisonExperiment(Experiment):
                         model_set.models[callpath, converter.new_metric] = converter.convert_models(i, [
                             model_set.models[callpath, metric] for metric in
                             converter.get_required_metrics(i)], measurements)
+
+
+class ComparisonExperimentSchema(ExperimentSchema):
+    callpaths = fields.List(fields.Nested(CallpathSchema))
+
+    def create_object(self):
+        return ComparisonExperiment(None, None, None)
+
+    def postprocess_object(self, obj: Experiment):
+        obj.callpaths = UniqueList(obj.callpaths)
+        return super().postprocess_object(obj)

@@ -77,6 +77,7 @@ class _NullModelSchema(ModelSchema):
     metric = fields.Constant(None, dump_only=True, load_only=True)
     hypothesis = fields.Constant(None, dump_only=True, load_only=True)
 
+    @post_load
     def unpack_to_object(self, data, **kwargs):
         return NULL_MODEL
 
