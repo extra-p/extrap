@@ -19,8 +19,18 @@ class Node:
         self.childs: List[Node] = [] if childs is None else childs
         self.path = path
 
-    def add_child_node(self, child_node):
-        self.childs.append(child_node)
+    def add_child_node(self, child_node: Node):
+        if child_node.name[0] == '[':
+            # insert nodes which names start with "[" at the start of the children, but in order
+            i = 0
+            for c in self.childs:
+                if c.name[0] == '[':
+                    i += 1
+                else:
+                    break
+            self.childs.insert(i, child_node)
+        else:
+            self.childs.append(child_node)
 
     def get_childs(self):
         return self.childs

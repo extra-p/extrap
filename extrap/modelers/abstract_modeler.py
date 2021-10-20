@@ -9,7 +9,7 @@ import copy
 from abc import ABC, abstractmethod
 from typing import Sequence, Optional
 
-from marshmallow import fields
+from marshmallow import fields, post_load
 
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
@@ -111,6 +111,7 @@ EMPTY_MODELER = _EmptyModeler(False)
 class _EmptyModelerSchema(ModelerSchema):
     use_median = fields.Constant(False, load_only=True, dump_only=True)
 
+    @post_load
     def unpack_to_object(self, data, **kwargs):
         return EMPTY_MODELER
 

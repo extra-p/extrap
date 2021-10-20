@@ -230,7 +230,7 @@ class ComparisonExperiment(Experiment):
                             cp = part_node.path
                         measurements[cp, metric] = s_measurement[source_key]
                 if origin_node.childs and node not in comparison_nodes:
-                    node.childs.insert(0, origin_node)
+                    node.add_child_node(origin_node)
 
         call_tree_match.update(new_matches)
         return measurements
@@ -283,4 +283,6 @@ class ComparisonExperimentSchema(ExperimentSchema):
 
     def postprocess_object(self, obj: Experiment):
         obj.callpaths = UniqueList(obj.callpaths)
-        return super().postprocess_object(obj)
+        experiment = super().postprocess_object(obj)
+        experiment.call_tree.ensure_callpaths_exist()
+        return experiment
