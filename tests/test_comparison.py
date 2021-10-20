@@ -189,9 +189,9 @@ class TestComparison(TestCase):
             model2 = experiment2.modelers[0].models[s_cp, metric]
             self.assertEqual(ComparisonModel, type(model))
             self.assertEqual(ComparisonFunction, type(model.hypothesis.function))
-            self.assertEqual(model.hypothesis.function.compound_terms[0],
+            self.assertEqual(model.hypothesis.function.functions[0],
                              model1.hypothesis.function)
-            self.assertEqual(model.hypothesis.function.compound_terms[1],
+            self.assertEqual(model.hypothesis.function.functions[1],
                              model2.hypothesis.function)
             self.assertEqual(model.hypothesis.function.to_string(),
                              '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
@@ -201,9 +201,9 @@ class TestComparison(TestCase):
         model2 = experiment2.modelers[0].models[overlap.path, metric]
         self.assertEqual(ComparisonModel, type(model))
         self.assertEqual(ComparisonFunction, type(model.hypothesis.function))
-        self.assertNotEqual(model.hypothesis.function.compound_terms[0],
+        self.assertNotEqual(model.hypothesis.function.functions[0],
                             model1.hypothesis.function)
-        self.assertEqual(model.hypothesis.function.compound_terms[1],
+        self.assertEqual(model.hypothesis.function.functions[1],
                          model2.hypothesis.function)
         self.assertNotEqual(model.hypothesis.function.to_string(),
                             '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
@@ -259,9 +259,9 @@ class TestComparison(TestCase):
             model2 = experiment2.modelers[0].models[s_cp, metric]
             self.assertEqual(ComparisonModel, type(model))
             self.assertEqual(ComparisonFunction, type(model.hypothesis.function))
-            self.assertEqual(model.hypothesis.function.compound_terms[0],
+            self.assertEqual(model.hypothesis.function.functions[0],
                              model1.hypothesis.function)
-            self.assertEqual(model.hypothesis.function.compound_terms[1],
+            self.assertEqual(model.hypothesis.function.functions[1],
                              model2.hypothesis.function)
             self.assertEqual(model.hypothesis.function.to_string(),
                              '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
@@ -271,9 +271,9 @@ class TestComparison(TestCase):
         model2 = experiment2.modelers[0].models[overlap.path, metric]
         self.assertEqual(ComparisonModel, type(model))
         self.assertEqual(ComparisonFunction, type(model.hypothesis.function))
-        self.assertNotEqual(model.hypothesis.function.compound_terms[0],
+        self.assertNotEqual(model.hypothesis.function.functions[0],
                             model1.hypothesis.function)
-        self.assertEqual(model.hypothesis.function.compound_terms[1],
+        self.assertEqual(model.hypothesis.function.functions[1],
                          model2.hypothesis.function)
         self.assertNotEqual(model.hypothesis.function.to_string(),
                             '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
