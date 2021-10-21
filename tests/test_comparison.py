@@ -10,7 +10,9 @@ from unittest import TestCase
 
 import numpy as np
 
-from extrap.comparison.experiment_comparison import ComparisonExperiment, ComparisonModel, ComparisonFunction
+from extrap.comparison.entities.comparison_function import ComparisonFunction
+from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.comparison.matchers import all_matchers
 from extrap.comparison.matchers.minimum_matcher import MinimumMatcher
 from extrap.comparison.matchers.smart_matcher import SmartMatcher

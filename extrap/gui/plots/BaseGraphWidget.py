@@ -18,7 +18,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 
-from extrap.comparison.experiment_comparison import ComparisonModel
+from extrap.comparison.entities.comparison_model import ComparisonModel
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget

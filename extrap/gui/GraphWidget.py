@@ -15,7 +15,7 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.comparison.experiment_comparison import ComparisonModel
+from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
