@@ -9,6 +9,7 @@ from typing import List, Sequence
 from marshmallow import fields
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter
@@ -143,8 +144,8 @@ class ComparisonExperiment(Experiment):
         else:
             self.modelers = [self._make_model_generator(k, match) for k, match in self.modelers_match.items()]
 
-    def _make_model_generator(self, name: str, modelers: Sequence[ModelGenerator]):
-        mg = ModelGenerator(self, EMPTY_MODELER, name, modelers[0].modeler.use_median)
+    def _make_model_generator(self, name: str, modelers: Sequence[ModelGenerator]) -> ComparisonModelGenerator:
+        mg = ComparisonModelGenerator(self, name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in self.metrics_match.items():
             for node, source_nodes in self.call_tree_match.items():

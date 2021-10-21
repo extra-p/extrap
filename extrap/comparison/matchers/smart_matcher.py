@@ -11,6 +11,7 @@ import re
 import warnings
 from typing import Sequence, Tuple, Mapping, List, Optional, Dict, TYPE_CHECKING
 
+from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import AbstractMatches, IdentityMatches, MutableAbstractMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter, all_conversions
@@ -20,7 +21,6 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model, NULL_MODEL
-from extrap.modelers.abstract_modeler import EMPTY_MODELER
 from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -210,9 +210,9 @@ class SmartMatcher(AbstractMatcher):
                                                      new_matches, measurements)
 
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
-                             progress_bar):
-        from extrap.comparison.experiment_comparison import ComparisonModel
-        mg = ModelGenerator(experiment, EMPTY_MODELER, name, modelers[0].modeler.use_median)
+                             progress_bar) -> ComparisonModelGenerator:
+        from extrap.comparison.entities.comparison_model import ComparisonModel
+        mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)
         mg.models = {}
         for metric, source_metrics in experiment.metrics_match.items():
             for node, source_nodes in experiment.call_tree_match.items():

@@ -17,7 +17,7 @@ from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema, EMPTY_MODELER
+from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
 from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.modeler_options import modeler_options
 from extrap.util.exceptions import RecoverableError
@@ -63,8 +63,8 @@ class ModelGenerator:
             except KeyError:
                 raise ValueError(
                     f'Modeler with name "{modeler}" does not exist.')
-        elif modeler is NotImplemented or modeler == EMPTY_MODELER:
-            result_modeler = EMPTY_MODELER
+        elif modeler is NotImplemented:
+            result_modeler = NotImplemented
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
                 # single-parameter model generator init here...
@@ -101,6 +101,11 @@ class ModelGenerator:
         elif self is other:
             return True
         else:
+            for m in self.models:
+                if self.models[m] == other.models[m]:
+                    continue
+                else:
+                    break
             return self.models == other.models and \
                    self._modeler.NAME == other._modeler.NAME and \
                    self._modeler.use_median == other._modeler.use_median and \
