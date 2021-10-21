@@ -254,7 +254,7 @@ class ComparisonExperiment(Experiment):
                     if s_node is not None:
                         source_key = (s_node.path, s_metric)
                         if source_key in s_modeler.models:
-                            models.append(s_modeler.models[source_key])
+                            models.append(s_modeler.models[source_key].with_callpath(node.path))
                 if len(models) == 1:
                     mg.models[node.path, metric] = models[0]
                 elif len(models) > 1:

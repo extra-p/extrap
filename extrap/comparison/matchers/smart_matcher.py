@@ -232,7 +232,7 @@ class SmartMatcher(AbstractMatcher):
                                                     progress_bar=progress_bar,
                                                     already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
-                                models.append(model)
+                                models.append(model.with_callpath(node.path))
 
                 elif node.path.tags.get('comparison', False):
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
@@ -251,14 +251,14 @@ class SmartMatcher(AbstractMatcher):
                                                     progress_bar=progress_bar,
                                                     already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
-                                models.append(model)
+                                models.append(model.with_callpath(node.path))
                             else:
                                 models.append(NULL_MODEL)
                 else:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None and (s_node.path, s_metric) in s_modeler.models:
-                            models.append(s_modeler.models[(s_node.path, s_metric)])
+                            models.append(s_modeler.models[(s_node.path, s_metric)].with_callpath(node.path))
 
                 if len(models) == 1:
                     mg.models[node.path, metric] = models[0]

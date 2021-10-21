@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import copy
 from typing import Optional, List
 
 import numpy
@@ -31,6 +31,16 @@ class Model:
     def predictions(self):
         coordinates = numpy.array([m.coordinate for m in self.measurements])
         return self.hypothesis.function.evaluate(coordinates.transpose())
+
+    def with_callpath(self, callpath):
+        model = copy.copy(self)
+        model.callpath = callpath
+        model.measurements = []
+        for m in self.measurements:
+            m = copy.copy(m)
+            m.callpath = callpath
+            model.measurements.append(m)
+        return model
 
     def __eq__(self, other):
         if not isinstance(other, Model):
