@@ -1,9 +1,15 @@
-from extrap.entities.experiment import Experiment
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from extrap.modelers.abstract_modeler import EMPTY_MODELER
 from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+
+if TYPE_CHECKING:
+    from extrap.entities.experiment import Experiment
 
 
 class ComparisonModelGenerator(ModelGenerator):
