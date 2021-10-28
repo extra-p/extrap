@@ -43,18 +43,18 @@ class TreeView(QTreeView):
 
     def max_path(self, model, node, parent_index):
         """ find path with maximum value in tree """
-        val = self.get_value_from_node(model, node, parent_index)
-        curr_tuple = tuple((val, node, parent_index))  # current tuple
+        value = self.get_value_from_node(model, node, parent_index)
+        curr_tuple = tuple((value, node, parent_index))  # tuple with current node
 
         if not node.child_items:
             return [curr_tuple]
 
-        # call max_path on children, then select list with largest max value, then insert current node in front
+        # call max_path on children, then select list with largest max value, then insert current node in front of list
         node_index = model.index(node.row(), 0, parent_index)  # get index of current node
         children = [self.max_path(model, c, node_index) for c in node.child_items]  # call max_path on children
 
         children_max = [self.max_value(c) for c in
-                        children]  # find the maximum value in each list c, where c is a list of tuples
+                        children]  # find the maximum value in each c, where c is a list of tuples
 
         ret_list = children[children_max.index(max(children_max))]
         ret_list.insert(0, curr_tuple)
