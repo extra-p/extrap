@@ -36,45 +36,34 @@ class TreeView(QTreeView):
         root = index.internalPointer()
         root_parent_index = index.parent()
 
-        # search for largest value in tree
-        max_value = self.find_max(model, root, root_parent_index)
-
         # find path to node with largest value and expand along path
-        arr = []
-        if self.has_path(model, root, arr, max_value, root_parent_index):
-            for a in arr:
-                self.expand(model.index(a[0].row(), 0, a[1]))
+        arr = self.max_path(model, root, root_parent_index)
+        for a in arr:
+            self.expand(model.index(a[1].row(), 0, a[2]))
 
-    def find_max(self, model, node, parent_index):
-        """ find maximum value in tree """
-        if node is None:
-            return float('-inf')
-
+    def max_path(self, model, node, parent_index):
+        """ find path with maximum value in tree """
         val = self.get_value_from_node(model, node, parent_index)
-        node_index = model.index(node.row(), 0, parent_index)
-        children = [self.find_max(model, c, node_index) for c in node.child_items]
-        children.append(val)
+        curr_tuple = tuple((val, node, parent_index))  # current tuple
 
-        return max(children)
+        if not node.child_items:
+            return [curr_tuple]
 
-    def has_path(self, model, node, arr, x, parent_index):  # arr: list containing nodes along path, x: searched value
-        """ checks if the tree has a path to the node containing value x
-            and fills arr with the path """
-        if node is None:
-            return False
+        # call max_path on children, then select list with largest max value, then insert current node in front
+        node_index = model.index(node.row(), 0, parent_index)  # get index of current node
+        children = [self.max_path(model, c, node_index) for c in node.child_items]  # call max_path on children
 
-        arr.append((node, parent_index))
+        children_max = [self.max_value(c) for c in
+                        children]  # find the maximum value in each list c, where c is a list of tuples
 
-        if self.get_value_from_node(model, node, parent_index) == x:
-            return True
+        ret_list = children[children_max.index(max(children_max))]
+        ret_list.insert(0, curr_tuple)
 
-        node_index = model.index(node.row(), 0, parent_index)
-        contains_x = [self.has_path(model, c, arr, x, node_index) for c in node.child_items]
-        if True in contains_x:
-            return True
+        return ret_list
 
-        del arr[-1]
-        return False
+    def max_value(self, l):
+        l.sort(key=lambda x: x[0], reverse=True)
+        return l[0][0]
 
     def get_value_from_node(self, tree_model, node, parent_index):
         index = tree_model.index(node.row(), 0, parent_index)
