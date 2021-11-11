@@ -23,7 +23,14 @@ class ModelColorMap(Mapping[Node, str]):
         self.dict_callpath_color: Dict[Node, str] = {}
 
     def __getitem__(self, k):
-        return self.dict_callpath_color[k]
+        if k not in self.dict_callpath_color:
+            next_index = len(self)
+            if next_index < len(self.color_list):
+                self.dict_callpath_color[k] = self.color_list[next_index]
+            else:
+                self.dict_callpath_color[k] = self._create_color(next_index, len(self.color_list))
+        else:
+            return self.dict_callpath_color[k]
 
     def __len__(self):
         return len(self.dict_callpath_color)
@@ -42,9 +49,13 @@ class ModelColorMap(Mapping[Node, str]):
             if current_index < size_of_color_list:
                 self.dict_callpath_color[callpath] = self.color_list[current_index]
             else:
-                offset = (current_index - size_of_color_list) % size_of_color_list
-                multiple = int(current_index / size_of_color_list)
-                color = self.color_list[offset]
-                newcolor = QColor(color).lighter(100 + 20 * multiple).name()
+                newcolor = self._create_color(current_index, size_of_color_list)
                 self.dict_callpath_color[callpath] = newcolor
             current_index = current_index + 1
+
+    def _create_color(self, current_index, size_of_color_list):
+        offset = (current_index - size_of_color_list) % size_of_color_list
+        multiple = int(current_index / size_of_color_list)
+        color = self.color_list[offset]
+        newcolor = QColor(color).lighter(100 + 20 * multiple).name()
+        return newcolor
