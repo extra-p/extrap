@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+import math
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -44,7 +45,9 @@ class TreeView(QTreeView):
     def max_path(self, model, node, parent_index):
         """ find path with maximum value in tree """
         value = self.get_value_from_node(model, node, parent_index)
-        curr_tuple = tuple((value, node, parent_index))  # tuple with current node
+        if value is None:
+            value = -math.inf
+        curr_tuple = (value, node, parent_index)  # tuple with current node
 
         if not node.child_items:
             return [curr_tuple]
@@ -53,7 +56,7 @@ class TreeView(QTreeView):
         node_index = model.index(node.row(), 0, parent_index)  # get index of current node
         children = [self.max_path(model, c, node_index) for c in node.child_items]  # call max_path on children
 
-        children_max = [self.max_value(c) for c in
+        children_max = [max(v for v, _, _ in c) for c in
                         children]  # find the maximum value in each c, where c is a list of tuples
 
         ret_list = children[children_max.index(max(children_max))]
@@ -61,15 +64,14 @@ class TreeView(QTreeView):
 
         return ret_list
 
-    def max_value(self, l):
-        l.sort(key=lambda x: x[0], reverse=True)
-        return l[0][0]
-
     def get_value_from_node(self, tree_model, node, parent_index):
         index = tree_model.index(node.row(), 0, parent_index)
         callpath = tree_model.getValue(index).path
         node_model = tree_model.getSelectedModel(callpath)
-        return tree_model.get_comparison_value(node_model)
+        if node_model:
+            return tree_model.get_comparison_value(node_model)
+        else:
+            return None
 
     def contextMenuEvent(self, event):
         menu = QMenu()
