@@ -30,8 +30,10 @@ class MinimumMatcher(AbstractMatcher):
 
     def match_call_tree(self, *call_tree: CallTree, progress_bar=DUMMY_PROGRESS):
         root = CallTree()
+        root.path = Callpath('')
         matches = {}
         self._merge_call_trees(root, call_tree[0], call_tree[1], matches, progress_bar)
+        root.path = None
         return root, matches
 
     def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[
