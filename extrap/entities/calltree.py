@@ -20,7 +20,7 @@ class Node:
         self.path = path
 
     def add_child_node(self, child_node: Node):
-        if child_node.name[0] == '[':
+        if child_node.name and child_node.name[0] == '[':
             # insert nodes which names start with "[" at the start of the children, but in order
             i = 0
             for c in self.childs:

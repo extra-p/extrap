@@ -8,7 +8,7 @@
 from functools import reduce
 from typing import Sequence
 
-from marshmallow import fields
+from marshmallow import fields, pre_load
 
 from extrap.comparison.entities.comparison_function import ComparisonFunction
 from extrap.entities.model import Model, ModelSchema
@@ -33,7 +33,8 @@ class ComparisonModel(Model):
         hypothesis._RSS = sum(m.hypothesis.RSS for m in models)
         hypothesis._RE = reduce(lambda a, b: a * b, (m.hypothesis.RE for m in models)) ** (1 / len(models))
         hypothesis._rRSS = reduce(lambda a, b: a * b, (m.hypothesis.rRSS for m in models)) ** (1 / len(models))
-        hypothesis._AR2 = reduce(lambda a, b: a * b, (m.hypothesis.AR2 for m in models)) ** (1 / len(models))
+        hypothesis._AR2 = reduce(lambda a, b: a * b,
+                                 (m.hypothesis.AR2 if m.hypothesis.AR2 > 0 else 0 for m in models)) ** (1 / len(models))
         hypothesis._SMAPE = reduce(lambda a, b: a * b, (m.hypothesis.SMAPE for m in models)) ** (1 / len(models))
         hypothesis._costs_are_calculated = True
         return hypothesis
@@ -44,6 +45,10 @@ class ComparisonModelSchema(ModelSchema):
         return ComparisonModel(None, None, None)
 
     models = fields.List(fields.Nested(ModelSchema))
+
+    @pre_load
+    def intercept(self, obj, **kwargs):
+        return obj
 
     def postprocess_object(self, obj: object) -> object:
         return obj

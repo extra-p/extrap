@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.modelers.abstract_modeler import EMPTY_MODELER
 from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
@@ -37,6 +38,10 @@ class ComparisonModelGenerator(ModelGenerator):
         for key, model in self.models.items():
             if not model.measurements:
                 model.measurements = experiment.measurements.get(key)
+            if isinstance(model, ComparisonModel):
+                for m in model.models:
+                    if not model.measurements:
+                        model.measurements = experiment.measurements.get((m.callpath, m.metric))
 
 
 class ComparisonModelGeneratorSchema(ModelGeneratorSchema):

@@ -35,11 +35,12 @@ class Model:
     def with_callpath(self, callpath):
         model = copy.copy(self)
         model.callpath = callpath
-        model.measurements = []
-        for m in self.measurements:
-            m = copy.copy(m)
-            m.callpath = callpath
-            model.measurements.append(m)
+        if self.measurements:
+            model.measurements = []
+            for m in self.measurements:
+                m = copy.copy(m)
+                m.callpath = callpath
+                model.measurements.append(m)
         return model
 
     def __eq__(self, other):

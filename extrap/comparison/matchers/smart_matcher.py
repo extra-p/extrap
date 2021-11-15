@@ -211,6 +211,7 @@ class SmartMatcher(AbstractMatcher):
 
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar) -> ComparisonModelGenerator:
+        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME
         from extrap.comparison.entities.comparison_model import ComparisonModel
         mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)
         mg.models = {}
@@ -251,7 +252,8 @@ class SmartMatcher(AbstractMatcher):
                                                     progress_bar=progress_bar,
                                                     already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
-                                models.append(model.with_callpath(node.path))
+                                models.append(model.with_callpath(
+                                    node.path.concat(COMPARISON_NODE_NAME, f"[{s_name}] {node.name}")))
                             else:
                                 models.append(NULL_MODEL)
                 else:

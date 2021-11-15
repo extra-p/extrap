@@ -24,7 +24,7 @@ class Hypothesis:
         self._RSS = 0
         self._rRSS = 0
         self._SMAPE = 0
-        self._AR2 = 0
+        self.__AR2 = 0
         self._RE = 0
         self._use_median = use_median
         self._costs_are_calculated = False
@@ -32,6 +32,16 @@ class Hypothesis:
     @property
     def use_median(self):
         return self._use_median
+
+    @property
+    def _AR2(self):
+        return self.__AR2
+
+    @_AR2.setter
+    def _AR2(self, val):
+        if isinstance(val, complex):
+            breakpoint()
+        self.__AR2 = val
 
     @property
     def RSS(self):
