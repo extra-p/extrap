@@ -8,10 +8,12 @@
 from asyncio import Event
 from functools import partial
 from itertools import chain
+from pathlib import Path
 from typing import Optional, Type
 
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QWizard, QCommandLinkButton, QSpacerItem, QSizePolicy, QFileDialog
+from PySide2.QtWidgets import QWizard, QCommandLinkButton, QSpacerItem, QSizePolicy, QFileDialog, QWizardPage, \
+    QFormLayout, QLineEdit, QLabel
 
 from extrap.comparison import matchers
 from extrap.comparison.experiment_comparison import ComparisonExperiment
@@ -27,7 +29,7 @@ class ComparisonWizard(QWizard):
     file_reader: Type[FileReader]
     file_name: str
 
-    def __init__(self, experiment1, experiment2=None):
+    def __init__(self, experiment1, experiment2=None, name1='exp1', name2='exp2'):
         super().__init__()
         self.setWindowTitle("Compare With Other Experiment")
         self.setWizardStyle(QWizard.ModernStyle)
@@ -35,9 +37,11 @@ class ComparisonWizard(QWizard):
         if not experiment2:
             self.addPage(FileSelectionPage(self))
             self.addPage(FileLoadingPage(self))
+        self.addPage(NamingPage(self))
         self.addPage(MatcherSelectionPage(self))
         self.comparing_page_id = self.addPage(ComparingPage(self))
         self.matcher = None
+        self.exp_names = [name1, name2]
         self.experiment1 = experiment1
         self.experiment2 = experiment2
         self.experiment: Optional[ComparisonExperiment] = None
@@ -71,9 +75,11 @@ class FileSelectionPage(ScrollAreaPage):
         self.scroll_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
 
     def open_file(self, reader, name):
-        self.wizard().file_name = name
-        self.wizard().file_reader = reader
-        self.wizard().next()
+        wizard: ComparisonWizard = self.wizard()
+        wizard.file_name = name
+        wizard.exp_names[1] = Path(name).stem
+        wizard.file_reader = reader
+        wizard.next()
 
     def isComplete(self) -> bool:
         return False
@@ -125,13 +131,45 @@ class ComparingPage(ProgressPage):
         super().cleanupPage()
 
     def do_process(self, pbar):
-        wizard = self.wizard()
+        wizard: ComparisonWizard = self.wizard()
         if wizard.matcher == InteractiveMatcher:
             matcher = wizard.matcher(wizard)
         else:
             matcher = wizard.matcher()
         wizard.experiment = ComparisonExperiment(wizard.experiment1, wizard.experiment2, matcher=matcher)
+        wizard.experiment.experiment_names = wizard.exp_names
         if wizard.matcher == InteractiveMatcher:
             self._override_next_id = matcher.determine_next_page_id()
         else:
             wizard.experiment.do_comparison(pbar)
+
+
+class NamingPage(QWizardPage):
+    def __init__(self, parent: ComparisonWizard):
+        super().__init__(parent)
+        self.setTitle('Name compared experiments')
+        layout = QFormLayout(self)
+        self.setLayout(layout)
+        self._tb_name1 = QLineEdit()
+        self._tb_name2 = QLineEdit()
+        layout.addRow(QLabel("These names are used in Extra-P to show the sources of the compared models."))
+        layout.addRow("Name of experiment 1", self._tb_name1)
+        layout.addRow("Name of experiment 2", self._tb_name2)
+
+    def initializePage(self) -> None:
+        wizard: ComparisonWizard = self.wizard()
+        self._tb_name1.setText(wizard.exp_names[0])
+        self._tb_name2.setText(wizard.exp_names[1])
+
+    def validatePage(self) -> bool:
+        wizard: ComparisonWizard = self.wizard()
+        wizard.exp_names[0] = self._tb_name1.text()
+        if not wizard.exp_names[0]:
+            wizard.exp_names[0] = 'exp1'
+        wizard.exp_names[1] = self._tb_name2.text()
+        if not wizard.exp_names[1]:
+            wizard.exp_names[1] = 'exp2'
+        if wizard.exp_names[0] == wizard.exp_names[1]:
+            wizard.exp_names[0] += 1
+            wizard.exp_names[1] += 2
+        return super().validatePage()

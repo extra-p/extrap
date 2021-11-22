@@ -16,6 +16,7 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 import extrap
+from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.model import Model
@@ -261,6 +262,7 @@ class MainWidget(QMainWindow):
     def set_experiment(self, experiment):
         self.experiment_change = True
         self._experiment = experiment
+        self.compare_action.setEnabled(not isinstance(experiment, ComparisonExperiment))
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
@@ -325,15 +327,15 @@ class MainWidget(QMainWindow):
 
     @Slot()
     def _compare_experiment(self, experiment=None):
-        cw = ComparisonWizard(self.getExperiment(), experiment)
-        cw.file_name = ''
+        exp_name = 'exp1'
+        if self.windowFilePath():
+            exp_name = Path(self.windowFilePath()).stem
+        cw = ComparisonWizard(self.getExperiment(), experiment, exp_name)
 
         def on_accept():
             self.set_experiment(cw.experiment)
-            current = self.windowTitle()
-            self._set_opened_file_name(None)
-            self.setWindowTitle(Path(cw.file_name).name + " <> " + current)
-            self.save_experiment_action.setEnabled(True)
+            self._set_opened_file_name(cw.experiment.experiment_names[0] + " <> " + cw.experiment.experiment_names[1],
+                                       compared=True)
 
         cw.accepted.connect(on_accept)
         cw.open()
@@ -398,11 +400,10 @@ class MainWidget(QMainWindow):
         else:
             file_dialog.show(self, _import_file, title, filter=filter, file_mode=file_mode)
 
-    def _set_opened_file_name(self, file_name):
+    def _set_opened_file_name(self, file_name, *, compared=False):
         if file_name:
             self.save_experiment_action.setEnabled(True)
-            self.compare_action.setEnabled(True)
-            self.setWindowFilePath(file_name)
+            self.setWindowFilePath(file_name if not compared else "")
             self.setWindowTitle(Path(file_name).name + " – " + extrap.__title__)
 
         else:
