@@ -211,6 +211,7 @@ class SmartMatcher(AbstractMatcher):
 
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar) -> ComparisonModelGenerator:
+        # breakpoint()
         from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME
         from extrap.comparison.entities.comparison_model import ComparisonModel
         mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)

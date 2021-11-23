@@ -31,7 +31,7 @@ class ComparisonModel(Model):
         hypothesis_type = type(models[0].hypothesis)
         hypothesis = hypothesis_type(function, models[0].hypothesis._use_median)
         hypothesis._RSS = sum(m.hypothesis.RSS for m in models)
-        hypothesis._RE = reduce(lambda a, b: a * b, (m.hypothesis.RE for m in models)) ** (1 / len(models))
+        hypothesis._RE = reduce(lambda a, b: abs(a * b), (m.hypothesis.RE for m in models)) ** (1 / len(models))
         hypothesis._rRSS = reduce(lambda a, b: a * b, (m.hypothesis.rRSS for m in models)) ** (1 / len(models))
         hypothesis._AR2 = reduce(lambda a, b: a * b,
                                  (m.hypothesis.AR2 if m.hypothesis.AR2 > 0 else 0 for m in models)) ** (1 / len(models))

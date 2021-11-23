@@ -166,9 +166,12 @@ class ComparisonExperiment(Experiment):
         for converter in converters:
             for i, exp in enumerate([self.exp1, self.exp2]):
                 for callpath in exp.callpaths:
-                    measurements = converter.convert_measurements(i, [
-                        exp.measurements[callpath, metric] for metric in
-                        converter.get_required_metrics(i)])
+                    try:
+                        measurements = converter.convert_measurements(i,
+                                                                      [exp.measurements[callpath, metric] for metric in
+                                                                       converter.get_required_metrics(i)])
+                    except KeyError:
+                        continue
                     exp.measurements[callpath, converter.new_metric] = measurements
                     for model_set in exp.modelers:
                         model_set.models[callpath, converter.new_metric] = converter.convert_models(i, [
