@@ -87,7 +87,7 @@ def _convert_metric_value(mv: MetricValueMessage):
         return mv.Uint64Value
     if mv.HasField("Uint32Value"):
         return mv.Uint32Value
-    return float('nan')
+    return None
 
 
 def _convert_and_map_measurements(data):
@@ -96,8 +96,9 @@ def _convert_and_map_measurements(data):
         res: ProfileResult = raw.parse()
         assert res.KernelFunctionName == name
         for mv in res.MetricResults:
-            aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += _convert_metric_value(
-                mv.MetricValue)
+            value = _convert_metric_value(mv.MetricValue)
+            if value:
+                aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += value
     return aggregated_values
 
 
@@ -110,6 +111,7 @@ def _convert_measurements(raw_data, *, ignore_metric_ids=None):
         for mv in res.MetricResults:
             if mv.NameId in ignore_metric_ids:
                 continue
-            aggregated_values[('main->' + res.KernelFunctionName, mv.NameId)] += _convert_metric_value(
-                mv.MetricValue)
+            value = _convert_metric_value(mv.MetricValue)
+            if value:
+                aggregated_values[('main->' + res.KernelFunctionName, mv.NameId)] += value
     return aggregated_values
