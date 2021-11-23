@@ -5,8 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from extrap.comparison.metric_conversion import CalculationFunction, CalculatedFunctionAddition, \
-    CalculatedFunctionMultiplication, CalculatedFunctionSubtraction
+from extrap.comparison.entities.calculation_function import CalculationFunction, CalculatedFunctionAddition, \
+    CalculatedFunctionSubtraction, CalculatedFunctionMultiplication
 from extrap.comparison.metric_conversion.cpu_gpu import FlopsDP
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate

@@ -5,8 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from extrap.comparison.metric_conversion import AbstractMetricConverter, ConversionMetrics, CalculationElement
-from extrap.entities.metric import Metric
+from extrap.comparison.entities.calculation_element import CalculationElement
+from extrap.comparison.metric_conversion import AbstractMetricConverter, ConversionMetrics
 
 
 class FlopsDP(AbstractMetricConverter):
