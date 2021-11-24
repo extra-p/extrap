@@ -20,7 +20,7 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
-from extrap.entities.model import Model, NULL_MODEL
+from extrap.entities.model import Model
 from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -256,7 +256,7 @@ class SmartMatcher(AbstractMatcher):
                                 models.append(model.with_callpath(
                                     node.path.concat(COMPARISON_NODE_NAME, f"[{s_name}] {node.name}")))
                             else:
-                                models.append(NULL_MODEL)
+                                models.append(Model.ZERO)
                 else:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):

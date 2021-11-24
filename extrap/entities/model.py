@@ -4,6 +4,8 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
+
 import copy
 from typing import Optional, List
 
@@ -20,6 +22,7 @@ from extrap.util.serialization_schema import BaseSchema
 
 
 class Model:
+    ZERO: Model
 
     def __init__(self, hypothesis, callpath=None, metric=None):
         self.hypothesis: Hypothesis = hypothesis
@@ -79,8 +82,12 @@ class _NullModel(Model):
     def __eq__(self, o: object) -> bool:
         return o is self or isinstance(o, _NullModel)
 
+    @property
+    def predictions(self):
+        return None
 
-NULL_MODEL = _NullModel()
+
+Model.ZERO = _NullModel()
 
 
 class _NullModelSchema(ModelSchema):
@@ -90,7 +97,7 @@ class _NullModelSchema(ModelSchema):
 
     @post_load
     def unpack_to_object(self, data, **kwargs):
-        return NULL_MODEL
+        return Model.ZERO
 
     def create_object(self):
-        return NULL_MODEL
+        return Model.ZERO
