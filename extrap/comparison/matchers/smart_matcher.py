@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import copy
 import re
 import warnings
 from typing import Sequence, Tuple, Mapping, List, Optional, Dict, TYPE_CHECKING
@@ -135,9 +136,13 @@ class SmartMatcher(AbstractMatcher):
                     new_match[i] = s_node
                     new_matches[part_node] = new_match
                     new_matches[part_agg_node] = new_match
-                    part_measurements = s_measurements.get((s_node.path, metric))
-                    if part_measurements:
-                        # TODO create Measurement opject with correct callpath
+                    s_part_measurements = s_measurements.get((s_node.path, metric))
+                    if s_part_measurements:
+                        part_measurements = []
+                        for m in s_part_measurements:
+                            measurement = copy.copy(m)
+                            measurement.callpath = part_cp
+                            part_measurements.append(measurement)
                         measurements[part_cp, metric] = part_measurements
                     measurements[agg_cp, metric] = list(t_measurements.values())
 

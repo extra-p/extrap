@@ -75,6 +75,7 @@ class NcuReport:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.report_data.close()
         self.report_data = None
 
 
@@ -97,7 +98,7 @@ def _convert_and_map_measurements(data):
         assert res.KernelFunctionName == name
         for mv in res.MetricResults:
             value = _convert_metric_value(mv.MetricValue)
-            if value:
+            if value is not None:
                 aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += value
     return aggregated_values
 
@@ -112,6 +113,6 @@ def _convert_measurements(raw_data, *, ignore_metric_ids=None):
             if mv.NameId in ignore_metric_ids:
                 continue
             value = _convert_metric_value(mv.MetricValue)
-            if value:
+            if value is not None:
                 aggregated_values[('main->' + res.KernelFunctionName, mv.NameId)] += value
     return aggregated_values
