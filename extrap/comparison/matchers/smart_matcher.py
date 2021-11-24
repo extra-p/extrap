@@ -29,6 +29,8 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 if TYPE_CHECKING:
     from extrap.comparison.experiment_comparison import ComparisonExperiment
 
+TAG_COMPARISON_NODE__AGG_PART = 'agg_part'
+
 
 class SmartMatcher(AbstractMatcher):
     NAME = 'Smart Matcher'
@@ -67,7 +69,8 @@ class SmartMatcher(AbstractMatcher):
     def make_measurements_and_update_call_tree(self, experiment: ComparisonExperiment,
                                                call_tree_match: MutableAbstractMatches[Node],
                                                *source_measurements: Dict[Tuple[Callpath, Metric], List[Measurement]]):
-        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME
+        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE, \
+            TAG_COMPARISON_NODE__COMPARISON
         measurements = {}
         new_matches = {}
         comparison_nodes = {}
@@ -91,7 +94,7 @@ class SmartMatcher(AbstractMatcher):
                     part_agg_node = comparison_node.find_child(name)
                     if not part_agg_node:
                         agg_cp = comparison_node.path.concat(name)
-                        agg_cp.tags = {'comparison__part_agg': True}
+                        agg_cp.tags = {TAG_COMPARISON_NODE: TAG_COMPARISON_NODE__AGG_PART}
                         part_agg_node = Node(name, agg_cp)
                         comparison_node.add_child_node(part_agg_node)
                     else:
@@ -149,7 +152,7 @@ class SmartMatcher(AbstractMatcher):
                 if comparison_node.childs and node not in comparison_nodes:
                     # add comparison node to the calltree
                     node.childs.insert(0, comparison_node)
-                    node.path.tags['comparison'] = True
+                    node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
                     comparison_nodes[node] = comparison_node
 
         call_tree_match.update(new_matches)
@@ -217,7 +220,8 @@ class SmartMatcher(AbstractMatcher):
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar) -> ComparisonModelGenerator:
         # breakpoint()
-        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME
+        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE, \
+            TAG_COMPARISON_NODE__COMPARISON
         from extrap.comparison.entities.comparison_model import ComparisonModel
         mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)
         mg.models = {}
@@ -225,7 +229,7 @@ class SmartMatcher(AbstractMatcher):
             for node, source_nodes in experiment.call_tree_match.items():
                 models = []
                 progress_bar.update()
-                if node.path.tags.get('comparison__part_agg', False):
+                if node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__AGG_PART:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None:
@@ -241,7 +245,7 @@ class SmartMatcher(AbstractMatcher):
                             if model:
                                 models.append(model.with_callpath(node.path))
 
-                elif node.path.tags.get('comparison', False):
+                elif node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__COMPARISON:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None:

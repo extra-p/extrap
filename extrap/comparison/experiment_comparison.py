@@ -22,6 +22,8 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.unique_list import UniqueList
 
 COMPARISON_NODE_NAME = '[Comparison]'
+TAG_COMPARISON_NODE = 'comparison__node'
+TAG_COMPARISON_NODE__COMPARISON = 'comparison'
 
 
 class ComparisonError(RecoverableError):
@@ -114,6 +116,7 @@ class ComparisonExperiment(Experiment):
                 origin_node = comparison_nodes.get(node)
                 if not origin_node:
                     origin_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
+                    origin_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
                 for i, (s_node, s_metric, s_measurement, s_name) in enumerate(
                         zip(source_nodes, source_metrics, source_measurements, self.experiment_names)):
                     source_key = (s_node.path, s_metric)
