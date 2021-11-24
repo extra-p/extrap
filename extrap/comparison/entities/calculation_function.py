@@ -15,12 +15,9 @@ from extrap.util.serialization_schema import NumberField
 
 class CalculationFunction(Function, CalculationElement):
 
-    def __init__(self, *function: Function):
-        super().__init__(*function)
-        if function:
-            self._function = function[0]
-        else:
-            self._function = None
+    def __init__(self, function: Function):
+        super().__init__()
+        self._function = function
 
     def to_string(self, *parameters: Union[str, Parameter]):
         result = self._function.to_string(*parameters)
@@ -164,7 +161,7 @@ class CalculationFunction(Function, CalculationElement):
 
 class CalculationFunctionSchema(FunctionSchema):
     def create_object(self):
-        return CalculationFunction()
+        return CalculationFunction(None)
 
     _function = fields.Nested(FunctionSchema)
 
@@ -177,28 +174,34 @@ class CalculatedFunctionOperator(CalculationFunction, ABC):
     _operator_name: str
     _is_prefix_operator: bool = False
 
+    def __init__(self, function1: Function, function2: Function):
+        super(CalculatedFunctionOperator, self).__init__(function1)
+        self._function2 = function2
+
     def evaluate(self, parameter_value: Union[_ValueType, Mapping[int, _ValueType],
                                               Sequence[_ValueType]]) -> _ValueType:
-        rest = iter(self)
-        function_value = next(rest).evaluate(parameter_value)
-        for t in rest:
-            function_value = self._operator(function_value, t.evaluate(parameter_value))
+        # rest = iter(self)
+        function_value = self._function.evaluate(parameter_value)
+        # for t in rest:
+        function_value = self._operator(function_value, self._function2.evaluate(parameter_value))
         function_value += self.constant_coefficient
         return function_value
 
     def to_string(self, *parameters: Union[str, Parameter]):
         if self._is_prefix_operator:
             result = self._operator_name + '(' + ', '.join(
-                [f.to_string(*parameters) for f in self.compound_terms]) + ')'
+                [f.to_string(*parameters) for f in [self._function, self._function2]]) + ')'
         else:
             result = '(' + (')' + self._operator_name + '(').join(
-                [f.to_string(*parameters) for f in self.compound_terms]) + ')'
+                [f.to_string(*parameters) for f in [self._function, self._function2]]) + ')'
         if self.constant_coefficient != 0:
             result = str(self.constant_coefficient) + " + " + result
         return result
 
 
 class CalculatedFunctionOperatorSchema(CalculationFunctionSchema):
+    _function2 = fields.Nested(FunctionSchema)
+
     def create_object(self):
         return NotImplemented, CalculatedFunctionOperator
 
@@ -210,7 +213,7 @@ class CalculatedFunctionAddition(CalculatedFunctionOperator):
 
 class CalculatedFunctionAdditionSchema(CalculatedFunctionOperatorSchema):
     def create_object(self):
-        return CalculatedFunctionAddition()
+        return CalculatedFunctionAddition(None, None)
 
 
 class CalculatedFunctionSubtraction(CalculatedFunctionOperator):
@@ -220,7 +223,7 @@ class CalculatedFunctionSubtraction(CalculatedFunctionOperator):
 
 class CalculatedFunctionSubtractionSchema(CalculatedFunctionOperatorSchema):
     def create_object(self):
-        return CalculatedFunctionSubtraction()
+        return CalculatedFunctionSubtraction(None, None)
 
 
 class CalculatedFunctionMultiplication(CalculatedFunctionOperator):
@@ -230,15 +233,12 @@ class CalculatedFunctionMultiplication(CalculatedFunctionOperator):
 
 class CalculatedFunctionMultiplicationSchema(CalculatedFunctionOperatorSchema):
     def create_object(self):
-        return CalculatedFunctionMultiplication()
+        return CalculatedFunctionMultiplication(None, None)
 
 
 class CalculatedFunctionFactor(CalculationFunction):
     def __init__(self, coefficient, function: Function):
-        if function == NotImplemented:
-            super(CalculatedFunctionFactor, self).__init__()
-        else:
-            super(CalculatedFunctionFactor, self).__init__(function)
+        super(CalculatedFunctionFactor, self).__init__(function)
         self.coefficient = coefficient
 
     def evaluate(self, parameter_value: Union[_ValueType, Mapping[int, Union[_ValueType]],
@@ -256,7 +256,7 @@ class CalculatedFunctionFactorSchema(CalculatedFunctionOperatorSchema):
     coefficient = NumberField()
 
     def create_object(self):
-        return CalculatedFunctionFactor(0, NotImplemented)
+        return CalculatedFunctionFactor(0, None)
 
 
 class CalculatedFunctionDivision(CalculatedFunctionOperator):
@@ -266,4 +266,4 @@ class CalculatedFunctionDivision(CalculatedFunctionOperator):
 
 class CalculatedFunctionDivisionSchema(CalculatedFunctionOperatorSchema):
     def create_object(self):
-        return CalculatedFunctionDivision()
+        return CalculatedFunctionDivision(None, None)
