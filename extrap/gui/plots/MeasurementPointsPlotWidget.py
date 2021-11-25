@@ -60,6 +60,9 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         for model, callpath in zip(model_list, selected_callpaths):
             callpath_color = dict_callpath_color[callpath]
             points = model.measurements
+            if not points:
+                breakpoint()
+                continue
             xs = np.array([m.coordinate[parameter_x.id] for m in points])
             ys = np.array([m.coordinate[parameter_y.id] for m in points])
             in_range = (xs <= maxX) & (ys <= maxY)
