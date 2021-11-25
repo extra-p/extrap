@@ -40,8 +40,8 @@ class ComparisonModelGenerator(ModelGenerator):
                 model.measurements = experiment.measurements.get(key)
             if isinstance(model, ComparisonModel):
                 for m in model.models:
-                    if not model.measurements:
-                        model.measurements = experiment.measurements.get((m.callpath, m.metric))
+                    if not m.measurements:
+                        m.measurements = experiment.measurements.get((m.callpath, m.metric))
 
 
 class ComparisonModelGeneratorSchema(ModelGeneratorSchema):
