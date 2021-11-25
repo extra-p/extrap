@@ -16,6 +16,7 @@ from marshmallow.fields import Field
 from marshmallow.schema import Schema as _Schema
 
 from extrap.entities.fraction import Fraction
+from extrap.util.exceptions import SerializationError
 
 
 class SchemaMeta(type(_Schema), type(ABC)):
@@ -80,12 +81,20 @@ class BaseSchema(Schema):
             return super(BaseSchema, self).load(data, **kwargs)
 
     def dump(self, obj, **kwargs):
-        if self.__is_direct_subclass(type(self), BaseSchema) and type(obj).__name__ in self._subclasses:
-            return self._subclasses[type(obj).__name__]().dump(obj, **kwargs)
+        obj_type = type(obj)
+        if self.__is_direct_subclass(type(self), BaseSchema) and obj_type.__name__ in self._subclasses:
+            return self._subclasses[obj_type.__name__]().dump(obj, **kwargs)
         else:
+            try:
+                serialization_type = type(self.create_object())
+            except NotImplementedError as e:
+                raise SerializationError() from e
+            if serialization_type != obj_type:
+                raise SerializationError(f"The serialization schema ({type(self)}, {serialization_type}) does not "
+                                         f"match the type of the serialized object ({obj_type}).")
             result = super(BaseSchema, self).dump(obj, **kwargs)
-            if type(obj).__name__ in self._subclasses:
-                result[self.type_field] = type(obj).__name__
+            if obj_type.__name__ in self._subclasses:
+                result[self.type_field] = obj_type.__name__
             return result
 
 
@@ -205,6 +214,8 @@ class NumberField(fields.Number):
             return None
         elif isinstance(value, Fraction):
             return self._to_string(value)
+        elif isinstance(value, complex):
+            raise SerializationError("The number field does not support serialization of complex values.")
         elif math.isnan(value) or math.isinf(value):
             return self._to_string(value)
         else:
