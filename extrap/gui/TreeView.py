@@ -4,13 +4,15 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import math
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gui.TreeModel import TreeModel
+from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
+from extrap.gui.TreeModel import TreeModel, TreeItem
 
 
 # TODO Expand largest
@@ -73,6 +75,32 @@ class TreeView(QTreeView):
         else:
             return None
 
+    def expand_recursively_without_comparison(self, index=None, context=None):
+        if not index or not context:
+            index = self.selectedIndexes()[0]
+            context = type('', (object,), {"treat_comparison_name_as_comparison": None})()
+        node: TreeItem = index.internalPointer()
+
+        for c in node.child_items:
+            child_index = self.model().index(c.row(), 0, index)
+            if c.data().path.tags.get(TAG_COMPARISON_NODE) != 'comparison':
+
+                # Check for COMPARISON_NODE_NAME to support legacy comparison experiments
+                if context.treat_comparison_name_as_comparison is None and c.data().name == COMPARISON_NODE_NAME:
+                    result = QMessageBox.question(self, "Comparison detection",
+                                                  f'Treat nodes which are named "{COMPARISON_NODE_NAME}" as comparison '
+                                                  'nodes?')
+                    if result == QMessageBox.Yes:
+                        context.treat_comparison_name_as_comparison = True
+                        continue
+                    else:
+                        context.treat_comparison_name_as_comparison = False
+                elif context.treat_comparison_name_as_comparison and c.data().name == COMPARISON_NODE_NAME:
+                    continue
+
+                self.expand_recursively_without_comparison(child_index, context)
+        self.expand(index)
+
     def contextMenuEvent(self, event):
         menu = QMenu()
 
@@ -113,6 +141,8 @@ class TreeView(QTreeView):
         expandSubtree = expand_collapse_submenu.addAction("Expand subtree")
         expandSubtree.triggered.connect(
             lambda: self.expandRecursively(self.selectedIndexes()[0]))
+        expandSubtree = expand_collapse_submenu.addAction("Expand subtree without comparisons")
+        expandSubtree.triggered.connect(self.expand_recursively_without_comparison)
         expandLargest = expand_collapse_submenu.addAction("Expand largest")
         expandLargest.triggered.connect(lambda: self.expand_largest(model, self.selectedIndexes()[0]))
         expand_collapse_submenu.addSeparator()  # --------------------------------------------------
