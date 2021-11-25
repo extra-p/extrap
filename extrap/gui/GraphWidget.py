@@ -16,8 +16,10 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
+from extrap.util.exceptions import RecoverableError
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -284,14 +286,18 @@ class GraphWidget(QWidget):
 
         model_list = []
         selected_call_nodes = []
+
+        def add_model(model, call_node):
+            if model != Model.ZERO:
+                model_list.append(model)
+                selected_call_nodes.append(call_node)
+
         for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
             if isinstance(model, ComparisonModel):
                 for m in model.models:
-                    model_list.append(m)
-                    selected_call_nodes.append(call_node)
+                    add_model(model, call_node)
             else:
-                model_list.append(model)
-                selected_call_nodes.append(call_node)
+                add_model(model, call_node)
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
@@ -299,25 +305,31 @@ class GraphWidget(QWidget):
         y = self.calculateMaxY(model_list) * 1.2
         self.max_y = y
 
-        # Draw coordinate system
-        self.drawAxis(paint, self.main_widget.get_selected_metric())
+        if math.isnan(self.max_y):
+            raise RecoverableError("Cannot draw graph, because NaN was set as maximum.")
 
-        # Draw functionss
-        index_indicator = 0
-        if not self.combine_all_callpath:
-            for model, call_node in zip(model_list, selected_call_nodes):
-                color = self.main_widget.model_color_map[call_node]
-                self.drawModel(paint, model, color)
-        else:
-            # main_widget = self.main_widget
-            # color = main_widget.model_color_map[selected_call_nodes[0]]
-            self.drawAggregratedModel(paint, model_list)
+        try:
+            # Draw coordinate system
+            self.drawAxis(paint, self.main_widget.get_selected_metric())
 
-        # Draw data points
-        self.drawDataPoints(paint, model_list)
+            # Draw functionss
+            index_indicator = 0
+            if not self.combine_all_callpath:
+                for model, call_node in zip(model_list, selected_call_nodes):
+                    color = self.main_widget.model_color_map[call_node]
+                    self.drawModel(paint, model, color)
+            else:
+                # main_widget = self.main_widget
+                # color = main_widget.model_color_map[selected_call_nodes[0]]
+                self.drawAggregratedModel(paint, model_list)
 
-        # Draw legend
-        self.drawLegend(paint)
+            # Draw data points
+            self.drawDataPoints(paint, model_list)
+
+            # Draw legend
+            self.drawLegend(paint)
+        except OverflowError as err:
+            raise RecoverableError(err) from err
 
     def drawDataPoints(self, paint, selected_models):
         if self.show_datapoints is True:
