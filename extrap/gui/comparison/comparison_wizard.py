@@ -170,6 +170,6 @@ class NamingPage(QWizardPage):
         if not wizard.exp_names[1]:
             wizard.exp_names[1] = 'exp2'
         if wizard.exp_names[0] == wizard.exp_names[1]:
-            wizard.exp_names[0] += 1
-            wizard.exp_names[1] += 2
+            wizard.exp_names[0] += '1'
+            wizard.exp_names[1] += '2'
         return super().validatePage()
