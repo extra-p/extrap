@@ -152,7 +152,7 @@ class SmartMatcher(AbstractMatcher):
                 if comparison_node.childs and node not in comparison_nodes:
                     # add comparison node to the calltree
                     node.childs.insert(0, comparison_node)
-                    comparison_nodes.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
+                    comparison_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
                     comparison_nodes[node] = comparison_node
 
         call_tree_match.update(new_matches)
