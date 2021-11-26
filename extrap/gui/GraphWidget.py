@@ -672,6 +672,8 @@ class GraphWidget(QWidget):
         """
 
         datapoints = model.measurements
+        if not datapoints:
+            return []
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         datapoint_x_absolute_pos_list = list()
         datapoint_y_absolute_pos_list = list()
@@ -728,8 +730,9 @@ class GraphWidget(QWidget):
         # Check the maximum value of a displayed data point
         if self.show_datapoints:
             for model in modelList:
-                y = max(model.predictions)
-                y_max = max(y, y_max)
+                if model.predictions:
+                    y = max(model.predictions)
+                    y_max = max(y, y_max)
 
         previous = numpy.seterr(invalid='ignore', divide='ignore')
 
@@ -745,7 +748,7 @@ class GraphWidget(QWidget):
             for model in modelList:
                 function = model.hypothesis.function
                 y = function.evaluate(pv_list)
-                if math.isinf(y):
+                if math.isinf(y) and model.predictions:
                     y = max(model.predictions)
                 y_agg += y
             y_max = max(y_agg, y_max)
@@ -754,7 +757,7 @@ class GraphWidget(QWidget):
         for model in modelList:
             function = model.hypothesis.function
             y = function.evaluate(pv_list)
-            if math.isinf(y):
+            if math.isinf(y) and model.predictions:
                 y = max(model.predictions)
             y_max = max(y, y_max)
 
@@ -763,7 +766,7 @@ class GraphWidget(QWidget):
         for model in modelList:
             function = model.hypothesis.function
             y = function.evaluate(pv_list)
-            if math.isinf(y):
+            if math.isinf(y) and model.predictions:
                 y = max(model.predictions)
             y_max = max(y, y_max)
 
@@ -776,6 +779,8 @@ class GraphWidget(QWidget):
 
     def showOutlierPoints(self, paint, selected_model):
         datapoints = selected_model.measurements
+        if not datapoints:
+            return
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         for datapoint in datapoints:
             x_value = datapoint.coordinate[parameter_datapoint]
