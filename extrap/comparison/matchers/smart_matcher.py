@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from extrap.comparison.experiment_comparison import ComparisonExperiment
 
 TAG_COMPARISON_NODE__AGG_PART = 'agg_part'
+TAG_COMPARISON_NODE__ROOT = 'root'
 
 
 class SmartMatcher(AbstractMatcher):
@@ -152,6 +153,7 @@ class SmartMatcher(AbstractMatcher):
                 if comparison_node.childs and node not in comparison_nodes:
                     # add comparison node to the calltree
                     node.childs.insert(0, comparison_node)
+                    node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__ROOT
                     comparison_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
                     comparison_nodes[node] = comparison_node
 
@@ -220,8 +222,7 @@ class SmartMatcher(AbstractMatcher):
     def make_model_generator(self, experiment: ComparisonExperiment, name: str, modelers: Sequence[ModelGenerator],
                              progress_bar) -> ComparisonModelGenerator:
         # breakpoint()
-        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE, \
-            TAG_COMPARISON_NODE__COMPARISON
+        from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
         from extrap.comparison.entities.comparison_model import ComparisonModel
         mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)
         mg.models = {}
@@ -245,7 +246,7 @@ class SmartMatcher(AbstractMatcher):
                             if model:
                                 models.append(model.with_callpath(node.path))
 
-                elif node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__COMPARISON:
+                elif node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__ROOT:
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None:
