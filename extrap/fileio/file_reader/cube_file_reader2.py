@@ -26,6 +26,8 @@ from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
+CUBE_CALLSITE_ID_KEY = 'callsite id'
+
 
 class CubeFileReader2(AbstractDirectoryReader):
     NAME = "cube"
@@ -146,6 +148,8 @@ class CubeFileReader2(AbstractDirectoryReader):
 
     def _make_callpath_mapping(self, cnodes):
         callpaths = {}
+        callsites = {}
+        callsite_kernels = {}
 
         def demangle_name(name):
             if self.demangle_names:
@@ -163,7 +167,26 @@ class CubeFileReader2(AbstractDirectoryReader):
                 name = cnode.region.name
                 name = demangle_name(name)
                 path_name = '->'.join((parent_name, name))
-                callpaths[cnode.id] = Callpath(path_name)
+                callpath = Callpath(path_name)
+                if cnode.region.paradigm == 'cuda':
+                    if cnode.region.role == 'function':
+                        callpath.tags['gpu__kernel'] = True
+                        callsite_kernels[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    elif cnode.region.role == 'wrapper':
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    elif cnode.region.role == 'implicit barrier':
+                        callpath.tags['gpu__sync'] = True
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    elif cnode.region.role == 'artificial':
+                        callpath.tags['gpu__overhead'] = True
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    else:
+                        warnings.warn(f"Unknown cuda role {cnode.region.role} in {path_name}.")
+
+                callpaths[cnode.id] = callpath
                 walk_tree(cnode, path_name)
 
         for root_cnode in cnodes:
@@ -172,6 +195,13 @@ class CubeFileReader2(AbstractDirectoryReader):
             callpath = Callpath(name)
             callpaths[root_cnode.id] = callpath
             walk_tree(root_cnode, name)
+
+        for id, kernel_callpath in callsite_kernels.items():
+            if id in callsites:
+                callsite_callpath = callsites[id]
+                kernel_callpath.name = callsite_callpath.name + '->[GPU]'
+            else:
+                warnings.warn(f"Could not find call-site ({id}) for the following kernel: {kernel_callpath.name}")
 
         return callpaths
 
