@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import copy
-import re
 import warnings
 from typing import Sequence, Tuple, Mapping, List, Optional, Dict, TYPE_CHECKING
 
@@ -24,6 +23,7 @@ from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
+from extrap.util.formatting_helper import replace_method_parameters
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 if TYPE_CHECKING:
@@ -57,7 +57,7 @@ class SmartMatcher(AbstractMatcher):
         main_node0 = self._find_main(call_tree[0])
         main_node1 = self._find_main(call_tree[1])
         if main_node0 and main_node1:
-            n = Node(self._normalizeName(main_node0.name), Callpath('main'))
+            n = Node(self._normalize_name(main_node0.name), Callpath('main'))
             matches[n] = [main_node0, main_node1]
             root.add_child_node(n)
             self._merge_call_trees(n, main_node0, main_node1, 'main', matches, progress_bar)
@@ -165,16 +165,15 @@ class SmartMatcher(AbstractMatcher):
         mg_map = {m.name: m for m in mg[1]}
         return {m.name: [m, mg_map[m.name]] for m in mg[0] if m.name in mg_map}
 
-    def _normalizeName(self, name):
-        name = re.sub(r'\(.*?\)', '', name)
-        name = re.sub(r'<.*?>', '', name)
-        return name
+    @staticmethod
+    def _normalize_name(name):
+        return replace_method_parameters(name, "")
 
     def _merge_call_trees(self, parent: Node, parent1: Node, parent2: Node, path, matches, progress_bar):
         for n1 in parent1.childs:
-            normalized_name = self._normalizeName(n1.name)
+            normalized_name = self._normalize_name(n1.name)
             for n2 in parent2.childs:
-                if self._normalizeName(n2.name) == normalized_name:
+                if self._normalize_name(n2.name) == normalized_name:
                     new_path = path + '->' + normalized_name
                     n = Node(normalized_name, Callpath(new_path))
                     matches[n] = [n1, n2]
