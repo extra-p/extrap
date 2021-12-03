@@ -22,9 +22,9 @@ class ComparisonModel(Model):
         super().__init__(self._make_comparison_hypothesis(models), callpath, metric)
         self.models = models
 
-    # @property
+    @property
     def predictions(self):
-        raise NotImplementedError()
+        return None
 
     @staticmethod
     def _make_comparison_hypothesis(models):

@@ -295,7 +295,7 @@ class GraphWidget(QWidget):
         for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
             if isinstance(model, ComparisonModel):
                 for m in model.models:
-                    add_model(model, call_node)
+                    add_model(m, call_node)
             else:
                 add_model(model, call_node)
 
@@ -730,7 +730,7 @@ class GraphWidget(QWidget):
         # Check the maximum value of a displayed data point
         if self.show_datapoints:
             for model in modelList:
-                if model.predictions:
+                if model.predictions is not None and len(model.predictions) > 0:
                     y = max(model.predictions)
                     y_max = max(y, y_max)
 
@@ -748,7 +748,7 @@ class GraphWidget(QWidget):
             for model in modelList:
                 function = model.hypothesis.function
                 y = function.evaluate(pv_list)
-                if math.isinf(y) and model.predictions:
+                if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                     y = max(model.predictions)
                 y_agg += y
             y_max = max(y_agg, y_max)
@@ -757,7 +757,7 @@ class GraphWidget(QWidget):
         for model in modelList:
             function = model.hypothesis.function
             y = function.evaluate(pv_list)
-            if math.isinf(y) and model.predictions:
+            if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                 y = max(model.predictions)
             y_max = max(y, y_max)
 
@@ -766,7 +766,7 @@ class GraphWidget(QWidget):
         for model in modelList:
             function = model.hypothesis.function
             y = function.evaluate(pv_list)
-            if math.isinf(y) and model.predictions:
+            if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                 y = max(model.predictions)
             y_max = max(y, y_max)
 
