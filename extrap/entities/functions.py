@@ -15,16 +15,18 @@ from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
 from extrap.util.serialization_schema import BaseSchema, NumberField
 
+_TermType = Union[CompoundTerm, MultiParameterTerm]
+
 
 class Function:
-    def __init__(self, *compound_terms: CompoundTerm):
+    def __init__(self, *compound_terms: _TermType):
         """
         Initialize a Function object.
         """
         self.constant_coefficient = 0
-        self.compound_terms: List[CompoundTerm] = list(compound_terms)
+        self.compound_terms: List[_TermType] = list(compound_terms)
 
-    def add_compound_term(self, compound_term):
+    def add_compound_term(self, compound_term: _TermType):
         """
         Add a compound term to the function.
         """
@@ -35,7 +37,7 @@ class Function:
         for t in self.compound_terms:
             t.reset_coefficients()
 
-    def __iadd__(self, compound_term):
+    def __iadd__(self, compound_term: _TermType):
         self.add_compound_term(compound_term)
         return self
 
@@ -94,7 +96,24 @@ class Function:
             return self.__dict__ == other.__dict__
 
 
-class ConstantFunction(Function):
+class TermlessFunction(Function):
+
+    def __init__(self):
+        super(TermlessFunction, self).__init__()
+        self.add_compound_term = None
+        self.__iadd__ = None
+
+    @property
+    def compound_terms(self):
+        return []
+
+    @compound_terms.setter
+    def compound_terms(self, val):
+        if val:
+            raise NotImplementedError()
+
+
+class ConstantFunction(TermlessFunction):
     """
     This class represents a constant function.
     """
@@ -102,8 +121,6 @@ class ConstantFunction(Function):
     def __init__(self, constant_coefficient=1):
         super().__init__()
         self.constant_coefficient = constant_coefficient
-        self.add_compound_term = None
-        self.__iadd__ = None
 
     def to_string(self, *_):
         """
@@ -116,8 +133,9 @@ class SingleParameterFunction(Function):
     """
     This class represents a single parameter function
     """
+    compound_terms: List[CompoundTerm]
 
-    def __init__(self, *compound_terms):
+    def __init__(self, *compound_terms: CompoundTerm):
         super().__init__(*compound_terms)
 
     def evaluate(self, parameter_value):
@@ -138,23 +156,31 @@ class MultiParameterFunction(Function):
 
 class FunctionSchema(BaseSchema):
     constant_coefficient = NumberField()
-    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(CompoundTermSchema))
+    compound_terms: List[_TermType] = fields.List(fields.Nested(CompoundTermSchema))  # Not really correct
 
 
-class ConstantFunctionSchema(FunctionSchema):
+class TermlessFunctionSchema(FunctionSchema):
     compound_terms = fields.Constant([], load_only=True)
+
+    def create_object(self):
+        return NotImplemented, FunctionSchema
+
+
+class ConstantFunctionSchema(TermlessFunctionSchema):
 
     def create_object(self):
         return ConstantFunction()
 
 
 class SingleParameterFunctionSchema(FunctionSchema):
+    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(CompoundTermSchema))
+
     def create_object(self):
         return SingleParameterFunction()
 
 
 class MultiParameterFunctionSchema(FunctionSchema):
-    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(MultiParameterTermSchema))
+    compound_terms: List[MultiParameterTerm] = fields.List(fields.Nested(MultiParameterTermSchema))
 
     def create_object(self):
         return MultiParameterFunction()

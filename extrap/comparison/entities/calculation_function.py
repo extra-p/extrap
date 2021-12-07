@@ -12,15 +12,17 @@ from numbers import Number, Real
 from typing import Union, Mapping, Sequence, cast, Callable
 
 import numpy
+import sympy
 from marshmallow import fields
 
 from extrap.comparison.entities.calculation_element import CalculationElement
-from extrap.entities.functions import Function, ConstantFunction, FunctionSchema
+from extrap.entities.functions import Function, ConstantFunction, FunctionSchema, TermlessFunctionSchema, \
+    TermlessFunction
 from extrap.entities.parameter import Parameter
 from extrap.util.serialization_schema import NumberField
 
 
-class CalculationFunction(Function, CalculationElement):
+class CalculationFunction(TermlessFunction, CalculationElement):
 
     def __init__(self, function: Function):
         super().__init__()
@@ -166,7 +168,7 @@ class CalculationFunction(Function, CalculationElement):
         return target, other
 
 
-class CalculationFunctionSchema(FunctionSchema):
+class CalculationFunctionSchema(TermlessFunctionSchema):
     def create_object(self):
         return CalculationFunction(None)
 

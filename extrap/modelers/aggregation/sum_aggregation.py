@@ -4,12 +4,14 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import copy
+import warnings
 from typing import Union, Sequence, Mapping
 
 import numpy
 
 from extrap.entities.callpath import Callpath
+from extrap.entities.functions import TermlessFunction, ConstantFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
@@ -20,6 +22,9 @@ from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggreg
 
 
 class SumAggregationFunction(BinaryAggregationFunction):
+    def __init__(self, *function_terms):
+        self.unsimplifiable_terms = []
+        super().__init__(*function_terms)
 
     def evaluate(self, parameter_value):
         if isinstance(parameter_value, numpy.ndarray):
@@ -51,18 +56,26 @@ class SumAggregationFunction(BinaryAggregationFunction):
             # aggregate constant term
             self.constant_coefficient += t.constant_coefficient
 
-            # find immutable simple term combinations
-            for x in t.compound_terms:
-                if isinstance(x, MultiParameterTerm):
-                    key = 'Multi' + ', '.join(str(y[0]) + y[1].to_string() for y in x.parameter_term_pairs)
-                elif hasattr(x, 'simple_terms'):
-                    key = ', '.join(y.to_string() for y in x.simple_terms)
-                else:
-                    key = 'Compat' + x.to_string()
-                if term_map.keys().__contains__(key):
-                    term_map[key].append(x)
-                else:
-                    term_map[key] = [x]
+            if isinstance(t, TermlessFunction):
+                if not isinstance(t, ConstantFunction):
+                    function = copy.copy(t)
+                    function.constant_coefficient = 0
+                    self.unsimplifiable_terms.append(function)
+            else:
+                # find immutable simple term combinations
+                for x in t.compound_terms:
+                    if isinstance(x, MultiParameterTerm):
+                        key = 'Multi' + ', '.join(str(y[0]) + y[1].to_string() for y in x.parameter_term_pairs)
+                    elif hasattr(x, 'simple_terms'):
+                        key = ', '.join(y.to_string() for y in x.simple_terms)
+                    else:
+                        key = 'Compat' + x.to_string()
+                    if term_map.keys().__contains__(key):
+                        term_map[key].append(x)
+                    else:
+                        term_map[key] = [x]
+                if not t.compound_terms:
+                    warnings.warn("Encountered empty compund terms in function that should contain compound terms.")
 
         # Aggregate a compound term for each immutable simple term combination
         for key in term_map.keys():
@@ -83,6 +96,9 @@ class SumAggregationFunction(BinaryAggregationFunction):
     def to_string(self, *parameters: Union[str, Parameter]):
         function_string = str(self.constant_coefficient)
         for t in self.compound_terms:
+            function_string += ' + '
+            function_string += t.to_string(*parameters)
+        for t in self.unsimplifiable_terms:
             function_string += ' + '
             function_string += t.to_string(*parameters)
         return function_string

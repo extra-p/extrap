@@ -10,11 +10,11 @@ from typing import Union
 import numpy as np
 from marshmallow import fields
 
-from extrap.entities.functions import Function, FunctionSchema
+from extrap.entities.functions import FunctionSchema, TermlessFunctionSchema, TermlessFunction
 from extrap.entities.parameter import Parameter
 
 
-class ComparisonFunction(Function):
+class ComparisonFunction(TermlessFunction):
     def __init__(self, functions):
         super().__init__()
         self.functions = functions
@@ -61,8 +61,7 @@ class ComparisonFunction(Function):
         return '(' + ', '.join(t.to_string(*parameters) for t in self.functions) + ')'
 
 
-class ComparisonFunctionSchema(FunctionSchema):
-    compound_terms = fields.Constant(None, load_only=True, dump_only=True)
+class ComparisonFunctionSchema(TermlessFunctionSchema):
     constant_coefficient = fields.Constant(None, load_only=True, dump_only=True)
 
     def create_object(self):
