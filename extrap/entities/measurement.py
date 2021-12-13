@@ -4,18 +4,20 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import copy
 
 import numpy as np
 from marshmallow import fields, post_load
 
+from extrap.entities.calculation_element import CalculationElement
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.coordinate import Coordinate, CoordinateSchema
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.util.serialization_schema import Schema, NumberField
 
 
-class Measurement:
+class Measurement(CalculationElement):
     """
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """

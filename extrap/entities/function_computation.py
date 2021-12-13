@@ -10,7 +10,6 @@ from __future__ import annotations
 import copy
 import operator
 import re
-from collections import Iterable
 from enum import Enum
 from numbers import Number
 from token import ERRORTOKEN, NUMBER, NAME
@@ -22,6 +21,7 @@ from marshmallow import fields
 from sympy.printing.precedence import precedence
 from sympy.printing.str import StrPrinter
 
+from extrap.entities.calculation_element import CalculationElement
 from extrap.entities.functions import TermlessFunction, Function, TermlessFunctionSchema, SingleParameterFunction, \
     MultiParameterFunction, ConstantFunction
 from extrap.entities.parameter import Parameter
@@ -130,7 +130,7 @@ class FunctionPrinter(StrPrinter):
         return result
 
 
-class ComputationFunction(TermlessFunction):
+class ComputationFunction(TermlessFunction, CalculationElement):
     PRINTER = FunctionPrinter()
 
     def __init__(self, function: Optional[Function]):
@@ -180,6 +180,9 @@ class ComputationFunction(TermlessFunction):
 
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
                                               Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
+        if len(self._params) == 0:
+            return self._evaluation_function()
+
         if self._ftype is CFType.SINGLE_PARAMETER:  # Handle single parameter
             if hasattr(parameter_value, '__len__') and (
                     len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
@@ -228,7 +231,7 @@ class ComputationFunction(TermlessFunction):
         elif isinstance(function, ComputationFunction):
             return function._params, function._ftype
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(f"Cannot determine parameters for function of type {type(function).__name__}")
         return sympy.symbols(tuple(PARAM_TOKEN + str(i) for i in range(num_params))), ftype
 
     def __eq__(self, other):

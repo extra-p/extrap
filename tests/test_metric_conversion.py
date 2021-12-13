@@ -5,11 +5,10 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from extrap.comparison.entities.calculation_function import CalculationFunction, CalculatedFunctionAddition, \
-    CalculatedFunctionSubtraction, CalculatedFunctionMultiplication
 from extrap.comparison.metric_conversion.cpu_gpu import FlopsDP
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
+from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.functions import SingleParameterFunction, MultiParameterFunction, ConstantFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
@@ -40,37 +39,37 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
         function2 = SingleParameterFunction(CompoundTerm.create(1, 3, 2))
         function2.constant_coefficient = 2
 
-        add_const_function = CalculationFunction(function1) + 4
+        add_const_function = ComputationFunction(function1) + 4
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) + 4, add_const_function.evaluate(i))
 
-        mul_const_function = CalculationFunction(function1) * 4
+        mul_const_function = ComputationFunction(function1) * 4
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) * 4, mul_const_function.evaluate(i))
 
-        div_const_function = CalculationFunction(function1) / 4
+        div_const_function = ComputationFunction(function1) / 4
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) / 4, div_const_function.evaluate(i))
 
-        mul_function = CalculationFunction(function1) * CalculationFunction(function2)
+        mul_function = ComputationFunction(function1) * ComputationFunction(function2)
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) * function2.evaluate(i), mul_function.evaluate(i))
 
-        add_function = CalculationFunction(function1) + CalculationFunction(function2)
+        add_function = ComputationFunction(function1) + ComputationFunction(function2)
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) + function2.evaluate(i), add_function.evaluate(i))
 
-        sub_function = CalculationFunction(function1) - CalculationFunction(function2)
+        sub_function = ComputationFunction(function1) - ComputationFunction(function2)
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) - function2.evaluate(i), sub_function.evaluate(i))
 
-        div_function = CalculationFunction(function1) / CalculationFunction(function2)
+        div_function = ComputationFunction(function1) / ComputationFunction(function2)
 
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) / function2.evaluate(i), div_function.evaluate(i))
@@ -85,47 +84,47 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
         function2 = MultiParameterFunction(mpterm2)
         function2.constant_coefficient = 2
 
-        add_const_function = CalculationFunction(function1) + 4
+        add_const_function = ComputationFunction(function1) + 4
 
         for i in range(1, 10):
             for j in range(1, 10):
                 self.assertAlmostEqual(function1.evaluate((i, j)) + 4,
                                        add_const_function.evaluate((i, j)))
 
-        mul_const_function = CalculationFunction(function1) * 4
+        mul_const_function = ComputationFunction(function1) * 4
 
         for i in range(1, 10):
             for j in range(1, 10):
                 self.assertAlmostEqual(function1.evaluate((i, j)) * 4, mul_const_function.evaluate((i, j)))
 
-        div_const_function = CalculationFunction(function1) / 4
+        div_const_function = ComputationFunction(function1) / 4
 
         for i in range(1, 10):
             for j in range(1, 10):
                 self.assertAlmostEqual(function1.evaluate((i, j)) / 4, div_const_function.evaluate((i, j)))
 
-        mul_function = CalculationFunction(function1) * CalculationFunction(function2)
+        mul_function = ComputationFunction(function1) * ComputationFunction(function2)
 
         for i in range(1, 10):
             for j in range(1, 10):
                 self.assertAlmostEqual(function1.evaluate((i, j)) * function2.evaluate((i, j)),
                                        mul_function.evaluate((i, j)))
 
-        add_function = CalculationFunction(function1) + CalculationFunction(function2)
+        add_function = ComputationFunction(function1) + ComputationFunction(function2)
 
         for i in range(1, 10):
             for j in range(1, 10):
                 self.assertAlmostEqual(function1.evaluate((i, j)) + function2.evaluate((i, j)),
                                        add_function.evaluate((i, j)))
 
-        sub_function = CalculationFunction(function1) - CalculationFunction(function2)
+        sub_function = ComputationFunction(function1) - ComputationFunction(function2)
 
         for i in range(1, 10):
             for j in range(1, 10):
                 self.assertAlmostEqual(function1.evaluate((i, j)) - function2.evaluate((i, j)),
                                        sub_function.evaluate((i, j)))
 
-        div_function = CalculationFunction(function1) / CalculationFunction(function2)
+        div_function = ComputationFunction(function1) / ComputationFunction(function2)
 
         for i in range(1, 10):
             for j in range(1, 10):
@@ -146,7 +145,7 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
         function3 = MultiParameterFunction(mpterm3)
         function3.constant_coefficient = 4
 
-        test_function = CalculationFunction(function1) * CalculationFunction(function2) / CalculationFunction(
+        test_function = ComputationFunction(function1) * ComputationFunction(function2) / ComputationFunction(
             function3)
         test_function.to_string()
         for i in range(1, 10):
@@ -155,7 +154,7 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
                     function1.evaluate((i, j)) * function2.evaluate((i, j)) / function3.evaluate((i, j)),
                     test_function.evaluate((i, j)))
 
-        test_function = CalculationFunction(function1) / CalculationFunction(function2) * CalculationFunction(function3)
+        test_function = ComputationFunction(function1) / ComputationFunction(function2) * ComputationFunction(function3)
         test_function.to_string()
         for i in range(1, 10):
             for j in range(1, 10):
@@ -163,7 +162,7 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
                     function1.evaluate((i, j)) / function2.evaluate((i, j)) * function3.evaluate((i, j)),
                     test_function.evaluate((i, j)))
 
-        test_function = CalculationFunction(function1) / CalculationFunction(function2) * CalculationFunction(
+        test_function = ComputationFunction(function1) / ComputationFunction(function2) * ComputationFunction(
             function3) + 4
         test_function.to_string()
         for i in range(1, 10):
@@ -172,8 +171,8 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
                     function1.evaluate((i, j)) / function2.evaluate((i, j)) * function3.evaluate((i, j)) + 4,
                     test_function.evaluate((i, j)))
 
-        test_function = (CalculationFunction(function1) - 8) / (
-                1 - CalculationFunction(function2)) * CalculationFunction(function3) / 4 + CalculationFunction(
+        test_function = (ComputationFunction(function1) - 8) / (
+                1 - ComputationFunction(function2)) * ComputationFunction(function3) / 4 + ComputationFunction(
             function1) * 2
         test_function.to_string()
         for i in range(1, 10):
@@ -183,7 +182,7 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
                         (i, j)) / 4 + function1.evaluate((i, j)) * 2,
                     test_function.evaluate((i, j)))
 
-        test_function = 3 / (-(4 / CalculationFunction(function2)) - (1 + 2 * CalculationFunction(function3))) - 1
+        test_function = 3 / (-(4 / ComputationFunction(function2)) - (1 + 2 * ComputationFunction(function3))) - 1
         test_function.to_string()
         for i in range(1, 10):
             for j in range(1, 10):
@@ -195,19 +194,19 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
         function1 = SingleParameterFunction(CompoundTerm.create(1, 2, 1))
         function1.constant_coefficient = 3
 
-        test_function = (ConstantFunction(3) - CalculationFunction(function1))
+        test_function = (ConstantFunction(3) - ComputationFunction(function1))
         for i in range(1, 10):
             self.assertAlmostEqual(3 - function1.evaluate(i), test_function.evaluate(i))
 
-        test_function = (function1 * CalculationFunction(function1))
+        test_function = (function1 * ComputationFunction(function1))
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) * function1.evaluate(i), test_function.evaluate(i))
 
-        test_function = (function1 + CalculationFunction(function1))
+        test_function = (function1 + ComputationFunction(function1))
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) + function1.evaluate(i), test_function.evaluate(i))
 
-        test_function = (ConstantFunction(3) / CalculationFunction(function1))
+        test_function = (ConstantFunction(3) / ComputationFunction(function1))
         for i in range(1, 10):
             self.assertAlmostEqual(3 / function1.evaluate(i), test_function.evaluate(i))
 
@@ -219,46 +218,41 @@ class TestMetricConversion(TestCaseWithFunctionAssertions):
         constant = ConstantFunction()
         constant0 = ConstantFunction(0)
 
-        add_function = CalculationFunction(function1) + CalculationFunction(constant)
-        self.assertNotEqual(CalculatedFunctionAddition, type(add_function))
+        add_function = ComputationFunction(constant) + ComputationFunction(function1)
+        self.assertEqual(ComputationFunction, type(add_function))
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) + 1, add_function.evaluate(i))
 
-        add_function = CalculationFunction(constant) + CalculationFunction(function1)
-        self.assertNotEqual(CalculatedFunctionAddition, type(add_function))
-        for i in range(1, 10):
-            self.assertAlmostEqual(function1.evaluate(i) + 1, add_function.evaluate(i))
-
-        add_function = CalculationFunction(constant) + CalculationFunction(function1) * CalculationFunction(function2)
-        self.assertNotEqual(CalculatedFunctionAddition, type(add_function))
+        add_function = ComputationFunction(constant) + ComputationFunction(function1) * ComputationFunction(function2)
+        self.assertEqual(ComputationFunction, type(add_function))
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) * function2.evaluate(i) + 1, add_function.evaluate(i))
 
-        sub_function = CalculationFunction(function1) - CalculationFunction(constant)
-        self.assertNotEqual(CalculatedFunctionSubtraction, type(sub_function))
+        sub_function = ComputationFunction(function1) - ComputationFunction(constant)
+        self.assertEqual(ComputationFunction, type(sub_function))
         for i in range(1, 10):
             self.assertAlmostEqual(function1.evaluate(i) - 1, sub_function.evaluate(i))
 
-        mul_function = CalculationFunction(constant0) * CalculationFunction(function1)
-        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        mul_function = ComputationFunction(constant0) * ComputationFunction(function1)
+        self.assertEqual(ComputationFunction, type(mul_function))
         for i in range(1, 10):
             self.assertAlmostEqual(0, mul_function.evaluate(i))
 
-        mul_function = CalculationFunction(function1) * CalculationFunction(constant0)
-        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        mul_function = ComputationFunction(function1) * ComputationFunction(constant0)
+        self.assertEqual(ComputationFunction, type(mul_function))
         for i in range(1, 10):
             self.assertAlmostEqual(0, mul_function.evaluate(i))
 
-        mul_function = (CalculationFunction(function1) + CalculationFunction(function2)) * CalculationFunction(
+        mul_function = (ComputationFunction(function1) + ComputationFunction(function2)) * ComputationFunction(
             constant0)
-        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        self.assertEqual(ComputationFunction, type(mul_function))
         for i in range(1, 10):
             self.assertAlmostEqual(0, mul_function.evaluate(i))
 
-        mul_function = (CalculationFunction(function1) + CalculationFunction(function2)) * (CalculationFunction(
-            constant0) + 2 * CalculationFunction(
+        mul_function = (ComputationFunction(function1) + ComputationFunction(function2)) * (ComputationFunction(
+            constant0) + 2 * ComputationFunction(
             constant0))
-        self.assertNotEqual(CalculatedFunctionMultiplication, type(mul_function))
+        self.assertEqual(ComputationFunction, type(mul_function))
         for i in range(1, 10):
             self.assertAlmostEqual(0, mul_function.evaluate(i))
         print(mul_function.to_string())

@@ -14,7 +14,7 @@ from inspect import signature
 from itertools import permutations
 from typing import Union, Sequence, Callable, Iterable
 
-from extrap.comparison.entities.calculation_element import CalculationElement
+from extrap.entities.calculation_element import CalculationElement
 from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.hypotheses import Hypothesis
 from extrap.entities.model import Model
