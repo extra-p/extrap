@@ -10,11 +10,13 @@ from numbers import Real
 from typing import Tuple, List, Union, Mapping, Sequence
 
 import numpy as np
+import sympy
 from marshmallow import fields, validate
 
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
+from extrap.util import sympy_functions
 from extrap.util.serialization_schema import Schema, NumberField
 
 DEFAULT_PARAM_NAMES = (
@@ -98,9 +100,15 @@ class SimpleTerm(SingleParameterTerm):
             return f"log2({parameter})^({self.exponent})"
 
     def _evaluate_polynomial(self, parameter_value):
+        if isinstance(parameter_value, sympy.Symbol):
+            return parameter_value ** self._exponent
         return parameter_value ** self._float_exponent
 
     def _evaluate_logarithm(self, parameter_value):
+        if isinstance(parameter_value, sympy.Symbol):
+            log = sympy_functions.log2(parameter_value)
+            log **= self._exponent
+            return log
         log = np.log2(parameter_value)
         log **= self._float_exponent
         return log
