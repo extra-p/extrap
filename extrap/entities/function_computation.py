@@ -174,7 +174,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             parameters = DEFAULT_PARAM_NAMES
         result = self.sympy_function
         for param, new_param in zip(self._params, parameters):
-            result = result.subs(param, new_param)
+            result = result.subs(param, str(new_param))
 
         return self.PRINTER.doprint(result)
 
