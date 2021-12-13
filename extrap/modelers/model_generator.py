@@ -105,6 +105,8 @@ class ModelGenerator:
                 if self.models[m] == other.models[m]:
                     continue
                 else:
+                    a, b = self.models[m], other.models[m]
+                    print(a == b)
                     break
             return self.models == other.models and \
                    self._modeler.NAME == other._modeler.NAME and \

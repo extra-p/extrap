@@ -11,11 +11,12 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment, ExperimentSchema
-from extrap.entities.functions import SingleParameterFunction, MultiParameterFunction
+from extrap.entities.function_computation import ComputationFunction
+from extrap.entities.functions import MultiParameterFunction, SingleParameterFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm, SimpleTerm, MultiParameterTerm
+from extrap.entities.terms import SimpleTerm, MultiParameterTerm, CompoundTerm
 from extrap.fileio import io_helper
 from extrap.modelers import aggregation
 from extrap.modelers.aggregation.max_aggregation import MaxAggregation, MaxAggregationFunction
@@ -40,17 +41,19 @@ class TestAggregation(TestCaseWithFunctionAssertions):
                    experiment1.modelers[0].models[cb.path, metric].hypothesis.function,
                    experiment1.modelers[0].models[ca.path, metric].hypothesis.function]
 
-        test_value = experiment1.modelers[1].models[overlap.path, metric].hypothesis.function.compound_terms
+        test_value = experiment1.modelers[1].models[overlap.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
 
         coeff_sum = 0
         for x in correct:
             coeff_sum += x.constant_coefficient
 
         self.assertApprox(coeff_sum,
-                          experiment1.modelers[1].models[overlap.path, metric].hypothesis.function.constant_coefficient,
-                          5)
-
-        self.assertEqual(2, len(test_value))
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(3, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
 
         # check model
         term1 = correct[0].compound_terms[0]
@@ -58,8 +61,9 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         term2.coefficient = correct[1].compound_terms[0].coefficient + correct[2].compound_terms[0].coefficient
         correct_function = SingleParameterFunction(term1, term2)
         correct_function.constant_coefficient = coeff_sum
-        self.assertApproxFunction(correct_function,
-                                  experiment1.modelers[1].models[overlap.path, metric].hypothesis.function)
+        correct_function = ComputationFunction(correct_function)
+        self.assertEqual(correct_function,
+                         experiment1.modelers[1].models[overlap.path, metric].hypothesis.function)
 
         correct_sum = 0
         for c in correct:
@@ -122,10 +126,23 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         s = SumAggregationFunction([fkt1, fkt2, fkt3])
         self.assertEqual(len(s.raw_terms), 3)
-        self.assertEqual(len(s.compound_terms), 2)
+        self.assertIsInstance(s, ComputationFunction)
+        self.assertEqual(len(s.sympy_function.args), 2)
+        self.assertEqual(len(s.compound_terms), 0)
 
         res_sum = s.evaluate(x)
         self.assertEqual(res_sum, res1 + res2 + res3)
+
+        fkt1.constant_coefficient = 1
+        fkt2.constant_coefficient = 2
+        fkt3.constant_coefficient = 3
+        s = SumAggregationFunction([fkt1, fkt2, fkt3])
+        self.assertEqual(len(s.raw_terms), 3)
+        self.assertIsInstance(s, ComputationFunction)
+        self.assertEqual(len(s.sympy_function.args), 3)
+        self.assertEqual(len(s.compound_terms), 0)
+        self.assertEqual(s.constant_coefficient, 0)
+        self.assertEqual(s.sympy_function.as_coeff_Add()[0], 6)
 
     def testMaxMultiParam(self):
         small_x = [2, 3]
@@ -158,6 +175,8 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         s = MaxAggregationFunction([fkt1, fkt2])
         self.assertEqual(len(s.raw_terms), 2)
+        self.assertIsInstance(s, ComputationFunction)
+        self.assertEqual(len(s.sympy_function.args), 2)
         self.assertEqual(len(s.compound_terms), 0)
 
         res_sum = s.evaluate(small_x)
@@ -196,17 +215,19 @@ class TestAggregation(TestCaseWithFunctionAssertions):
                    experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
                    experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
 
-        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function.compound_terms
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
 
         coeff_sum = 0
         for x in correct:
             coeff_sum += x.constant_coefficient
 
         self.assertApprox(coeff_sum,
-                          experiment1.modelers[1].models[main.path, metric].hypothesis.function.constant_coefficient,
-                          5)
-
-        self.assertEqual(1, len(test_value))
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(2, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
 
     def testSumCategory(self):
         metric = Metric('time')
@@ -245,32 +266,37 @@ class TestAggregation(TestCaseWithFunctionAssertions):
                    experiment1.modelers[0].models[neA.path, metric].hypothesis.function,
                    experiment1.modelers[0].models[neC.path, metric].hypothesis.function]
 
-        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function.compound_terms
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
 
         coeff_sum = 0
         for x in correct:
             coeff_sum += x.constant_coefficient
 
         self.assertApprox(coeff_sum,
-                          experiment1.modelers[1].models[main.path, metric].hypothesis.function.constant_coefficient,
-                          5)
-
-        self.assertEqual(1, len(test_value))
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(2, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
 
         correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
                    experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
 
-        test_value = experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.compound_terms
+        test_value = experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
 
         coeff_sum = 0
         for x in correct:
             coeff_sum += x.constant_coefficient
 
         self.assertApprox(coeff_sum,
-                          experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.constant_coefficient,
-                          5)
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(2, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
 
-        self.assertEqual(1, len(test_value))
         self.assertIn((main.path.concat('cat'), metric), experiment1.modelers[1].models)
         self.assertIn((Callpath('cat'), metric), experiment1.modelers[1].models)
 
@@ -305,32 +331,37 @@ class TestAggregation(TestCaseWithFunctionAssertions):
                    experiment1.modelers[0].models[neA.path, metric].hypothesis.function,
                    experiment1.modelers[0].models[neC.path, metric].hypothesis.function]
 
-        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function.compound_terms
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
 
         coeff_sum = 0
         for x in correct:
             coeff_sum += x.constant_coefficient
 
         self.assertApprox(coeff_sum,
-                          experiment1.modelers[1].models[main.path, metric].hypothesis.function.constant_coefficient,
-                          5)
-
-        self.assertEqual(1, len(test_value))
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(2, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
 
         correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
                    experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
 
-        test_value = experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.compound_terms
+        test_value = experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
 
         coeff_sum = 0
         for x in correct:
             coeff_sum += x.constant_coefficient
 
         self.assertApprox(coeff_sum,
-                          experiment1.modelers[1].models[emptyA.path, metric].hypothesis.function.constant_coefficient,
-                          5)
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
 
-        self.assertEqual(1, len(test_value))
+        self.assertEqual(2, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
 
     def check_changed(self, experiment1, metric, paths):
         for cp in paths:

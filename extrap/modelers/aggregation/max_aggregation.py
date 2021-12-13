@@ -5,15 +5,16 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from typing import Union, Sequence
+from typing import Sequence
 
-import numpy
 import numpy as np
+import sympy
+from marshmallow import pre_dump
 
 from extrap.entities.callpath import Callpath
+from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
-from extrap.entities.parameter import Parameter
 from extrap.modelers.aggregation import AggregatedModel
 from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, BinaryAggregation, \
     BinaryAggregationFunctionSchema
@@ -21,36 +22,30 @@ from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggreg
 
 class MaxAggregationFunction(BinaryAggregationFunction):
 
-    def evaluate(self, parameter_value):
-        rest = iter(self.raw_terms)
-        function_value = next(rest).evaluate(parameter_value)
-
-        if isinstance(parameter_value, numpy.ndarray):
-            shape = parameter_value.shape
-            if len(shape) == 2:
-                shape = (shape[1],)
-            function_value += numpy.zeros(shape, dtype=float)
-
-        for t in rest:
-            function_value = np.maximum(function_value, t.evaluate(parameter_value))
-        return function_value
-
     def aggregate(self):
-        self.constant_coefficient = 0
-        self.compound_terms = []
-
-    def to_string(self, *parameters: Union[str, Parameter]):
-        function_string = "Max(" + str(self.constant_coefficient)
-        for t in self.raw_terms:
-            function_string += ' , '
-            function_string += t.to_string(*parameters)
-        function_string += ")"
-        return function_string
+        if not self.raw_terms:
+            return
+        sym_functions = []
+        _, self._ftype = self._determine_params(self.raw_terms[0])
+        for function in self.raw_terms:
+            _params, ftype = self._determine_params(function)
+            if self._ftype != ftype:
+                raise ValueError("You cannot aggregate single and multi parameter functions to one function.")
+            self._ftype &= ftype
+            if isinstance(function, ComputationFunction):
+                sym_functions.append(function.sympy_function)
+            else:
+                sym_functions.append(function.evaluate(_params))
+        self.sympy_function = sympy.Max(*sym_functions)
 
 
 class MaxAggregationFunctionSchema(BinaryAggregationFunctionSchema):
     def create_object(self):
-        return MaxAggregationFunction(None)
+        return MaxAggregationFunction([])
+
+    @pre_dump
+    def intercept(self, data, **kwargs):
+        return data
 
 
 class MaxAggregation(BinaryAggregation):

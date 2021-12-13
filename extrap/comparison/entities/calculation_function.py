@@ -12,10 +12,10 @@ from numbers import Number, Real
 from typing import Union, Mapping, Sequence, cast, Callable
 
 import numpy
-import sympy
 from marshmallow import fields
 
 from extrap.comparison.entities.calculation_element import CalculationElement
+from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.functions import Function, ConstantFunction, FunctionSchema, TermlessFunctionSchema, \
     TermlessFunction
 from extrap.entities.parameter import Parameter
@@ -173,6 +173,11 @@ class CalculationFunctionSchema(TermlessFunctionSchema):
         return CalculationFunction(None)
 
     _function = fields.Nested(FunctionSchema)
+
+    def postprocess_object(self, obj: CalculationFunction) -> object:
+        obj = ComputationFunction(obj)
+        obj.original_function = None
+        return obj
 
 
 _ValueType = Union[Number, numpy.ndarray]

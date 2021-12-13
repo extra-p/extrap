@@ -15,11 +15,11 @@ from marshmallow import fields
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import Node, CallTree
-from extrap.entities.functions import Function, FunctionSchema
+from extrap.entities.function_computation import ComputationFunction, ComputationFunctionSchema
+from extrap.entities.functions import FunctionSchema
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.entities.parameter import Parameter
 from extrap.modelers.aggregation import Aggregation, AggregatedModel
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -27,28 +27,17 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 numeric_array_t = Union[Number, numpy.ndarray]
 
 
-class BinaryAggregationFunction(Function, ABC):
+class BinaryAggregationFunction(ComputationFunction, ABC):
     def __init__(self, function_terms):
         """
         Initialize a Function object.
         """
-        super().__init__()
+        super().__init__(None)
         self.raw_terms = function_terms
         self.aggregate()
 
     @abstractmethod
-    def evaluate(self, parameter_value):
-        raise NotImplementedError
-
-    @abstractmethod
     def aggregate(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_string(self, *parameters: Union[str, Parameter]):
-        """
-        Return a string representation of the function.
-        """
         raise NotImplementedError
 
     def __eq__(self, other):
@@ -57,21 +46,20 @@ class BinaryAggregationFunction(Function, ABC):
         elif self is other:
             return True
         else:
-            return self.raw_terms == other.raw_terms and \
-                   self.compound_terms == other.compound_terms and \
-                   self.constant_coefficient == other.constant_coefficient
+            result = self.raw_terms == other.raw_terms
+            result = result and super().__eq__(other)
+            return result
 
 
-class BinaryAggregationFunctionSchema(FunctionSchema):
+class BinaryAggregationFunctionSchema(ComputationFunctionSchema):
     raw_terms = fields.List(fields.Nested(FunctionSchema))
-    compound_terms = fields.Constant(None, load_only=True, dump_only=True)
-    constant_coefficient = fields.Constant(None, load_only=True, dump_only=True)
 
     def create_object(self):
         return NotImplemented, BinaryAggregationFunction
 
     def postprocess_object(self, obj: BinaryAggregationFunction) -> BinaryAggregationFunction:
-        obj.aggregate()
+        if not obj.sympy_function:
+            obj.aggregate()
         return obj
 
 

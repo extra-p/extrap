@@ -15,14 +15,13 @@ from itertools import permutations
 from typing import Union, Sequence, Callable, Iterable
 
 from extrap.comparison.entities.calculation_element import CalculationElement
-from extrap.comparison.entities.calculation_function import CalculationFunction
+from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.hypotheses import Hypothesis
 from extrap.entities.model import Model
 from extrap.util.extension_loader import load_extensions
 
 REQUIRED_METRICS_NAME = '_required_metrics'
 
-from extrap.entities.functions import Function
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.util.classproperty import classproperty
@@ -38,7 +37,7 @@ class ConversionMetrics:
 
 
 class AbstractMetricConverter(ABC):
-    Value = Union[Measurement, Function]
+    Value = Union[Measurement, ComputationFunction]
 
     _conversions = []
 
@@ -122,10 +121,10 @@ class AbstractMetricConverter(ABC):
 
     def convert_models(self, i, model_sets: Iterable[Model], measurements):
         conversion_function = self.get_conversion(i)
-        functions = [CalculationFunction(m.hypothesis.function) for m in model_sets]
+        functions = [ComputationFunction(m.hypothesis.function) for m in model_sets]
         function = conversion_function(self, *functions)
-        if type(function) == CalculationFunction:
-            function = CalculationFunction.unwrap_functions(function)
+        if type(function) == ComputationFunction and function.original_function:
+            function = function.original_function
         model = next(iter(model_sets))
         hypothesis_class = Hypothesis.infer_best_type([m.hypothesis for m in model_sets])
         hypothesis = hypothesis_class(function, model.hypothesis.use_median)
