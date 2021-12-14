@@ -87,8 +87,10 @@ class GraphDisplayWindow(FigureCanvas):
             points[p] = v
         param1 = self.main_widget.data_display.getAxisParameter(0).id
         param2 = self.main_widget.data_display.getAxisParameter(1).id
-        points[param1] = xs
-        points[param2] = ys
+        if param1 >= 0:
+            points[param1] = xs
+        if param2 >= 0:
+            points[param2] = ys
 
         z_value = function.evaluate(points)
         return z_value

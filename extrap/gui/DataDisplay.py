@@ -22,7 +22,6 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
-
 #####################################################################
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = 2000000000
@@ -66,6 +65,7 @@ class AxisSelection(QWidget):
         self.combo_box.setMinimumHeight(20)
         for i in range(0, len(parameters)):
             self.combo_box.addItem(parameters[i].name)
+        self.combo_box.setEnabled(self.index < len(parameters))
         self.combo_box.setCurrentIndex(self.index)
 
         self.combo_box.currentIndexChanged.connect(self.parameter_selected)

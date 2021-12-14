@@ -160,12 +160,16 @@ class TreeView(QTreeView):
         msgBox.setLayout(layout)
 
         msg_txt = "Callpath: " + model.callpath.name + "\n\n"
-        row_format = "{:20} {:>15} {:>15} {:>15}\n"
-        msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
-        row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
-        for pred, m in zip(model.predictions, model.measurements):
-            msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
-            # print(str(ps[i])+","+str(actual_points[i]))
+
+        if model.predictions is not None and model.measurements is not None:
+            row_format = "{:20} {:>15} {:>15} {:>15}\n"
+            msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
+            row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
+            for pred, m in zip(model.predictions, model.measurements):
+                msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
+                # print(str(ps[i])+","+str(actual_points[i]))
+        else:
+            msg_txt += "No data available."
 
         print(msg_txt)
         print("")
