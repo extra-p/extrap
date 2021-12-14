@@ -180,8 +180,14 @@ class ComputationFunction(TermlessFunction, CalculationElement):
 
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
                                               Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
-        if len(self._params) == 0:
-            return self._evaluation_function()
+        if not self._params:
+            if isinstance(parameter_value, numpy.ndarray):
+                shape = parameter_value.shape
+                if len(shape) == 2:
+                    shape = (shape[1],)
+                return numpy.full(shape, self._evaluation_function())
+            else:
+                return self._evaluation_function()
 
         if self._ftype is CFType.SINGLE_PARAMETER:  # Handle single parameter
             if hasattr(parameter_value, '__len__') and (
