@@ -139,6 +139,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         self._params = cast(Tuple[sympy.Symbol], ())
         self._ftype = CFType.NONE
         self._sympy_function: Optional[sympy.Expr] = None
+        self._evaluation_function = None
         if not self.original_function:
             return
         _params, self._ftype = self._determine_params(self.original_function)
@@ -167,7 +168,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         if self._ftype == CFType.SINGLE_PARAMETER and max_param_id > 0:
             raise ValueError("This is a single parameter function, you cannot add a multi parameter sympy function.")
         self._params = sympy.symbols(tuple(PARAM_TOKEN + str(i) for i in range(max_param_id + 1)))
-        self._evaluation_function = sympy.lambdify(self._params, self.sympy_function, 'numpy')
+        self._evaluation_function = None  # reset evaluation function
 
     def to_string(self, *parameters: Union[str, Parameter]):
         if not parameters:
@@ -180,7 +181,10 @@ class ComputationFunction(TermlessFunction, CalculationElement):
 
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
                                               Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
-        if not self._params:
+        if not self._evaluation_function:  # lazy init of evaluation function
+            self._evaluation_function = sympy.lambdify(self._params, self.sympy_function, 'numpy')
+
+        if not self._params:  # Handle no parameter
             if isinstance(parameter_value, numpy.ndarray):
                 shape = parameter_value.shape
                 if len(shape) == 2:
