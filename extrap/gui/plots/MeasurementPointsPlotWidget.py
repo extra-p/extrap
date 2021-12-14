@@ -37,11 +37,15 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         widget = self.main_widget
         dict_callpath_color = widget.model_color_map
 
+        # Get base data for drawing points
+        parameter_x = self.main_widget.data_display.getAxisParameter(0)
+        parameter_y = self.main_widget.data_display.getAxisParameter(1)
+
         # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).name
+        x_label = parameter_x.name
         if x_label.startswith("_"):
             x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).name
+        y_label = parameter_y.name
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
@@ -52,9 +56,6 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         ax_all = self.fig.add_subplot(
             1, number_of_subplots, number_of_subplots, projection='3d')
 
-        # Gat base data for drawing points
-        parameter_x = self.main_widget.data_display.getAxisParameter(0)
-        parameter_y = self.main_widget.data_display.getAxisParameter(1)
         max_z = 0
 
         for model, callpath in zip(model_list, selected_callpaths):
@@ -63,8 +64,14 @@ class MeasurementPointsPlot(GraphDisplayWindow):
             if not points:
                 breakpoint()
                 continue
-            xs = np.array([m.coordinate[parameter_x.id] for m in points])
-            ys = np.array([m.coordinate[parameter_y.id] for m in points])
+            if parameter_x.id >= 0:
+                xs = np.array([m.coordinate[parameter_x.id] for m in points])
+            else:
+                xs = np.zeros(len(points))
+            if parameter_y.id >= 0:
+                ys = np.array([m.coordinate[parameter_y.id] for m in points])
+            else:
+                ys = np.full(len(points), max(min(np.min(xs), 0), 0))
             in_range = (xs <= maxX) & (ys <= maxY)
             xs, ys = xs[in_range], ys[in_range]
 
