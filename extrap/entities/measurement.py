@@ -124,6 +124,7 @@ class Measurement(CalculationElement):
         return result
 
     def __truediv__(self, other):
+        # TODO implement correct division
         return self.__mul__(other ** -1)
 
     def __rtruediv__(self, other):
@@ -131,6 +132,15 @@ class Measurement(CalculationElement):
 
     def __neg__(self):
         return self * -1
+
+    def make_one(self):
+        result = copy.copy(self)
+        result.median = 1
+        result.mean = 1
+        result.minimum = 1
+        result.maximum = 1
+        result.std = 0
+        return result
 
 
 class MeasurementSchema(Schema):

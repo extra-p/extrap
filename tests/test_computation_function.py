@@ -9,6 +9,7 @@ import unittest
 
 import numpy
 
+from extrap.entities.calculation_element import divide_no0
 from extrap.entities.function_computation import ComputationFunction, ComputationFunctionSchema, CFType
 from extrap.entities.functions import MultiParameterFunction, SingleParameterFunction, ConstantFunction
 from extrap.entities.terms import MultiParameterTerm, CompoundTerm
@@ -306,6 +307,81 @@ class TestComputationFunction(unittest.TestCase):
 
         self.assertRaises(ValueError, lambda: cfunction + cfunction_sp)
         self.assertRaises(ValueError, lambda: cfunction_sp + cfunction)
+
+
+class TestDivideNo0(unittest.TestCase):
+
+    def test_number_division(self):
+        self.assertEqual(1, divide_no0(1, 1))
+        self.assertEqual(0, divide_no0(0, 1))
+        self.assertEqual(1, divide_no0(10, 10))
+        self.assertEqual(1, divide_no0(42, 42))
+
+    def test_number_division_by_zero(self):
+        self.assertEqual(1, divide_no0(0, 0))
+        self.assertRaises(ZeroDivisionError, divide_no0, 1, 0)
+        self.assertRaises(ZeroDivisionError, divide_no0, 10, 0)
+        self.assertRaises(ZeroDivisionError, divide_no0, 42, 0)
+
+    def test_function_division(self):
+        function2 = MultiParameterFunction(MultiParameterTerm((2, CompoundTerm.create(3, 1, 0))))
+        mpterm1 = MultiParameterTerm((0, CompoundTerm.create(1, 2, 0)), (1, CompoundTerm.create(1, 1, 0)))
+        mpterm1.coefficient = 2
+        function = MultiParameterFunction(mpterm1)
+        function.constant_coefficient = 2
+        cfunction = ComputationFunction(function)
+        cfunction1 = divide_no0(cfunction, cfunction)
+        self.assertEqual('1', cfunction1.to_string())
+        self.assertEqual(1, cfunction1.evaluate([9, 5]))
+        self.assertEqual(cfunction / cfunction, cfunction1)
+        cfunction1 = divide_no0(cfunction, function2)
+        true_function = cfunction / function2
+        self.assertEqual(true_function.to_string(), cfunction1.to_string())
+        self.assertEqual(true_function.evaluate([9, 5, 2]), cfunction1.evaluate([9, 5, 2]))
+        self.assertEqual(true_function, cfunction1)
+        cfunction1 = divide_no0(cfunction, 3)
+        true_function = cfunction / 3
+        self.assertEqual(true_function.to_string(), cfunction1.to_string())
+        self.assertEqual(true_function.evaluate([9, 5, 2]), cfunction1.evaluate([9, 5]))
+        self.assertEqual(true_function, cfunction1)
+        cfunction1 = divide_no0(function2, cfunction)
+        true_function = function2 / cfunction
+        self.assertEqual(true_function.to_string(), cfunction1.to_string())
+        self.assertEqual(true_function.evaluate([9, 5, 2]), cfunction1.evaluate([9, 5, 2]))
+        self.assertEqual(true_function, cfunction1)
+        cfunction1 = divide_no0(3, cfunction)
+        true_function = 3 / cfunction
+        self.assertEqual(true_function.to_string(), cfunction1.to_string())
+        self.assertEqual(true_function.evaluate([9, 5, 2]), cfunction1.evaluate([9, 5, 2]))
+        self.assertEqual(true_function, cfunction1)
+
+    def test_function_division_by_zero(self):
+        function2 = MultiParameterFunction(MultiParameterTerm((2, CompoundTerm.create(3, 1, 0))))
+        mpterm1 = MultiParameterTerm((0, CompoundTerm.create(1, 2, 0)), (1, CompoundTerm.create(1, 1, 0)))
+        mpterm1.coefficient = 2
+        function = MultiParameterFunction(mpterm1)
+        function.constant_coefficient = 2
+        cfunction = ComputationFunction(function)
+        cfunction1 = divide_no0(cfunction - cfunction, cfunction - cfunction)
+        self.assertEqual('1', cfunction1.to_string())
+        self.assertEqual(1, cfunction1.evaluate([9, 5]))
+        self.assertEqual(ComputationFunction(ConstantFunction(1)), cfunction1)
+
+        cfunction1 = divide_no0(cfunction - cfunction, 0)
+        self.assertEqual('1', cfunction1.to_string())
+        self.assertEqual(1, cfunction1.evaluate([9, 5]))
+        self.assertEqual(ComputationFunction(ConstantFunction(1)), cfunction1)
+
+        cfunction1 = divide_no0(0, cfunction - cfunction)
+        self.assertEqual('1', cfunction1.to_string())
+        self.assertEqual(1, cfunction1.evaluate([9, 5]))
+        self.assertEqual(ComputationFunction(ConstantFunction(1)), cfunction1)
+
+        self.assertRaises(ZeroDivisionError, divide_no0, cfunction, 0)
+        self.assertRaises(ZeroDivisionError, divide_no0, function2, 0)
+        self.assertRaises(ZeroDivisionError, divide_no0, 1, cfunction - cfunction)
+        self.assertRaises(ZeroDivisionError, divide_no0, 10, cfunction - cfunction)
+        self.assertRaises(ZeroDivisionError, divide_no0, 42, cfunction - cfunction)
 
 
 if __name__ == '__main__':

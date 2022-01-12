@@ -6,7 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 from extrap.comparison.metric_conversion import AbstractMetricConverter, ConversionMetrics
-from extrap.entities.calculation_element import CalculationElement
+from extrap.entities.calculation_element import CalculationElement, divide_no0
 
 
 class FlopsDP(AbstractMetricConverter):
@@ -45,10 +45,10 @@ class VecLoads(AbstractMetricConverter):
     @ConversionMetrics("PAPI_LD_INS", "PAPI_SP_OPS", "PAPI_DP_OPS", "PAPI_VEC_SP", "PAPI_VEC_DP")
     def _conversion1(self, ld_ins: CalculationElement, sp_ops: CalculationElement, dp_ops: CalculationElement,
                      vec_sp_ops: CalculationElement, vec_dp_ops: CalculationElement) -> CalculationElement:
-        return ld_ins * ((vec_sp_ops + vec_dp_ops) / (dp_ops + sp_ops))
+        return ld_ins * divide_no0((vec_sp_ops + vec_dp_ops), (dp_ops + sp_ops))
 
-    @ConversionMetrics("smsp__sass_inst_executed_op_ld")
-    def _conversion2(self, inst_executed_op_ld: CalculationElement, ) -> CalculationElement:
+    @ConversionMetrics("smsp__sass_inst_executed_op_ld.sum")
+    def _conversion2(self, inst_executed_op_ld: CalculationElement) -> CalculationElement:
         return inst_executed_op_ld
 
 
@@ -58,8 +58,8 @@ class VecStores(AbstractMetricConverter):
     @ConversionMetrics("PAPI_SR_INS", "PAPI_SP_OPS", "PAPI_DP_OPS", "PAPI_VEC_SP", "PAPI_VEC_DP")
     def _conversion1(self, sr_ins: CalculationElement, sp_ops: CalculationElement, dp_ops: CalculationElement,
                      vec_sp_ops: CalculationElement, vec_dp_ops: CalculationElement) -> CalculationElement:
-        return sr_ins * ((vec_sp_ops + vec_dp_ops) / (dp_ops + sp_ops))
+        return sr_ins * divide_no0((vec_sp_ops + vec_dp_ops), (dp_ops + sp_ops))
 
-    @ConversionMetrics("smsp__sass_inst_executed_op_st")
-    def _conversion2(self, inst_executed_op_st: CalculationElement, ) -> CalculationElement:
+    @ConversionMetrics("smsp__sass_inst_executed_op_st.sum")
+    def _conversion2(self, inst_executed_op_st: CalculationElement) -> CalculationElement:
         return inst_executed_op_st

@@ -175,11 +175,17 @@ class ComparisonExperiment(Experiment):
                                                                        converter.get_required_metrics(i)])
                     except KeyError:
                         continue
+                    except ZeroDivisionError:
+                        continue
                     exp.measurements[callpath, converter.new_metric] = measurements
                     for model_set in exp.modelers:
-                        model_set.models[callpath, converter.new_metric] = converter.convert_models(i, [
-                            model_set.models[callpath, metric] for metric in
-                            converter.get_required_metrics(i)], measurements)
+                        try:
+                            model = converter.convert_models(i, [model_set.models[callpath, metric] for metric in
+                                                                 converter.get_required_metrics(i)], measurements)
+                            if model:
+                                model_set.models[callpath, converter.new_metric] = model
+                        except ZeroDivisionError:
+                            continue
 
 
 class ComparisonExperimentSchema(ExperimentSchema):

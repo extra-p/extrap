@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 try:
-    from typing import Protocol
+    from typing import Protocol, Union, TypeVar
 except ImportError:
     class Protocol:
         pass
@@ -41,3 +41,23 @@ class CalculationElement(Protocol):
 
     def __neg__(self) -> CalculationElement:
         pass
+
+    def make_one(self) -> CalculationElement:
+        pass
+
+
+_T = TypeVar('_T')
+_S = TypeVar('_S')
+
+
+def divide_no0(a: _T, b: _S) -> Union[_T, _S, CalculationElement]:
+    if a == 0 and b == 0:
+        if hasattr(a, 'make_one'):
+            return a.make_one()
+        if hasattr(b, 'make_one'):
+            return b.make_one()
+        return 1
+    elif b == 0:
+        raise ZeroDivisionError()
+    else:
+        return a / b

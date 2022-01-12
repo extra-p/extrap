@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import copy
+import numbers
 import operator
 import re
 from enum import Enum
@@ -246,12 +247,18 @@ class ComputationFunction(TermlessFunction, CalculationElement):
 
     def __eq__(self, other):
         if not isinstance(other, ComputationFunction):
+            if isinstance(other, numbers.Number):
+                return self.sympy_function == other
             return NotImplemented
         elif self is other:
             return True
         else:
             return self._sympy_function.evalf(15) == other._sympy_function.evalf(15) and \
                    self._ftype is other._ftype
+
+    @classmethod
+    def make_one(cls):
+        return ComputationFunction(ConstantFunction(1))
 
 
 def param_transformation(tokens, local_dict, global_dict):
