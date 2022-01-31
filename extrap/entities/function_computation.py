@@ -132,7 +132,7 @@ class FunctionPrinter(StrPrinter):
 
 
 class ComputationFunction(TermlessFunction, CalculationElement):
-    PRINTER = FunctionPrinter()
+    _PRINTER = FunctionPrinter()
 
     def __init__(self, function: Optional[Function]):
         super().__init__()
@@ -178,7 +178,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         for param, new_param in zip(self._params, parameters):
             result = result.subs(param, str(new_param))
 
-        return self.PRINTER.doprint(result)
+        return self._PRINTER.doprint(result)
 
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
                                               Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
