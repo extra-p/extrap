@@ -63,3 +63,28 @@ class VecStores(AbstractMetricConverter):
     @ConversionMetrics("smsp__sass_inst_executed_op_st.sum")
     def _conversion2(self, inst_executed_op_st: CalculationElement) -> CalculationElement:
         return inst_executed_op_st
+
+
+class VecLoadStore(AbstractMetricConverter):
+    NAME = "VEC LD ST"
+
+    @ConversionMetrics("PAPI_LST_INS", "PAPI_SP_OPS", "PAPI_DP_OPS", "PAPI_VEC_SP", "PAPI_VEC_DP")
+    def _conversion1(self, lst_ins: CalculationElement, sp_ops: CalculationElement, dp_ops: CalculationElement,
+                     vec_sp_ops: CalculationElement, vec_dp_ops: CalculationElement) -> CalculationElement:
+        return lst_ins * divide_no0((vec_sp_ops + vec_dp_ops), (dp_ops + sp_ops))
+
+    @ConversionMetrics("smsp__sass_thread_inst_executed_op_memory_pred_on.sum")
+    def _conversion2(self, mem_inst_executed: CalculationElement) -> CalculationElement:
+        return mem_inst_executed
+
+
+class Instructions(AbstractMetricConverter):
+    NAME = "TOT INST"
+
+    @ConversionMetrics("PAPI_TOT_INS")
+    def _conversion1(self, ins: CalculationElement) -> CalculationElement:
+        return ins
+
+    @ConversionMetrics("sm__sass_thread_inst_executed.sum")
+    def _conversion2(self, inst_executed: CalculationElement) -> CalculationElement:
+        return inst_executed
