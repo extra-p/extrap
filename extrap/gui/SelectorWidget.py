@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -75,16 +75,16 @@ class SelectorWidget(QWidget):
         self.toolbar.layout().setSpacing(5)
         group_layout.addWidget(self.toolbar)
 
-        self.view_select = QComboBox(self.toolbar)
-        self.view_select.addItem('All', TreeItemFilterProvider.ConstructionType.INCLUDE)
-        self.view_select.addItem('Compact', TreeItemFilterProvider.ConstructionType.COMPACT)
-        self.view_select.addItem('Flat', TreeItemFilterProvider.ConstructionType.FLAT)
+        self.tree_display_select = QComboBox(self.toolbar)
+        self.tree_display_select.addItem('All', TreeItemFilterProvider.DisplayType.INCLUDE)
+        self.tree_display_select.addItem('Compact', TreeItemFilterProvider.DisplayType.COMPACT)
+        self.tree_display_select.addItem('Flat', TreeItemFilterProvider.DisplayType.FLAT)
 
         def select_view_type(x):
-            self.tree_model.item_filter.view_type = self.view_select.currentData()
+            self.tree_model.item_filter.display_type = self.tree_display_select.currentData()
 
-        self.view_select.currentIndexChanged.connect(select_view_type)
-        self.toolbar.addWidget(self.view_select)
+        self.tree_display_select.currentIndexChanged.connect(select_view_type)
+        self.toolbar.addWidget(self.tree_display_select)
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.toolbar.addWidget(spacer)

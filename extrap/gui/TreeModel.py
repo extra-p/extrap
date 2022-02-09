@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -280,47 +280,75 @@ class TreeItem(object):
 
 
 class TreeItemFilterProvider:
-    class ConstructionType(Enum):
+    """
+    Performs the translation from the actual calltree to the displayed calltree.
+    Allows filtering of the calltree by passing in filter conditions.
+    """
+
+    class DisplayType(Enum):
         INCLUDE = auto()
-        EXCLUDE = auto()
+        EXCLUDE = auto()  # unused
         FLAT = auto()
         COMPACT = auto()
+        DEFAULT = INCLUDE
 
     def __init__(self, model: TreeModel):
         self._model = model
-        self._view_type = self.ConstructionType.INCLUDE
+        self._view_type = self.DisplayType.DEFAULT
         self._call_tree: Optional[CallTree] = None
         self.conditions = {}
         self._type_builder = {
-            self.ConstructionType.INCLUDE: self._construct_tree_include_child_if_mismatch,
-            self.ConstructionType.COMPACT: self._construct_tree_skip_if_mismatch_and_at_most_one_child,
-            self.ConstructionType.FLAT: self._construct_tree_flat
+            self.DisplayType.INCLUDE: self._construct_tree_include_child_if_mismatch,
+            self.DisplayType.COMPACT: self._construct_tree_skip_if_mismatch_and_at_most_one_child,
+            self.DisplayType.FLAT: self._construct_tree_flat
         }
         self._tree_builder = self._type_builder[self._view_type]
 
-    def put_condition(self, id, condition: Callable[[Node], bool], inherited_from_child=True):
-        self.conditions[id] = condition  # , inherited_from_child, {})
+    def put_condition(self, id, condition: Callable[[Node], bool]):
+        """
+        Adds a filter condition to the list of conditions and updates the tree.
+
+        :param id: The id under witch the condition is stored.
+        You can use it with remove_condition to remove the condition from the filter.
+        :param condition: A condition is a function which gets supplied a node and
+        returns whether this node should be visible or not.
+        The condition must return True, if the node should be visible.
+        If the condition returns False the node is not shown.
+        """
+        self.conditions[id] = condition
         self.update_tree()
 
     def remove_condition(self, id):
+        """
+        Removes a filter condition from the list of conditions and updates the tree.
+
+        :param id: The id of the condition te be removed.
+        """
         if id in self.conditions:
             del self.conditions[id]
+            self.update_tree()
 
     @property
-    def view_type(self):
+    def display_type(self):
+        """Gets the DisplayType for the TreeView"""
         return self._view_type
 
-    @view_type.setter
-    def view_type(self, val):
+    @display_type.setter
+    def display_type(self, val):
+        """Sets the DisplayType for the TreeView. Switches between NORMAL, COMPACT, FLAT etc."""
         self._view_type = val
         self._tree_builder = self._type_builder[val]
         self.update_tree()
 
     def setup(self, call_tree: CallTree):
+        """ Performs the setup for the passed call tree and creates the first display tree."""
         self._call_tree = call_tree
         self.update_tree()
 
     def update_tree(self):
+        """ Updates the tree.
+        Performs dry run first, and updates only if changes occurred.
+        """
         if not self._call_tree:
             return
         root = TreeItem(self._call_tree)
