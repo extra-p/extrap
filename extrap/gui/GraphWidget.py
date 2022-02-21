@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import typing
+from itertools import cycle
 
 import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -42,6 +43,7 @@ class GraphWidget(QWidget):
         self.initUI()
         self.set_initial_value()
         self.setMouseTracking(True)
+        self._line_styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
 
     def initUI(self):
         self.setMinimumWidth(300)
@@ -315,9 +317,13 @@ class GraphWidget(QWidget):
             # Draw functionss
             index_indicator = 0
             if not self.combine_all_callpath:
-                for model, call_node in zip(model_list, selected_call_nodes):
+                for model, call_node in zip(model_list1, selected_call_nodes1):
                     color = self.main_widget.model_color_map[call_node]
-                    self.drawModel(paint, model, color)
+                    if isinstance(model, ComparisonModel):
+                        for m, style in zip(model.models, cycle(self._line_styles)):
+                            self.drawModel(paint, m, color, style)
+                    else:
+                        self.drawModel(paint, model, color)
             else:
                 # main_widget = self.main_widget
                 # color = main_widget.model_color_map[selected_call_nodes[0]]
@@ -416,12 +422,13 @@ class GraphWidget(QWidget):
                            self.legend_y + px_between,
                            aggregated_callpath_name)
 
-    def drawModel(self, paint, model, color):
+    def drawModel(self, paint, model, color, style=Qt.SolidLine):
         function = model.hypothesis.function
 
         cord_list = self.calculate_function(function, self.graph_width)
 
         pen = QPen(QColor(color))
+        pen.setStyle(style)
         pen.setWidth(2)
         paint.setPen(pen)
 
