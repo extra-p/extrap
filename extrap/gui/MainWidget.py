@@ -34,6 +34,8 @@ from extrap.gui.components import file_dialog
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
 
+DEFAULT_MODEL_NAME = "Default Model"
+
 
 class CallPathEnum(Enum):
     constant = "constant"
@@ -247,9 +249,14 @@ class MainWidget(QMainWindow):
         self.experiment_change = False
         self.show()
 
-    def set_experiment(self, experiment):
+    def set_experiment(self, experiment, file_name="", *, compared=False):
+        if experiment is None:
+            raise ValueError("Experiment cannot be none.")
         self.experiment_change = True
         self._experiment = experiment
+        self._set_opened_file_name(file_name, compared=compared)
+        self.save_experiment_action.setEnabled(True)
+        self.compare_action.setEnabled(not isinstance(experiment, ComparisonExperiment))
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
@@ -344,13 +351,13 @@ class MainWidget(QMainWindow):
         dialog = file_dialog.showSave(self, _save, "Save Screenshot", initial_path, file_filter)
         dialog.selectNameFilter("PNG image (*.png)")
 
-    def model_experiment(self, experiment):
+    def model_experiment(self, experiment, file_name=""):
         # initialize model generator
-        model_generator = ModelGenerator(experiment, use_median=self.median, name="Default Model")
+        model_generator = ModelGenerator(experiment, use_median=self.median, name=DEFAULT_MODEL_NAME)
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)
-        self.set_experiment(experiment)
+        self.set_experiment(experiment, file_name)
 
     def _make_import_func(self, title, reader_func, **kwargs):
         return partial(self.import_file, reader_func, title, **kwargs)
@@ -360,26 +367,22 @@ class MainWidget(QMainWindow):
         def _import_file(file_name):
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
-                self._set_opened_file_name(file_name)
                 # call the modeler and create a function model
                 if model:
-                    self.model_experiment(experiment)
+                    self.model_experiment(experiment, file_name)
                 else:
-                    self.set_experiment(experiment)
+                    self.set_experiment(experiment, file_name)
 
         if file_name:
             _import_file(file_name)
         else:
             file_dialog.show(self, _import_file, title, filter=filter, file_mode=file_mode)
 
-    def _set_opened_file_name(self, file_name):
+    def _set_opened_file_name(self, file_name, *, compared=False):
         if file_name:
-            self.save_experiment_action.setEnabled(True)
-            self.setWindowFilePath(file_name)
+            self.setWindowFilePath(file_name if not compared else "")
             self.setWindowTitle(Path(file_name).name + " – " + extrap.__title__)
-
         else:
-            self.save_experiment_action.setEnabled(False)
             self.setWindowFilePath("")
             self.setWindowTitle(extrap.__title__)
 
@@ -404,8 +407,7 @@ class MainWidget(QMainWindow):
             dialog.setModal(True)
             dialog.exec_()  # do not use open, wait for loading to finish
             if dialog.valid:
-                self._set_opened_file_name(dir_name)
-                self.model_experiment(dialog.experiment)
+                self.model_experiment(dialog.experiment, dir_name)
 
         file_dialog.showOpenDirectory(self, _process_cube, 'Select a Directory with a Set of CUBE Files')
 
