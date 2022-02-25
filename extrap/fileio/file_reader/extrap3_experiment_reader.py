@@ -487,11 +487,12 @@ def SAFE_RETURN_None(x):
 
 
 class _Mappings:
-    region_mapping = {}
-    region_set = {}
-    callpath_mapping = {}
-    parameter_mapping = {}
-    coordinate_mapping = {}
+    def __init__(self):
+        self.region_mapping = {}
+        self.region_set = {}
+        self.callpath_mapping = {}
+        self.parameter_mapping = {}
+        self.coordinate_mapping = {}
 
 
 class Extrap3ExperimentFileReader(FileReader):
