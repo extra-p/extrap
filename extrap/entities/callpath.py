@@ -27,8 +27,54 @@ class Callpath(NamedEntityWithTags):
     Empty callpath. Can be used as placeholder.
     """
 
+    def concat(self, *other: str, copy_tags=False):
+        cp = Callpath('->'.join(itertools.chain((self.name,), other)))
+        if copy_tags:
+            cp.tags = self.tags.copy()
+        return cp
 
 class CallpathSchema(NamedEntityWithTagsSchema):
     def create_object(self):
         return Callpath('')
 
+class _EmptyCallpath(Callpath):
+
+    def __init__(self):
+        self.__is_init = True
+        super().__init__("")
+        self.__is_init = False
+
+    def __copy__(self):
+        raise NotImplementedError()
+
+    @property
+    def name(self):
+        return ""
+
+    def __hash__(self):
+        return 0
+
+    @name.setter
+    def name(self, val):
+        if not self.__is_init:
+            raise NotImplementedError()
+
+    @property
+    def tags(self):
+        return {}
+
+    @tags.setter
+    def tags(self, val):
+        if not self.__is_init:
+            raise NotImplementedError()
+
+    def concat(self, *other, copy_tags=False):
+        raise NotImplementedError()
+
+
+class CallpathSchema(NamedEntityWithTagsSchema):
+    def create_object(self):
+        return Callpath('')
+
+
+Callpath.EMPTY = _EmptyCallpath()
