@@ -33,9 +33,6 @@ class Callpath(NamedEntityWithTags):
             cp.tags = self.tags.copy()
         return cp
 
-class CallpathSchema(NamedEntityWithTagsSchema):
-    def create_object(self):
-        return Callpath('')
 
 class _EmptyCallpath(Callpath):
 
