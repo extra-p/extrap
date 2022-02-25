@@ -1,10 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import copy
 from typing import Sequence, Iterable, TypeVar
 
 T = TypeVar('T')
@@ -68,3 +69,11 @@ class UniqueList(list, Sequence[T]):
     def clear(self) -> None:
         super(UniqueList, self).clear()
         self._set.clear()
+
+    def __deepcopy__(self, memodict=None):
+        if memodict is None:
+            memodict = {}
+        obj = UniqueList()
+        super(UniqueList, obj).extend(copy.deepcopy(e, memodict) for e in self)
+        obj._set = copy.deepcopy(self._set, memodict)
+        return obj
