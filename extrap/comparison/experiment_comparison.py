@@ -1,12 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-from typing import List, Sequence
 
-from marshmallow import fields
+from typing import List, Sequence
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
@@ -19,6 +18,7 @@ from extrap.entities.experiment import Experiment, ExperimentSchema
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.util.serialization_schema import ListToMappingField
 from extrap.util.unique_list import UniqueList
 
 COMPARISON_NODE_NAME = '[Comparison]'
@@ -189,13 +189,12 @@ class ComparisonExperiment(Experiment):
 
 
 class ComparisonExperimentSchema(ExperimentSchema):
-    callpaths = fields.List(fields.Nested(CallpathSchema))
+    callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList)
 
     def create_object(self):
         return ComparisonExperiment(None, None, None)
 
     def postprocess_object(self, obj: Experiment):
-        obj.callpaths = UniqueList(obj.callpaths)
         experiment = super().postprocess_object(obj)
         experiment.call_tree.ensure_callpaths_exist()
         return experiment
