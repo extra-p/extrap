@@ -256,7 +256,6 @@ class MainWidget(QMainWindow):
         self._experiment = experiment
         self._set_opened_file_name(file_name, compared=compared)
         self.save_experiment_action.setEnabled(True)
-        self.compare_action.setEnabled(not isinstance(experiment, ComparisonExperiment))
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()

@@ -13,6 +13,10 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
 from extrap.util.exceptions import RecoverableError
 
+"""
+This module provides the custom output formatting for the experiments. 
+You can find the explanation of the placeholders in docs/output-formatting.md
+"""
 
 class OutputFormatError(RecoverableError):
     NAME = 'Output Format Error'
