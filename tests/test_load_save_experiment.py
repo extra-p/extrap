@@ -94,7 +94,10 @@ class TestVersionCheck(unittest.TestCase):
             write_experiment(self.experiment, tmp)
             with zipfile.ZipFile(tmp, 'r', allowZip64=True) as file:
                 data = json.loads(file.read(EXPERIMENT_DATA_FILE).decode("utf-8"))
-                data[extrap.__title__] = data[extrap.__title__] + '-alpha1'
+                if '-' in data[extrap.__title__]:
+                    data[extrap.__title__] = data[extrap.__title__] + '1'
+                else:
+                    data[extrap.__title__] = data[extrap.__title__] + '-alpha1'
             with zipfile.ZipFile(tmp, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as file:
                 file.writestr(EXPERIMENT_DATA_FILE, json.dumps(data))
             with warnings.catch_warnings(record=True) as record:
