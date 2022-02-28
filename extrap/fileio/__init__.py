@@ -9,18 +9,17 @@ import importlib
 import sys
 from types import ModuleType
 
-from extrap.fileio.file_reader import jsonlines_file_reader as _jsonlines_file_reader
 from extrap.util.deprecation import deprecated
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
-def _make_compat_module(module_name, method_name, reader_class, method_impl=None):
+def _make_compat_module(module_name, method_name, reader_class_name, method_impl=None):
     if not method_impl:
-        reader_class = getattr(importlib.import_module('extrap.fileio.file_reader.' + module_name), reader_class)
-
-        @deprecated(f"Use extrap.fileio.file_reader.{module_name}.{reader_class.__name__}.read_experiment instead.",
+        @deprecated(f"Use extrap.fileio.file_reader.{module_name}.{reader_class_name}.read_experiment instead.",
                     f"extrap.fileio.{module_name}.{method_name} is deprecated.")
         def read_file_method(path, pbar=DUMMY_PROGRESS):
+            reader_class = getattr(importlib.import_module('extrap.fileio.file_reader.' + module_name),
+                                   reader_class_name)
             return reader_class().read_experiment(path, pbar)
     else:
         read_file_method = method_impl
@@ -43,8 +42,12 @@ def _read_cube_file(dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metric
     return CubeFileReader2().read_cube_file(dir_name, scaling_type, pbar, selected_metrics)
 
 
+@deprecated("Use extrap.fileio.file_reader.jsonlines_file_reader.read_jsonlines_file instead.",
+            "extrap.fileio.jsonlines_file_reader.read_jsonlines_file is deprecated.")
+def _read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
+    from extrap.fileio.file_reader import jsonlines_file_reader
+    return jsonlines_file_reader.read_jsonlines_file(path, progress_bar)
+
+
 _make_compat_module('cube_file_reader2', 'read_cube_file', 'CubeFileReader2', _read_cube_file)
-_make_compat_module('jsonlines_file_reader', 'read_jsonlines_file', None,
-                    deprecated("Use extrap.fileio.file_reader.jsonlines_file_reader.read_jsonlines_file instead.",
-                               "extrap.fileio.jsonlines_file_reader.read_jsonlines_file is deprecated.")(
-                        _jsonlines_file_reader.read_jsonlines_file))
+_make_compat_module('jsonlines_file_reader', 'read_jsonlines_file', None, _read_jsonlines_file)
