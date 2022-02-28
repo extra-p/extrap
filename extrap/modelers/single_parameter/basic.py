@@ -97,6 +97,11 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         if self.are_measurements_log_capable(measurements, self.allow_negative_exponents):
             return self.hypotheses_building_blocks
 
+        if any(t.term_type == "logarithm" for compound_term in self.hypotheses_building_blocks
+               for t in compound_term.simple_terms):
+            warnings.warn("Your measurements contained a point value below one, therefore, "
+                          "Extra-P does not use logarithmic terms for modeling.")
+
         return [compound_term
                 for compound_term in self.hypotheses_building_blocks
                 if not any(t.term_type == "logarithm"
