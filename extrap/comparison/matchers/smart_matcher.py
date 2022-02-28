@@ -83,6 +83,7 @@ class SmartMatcher(AbstractMatcher):
                 comparison_node = comparison_nodes.get(node)
                 if not comparison_node:
                     comparison_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
+                    new_matches[comparison_node] = [None] * len(source_measurements)
                 for i, (s_node, s_metric, s_measurements, s_name) in enumerate(
                         zip(source_nodes, source_metrics, source_measurements, experiment.experiment_names)):
 
