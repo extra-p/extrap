@@ -21,6 +21,7 @@ class TreeView(QTreeView):
         super(TreeView, self).__init__(parent)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setAnimated(True)
+        self.setAcceptDrops(True)
 
     def collapseRecursively(self, index):
         if not index.isValid():
@@ -175,3 +176,25 @@ class TreeView(QTreeView):
         print("")
         msg.setText(msg_txt)
         msgBox.exec_()
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        self._handle_drop_event(event)
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        self._handle_drop_event(event)
+
+    def _handle_drop_event(self, event):
+        event.setDropAction(Qt.DropAction.CopyAction)
+        mimeData = event.mimeData()
+        if mimeData.hasUrls() and len(mimeData.urls()) == 1 and mimeData.urls()[0].toLocalFile().endswith('.extra-p'):
+            event.accept()
+            return mimeData
+        else:
+            event.ignore()
+            return None
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        mimeData = self._handle_drop_event(event)
+        if mimeData:
+            file_name = mimeData.urls()[0].toLocalFile()  # Make sure to pass only python types into lambda
+            QTimer.singleShot(0, lambda: self.parent().parent().main_widget.open_experiment(file_name))

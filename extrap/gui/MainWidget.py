@@ -385,11 +385,12 @@ class MainWidget(QMainWindow):
             self.setWindowFilePath("")
             self.setWindowTitle(extrap.__title__)
 
-    def open_experiment(self):
+    def open_experiment(self, file_name=None):
         self.import_file(read_experiment, 'Open Experiment',
                          filter='Experiments (*.extra-p)',
                          model=False,
-                         progress_text="Loading experiment")
+                         progress_text="Loading experiment",
+                         file_name=file_name)
 
     def save_experiment(self):
         def _save(file_name):
