@@ -1,6 +1,10 @@
 ﻿cmake_minimum_required (VERSION 3.15)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+set(STRING_ENCODING_TYPE "NONE")
+set(protobuf_BUILD_TESTS OFF)
+set(SQLITECPP_RUN_CPPLINT OFF)
 # Add dependencies
 include(FetchContent)
 FetchContent_Declare(
@@ -23,9 +27,7 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/SRombauts/SQLiteCpp.git
         GIT_TAG        3.1.1
 )
-set(protobuf_BUILD_TESTS OFF)
-set(STRING_ENCODING_TYPE "NONE")
-set(SQLITECPP_RUN_CPPLINT OFF)
+
 
 FetchContent_MakeAvailable(kaitai_struct_cpp_stl_runtime protobuf sqlite3 SQLiteCpp)
 
