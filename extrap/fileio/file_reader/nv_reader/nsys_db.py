@@ -34,7 +34,7 @@ class NsysReport:
                 f"You need to convert the file into a .qdrep-report and than into a sqlite database: {filename}")
         elif filename.suffix == ".qdrep":
             raise FileFormatError(f"You need to convert the file into a sqlite database: {filename}")
-        elif filename.suffix == ".nsight-cuprof-report":
+        elif filename.suffix == ".nsight-cuprof-report" or filename.suffix == ".ncu-rep":
             raise FileFormatError(f"You need to use the ncu reader to open the file: {filename}")
         else:
             return filename

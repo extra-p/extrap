@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import logging
 import os
 from collections import defaultdict
 from itertools import islice
@@ -18,7 +18,7 @@ from extrap.fileio.file_reader.nv_reader.pb_parser.ProfilerResults_pb2 import Me
 class NcuReport:
 
     def __init__(self, name):
-
+        logging.info(f"Loading NCU report {name}")
         self.string_table: List[str] = []
         self.source_blocks = []
         self.result_blocks = []

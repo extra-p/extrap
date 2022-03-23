@@ -7,6 +7,7 @@
 
 import logging
 import multiprocessing
+import os.path
 import re
 from collections import defaultdict
 from itertools import groupby
@@ -22,6 +23,7 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
+from extrap.fileio.file_reader.nv_reader.agg_ncu_report import AggNcuReport
 from extrap.fileio.file_reader.nv_reader.ncu_report import NcuReport
 from extrap.fileio.file_reader.nv_reader.nsys_db import NsysReport
 from extrap.util.exceptions import FileFormatError
@@ -88,6 +90,7 @@ class NsightFileReader(AbstractDirectoryReader):
                 aggregated_values.clear()
                 metric = Metric('time')
                 metric_bytes = Metric('bytes_transferred')
+                correponding_agg_ncu_path = None
                 for path, _ in point_group:
                     pbar.update()
                     with NsysReport(path) as parsed:
@@ -149,26 +152,42 @@ class NsightFileReader(AbstractDirectoryReader):
                             if duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
 
-                        correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
-                        if not correponding_ncu_path.exists():
-                            correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
-                        if correponding_ncu_path.exists() and not only_time:
+                        temp_correponding_agg_ncu_path = Path(path).with_suffix(".ncu-rep.agg")
+                        if temp_correponding_agg_ncu_path.exists():
+                            correponding_ncu_path = None
+                            correponding_agg_ncu_path = temp_correponding_agg_ncu_path
+                        else:
+                            correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
+                            if not correponding_ncu_path.exists():
+                                correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
+                        if not correponding_agg_ncu_path and correponding_ncu_path.exists() and not only_time:
                             if pool is None:
                                 pool = multiprocessing.Pool()
-                            with NcuReport(correponding_ncu_path) as ncuReport:
+                            with NcuReport(correponding_ncu_path) as ncu_report:
                                 ignore_metrics = None
                                 if self.ignore_device_attributes:
                                     ignore_metrics = ['device__attribute', 'nvlink__']
-                                measurements = ncuReport.get_measurements_parallel(parsed.get_kernelid_paths(), pool,
-                                                                                   ignore_metrics=ignore_metrics)
+                                measurements = ncu_report.get_measurements_parallel(parsed.get_kernelid_paths(), pool,
+                                                                                    ignore_metrics=ignore_metrics)
                                 for (callpath, metricId), v in measurements.items():
                                     aggregated_values[
-                                        (Callpath(callpath), Metric(ncuReport.string_table[metricId]))].append(v)
+                                        (Callpath(callpath), Metric(ncu_report.string_table[metricId]))].append(v)
 
                 # add measurements to experiment
                 for (callpath, metric), values in aggregated_values.items():
                     pbar.update(0)
                     experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
+
+                if correponding_agg_ncu_path:
+                    with  AggNcuReport(correponding_agg_ncu_path) as agg_report, NsysReport(path) as parsed:
+                        ignore_metrics = None
+                        if self.ignore_device_attributes:
+                            ignore_metrics = ['device__attribute', 'nvlink__']
+                        measurements = agg_report.get_measurements(ignore_metrics=ignore_metrics)
+                        for (callpath_enc, matric_id), values in measurements:
+                            metric = Metric(agg_report.string_table[metricId])
+                            callpath = Callpath(parsed.decode_callpath(callpath_enc))
+                            experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
         finally:
             if pool:
                 pool.close()
@@ -276,23 +295,38 @@ class NsightFileReader(AbstractDirectoryReader):
             experiment.add_coordinate(coordinate)
 
             aggregated_values.clear()
-            for path, _ in point_group:
-                pbar.update()
-                with NcuReport(path) as ncuReport:
+            agg_path = str(point_group[0][0]) + '.agg'
+            if os.path.exists(agg_path):
+                with AggNcuReport(agg_path) as agg_report:
+                    pbar.update(agg_report.count)
                     if self.ignore_device_attributes:
-                        measurements = ncuReport.get_measurements_unmapped(
+                        measurements = agg_report.get_measurements_unmapped(
                             ignore_metrics=['device__attribute', 'nvlink__'])
                     else:
-                        measurements = ncuReport.get_measurements_unmapped()
-                    for (callpath, metricId), v in measurements.items():
+                        measurements = agg_report.get_measurements_unmapped()
+                    for (kernelId, metricId), values in measurements.items():
                         pbar.update(0)
-                        aggregated_values[
-                            (Callpath(callpath), Metric(ncuReport.string_table[metricId]))].append(v)
+                        experiment.add_measurement(
+                            Measurement(coordinate, Callpath('main->' + agg_report.kernel_names[kernelId]),
+                                        Metric(agg_report.string_table[metricId]), values))
+            else:
+                for path, _ in point_group:
+                    pbar.update()
+                    with NcuReport(path) as ncu_report:
+                        if self.ignore_device_attributes:
+                            measurements = ncu_report.get_measurements_unmapped(
+                                ignore_metrics=['device__attribute', 'nvlink__'])
+                        else:
+                            measurements = ncu_report.get_measurements_unmapped()
+                        for (callpath, metricId), v in measurements.items():
+                            pbar.update(0)
+                            aggregated_values[
+                                (Callpath(callpath), Metric(ncu_report.string_table[metricId]))].append(v)
 
-            # add measurements to experiment
-            for (callpath, metric), values in aggregated_values.items():
-                pbar.update(0)
-                experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
+                # add measurements to experiment
+                for (callpath, metric), values in aggregated_values.items():
+                    pbar.update(0)
+                    experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
 
         to_delete = []
         for key, value in pbar.__call__(experiment.measurements.items(), len(experiment.measurements), scale=0.1):
