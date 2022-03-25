@@ -25,6 +25,7 @@ from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.AggregationWidget import AggregationWidget
 from extrap.gui.ColorWidget import ColorWidget
+from extrap.gui.CoordinateTransformation import CoordinateTransformationDialog
 from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.LogWidget import LogWidget
@@ -189,6 +190,9 @@ class MainWidget(QMainWindow):
         metric_delete_action = QAction('Dele&te metrics', self)
         metric_delete_action.triggered.connect(self.selector_widget.delete_metric)
 
+        coordinates_transform_dialog = CoordinateTransformationDialog(self)
+        coordinates_transform = QAction('Transform Coordinates', self)
+        coordinates_transform.triggered.connect(coordinates_transform_dialog.show)
         # compare menu
         compare_action = QAction('&Compare with experiment', self)
         compare_action.setStatusTip('Compare the current models with ')
@@ -238,6 +242,8 @@ class MainWidget(QMainWindow):
         model_menu.addAction(model_rename_action)
         model_menu.addSeparator()
         model_menu.addAction(metric_delete_action)
+        model_menu.addSeparator()
+        model_menu.addAction(coordinates_transform)
 
         # filter_menu = menubar.addMenu('Filter')
         # filter_menu.addAction(filter_callpath_action)

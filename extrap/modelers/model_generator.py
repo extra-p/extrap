@@ -77,7 +77,7 @@ class ModelGenerator:
                 raise ValueError("Modeler must use one parameter.")
         return result_modeler
 
-    def model_all(self, progress_bar=DUMMY_PROGRESS):
+    def model_all(self, progress_bar=DUMMY_PROGRESS, auto_append=True):
         models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
         self.models = {
             k: m for k, m in zip(self.experiment.measurements.keys(), models)
@@ -86,14 +86,16 @@ class ModelGenerator:
             model.callpath = callpath
             model.metric = metric
             model.measurements = self.experiment.measurements[(callpath, metric)]
-        # add the modeler with the results to the experiment
-        self.experiment.add_modeler(self)
+        if auto_append:
+            # add the modeler with the results to the experiment
+            self.experiment.add_modeler(self)
 
-    def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS):
+    def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS, auto_append=True):
         mg = AggregateModelGenerator(self.experiment, aggregation, self._modeler, aggregation.NAME + ' ' + self.name,
                                      self._modeler.use_median)
         mg.models = aggregation.aggregate(self.models, self.experiment.call_tree, self.experiment.metrics, progress_bar)
-        self.experiment.add_modeler(mg)
+        if auto_append:
+            self.experiment.add_modeler(mg)
 
     def __eq__(self, other):
         if not isinstance(other, ModelGenerator):
