@@ -169,9 +169,9 @@ class NsightFileReader(AbstractDirectoryReader):
                                     ignore_metrics = ['device__attribute', 'nvlink__']
                                 measurements = ncu_report.get_measurements_parallel(parsed.get_kernelid_paths(), pool,
                                                                                     ignore_metrics=ignore_metrics)
-                                for (callpath, metricId), v in measurements.items():
+                                for (callpath, metric_id), v in measurements.items():
                                     aggregated_values[
-                                        (Callpath(callpath), Metric(ncu_report.string_table[metricId]))].append(v)
+                                        (Callpath(callpath), Metric(ncu_report.string_table[metric_id]))].append(v)
 
                 # add measurements to experiment
                 for (callpath, metric), values in aggregated_values.items():
@@ -184,8 +184,8 @@ class NsightFileReader(AbstractDirectoryReader):
                         if self.ignore_device_attributes:
                             ignore_metrics = ['device__attribute', 'nvlink__']
                         measurements = agg_report.get_measurements(ignore_metrics=ignore_metrics)
-                        for (callpath_enc, matric_id), values in measurements:
-                            metric = Metric(agg_report.string_table[metricId])
+                        for (callpath_enc, metric_id), values in measurements.items():
+                            metric = Metric(agg_report.string_table[metric_id])
                             callpath = Callpath(parsed.decode_callpath(callpath_enc))
                             experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
         finally:

@@ -181,6 +181,7 @@ int process_files(std::vector<fs::path>& paths)
 
 		std::unique_ptr<SQLite::Database> db;
 		std::unique_ptr<SQLite::Statement> kernel_info;
+		bool kernel_info_has_line = true;
 		try_load_database(paths[fidx], db, kernel_info);
 		std::cout << "Reading " << paths[fidx] << std::endl;
 		std::ifstream is(paths[fidx], std::ifstream::binary);
@@ -217,24 +218,41 @@ int process_files(std::vector<fs::path>& paths)
 					auto kernel_id = _get_kernel_id(kernel_names, result.kerneldemangledname());
 					assert(kernel_id < kernel_names.size());
 					if (kernel_info != nullptr) {
-						if (!kernel_info->executeStep()) {
-							std::cout << "No further kernels in database." << std::endl;
-							return 3;
+						if (kernel_info_has_line) {
+							kernel_info_has_line = kernel_info->executeStep();
 						}
-						auto name = kernel_info->getColumn("name").getString();
-						auto callpath = kernel_info->getColumn("callpath").getString();
-						if (result.kernelfunctionname() != name) {
-							std::cout << name << "does not match" << result.kernelfunctionname() << std::endl;
-							return 2;
+						if (!kernel_info_has_line) {
+							auto& name = string_tables[0]->stringtable().strings()[kernel_id];
+							std::cout << "No further kernels in database: id: " << kernel_id << " name: " << name << std::endl;
+							//return 3;
+							for (auto& mv : result.metricresults())
+							{
+								auto value = _convert_metric_value(mv.metricvalue());
+								if (!std::holds_alternative<empty_value>(value)) {
+									auto key = std::make_tuple(kernel_id, mv.nameid());
+									aggregate_values(num_files, fidx, key, value, aggregated_values_per_kernel);
+
+									auto key2 = std::make_tuple("UNMATCHED->" + name + "->GPU", mv.nameid());
+									aggregate_values(num_files, fidx, key2, value, aggregated_values_per_call);
+								}
+							}
 						}
-						for (auto& mv : result.metricresults())
-						{
-							auto value = _convert_metric_value(mv.metricvalue());
-							if (!std::holds_alternative<empty_value>(value)) {
-								auto key = std::make_tuple(kernel_id, mv.nameid());
-								aggregate_values(num_files, fidx, key, value, aggregated_values_per_kernel);
-								auto key2 = std::make_tuple(callpath + "->" + name + "->GPU", mv.nameid());
-								aggregate_values(num_files, fidx, key2, value, aggregated_values_per_call);
+						else {
+							auto name = kernel_info->getColumn("name").getString();
+							auto callpath = kernel_info->getColumn("callpath").getString();
+							if (result.kernelfunctionname() != name) {
+								std::cout << name << "does not match" << result.kernelfunctionname() << std::endl;
+								return 2;
+							}
+							for (auto& mv : result.metricresults())
+							{
+								auto value = _convert_metric_value(mv.metricvalue());
+								if (!std::holds_alternative<empty_value>(value)) {
+									auto key = std::make_tuple(kernel_id, mv.nameid());
+									aggregate_values(num_files, fidx, key, value, aggregated_values_per_kernel);
+									auto key2 = std::make_tuple(callpath + "->" + name + "->GPU", mv.nameid());
+									aggregate_values(num_files, fidx, key2, value, aggregated_values_per_call);
+								}
 							}
 						}
 					}

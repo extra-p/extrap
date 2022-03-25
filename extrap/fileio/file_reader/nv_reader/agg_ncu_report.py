@@ -63,7 +63,7 @@ class AggNcuReport:
                 callpath, metricId, value = line.split(self._SEP, 2)
                 metricId = int(metricId)
                 key = callpath, metricId
-                self.unmapped_measurements[key] = np.fromstring(value, dtype=np.float, sep=self._USEP)
+                self.mapped_measurements[key] = np.fromstring(value, dtype=np.float, sep=self._USEP)
 
     def get_measurements(self, *, ignore_metrics=None):
         ignore_metric_ids = self._calc_ignored_metric_ids(ignore_metrics)
