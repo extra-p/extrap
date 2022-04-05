@@ -81,6 +81,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                 measurement.minimum = np.mean([m.minimum for m in ms])
                 measurement.std = np.mean([m.std for m in ms])
             else:
+                ms = [m for m in ms if m.mean != 0]
                 measurement.maximum = np.nanmean([m.maximum / m.mean for m in ms]) * measurement.mean
                 measurement.minimum = np.nanmean([m.minimum / m.mean for m in ms]) * measurement.mean
                 measurement.std = np.nanmean([m.std / m.mean for m in ms]) * measurement.mean

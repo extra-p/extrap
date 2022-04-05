@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import TYPE_CHECKING
 
 import sympy
@@ -74,9 +75,11 @@ class CoordinateTransformationDialog(QDialog):
         formulae = []
         old_param_names = [p.name for p in old_params]
         for i, (name_edit, formula_edit) in enumerate(zip(self._name_edits, self._formula_edits)):
-            if old_params[i].name != name_edit.text().strip():
-                self._experiment.parameters[i] = Parameter(name_edit.text().strip())
-            formula = sympy_parser.parse_expr(formula_edit.text().strip())
+            try:
+                formula = sympy_parser.parse_expr(formula_edit.text().strip())
+            except SyntaxError:
+                warnings.warn(f"Syntax error in formula of parameter {old_params[i].name}")
+                return
             logging.debug(f"Coordinate Transformation: Formula: {formula}")
             formulae.append(formula)
 
@@ -85,6 +88,9 @@ class CoordinateTransformationDialog(QDialog):
         super(CoordinateTransformationDialog, self).accept()
 
         def _process():
+            for i, (name_edit, formula_edit) in enumerate(zip(self._name_edits, self._formula_edits)):
+                if old_params[i].name != name_edit.text().strip():
+                    self._experiment.parameters[i] = Parameter(name_edit.text().strip())
             self._experiment.coordinates = UniqueList(
                 Coordinate(transformation(*coord).reshape(-1)) for coord in self._experiment.coordinates)
             with ProgressWindow(self, 'Transforming') as pbar:
