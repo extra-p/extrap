@@ -25,18 +25,18 @@ class SumAggregationFunction(BinaryAggregationFunction):
     def aggregate(self):
         if not self.raw_terms:
             return
-        sym_function_agg = sympy.sympify(0)
         _, self._ftype = self._determine_params(self.raw_terms[0])
+        preprocessed_terms = []
         for function in self.raw_terms:
             _params, ftype = self._determine_params(function)
             if self._ftype != ftype:
                 raise ValueError("You cannot aggregate single and multi parameter functions to one function.")
             self._ftype &= ftype
             if isinstance(function, ComputationFunction):
-                sym_function_agg += function.sympy_function
+                preprocessed_terms.append(function.sympy_function)
             else:
-                sym_function_agg += function.evaluate(_params)
-        self.sympy_function = sym_function_agg
+                preprocessed_terms.append(function.evaluate(_params))
+        self.sympy_function = sympy.Add(*preprocessed_terms)
 
 
 class SumAggregationFunctionSchema(BinaryAggregationFunctionSchema):
