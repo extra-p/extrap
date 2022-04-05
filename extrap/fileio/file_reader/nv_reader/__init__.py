@@ -99,7 +99,7 @@ class NsightFileReader(AbstractDirectoryReader):
                             pbar.update(0)
                             if duration:
                                 aggregated_values[
-                                    (Callpath(callpath + '->GPU IDLE', gpu__idle=True, agg_category='GPU IDLE',
+                                    (Callpath(callpath + '->GPU IDLE', gpu__idle=True, agg__category='GPU IDLE',
                                               validation__ignore__num_measurements=True),
                                      metric)].append(duration / 10 ** 9)
                         for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
@@ -133,7 +133,7 @@ class NsightFileReader(AbstractDirectoryReader):
                                 aggregated_values[
                                     (
                                         Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True,
-                                                 agg_category='GPU'),
+                                                 agg__category='GPU'),
                                         metric)].append(
                                     durationGPU / 10 ** 9)
                             elif duration:
