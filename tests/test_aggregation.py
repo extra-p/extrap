@@ -19,6 +19,7 @@ from extrap.entities.parameter import Parameter
 from extrap.entities.terms import SimpleTerm, MultiParameterTerm, CompoundTerm
 from extrap.fileio import io_helper
 from extrap.modelers import aggregation
+from extrap.modelers.aggregation import Aggregation
 from extrap.modelers.aggregation.max_aggregation import MaxAggregation, MaxAggregationFunction
 from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction, SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
@@ -391,6 +392,52 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         self.check_same(experiment1, metric, [cb.path, ca.path, evt_sync.path, work.path, wait.path])
         self.check_changed(experiment1, metric, [overlap.path, sync.path, main.path, start.path])
+
+    def test_tag_suffix_update(self):
+        agg = SumAggregation()
+        self.assertEqual(Aggregation.TAG_CATEGORY, agg.TAG_CATEGORY)
+        self.assertEqual(SumAggregation.TAG_CATEGORY, agg.TAG_CATEGORY)
+        self.assertNotEqual(Aggregation.TAG_DISABLED, agg.TAG_DISABLED)
+        self.assertEqual(SumAggregation.TAG_DISABLED, agg.TAG_DISABLED)
+        self.assertNotEqual(Aggregation.TAG_USAGE_DISABLED, agg.TAG_USAGE_DISABLED)
+        self.assertEqual(SumAggregation.TAG_USAGE_DISABLED, agg.TAG_USAGE_DISABLED)
+
+        expected_class_tag_category = Aggregation.TAG_CATEGORY
+        expected_class_tag_disabled = SumAggregation.TAG_DISABLED
+        expected_class_tag_usage_disabled = SumAggregation.TAG_USAGE_DISABLED
+        expected_class_tag_usage_disabled_agg_model = Aggregation.TAG_USAGE_DISABLED_agg_model
+        agg.tag_suffix = "test"
+        self.assertEqual(expected_class_tag_category, Aggregation.TAG_CATEGORY)
+        self.assertNotEqual(expected_class_tag_category, agg.TAG_CATEGORY)
+        self.assertEqual(expected_class_tag_category + "__test", agg.TAG_CATEGORY)
+
+        self.assertEqual(expected_class_tag_disabled, SumAggregation.TAG_DISABLED)
+        self.assertNotEqual(expected_class_tag_disabled, agg.TAG_DISABLED)
+        self.assertEqual(expected_class_tag_disabled + "__test", agg.TAG_DISABLED)
+
+        self.assertEqual(expected_class_tag_usage_disabled, SumAggregation.TAG_USAGE_DISABLED)
+        self.assertNotEqual(expected_class_tag_usage_disabled, agg.TAG_USAGE_DISABLED)
+        self.assertEqual(expected_class_tag_usage_disabled + "__test", agg.TAG_USAGE_DISABLED)
+
+        self.assertEqual(expected_class_tag_usage_disabled_agg_model, Aggregation.TAG_USAGE_DISABLED_agg_model)
+        self.assertEqual(expected_class_tag_usage_disabled_agg_model, SumAggregation.TAG_USAGE_DISABLED_agg_model)
+        self.assertEqual(expected_class_tag_usage_disabled_agg_model, agg.TAG_USAGE_DISABLED_agg_model)
+
+        agg.tag_suffix = "test2"
+        self.assertEqual(expected_class_tag_category + "__test2", agg.TAG_CATEGORY)
+        self.assertEqual(expected_class_tag_disabled + "__test2", agg.TAG_DISABLED)
+        self.assertEqual(expected_class_tag_usage_disabled + "__test2", agg.TAG_USAGE_DISABLED)
+
+        agg.tag_suffix = ""
+        self.assertEqual(expected_class_tag_category, agg.TAG_CATEGORY)
+        self.assertEqual(expected_class_tag_disabled, agg.TAG_DISABLED)
+        self.assertEqual(expected_class_tag_usage_disabled, agg.TAG_USAGE_DISABLED)
+
+        agg.tag_suffix = "test"
+        agg.tag_suffix = None
+        self.assertEqual(expected_class_tag_category, agg.TAG_CATEGORY)
+        self.assertEqual(expected_class_tag_disabled, agg.TAG_DISABLED)
+        self.assertEqual(expected_class_tag_usage_disabled, agg.TAG_USAGE_DISABLED)
 
     @staticmethod
     def prepare_experiment(metric, **evt_sync_tags):

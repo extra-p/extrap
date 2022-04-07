@@ -145,10 +145,11 @@ class BinaryAggregation(Aggregation, ABC):
             category_node = node.find_child(category)
             if not category_node:
                 if isinstance(node, CallTree):
-                    category_path = Callpath(category, agg__category=category)
+                    category_path = Callpath(category)
+                    category_path.tags[self.TAG_CATEGORY] = category
                 else:
                     category_path = node.path.concat(category)
-                    category_path.tags['agg__category'] = category
+                    category_path.tags[self.TAG_CATEGORY] = category
                 category_node = Node(category, category_path)
                 node.add_child_node(category_node)
 
