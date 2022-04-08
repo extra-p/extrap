@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -28,6 +28,8 @@ from extrap.fileio.file_reader.nv_reader.ncu_report import NcuReport
 from extrap.fileio.file_reader.nv_reader.nsys_db import NsysReport
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+
+ns_per_s = 10 ** 9
 
 
 class NsightFileReader(AbstractDirectoryReader):
@@ -98,32 +100,30 @@ class NsightFileReader(AbstractDirectoryReader):
                         for callpath, duration in parsed.get_gpu_idle():
                             pbar.update(0)
                             if duration:
-                                aggregated_values[
-                                    (Callpath(callpath + '->GPU IDLE', gpu__idle=True, agg__category='GPU IDLE',
-                                              validation__ignore__num_measurements=True),
-                                     metric)].append(duration / 10 ** 9)
+                                cp_obj = Callpath(callpath + '->GPU IDLE', gpu__idle=True, agg__category='GPU IDLE',
+                                                  validation__ignore__num_measurements=True)
+                                aggregated_values[(cp_obj, metric)].append(duration / ns_per_s)
+
                         for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
                             pbar.update(0)
                             if kernelName:
-                                aggregated_values[
-                                    (Callpath(callpath + "->" + syncType + "->OVERLAP",
-                                              validation__ignore__num_measurements=True,
-                                              gpu__overlap='agg', agg__usage__disabled=True),
-                                     metric)] = [0]
+                                cp_obj = Callpath(callpath + "->" + syncType + "->OVERLAP",
+                                                  validation__ignore__num_measurements=True,
+                                                  gpu__overlap='agg', agg__usage_disabled=True)
+                                aggregated_values[(cp_obj, metric)] = [0]
 
                                 overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
                                                       gpu__overlap=True, gpu__kernel=True,
                                                       validation__ignore__num_measurements=True)
-                                aggregated_values[(overlap_cp, metric)].append(durationGPU / 10 ** 9)
+                                aggregated_values[(overlap_cp, metric)].append(durationGPU / ns_per_s)
                             else:
                                 if duration:
                                     aggregated_values[(
                                         Callpath(callpath + "->" + syncType), metric)].append(
                                         duration / 10 ** 9)
-                                aggregated_values[(
-                                    Callpath(callpath + "->" + syncType + "->WAIT", agg__usage__disabled=True),
-                                    metric)].append(
-                                    other_duration / 10 ** 9)
+                                cp_obj = Callpath(callpath + "->" + syncType + "->WAIT", agg__usage_disabled=True)
+                                aggregated_values[(cp_obj, metric)].append(other_duration / ns_per_s)
+
                         for id, callpath, kernelName, duration, durationGPU, other_duration in parsed.get_kernel_runtimes():
                             pbar.update(0)
                             if kernelName:
@@ -137,20 +137,21 @@ class NsightFileReader(AbstractDirectoryReader):
                                         metric)].append(
                                     durationGPU / 10 ** 9)
                             elif duration:
-                                aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
+
                         for id, callpath, name, duration, bytes, kind, durationCopy in parsed.get_mem_copies():
                             pbar.update(0)
                             if duration:
-                                aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
                             if durationCopy:
                                 aggregated_values[(Callpath(callpath + "->" + kind), metric)].append(
-                                    durationCopy / 10 ** 9)
-                                aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(
-                                    bytes)
+                                    durationCopy / ns_per_s)
+                                aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(bytes)
+                                
                         for id, callpath, name, duration in parsed.get_os_runtimes():
                             pbar.update(0)
                             if duration:
-                                aggregated_values[(Callpath(callpath), metric)].append(duration / 10 ** 9)
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
 
                         temp_correponding_agg_ncu_path = Path(path).with_suffix(".ncu-rep.agg")
                         if temp_correponding_agg_ncu_path.exists():

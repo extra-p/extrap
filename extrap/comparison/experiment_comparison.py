@@ -23,7 +23,7 @@ from extrap.util.unique_list import UniqueList
 
 COMPARISON_NODE_NAME = '[Comparison]'
 TAG_COMPARISON_NODE = 'comparison__node'
-TAG_COMPARISON_NODE__COMPARISON = 'comparison'
+TAG_COMPARISON_NODE__comparison = 'comparison'
 
 
 class ComparisonError(RecoverableError):
@@ -116,7 +116,7 @@ class ComparisonExperiment(Experiment):
                 origin_node = comparison_nodes.get(node)
                 if not origin_node:
                     origin_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
-                    origin_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
+                    origin_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__comparison
                     new_matches[origin_node] = [None] * len(source_measurements)
                 for i, (s_node, s_metric, s_measurement, s_name) in enumerate(
                         zip(source_nodes, source_metrics, source_measurements, self.experiment_names)):

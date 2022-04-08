@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -74,10 +74,10 @@ class TestComparison(TestCase):
 
         cB = Node("cB", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cB", gpu__overlap=True, gpu__kernel=True), [])
         cA = Node("cA", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cA", gpu__overlap=True, gpu__kernel=True), [])
-        overlap = Node("OVERLAP", Callpath("_start->main->sync->EVT_SYNC->OVERLAP", agg__usage__disabled=True,
+        overlap = Node("OVERLAP", Callpath("_start->main->sync->EVT_SYNC->OVERLAP", agg__usage_disabled=True,
                                            gpu__overlap='agg'), [cA, cB])
         wait = Node("WAIT",
-                    Callpath("_start->main->sync->EVT_SYNC->WAIT", agg__usage__disabled=True, agg__disabled=True), [])
+                    Callpath("_start->main->sync->EVT_SYNC->WAIT", agg__usage_disabled=True, agg__disabled=True), [])
         evt_sync = Node("EVT_SYNC", Callpath("_start->main->sync->EVT_SYNC"), [wait, overlap])
         source_nodes = Node("sync", Callpath("_start->main->sync"), [evt_sync])
 
@@ -94,10 +94,10 @@ class TestComparison(TestCase):
         r_cA = Node("cA", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP->cA", gpu__overlap=True,
                                    gpu__kernel=True), [])
         r_overlap = Node("OVERLAP",
-                         Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP", agg__usage__disabled=True,
+                         Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->OVERLAP", agg__usage_disabled=True,
                                   gpu__overlap='agg'), [r_cA, r_cB])
         r_wait = Node("WAIT",
-                      Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->WAIT", agg__usage__disabled=True,
+                      Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC->WAIT", agg__usage_disabled=True,
                                agg__disabled=True), [])
         r_evt_sync = Node("EVT_SYNC", Callpath("->[Comparison]->[exp1] main->sync->EVT_SYNC"), [r_wait, r_overlap])
         r_sync = Node("sync", Callpath("->[Comparison]->[exp1] main->sync"), [r_evt_sync])

@@ -29,14 +29,15 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 if TYPE_CHECKING:
     from extrap.comparison.experiment_comparison import ComparisonExperiment
 
-TAG_COMPARISON_NODE__AGG_PART = 'agg_part'
-TAG_COMPARISON_NODE__ROOT = 'root'
+TAG_COMPARISON_NODE__agg_part = 'agg_part'
+TAG_COMPARISON_NODE__root = 'root'
 
 
 class SmartMatcher(AbstractMatcher):
     NAME = 'Smart Matcher'
     DESCRIPTION = 'Tries to find the common call tree and integrates the remaining call paths into this call tree.'
 
+    TAG_GPU_OVERLAP = 'gpu__overlap'
     def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
         Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
         # preliminary, TODO we need to add new matches for hw counters, etc.
@@ -71,7 +72,7 @@ class SmartMatcher(AbstractMatcher):
                                                call_tree_match: MutableAbstractMatches[Node],
                                                *source_measurements: Dict[Tuple[Callpath, Metric], List[Measurement]]):
         from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE, \
-            TAG_COMPARISON_NODE__COMPARISON
+            TAG_COMPARISON_NODE__comparison
         measurements = {}
         new_matches = {}
         comparison_nodes = {}
@@ -92,11 +93,11 @@ class SmartMatcher(AbstractMatcher):
 
                     source_key = (s_node.path, s_metric)
                     name = f"[{s_name}] {node.name}"
-                    # create or get the aggregation node for the comparison
+                    # create or get the aggregation node ([exp_name] function_name) for the comparison
                     part_agg_node = comparison_node.find_child(name)
                     if not part_agg_node:
                         agg_cp = comparison_node.path.concat(name)
-                        agg_cp.tags = {TAG_COMPARISON_NODE: TAG_COMPARISON_NODE__AGG_PART}
+                        agg_cp.tags = {TAG_COMPARISON_NODE: TAG_COMPARISON_NODE__agg_part}
                         part_agg_node = Node(name, agg_cp)
                         comparison_node.add_child_node(part_agg_node)
                     else:
@@ -154,8 +155,8 @@ class SmartMatcher(AbstractMatcher):
                 if comparison_node.childs and node not in comparison_nodes:
                     # add comparison node to the calltree
                     node.childs.insert(0, comparison_node)
-                    node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__ROOT
-                    comparison_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__COMPARISON
+                    node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__root
+                    comparison_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__comparison
                     comparison_nodes[node] = comparison_node
 
         call_tree_match.update(new_matches)
@@ -211,6 +212,7 @@ class SmartMatcher(AbstractMatcher):
         if c_measurements is not None:
             if not (s_node.path.lookup_tag('agg__usage__disabled', False) or
                     s_node.path.lookup_tag('gpu__overlap', False)):
+                    s_node.path.lookup_tag(self.TAG_GPU_OVERLAP, False)):
                 for m in c_measurements:
                     measurements_out[m.coordinate].merge(m)
             measurements[cp, metric] = c_measurements
@@ -230,7 +232,8 @@ class SmartMatcher(AbstractMatcher):
             for node, source_nodes in experiment.call_tree_match.items():
                 models = []
                 progress_bar.update()
-                if node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__AGG_PART:
+                if node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__agg_part:
+                    # generates the models for the "[exp_name] function_name" nodes
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None:
@@ -246,7 +249,8 @@ class SmartMatcher(AbstractMatcher):
                             if model:
                                 models.append(model.with_callpath(node.path))
 
-                elif node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__ROOT:
+                elif node.path.tags.get(TAG_COMPARISON_NODE) == TAG_COMPARISON_NODE__root:
+                    # generates the comparison model for the comparison root node
                     for i, (s_node, s_metric, s_modeler, s_name) in enumerate(
                             zip(source_nodes, source_metrics, modelers, experiment.experiment_names)):
                         if s_node is not None:
