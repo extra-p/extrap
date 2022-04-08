@@ -8,7 +8,7 @@
 import copy
 import json
 from abc import abstractmethod, ABC
-from typing import Iterator, Mapping, Any
+from typing import Iterator, Any, MutableMapping
 
 from marshmallow import fields
 
@@ -36,7 +36,7 @@ class NamedEntity(ABC):
         """
         raise NotImplementedError
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self.id = next(type(self).ID_COUNTER)
 
@@ -65,14 +65,26 @@ class NamedEntityWithTags(NamedEntity, ABC):
 
     def __init__(self, name, **tags):
         super(NamedEntityWithTags, self).__init__(name)
-        self.tags: Mapping[str, Any] = tags or {}
+        self.tags: MutableMapping[str, Any] = tags or {}
 
-    def lookup_tag(self, tag: str, default=None, prefix=1):
+    def lookup_tag(self, tag: str, default=None, prefix_len=1, suffix=None):
+        if suffix:
+            tag_with_suffix = tag + TAG_SEPARATOR + suffix
+            if tag_with_suffix in self.tags:
+                return self.tags[tag_with_suffix]
+            else:
+                path = tag.split(TAG_SEPARATOR)
+                l_suffix = [suffix]
+                for i in range(-1, -len(path) + prefix_len, -1):
+                    tag_with_suffix = TAG_SEPARATOR.join(path[:i] + l_suffix)
+                    if tag_with_suffix in self.tags:
+                        return self.tags[tag_with_suffix]
+            # if nothing found with suffix continue with suffix-less tag
         if tag in self.tags:
             return self.tags[tag]
         else:
             path = tag.split(TAG_SEPARATOR)
-            for i in range(-1, -len(path) + prefix, -1):
+            for i in range(-1, -len(path) + prefix_len, -1):
                 tag = TAG_SEPARATOR.join(path[:i])
                 if tag in self.tags:
                     return self.tags[tag]
