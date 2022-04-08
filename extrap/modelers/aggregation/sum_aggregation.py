@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -53,7 +53,7 @@ class SumAggregation(BinaryAggregation):
     def aggregate_model(self, agg_models, callpath: Callpath, measurements: Sequence[Measurement], metric: Metric):
         function = SumAggregationFunction([m.hypothesis.function for m in agg_models])
         hypothesis_type = type(agg_models[0].hypothesis)
-        hypothesis = hypothesis_type(function, agg_models[0].hypothesis._use_median)
+        hypothesis = hypothesis_type(function, agg_models[0].hypothesis.use_median)
         hypothesis.compute_cost(measurements)
         model = AggregatedModel(hypothesis, callpath, metric)
         return model

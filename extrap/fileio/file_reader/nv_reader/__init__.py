@@ -118,9 +118,9 @@ class NsightFileReader(AbstractDirectoryReader):
                                 aggregated_values[(overlap_cp, metric)].append(durationGPU / ns_per_s)
                             else:
                                 if duration:
-                                    aggregated_values[(
-                                        Callpath(callpath + "->" + syncType), metric)].append(
-                                        duration / 10 ** 9)
+                                    cp_obj = Callpath(callpath + "->" + syncType,
+                                                      agg__category__comparison_cpu_gpu='GPU SYNC')
+                                    aggregated_values[(cp_obj, metric)].append(duration / ns_per_s)
                                 cp_obj = Callpath(callpath + "->" + syncType + "->WAIT", agg__usage_disabled=True)
                                 aggregated_values[(cp_obj, metric)].append(other_duration / ns_per_s)
 
@@ -129,13 +129,10 @@ class NsightFileReader(AbstractDirectoryReader):
                             if kernelName:
                                 if duration:
                                     aggregated_values[(Callpath(callpath + "->" + kernelName), metric)].append(
-                                        duration / 10 ** 9)
-                                aggregated_values[
-                                    (
-                                        Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True,
-                                                 agg__category='GPU'),
-                                        metric)].append(
-                                    durationGPU / 10 ** 9)
+                                        duration / ns_per_s)
+                                cp_obj = Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True,
+                                                  agg__category='GPU', agg__category__comparison_cpu_gpu=None)
+                                aggregated_values[(cp_obj, metric)].append(durationGPU / ns_per_s)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
 

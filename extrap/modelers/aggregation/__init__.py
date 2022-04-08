@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -15,7 +15,6 @@ from extrap.entities.calltree import CallTree
 from extrap.entities.measurement import MeasurementSchema
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model, ModelSchema
-from extrap.entities.named_entity import TAG_SEPARATOR
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -50,35 +49,13 @@ class Aggregation(ABC):
     TAG_CATEGORY = 'agg__category'
 
     def __init__(self):
-        self._tag_suffix = None
-
-    @property
-    def tag_suffix(self) -> str:
+        self.tag_suffix: Optional[str] = None
         """
         A suffix appended to the tags controlling the aggregation.
 
         Allows specifying aggregation behavior for specific use cases, such as comparison.
         A separator will be automatically added between the tag and the suffix.
         """
-        return self._tag_suffix
-
-    @tag_suffix.setter
-    def tag_suffix(self, val: str):
-        self._tag_suffix = val
-        if val:
-            self._update_tags(suffix=TAG_SEPARATOR + self._tag_suffix)
-        else:
-            self._update_tags()
-
-    def _update_tags(self, prefix="", suffix=""):
-        """
-        Updates the tags with prefix and suffix.
-
-        Should be overridden/extended when new tags are added.
-        """
-        self.TAG_DISABLED = prefix + type(self).TAG_DISABLED + suffix
-        self.TAG_USAGE_DISABLED = prefix + type(self).TAG_USAGE_DISABLED + suffix
-        self.TAG_CATEGORY = prefix + type(self).TAG_CATEGORY + suffix
 
     @abstractmethod
     def aggregate(self, models: Dict[Tuple[Callpath, Metric], Model], calltree: CallTree, metrics: Sequence[Metric],

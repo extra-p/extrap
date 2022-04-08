@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -20,6 +20,7 @@ from extrap.entities.functions import FunctionSchema
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
+from extrap.entities.named_entity import TAG_SEPARATOR
 from extrap.modelers.aggregation import Aggregation, AggregatedModel
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -89,7 +90,7 @@ class BinaryAggregation(Aggregation, ABC):
         progress_bar.total += len(models)
         result = {}
         for metric in metrics:
-            if metric.lookup_tag(self.TAG_DISABLED, False):
+            if metric.lookup_tag(self.TAG_DISABLED, False, suffix=self.tag_suffix):
                 continue
             self.walk_nodes(result, calltree, models, metric, progress_bar=progress_bar)
             if (None, metric) in result:
@@ -101,7 +102,7 @@ class BinaryAggregation(Aggregation, ABC):
                    models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS):
         agg_models: Dict[Optional[str], List[Model]] = defaultdict(list)
         callpath = node.path if node.path else Callpath.EMPTY
-        own_category = callpath.lookup_tag(self.TAG_CATEGORY)
+        own_category = callpath.lookup_tag(self.TAG_CATEGORY, suffix=self.tag_suffix)
 
         key = (callpath, metric)
         if key in models:
@@ -121,7 +122,7 @@ class BinaryAggregation(Aggregation, ABC):
         for category in agg_models.keys():
             if not agg_models[category]:
                 res_models[category] = None
-            elif callpath.lookup_tag(self.TAG_DISABLED, False):
+            elif callpath.lookup_tag(self.TAG_DISABLED, False, suffix=self.tag_suffix):
                 res_models[category] = own_model
             else:
                 if len(agg_models[category]) == 1:
@@ -147,9 +148,13 @@ class BinaryAggregation(Aggregation, ABC):
                 if isinstance(node, CallTree):
                     category_path = Callpath(category)
                     category_path.tags[self.TAG_CATEGORY] = category
+                    if self.tag_suffix:
+                        category_path.tags[self.TAG_CATEGORY + TAG_SEPARATOR + self.tag_suffix] = category
                 else:
                     category_path = node.path.concat(category)
                     category_path.tags[self.TAG_CATEGORY] = category
+                    if self.tag_suffix:
+                        category_path.tags[self.TAG_CATEGORY + TAG_SEPARATOR + self.tag_suffix] = category
                 category_node = Node(category, category_path)
                 node.add_child_node(category_node)
 
@@ -158,7 +163,7 @@ class BinaryAggregation(Aggregation, ABC):
         progress_bar.update(1)
 
         # check how model may be used in aggregated model of parent
-        usage_disabled = callpath.lookup_tag(self.TAG_USAGE_DISABLED, False)
+        usage_disabled = callpath.lookup_tag(self.TAG_USAGE_DISABLED, False, suffix=self.tag_suffix)
         if usage_disabled:
             if usage_disabled == self.TAG_USAGE_DISABLED_agg_model:
                 return {own_category: own_model}

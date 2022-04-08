@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -37,7 +37,28 @@ class SmartMatcher(AbstractMatcher):
     NAME = 'Smart Matcher'
     DESCRIPTION = 'Tries to find the common call tree and integrates the remaining call paths into this call tree.'
 
+    AGG_TAG_SUFFIX_CPU_GPU_COMPARISON = "comparison_cpu_gpu"
+
     TAG_GPU_OVERLAP = 'gpu__overlap'
+
+    def __init__(self):
+        self._enable_cpu_gpu_comparison = False
+        self._aggregation_strategy = SumAggregation()
+
+        self.enable_cpu_gpu_comparison = True
+
+    @property
+    def enable_cpu_gpu_comparison(self):
+        return self._enable_cpu_gpu_comparison
+
+    @enable_cpu_gpu_comparison.setter
+    def enable_cpu_gpu_comparison(self, val):
+        self._enable_cpu_gpu_comparison = val
+        if val:
+            self._aggregation_strategy.tag_suffix = self.AGG_TAG_SUFFIX_CPU_GPU_COMPARISON
+        else:
+            self._aggregation_strategy.tag_suffix = None
+
     def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
         Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
         # preliminary, TODO we need to add new matches for hw counters, etc.
@@ -210,8 +231,8 @@ class SmartMatcher(AbstractMatcher):
 
         c_measurements = s_measurements.get((s_node.path, metric), None)
         if c_measurements is not None:
-            if not (s_node.path.lookup_tag('agg__usage__disabled', False) or
-                    s_node.path.lookup_tag('gpu__overlap', False)):
+            if not (s_node.path.lookup_tag(self._aggregation_strategy.TAG_USAGE_DISABLED, False,
+                                           suffix=self._aggregation_strategy.tag_suffix) or
                     s_node.path.lookup_tag(self.TAG_GPU_OVERLAP, False)):
                 for m in c_measurements:
                     measurements_out[m.coordinate].merge(m)
@@ -242,10 +263,10 @@ class SmartMatcher(AbstractMatcher):
                                                 for child in node_subtree_root if
                                                 child in experiment.call_tree_match]
                             t_node = Node(s_node.name, s_node.path, [c for c in s_node.childs if c in allowed_s_childs])
-                            model = self.walk_nodes(t_node, s_modeler.models, metric,
-                                                    path=s_node.path.name.rpartition('->')[0],
-                                                    progress_bar=progress_bar,
-                                                    already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
+                            model = self._agg_models(t_node, s_modeler.models, metric,
+                                                     path=s_node.path.name.rpartition('->')[0],
+                                                     progress_bar=progress_bar,
+                                                     already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
                                 models.append(model.with_callpath(node.path))
 
@@ -262,10 +283,10 @@ class SmartMatcher(AbstractMatcher):
                                         continue
                                     t_node.childs.remove(s_child)
 
-                            model = self.walk_nodes(t_node, s_modeler.models, metric,
-                                                    path=s_node.path.name.rpartition('->')[0],
-                                                    progress_bar=progress_bar,
-                                                    already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
+                            model = self._agg_models(t_node, s_modeler.models, metric,
+                                                     path=s_node.path.name.rpartition('->')[0],
+                                                     progress_bar=progress_bar,
+                                                     already_aggregated=isinstance(s_modeler, AggregateModelGenerator))
                             if model:
                                 models.append(model.with_callpath(
                                     node.path.concat(COMPARISON_NODE_NAME, f"[{s_name}] {node.name}")))
@@ -283,11 +304,39 @@ class SmartMatcher(AbstractMatcher):
                     mg.models[node.path, metric] = ComparisonModel(node.path, metric, models)
         return mg
 
-    def walk_nodes(self, node: Node,
-                   models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS,
-                   agg_models=None, already_aggregated=False):
-        if agg_models is None:
-            agg_models: List[Model] = []
+    def _agg_models(self, node: Node, models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path: str,
+                    progress_bar=DUMMY_PROGRESS, already_aggregated=False):
+        """
+        Generates the (aggregated) model for node in the comparison call-tree.
+        """
+
+        progress_bar.total += 1
+
+        agg_models: List[Model] = []
+        callpath = self._gather_models_for_agg(agg_models, node, models, metric, path, already_aggregated, progress_bar)
+
+        if not agg_models:  # or (node.path and 'agg_sum__not_calculable' in node.path.tags):
+            model = None
+        elif len(agg_models) == 1:
+            model = agg_models[0]
+        else:
+            sum_aggregation = self._aggregation_strategy
+            measurements = sum_aggregation.aggregate_measurements(agg_models)
+            model = sum_aggregation.aggregate_model(agg_models, callpath, measurements, metric)
+            model.callpaths = [m.callpath for m in agg_models]
+            model.measurements = measurements
+
+        progress_bar.update(1)
+        return model
+
+    def _gather_models_for_agg(self, models_for_aggregation: List[Model], node: Node,
+                               models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path: str,
+                               already_aggregated: bool = False, progress_bar=DUMMY_PROGRESS):
+        """ Appends all models of children of node and the model for node to models_for_aggregation.
+        If the models are already aggregated and a model exists, only that is appended.
+        :return: constructed call-path for node """
+
+        # construct callpath
         if node.name:
             if path == "":
                 path = node.name
@@ -295,23 +344,22 @@ class SmartMatcher(AbstractMatcher):
                 path = path + '->' + node.name
         callpath = Callpath(path)
         key = (callpath, metric)
+        # search model for node
         if key in models:
-            agg_models.append(models[key])
+            models_for_aggregation.append(models[key])
+            if already_aggregated:
+                # if an aggregated model is found we are done
+                progress_bar.update(1)
+                return callpath
         else:
             progress_bar.total += 1
+
+        # gather models for all children of node
+        tag_agg_disabled = self._aggregation_strategy.TAG_DISABLED
         for c in node:
-            if not (c.path and c.path.lookup_tag('agg__disabled', False)):
-                self.walk_nodes(c, models, metric, path, progress_bar, agg_models)
-
-        if not agg_models or (node.path and 'agg_sum__not_calculable' in node.path.tags):
-            model = None
-        elif len(agg_models) == 1 or already_aggregated:
-            model = agg_models[0]
-        else:
-            measurements = SumAggregation().aggregate_measurements(agg_models)
-            model = SumAggregation().aggregate_model(agg_models, callpath, measurements, metric)
-            model.callpaths = [m.callpath for m in agg_models]
-            model.measurements = measurements
-
+            if not (c.path and c.path.lookup_tag(tag_agg_disabled, False,
+                                                 suffix=self._aggregation_strategy.tag_suffix)):
+                self._gather_models_for_agg(models_for_aggregation, c, models, metric, path, already_aggregated,
+                                            progress_bar)
         progress_bar.update(1)
-        return model
+        return callpath
