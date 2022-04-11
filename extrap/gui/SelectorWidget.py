@@ -66,7 +66,7 @@ class SelectorWidget(QWidget):
 
         # group.setAutoFillBackground(True)
         # Callpath selection
-        self.tree_view = TreeView(group)
+        self.tree_view = TreeView(group, self)
         group_layout.addWidget(self.tree_view)
         # Input variable values
 

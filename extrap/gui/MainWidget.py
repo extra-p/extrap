@@ -58,6 +58,7 @@ class MainWidget(QMainWindow):
         self.max_value = 0
         self.min_value = 0
         self.old_x_pos = 0
+        self.developer_mode = False
         self._experiment = None
         self.model_color_map = ModelColorMap()
         self.font_size = 6
@@ -161,6 +162,10 @@ class MainWidget(QMainWindow):
         change_font_action.setStatusTip('Change the legend font size')
         change_font_action.triggered.connect(self.open_font_dialog_box)
 
+        toggle_developer_mode = QAction('Developer mode', self)
+        toggle_developer_mode.setCheckable(True)
+        toggle_developer_mode.toggled.connect(self._toggle_developer_mode)
+
         select_view_action = QAction('Select plot &type', self)
         select_view_action.setStatusTip('Select the plots you want to view')
         select_view_action.triggered.connect(self.open_select_plots_dialog_box)
@@ -228,6 +233,7 @@ class MainWidget(QMainWindow):
         view_menu = menubar.addMenu('&View')
         view_menu.addAction(change_font_action)
         view_menu.addAction(select_view_action)
+        view_menu.addAction(toggle_developer_mode)
         ui_parts_menu = self.createPopupMenu()
         if ui_parts_menu:
             ui_parts_menu_action = view_menu.addMenu(ui_parts_menu)
@@ -462,3 +468,7 @@ class MainWidget(QMainWindow):
             for h in self.activate_event_handlers:
                 h(e)
         return super().event(e)
+
+    @Slot(bool)
+    def _toggle_developer_mode(self, enabled):
+        self.developer_mode = enabled

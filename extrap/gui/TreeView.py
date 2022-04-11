@@ -5,7 +5,10 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 import math
+from typing import TYPE_CHECKING
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -14,13 +17,18 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
 from extrap.gui.TreeModel import TreeModel, TreeItem
 
+if TYPE_CHECKING:
+    from extrap.gui.MainWidget import MainWidget
+    from extrap.gui.SelectorWidget import SelectorWidget
+
 
 # TODO Expand largest
 
 class TreeView(QTreeView):
 
-    def __init__(self, parent):
+    def __init__(self, parent, selector_widget: SelectorWidget):
         super(TreeView, self).__init__(parent)
+        self._selector_widget = selector_widget
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setAnimated(True)
         self.setAcceptDrops(True)
@@ -118,6 +126,9 @@ class TreeView(QTreeView):
                 expandAction.triggered.connect(self.expandAll)
 
                 menu.addMenu(self._create_expand_collapse_menu(model))
+                if self._selector_widget.main_widget.developer_mode:
+                    menu.addSeparator()
+                    menu.addMenu(self._create_developer_menu(model, selectedCallpath))
                 menu.addSeparator()  # --------------------------------------------------
                 # showCommentsAction = menu.addAction("Show Comments")
                 # showCommentsAction.setEnabled(
@@ -128,6 +139,7 @@ class TreeView(QTreeView):
                 showDataPointsAction.setDisabled(selectedModel is None)
                 showDataPointsAction.triggered.connect(
                     lambda: self.showDataPoints(selectedModel))
+
                 copyModel = menu.addAction("Copy model")
                 copyModel.setDisabled(selectedModel is None)
                 copyModel.triggered.connect(
@@ -154,6 +166,17 @@ class TreeView(QTreeView):
             lambda: self.collapseRecursively(self.selectedIndexes()[0]))
         return expand_collapse_submenu
 
+    def _create_developer_menu(self, selectedModel, selectedCallpath):
+        submenu = QMenu("Developer tools")
+        showInfoAction = submenu.addAction("Show tags")
+        showInfoAction.triggered.connect(
+            lambda: self.show_info(selectedModel, selectedCallpath.path))
+        submenu.addSeparator()
+        showInfoAction = submenu.addAction("Delete subtree")
+        showInfoAction.triggered.connect(
+            lambda: self.delete_subtree(selectedModel))
+        return submenu
+
     def copy_model_to_clipboard(self, selectedModel):
         parameters = self.model().main_widget.getExperiment().parameters
         function_string = selectedModel.hypothesis.function.to_string(*parameters)
@@ -169,6 +192,22 @@ class TreeView(QTreeView):
                                 for c in model.getComments())
         msg.setInformativeText(allComments)
         msg.setWindowTitle("Model Comments")
+        # msg.setDetailedText("The details are as follows:")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
+    @staticmethod
+    def show_info(model, callpath):
+        if not model and not callpath:
+            return
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        if callpath:
+            msg.setText(
+                f"Tags for callpath {callpath}:")
+            allComments = '\n'.join(f"{tag}: {value}" for tag, value in callpath.tags.items())
+            msg.setInformativeText(allComments)
+        msg.setWindowTitle("Model Info")
         # msg.setDetailedText("The details are as follows:")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
@@ -227,4 +266,27 @@ class TreeView(QTreeView):
         mimeData = self._handle_drop_event(event)
         if mimeData:
             file_name = mimeData.urls()[0].toLocalFile()  # Make sure to pass only python types into lambda
-            QTimer.singleShot(0, lambda: self.parent().parent().main_widget.open_experiment(file_name))
+            QTimer.singleShot(0, lambda: self._selector_widget.main_widget.open_experiment(file_name))
+
+    def delete_subtree(self, model):
+        if not self.selectedIndexes():
+            return
+        selectedCallpaths = [model.getValue(i) for i in self.selectedIndexes()]
+
+        for selectedCallpath in selectedCallpaths:
+            if not selectedCallpath.path:
+                continue
+            callpath = selectedCallpath.path
+            main_widget: MainWidget = self._selector_widget.main_widget
+            experiment = main_widget.getExperiment()
+            callpaths_to_delete = [(i, c) for i, c in enumerate(experiment.callpaths) if
+                                   c.name.startswith(callpath.name)]
+
+            for callpath_index, callpath_to_delete in reversed(callpaths_to_delete):
+                del experiment.callpaths[callpath_index]  # make sure to delete only once
+                for metric in experiment.metrics:
+                    key = (callpath_to_delete, metric)
+                    experiment.measurements.pop(key, None)
+                    for modeler in experiment.modelers:
+                        modeler.models.pop(key, None)
+        self.model().valuesChanged()
