@@ -59,8 +59,8 @@ class SmartMatcher(AbstractMatcher):
         else:
             self._aggregation_strategy.tag_suffix = None
 
-    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) -> Tuple[
-        Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
+    def match_metrics(self, *metric: Sequence[Metric], progress_bar=DUMMY_PROGRESS) \
+            -> Tuple[Sequence[Metric], AbstractMatches[Metric], Sequence[AbstractMetricConverter]]:
         # preliminary, TODO we need to add new matches for hw counters, etc.
         metrics = [m for m in progress_bar(metric[0]) if m in metric[1]]
         converters = []
@@ -183,8 +183,8 @@ class SmartMatcher(AbstractMatcher):
         call_tree_match.update(new_matches)
         return measurements
 
-    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) -> Mapping[
-        str, Sequence[ModelGenerator]]:
+    def match_modelers(self, *mg: Sequence[ModelGenerator], progress_bar=DUMMY_PROGRESS) \
+            -> Mapping[str, Sequence[ModelGenerator]]:
         mg_map = {m.name: m for m in mg[1]}
         return {m.name: [m, mg_map[m.name]] for m in mg[0] if m.name in mg_map}
 
@@ -219,7 +219,7 @@ class SmartMatcher(AbstractMatcher):
         node = ct_parent.find_child(s_node.name)
         if not node:
             cp = ct_parent.path.concat(s_node.name)
-            cp.tags = s_node.path.tags.copy()
+            cp.tags = copy.copy(s_node.path.tags)
             node = Node(s_node.name, cp)
             ct_parent.add_child_node(node)
 
@@ -355,10 +355,13 @@ class SmartMatcher(AbstractMatcher):
             progress_bar.total += 1
 
         # gather models for all children of node
+        # TODO: add real support for agg__category
         tag_agg_disabled = self._aggregation_strategy.TAG_DISABLED
         for c in node:
             if not (c.path and c.path.lookup_tag(tag_agg_disabled, False,
-                                                 suffix=self._aggregation_strategy.tag_suffix)):
+                                                 suffix=self._aggregation_strategy.tag_suffix)
+                    or c.path.lookup_tag(self._aggregation_strategy.TAG_CATEGORY,
+                                         suffix=self._aggregation_strategy.tag_suffix) is not None):
                 self._gather_models_for_agg(models_for_aggregation, c, models, metric, path, already_aggregated,
                                             progress_bar)
         progress_bar.update(1)
