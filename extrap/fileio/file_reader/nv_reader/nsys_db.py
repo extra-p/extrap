@@ -326,6 +326,7 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
                WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
                ELSE 'UNKNOWN_COPY_KIND_' || copyKind
                END       AS copyKind,
+           srcKind==0 OR dstKind==0 AS pageable,
            bytes,
            NULL          AS shortName
     FROM CUPTI_ACTIVITY_KIND_MEMCPY),
@@ -348,6 +349,7 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
                     WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
                     ELSE 'UNKNOWN_COPY_KIND_' || copyKind
                     END                                                 AS copyKind,
+                NULL                                                    AS pageable,
                 NULL                                                    AS bytes,
                 shortName
          FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKS
@@ -358,6 +360,7 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
          SELECT CA.correlationId,
                 NULL        AS demangledName,
                 copyKind,
+                pageable,
                 bytes,
                 CA.duration AS other_duration
          FROM (SELECT *
@@ -373,21 +376,24 @@ SELECT paths.correlationId,
        SUM(duration)       AS duration,
        SUM(bytes)          AS bytes,
        copyKind,
+       pageable OR NOT (callpath GLOB '*Async_*') AS blocking,
        SUM(other_duration) AS other_duration
 FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
              callpath,
              demangledName,
              duration,
              copyKind,
+             pageable,
              other_duration,
              bytes
       FROM EXTRAP_RESOLVED_CALLPATHS
                INNER JOIN cupti_activity
                           ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
-GROUP BY callpath, demangledName, copyKind 
+GROUP BY callpath, demangledName, copyKind, blocking 
     """)
-        return [(correlation_id, self.decode_callpath(callpath), name, duration, bytes, copyKind, other_duration)
-                for correlation_id, callpath, name, duration, bytes, copyKind, other_duration in query_result]
+        return [
+            (correlation_id, self.decode_callpath(callpath), name, duration, bytes, copyKind, blocking, other_duration)
+            for correlation_id, callpath, name, duration, bytes, copyKind, blocking, other_duration in query_result]
 
     def get_synchronization(self) -> List[Tuple[int, str, str, float, float, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION'):
@@ -456,6 +462,9 @@ GROUP BY callpath, demangledName, syncType
     """)
         return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
                 for correlation_id, callpath, name, duration, durationGPU, syncType, other_duration in result]
+
+    # TODO add memset
+    # TODO add overlap for free and malloc?
 
     def get_kernel_runtimes(self) -> List[Tuple[int, str, str, float, float, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_KERNEL'):

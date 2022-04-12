@@ -130,21 +130,31 @@ class NsightFileReader(AbstractDirectoryReader):
                                 if duration:
                                     aggregated_values[(Callpath(callpath + "->" + kernelName), metric)].append(
                                         duration / ns_per_s)
-                                cp_obj = Callpath(callpath + "->" + kernelName + "->GPU", gpu__kernel=True,
-                                                  agg__category='GPU', agg__category__comparison_cpu_gpu=None)
+                                cp_obj = Callpath(callpath + "->" + kernelName + "->GPU " + kernelName,
+                                                  gpu__kernel=True, agg__category='GPU',
+                                                  agg__category__comparison_cpu_gpu=None)
                                 aggregated_values[(cp_obj, metric)].append(durationGPU / ns_per_s)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
 
-                        for id, callpath, name, duration, bytes, kind, durationCopy in parsed.get_mem_copies():
+                        for id, callpath, overlap_name, duration, bytes, kind, blocking, durationCopy in parsed.get_mem_copies():
                             pbar.update(0)
                             if duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
                             if durationCopy:
-                                aggregated_values[(Callpath(callpath + "->" + kind), metric)].append(
-                                    durationCopy / ns_per_s)
-                                aggregated_values[(Callpath(callpath + "->" + kind), metric_bytes)].append(bytes)
-                                
+                                sep = "->BLOCKING " if blocking else "->"
+                                cp_obj = Callpath(callpath + sep + kind, gpu__mem_copy=True)
+                                if blocking:
+                                    cp_obj.tags['gpu__mem_copy__blocking'] = True
+                                    cp_obj.tags['agg__usage_disabled'] = True
+                                else:
+                                    cp_obj.tags['agg__category'] = 'GPU MEM',
+                                    cp_obj.tags['gpu__mem_copy__blocking'] = False
+                                    cp_obj.tags['agg__category__comparison_cpu_gpu'] = None
+                                aggregated_values[(cp_obj, metric)].append(durationCopy / ns_per_s)
+                                aggregated_values[(cp_obj, metric_bytes)].append(bytes)
+
+                        # TODO add memset
                         for id, callpath, name, duration in parsed.get_os_runtimes():
                             pbar.update(0)
                             if duration:
