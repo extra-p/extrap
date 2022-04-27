@@ -160,7 +160,7 @@ FROM main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
                        )
          LEFT JOIN StringIds ON nameId = id
 UNION ALL
-SELECT NULL AS correlationId, callpath, depth AS stackDepth, SUM(END - start) AS duration
+SELECT NULL AS correlationId, callpath, depth AS stackDepth, SUM(end - start) AS duration
 FROM EXTRAP_TEMP_CALLPATHS
 GROUP BY callpath""")
 
@@ -243,7 +243,7 @@ WITH steps AS (
             AND eventType = 59
          )),
      split_up_kernels AS (
-         SELECT steps.e_step AS start, steps2.e_step AS END, steps.correlationId AS correlationId
+         SELECT steps.e_step AS start, steps2.e_step AS end, steps.correlationId AS correlationId
          FROM steps
                   INNER JOIN steps AS steps2
                              ON steps.RowNum + 1 = steps2.RowNum AND steps.correlationId = steps2.correlationId
@@ -304,7 +304,8 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
             callpath += rest
         return callpath
 
-    def get_mem_copies(self) -> List[Tuple[int, str, str, float, int, str, float]]:
+    # TODO overlap multiple kernels
+    def get_mem_copies(self) -> List[Tuple[int, str, str, float, int, str, bool, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMCPY'):
             return []
         query_result = self.db.execute("""WITH cupti_memory AS (
@@ -358,7 +359,7 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
      ),
      cupti_activity AS (
          SELECT CA.correlationId,
-                NULL        AS demangledName,
+                value        AS demangledName,
                 copyKind,
                 pageable,
                 bytes,
@@ -369,6 +370,7 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
                SELECT *
                FROM cupti_memory_overlap
               ) AS CA
+              LEFT JOIN StringIds ON shortName = StringIds.id
      )
 SELECT paths.correlationId,
        callpath,
@@ -395,12 +397,13 @@ GROUP BY callpath, demangledName, copyKind, blocking
             (correlation_id, self.decode_callpath(callpath), name, duration, bytes, copyKind, blocking, other_duration)
             for correlation_id, callpath, name, duration, bytes, copyKind, blocking, other_duration in query_result]
 
+    # TODO overlap multiple kernels
     def get_synchronization(self) -> List[Tuple[int, str, str, float, float, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION'):
             return []
         result = self.db.execute("""WITH cupti_synchronization AS (
     SELECT correlationId,
-           (END - START) AS duration,
+           (end - start) AS duration,
            NULL          AS durationGPU,
            CASE syncType
                WHEN 0 THEN 'UNKNOWN'
@@ -424,7 +427,7 @@ GROUP BY callpath, demangledName, copyKind, blocking
                     END                                                 AS syncType,
                 shortName
          FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS CAKS
-                  LEFT JOIN (SELECT start, END, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                  LEFT JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
                             ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
      ),
      cupti_activity AS (
@@ -463,7 +466,63 @@ GROUP BY callpath, demangledName, syncType
         return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
                 for correlation_id, callpath, name, duration, durationGPU, syncType, other_duration in result]
 
-    # TODO add memset
+    # TODO overlap multiple kernels
+    def get_mem_sets(self) -> List[Tuple[int, str, str, float, int, bool, float]]:
+        if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMSET'):
+            return []
+        query_result = self.db.execute("""WITH cupti_memory AS (
+        SELECT correlationId,
+               (end - start) AS duration,               
+               memKind==0 AS pageable,
+               bytes,
+               NULL          AS shortName
+        FROM CUPTI_ACTIVITY_KIND_MEMSET),
+         cupti_memory_overlap AS (
+             SELECT correlationId,
+                    (MIN(CAKS.end, CAKK.end) - MAX(CAKS.start, CAKK.start)) AS duration,
+                    NULL                                                    AS pageable,
+                    NULL                                                    AS bytes,
+                    shortName
+             FROM CUPTI_ACTIVITY_KIND_MEMSET AS CAKS
+                      INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                 ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
+         ),
+         cupti_activity AS (
+             SELECT CA.correlationId,
+                    NULL        AS demangledName,
+                    pageable,
+                    bytes,
+                    CA.duration AS other_duration
+             FROM (SELECT *
+                   FROM cupti_memory
+                   UNION ALL
+                   SELECT *
+                   FROM cupti_memory_overlap
+                  ) AS CA
+         )
+    SELECT paths.correlationId,
+           callpath,
+           demangledName       AS name,
+           SUM(duration)       AS duration,
+           SUM(bytes)          AS bytes,
+           pageable OR NOT (callpath GLOB '*Async_*') AS blocking,
+           SUM(other_duration) AS other_duration
+    FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
+                 callpath,
+                 demangledName,
+                 duration,
+                 pageable,
+                 other_duration,
+                 bytes
+          FROM EXTRAP_RESOLVED_CALLPATHS
+                   INNER JOIN cupti_activity
+                              ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
+    GROUP BY callpath, demangledName, blocking 
+        """)
+        return [
+            (correlation_id, self.decode_callpath(callpath), name, duration, bytes, blocking, other_duration)
+            for correlation_id, callpath, name, duration, bytes, blocking, other_duration in query_result]
+
     # TODO add overlap for free and malloc?
 
     def get_kernel_runtimes(self) -> List[Tuple[int, str, str, float, float, float]]:

@@ -104,15 +104,15 @@ class NsightFileReader(AbstractDirectoryReader):
                                                   validation__ignore__num_measurements=True)
                                 aggregated_values[(cp_obj, metric)].append(duration / ns_per_s)
 
-                        for id, callpath, kernelName, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
+                        for id, callpath, overlap_name, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
                             pbar.update(0)
-                            if kernelName:
+                            if overlap_name:
                                 cp_obj = Callpath(callpath + "->" + syncType + "->OVERLAP",
                                                   validation__ignore__num_measurements=True,
                                                   gpu__overlap='agg', agg__usage_disabled=True)
                                 aggregated_values[(cp_obj, metric)] = [0]
 
-                                overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + kernelName,
+                                overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + overlap_name,
                                                       gpu__overlap=True, gpu__kernel=True,
                                                       validation__ignore__num_measurements=True)
                                 aggregated_values[(overlap_cp, metric)].append(durationGPU / ns_per_s)
@@ -145,16 +145,32 @@ class NsightFileReader(AbstractDirectoryReader):
                                 sep = "->BLOCKING " if blocking else "->"
                                 cp_obj = Callpath(callpath + sep + kind, gpu__mem_copy=True)
                                 if blocking:
-                                    cp_obj.tags['gpu__mem_copy__blocking'] = True
+                                    cp_obj.tags['gpu__blocking__mem_copy'] = True
                                     cp_obj.tags['agg__usage_disabled'] = True
                                 else:
                                     cp_obj.tags['agg__category'] = 'GPU MEM',
-                                    cp_obj.tags['gpu__mem_copy__blocking'] = False
+                                    cp_obj.tags['gpu__blocking__mem_copy'] = False
                                     cp_obj.tags['agg__category__comparison_cpu_gpu'] = None
                                 aggregated_values[(cp_obj, metric)].append(durationCopy / ns_per_s)
                                 aggregated_values[(cp_obj, metric_bytes)].append(bytes)
 
-                        # TODO add memset
+                        for id, callpath, overlap_name, duration, bytes, blocking, duration_set in parsed.get_mem_sets():
+                            pbar.update(0)
+                            if duration:
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
+                            if duration_set:
+                                sep = "->BLOCKING GPU MEMSET" if blocking else "->GPU MEMSET"
+                                cp_obj = Callpath(callpath + sep, gpu__mem_set=True)
+                                if blocking:
+                                    cp_obj.tags['gpu__blocking__mem_set'] = True
+                                    cp_obj.tags['agg__usage_disabled'] = True
+                                else:
+                                    cp_obj.tags['agg__category'] = 'GPU MEM',
+                                    cp_obj.tags['gpu__blocking__mem_set'] = False
+                                    cp_obj.tags['agg__category__comparison_cpu_gpu'] = None
+                                aggregated_values[(cp_obj, metric)].append(duration_set / ns_per_s)
+                                aggregated_values[(cp_obj, metric_bytes)].append(bytes)
+
                         for id, callpath, name, duration in parsed.get_os_runtimes():
                             pbar.update(0)
                             if duration:
