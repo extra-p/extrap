@@ -523,8 +523,6 @@ GROUP BY callpath, demangledName, syncType
             (correlation_id, self.decode_callpath(callpath), name, duration, bytes, blocking, other_duration)
             for correlation_id, callpath, name, duration, bytes, blocking, other_duration in query_result]
 
-    # TODO add overlap for free and malloc?
-
     def get_kernel_runtimes(self) -> List[Tuple[int, str, str, float, float, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_KERNEL'):
             return []
@@ -569,6 +567,55 @@ GROUP BY callpath, demangledName
 """)
         return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, other_duration)
                 for correlation_id, callpath, name, duration, durationGPU, other_duration in result]
+
+    # TODO overlap multiple kernels
+    # TODO other overlaps
+    def get_mem_alloc_overlap(self) -> List[Tuple[int, str, str, float, float]]:
+        if not self._check_table_exists('CUPTI_ACTIVITY_KIND_KERNEL'):
+            return []
+        result = self.db.execute("""WITH mem_alloc_activities AS (SELECT correlationId, start, end
+                            FROM main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
+                                     LEFT JOIN StringIds ON nameId = id
+                            WHERE value GLOB 'cudaFree*'
+                               OR value GLOB 'cudaMalloc*'),
+     mem_alloc_overlap AS (SELECT correlationId,
+                                  NULL                                                AS duration,
+                                  (MIN(CA.end, CAKK.end) - MAX(CA.start, CAKK.start)) AS durationGPU,
+                                  value                                               AS shortName
+                           FROM mem_alloc_activities AS CA
+                                    INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                               ON CAKK.start BETWEEN CA.start AND CA.end OR
+                                                  CAKK.end BETWEEN CA.start AND CA.end
+                                    LEFT JOIN StringIds ON shortName = id),
+     mem_alloc AS (SELECT CA.correlationId,
+                          (end - start) - IFNULL(OL.durationGPU, 0) AS duration,
+                          NULL                                      AS durationGPU,
+                          NULL                                      AS shortName
+                   FROM mem_alloc_activities AS CA
+                            LEFT JOIN (SELECT SUM(durationGPU) AS durationGPU, correlationId
+                                       FROM mem_alloc_overlap
+                                       GROUP BY correlationId) AS OL ON CA.correlationId == OL.correlationId),
+     cupti_activity AS (SELECT correlationId, duration, durationGPU, shortName
+                        FROM mem_alloc
+                        UNION ALL
+                        SELECT *
+                        FROM mem_alloc_overlap)
+SELECT paths.correlationId,
+       callpath,
+       shortName        AS kernelName,
+       SUM(duration)    AS duration,
+       SUM(durationGPU) AS durationGPU
+FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
+             callpath,
+             shortName,
+             cupti_activity.duration,
+             durationGPU
+      FROM EXTRAP_RESOLVED_CALLPATHS
+               INNER JOIN cupti_activity
+                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = cupti_activity.correlationId) AS paths
+GROUP BY callpath, shortName""")
+        return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU)
+                for correlation_id, callpath, name, duration, durationGPU in result]
 
     def get_gpu_idle(self) -> List[Tuple[str, int]]:
         if not self._check_table_exists('EXTRAP_GPU_IDLE'):

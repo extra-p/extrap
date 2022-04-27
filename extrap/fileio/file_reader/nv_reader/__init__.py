@@ -136,7 +136,18 @@ class NsightFileReader(AbstractDirectoryReader):
                                 aggregated_values[(cp_obj, metric)].append(durationGPU / ns_per_s)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
-
+                        for id, callpath, overlap_name, duration, durationGPU in parsed.get_mem_alloc_overlap():
+                            pbar.update(0)
+                            # TODO solve parent cudaFree/cudaMalloc consists of overlap and real value
+                            #   maybe: cudaFree/Malloc<without overlap> ->OVERLAP<actual overlap> ->[Kernels...<overlap of each kernel>]
+                            if overlap_name:
+                                cp_obj = Callpath(callpath + "->OVERLAP->" + overlap_name,
+                                                  gpu__overlap=True, gpu__kernel=True,
+                                                  validation__ignore__num_measurements=True)
+                                aggregated_values[(cp_obj, metric)].append(durationGPU / ns_per_s)
+                            elif duration:
+                                cp_obj = Callpath(callpath + "->GPU MEM", )
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
                         for id, callpath, overlap_name, duration, bytes, kind, blocking, durationCopy in parsed.get_mem_copies():
                             pbar.update(0)
                             if duration:
