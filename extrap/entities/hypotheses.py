@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -445,10 +445,14 @@ class MultiParameterHypothesis(Hypothesis):
         A = numpy.array(a_list)
         B = numpy.array(b_list)
         try:
-            coeffs, _, _, _ = numpy.linalg.lstsq(A, B, None)
+            coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
+            if rank < A.shape[1]: # if rcond is to big the rank of A collapses and the coefficients are wrong
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1) # retry with rcond = machine precision
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
-            coeffs, _, _, _ = numpy.linalg.lstsq(A, B, None)
+            coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
+            if rank < A.shape[1]:
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)
 
         # print("Coefficients:"+str(coeffs))
         # logging.debug("Coefficients:"+str(coeffs[0]))
