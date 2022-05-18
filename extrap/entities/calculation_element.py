@@ -7,8 +7,9 @@
 
 from __future__ import annotations
 
+from typing import  Union, TypeVar
 try:
-    from typing import Protocol, Union, TypeVar
+    from typing import Protocol
 except ImportError:
     class Protocol:
         pass
