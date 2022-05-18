@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 from extrap.entities.metric import Metric
-from extrap.fileio.file_reader.nv_reader import NsightFileReader
+from extrap.fileio.file_reader.nv_reader import NsightFileReader, NsysReport
 from extrap.modelers.model_generator import ModelGenerator
 
 
@@ -259,6 +259,25 @@ class TestLoadNsightFiles(unittest.TestCase):
                               'sm__sass_inst_executed_op_st.max', 'sm__sass_inst_executed_op_st.min',
                               'sm__sass_inst_executed_op_st.sum', 'smsp__maximum_warps_avg_per_active_cycle']
                              })
+
+
+class TestNsysDbReader(unittest.TestCase):
+    def test_concurrent_kernel_execution(self):
+        report = NsysReport('data/nsight/nsys_db/con_kernel.sqlite')
+        mem_copies = report.get_mem_copies()
+        self.assertEqual(11, len([m[-2] for m in mem_copies if m[-2] is not None]))
+
+        self.assertEqual(4, len([correlation_id for (
+            correlation_id, callpath, name, duration, bytes, copyKind, blocking, gpu_duration, overlap_duration) in
+                                 mem_copies if
+                                 '6' in callpath and bytes is None and gpu_duration is None
+                                 and overlap_duration is not None]))
+        print(mem_copies)
+        kernels = report.get_kernel_runtimes()
+        self.assertEqual(7, len([(correlation_id, callpath, name, duration, durationGPU, other_duration)
+                                 for correlation_id, callpath, name, duration, durationGPU, other_duration in kernels if
+                                 durationGPU is not None and name is not None]))
+        print(kernels)
 
 
 if __name__ == '__main__':

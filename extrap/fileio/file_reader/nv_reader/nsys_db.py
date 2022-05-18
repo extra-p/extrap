@@ -59,6 +59,8 @@ class NsysReport:
 
     def _prepare_shared(self):
         with self.db:
+            self._create_concurrent_kernel_view()
+
             if self._check_table_exists('EXTRAP_RESOLVED_CALLPATHS'):
                 # if necessary upgrade to newer table
                 if self.db.execute("""SELECT name AS CNTREC FROM pragma_table_info('EXTRAP_RESOLVED_CALLPATHS')
@@ -98,6 +100,121 @@ class NsysReport:
                 self._prepare_callpaths_from_nsys_tracing()
                 self._convert_to_exclusive()
                 self._update_extrap_format_version()
+
+    def _create_concurrent_kernel_view(self):
+        if self._check_table_exists('TARGET_INFO_CUDA_GPU'):
+            self.db.execute("""CREATE VIEW EXTRAP_TEMP_GPU_INFO AS
+SELECT numMultiprocessors * numThreadsPerWarp * maxWarpsPerMultiprocessor AS maxThreads
+FROM TARGET_INFO_CUDA_GPU
+WHERE computeCapabilityMajor > 0
+            """)
+        else:
+            self.db.execute("""CREATE VIEW EXTRAP_TEMP_GPU_INFO AS
+SELECT smCount * threadsPerWarp * maxWarpsPerSm AS maxThreads
+FROM TARGET_INFO_GPU
+WHERE computeMajor > 0
+            """)
+        self.db.execute("""-- Creates a view which contains time spans of kernel execution and the number of concurrently executing kernels
+CREATE VIEW IF NOT EXISTS EXTRAP_CONCURRENT_KERNELS AS
+WITH kernel_overlap_base AS (SELECT correlationId                                                     AS correlationIdK,
+                                    start                                                             AS startK,
+                                    end                                                               AS endK,
+                                    shortName                                                         AS shortNameK,
+                                    MIN(gridX * gridY * gridZ * blockX * blockY * blockZ, maxThreads) AS roof_threads
+                             FROM CUPTI_ACTIVITY_KIND_KERNEL,
+                                  EXTRAP_TEMP_GPU_INFO),
+     kernel_overlap_events AS ( -- A single event stream of kernel starts/ends
+         SELECT *
+         FROM (SELECT correlationIdK, startK AS eventK, shortNameK, 0 AS endCount, roof_threads
+               FROM kernel_overlap_base
+               UNION ALL
+               SELECT correlationIdK, endK AS eventK, shortNameK, 1 AS endCount, roof_threads
+               FROM kernel_overlap_base)
+         ORDER BY eventK),
+     intermediate AS ( -- The count of simultaneously executing kernels for each start/end
+         SELECT base.correlationIdK,
+                base.startK,
+                eventK,
+                base.endK,
+                COUNT(eventK)                                 AS concurrency,
+                GROUP_CONCAT(DISTINCT base.correlationIdK) || ',' ||
+                GROUP_CONCAT(DISTINCT overlap.correlationIdK) AS correlationId,
+                overlap.correlationIdK                        AS eventCorrelationId,
+                SUM(base.roof_threads)                        AS roof_threads,
+                overlap.roof_threads                          AS event_roof_threads,
+                endCount
+         FROM kernel_overlap_events AS overlap
+                  INNER JOIN kernel_overlap_base AS base
+                             ON eventK BETWEEN startK AND endK
+         GROUP BY eventK, overlap.correlationIdK
+         ORDER BY eventK),
+     concurrency_per_event AS (SELECT ROW_NUMBER() OVER (ORDER BY eventK)       AS rowNum,
+                                      GROUP_CONCAT(DISTINCT correlationIdK)     AS correlationIdK,
+                                      startK,
+                                      eventK,
+                                      endK,
+                                      concurrency,
+                                      GROUP_CONCAT(DISTINCT correlationIdK)     AS correlationId,
+                                      GROUP_CONCAT(DISTINCT eventCorrelationId) AS eventCorrelationId,
+                                      roof_threads,
+                                      SUM(event_roof_threads)                   AS event_roof_threads,
+                                      SUM(endCount)                             AS endCount
+                               FROM intermediate
+                               GROUP BY eventK)
+     -- The total time spend in at least one kernel, summing up the time between starts/ends
+     -- not considering the simultaneously executing kernels
+SELECT agg_start.eventK                           AS start,
+       agg_end.eventK                             AS end,
+       agg_start.concurrency - agg_start.endCount AS concurrency,
+       agg_end.eventK - agg_start.eventK          AS duration,
+       CASE
+           WHEN agg_start.endCount > 0 THEN agg_start.roof_threads - agg_start.event_roof_threads
+           ELSE agg_start.roof_threads END        AS roof_threads
+FROM concurrency_per_event AS agg_end
+         INNER JOIN concurrency_per_event AS agg_start
+                    ON agg_start.rowNum + 1 == agg_end.rowNum
+WHERE agg_start.concurrency - agg_start.endCount > 0
+    """)
+
+    def _create_overlap_view(self):
+        self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_TEMP_OVERLAP AS
+WITH overlap_base AS (SELECT correlationId, start, end
+                      FROM CUPTI_ACTIVITY_KIND_KERNEL
+                      UNION ALL
+                      SELECT correlationId, start, end
+                      FROM CUPTI_ACTIVITY_KIND_MEMCPY
+                      UNION ALL
+                      SELECT correlationId, start, end
+                      FROM CUPTI_ACTIVITY_KIND_MEMSET),
+     overlap_events AS ( -- A single event stream of activity starts/ends
+         SELECT correlationId, start AS eventK, 0 AS endCount
+         FROM overlap_base
+         UNION ALL
+         SELECT correlationId, end AS eventK, 1 AS endCount
+         FROM overlap_base
+         ORDER BY eventK),
+     intermediate AS (SELECT *, COUNT(eventK) AS concurrency
+                      FROM overlap_events
+                               LEFT JOIN overlap_base AS base
+                                         ON eventK BETWEEN start AND end AND eventK != start AND eventK != end
+                      GROUP BY eventK, overlap_events.correlationId),
+     concurrency_per_event AS (SELECT ROW_NUMBER() OVER (ORDER BY eventK ) AS rowNum,
+                                      eventK,
+                                      concurrency,
+                                      start,
+                                      end,
+                                      SUM(endCount)                        AS endCount
+                               FROM intermediate
+                               GROUP BY eventK)
+SELECT agg_start.eventK                           AS start,
+       agg_end.eventK                             AS end,
+       agg_start.concurrency - agg_start.endCount AS concurrency,
+       agg_end.eventK - agg_start.eventK          AS duration
+FROM concurrency_per_event AS agg_end
+         INNER JOIN concurrency_per_event AS agg_start
+                    ON agg_start.rowNum + 1 == agg_end.rowNum
+WHERE agg_start.concurrency - agg_start.endCount > 0
+        """)
 
     def _ep_nvtx_domain_id(self):
         domain_id = self.db.execute(
@@ -304,13 +421,12 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
             callpath += rest
         return callpath
 
-    # TODO overlap multiple kernels
-    def get_mem_copies(self) -> List[Tuple[int, str, str, float, int, str, bool, float]]:
+    def get_mem_copies(self) -> List[Tuple[int, str, str, float, int, str, bool, float, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMCPY'):
             return []
-        query_result = self.db.execute("""WITH cupti_memory AS (
+        query_result = self.db.execute("""WITH cupti_memory AS ( -- memory copy operations
     SELECT correlationId,
-           (end - start) AS duration,
+           (end - start)                AS duration,
            CASE copyKind
                WHEN 0 THEN 'UNKNOWN'
                WHEN 1 THEN 'HOST_TO_DEVICE'
@@ -326,124 +442,201 @@ FROM (SELECT *, INSTR(SUBSTR(value, 4), char(31)) + 4 AS pos
                WHEN 11 THEN 'UMA_HOST_TO_DEVICE'
                WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
                ELSE 'UNKNOWN_COPY_KIND_' || copyKind
-               END       AS copyKind,
-           srcKind==0 OR dstKind==0 AS pageable,
-           bytes,
-           NULL          AS shortName
+               END                      AS copyKind,
+           srcKind == 0 OR dstKind == 0 AS pageable,
+           bytes
     FROM CUPTI_ACTIVITY_KIND_MEMCPY),
-     cupti_memory_overlap AS (
+     individual_kernel_overlaps AS ( -- All the kernels executing simultaneously to the copy operations
          SELECT correlationId,
-                (MIN(CAKS.end, CAKK.end) - MAX(CAKS.start, CAKK.start)) AS duration,
-                CASE copyKind
-                    WHEN 0 THEN 'UNKNOWN'
-                    WHEN 1 THEN 'HOST_TO_DEVICE'
-                    WHEN 2 THEN 'DEVICE_TO_HOST'
-                    WHEN 3 THEN 'HOST_TO_DEVICE_ARRAY'
-                    WHEN 4 THEN 'DEVICE_ARRAY_TO_HOST'
-                    WHEN 5 THEN 'DEVICE_ARRAY_TO_DEVICE_ARRAY'
-                    WHEN 6 THEN 'DEVICE_ARRAY_TO_DEVICE'
-                    WHEN 7 THEN 'DEVICE_TO_DEVICE_ARRAY'
-                    WHEN 8 THEN 'DEVICE_TO_DEVICE'
-                    WHEN 9 THEN 'HOST_TO_HOST'
-                    WHEN 10 THEN 'PEER_TO_PEER'
-                    WHEN 11 THEN 'UMA_HOST_TO_DEVICE'
-                    WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
-                    ELSE 'UNKNOWN_COPY_KIND_' || copyKind
-                    END                                                 AS copyKind,
-                NULL                                                    AS pageable,
-                NULL                                                    AS bytes,
+                MAX(CA.start, CO.start) AS startO,
+                MIN(CA.end, CO.end)     AS endO,
                 shortName
-         FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CAKS
-                  INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
-                             ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
-     ),
-     cupti_activity AS (
-         SELECT CA.correlationId,
-                value        AS demangledName,
-                copyKind,
-                pageable,
-                bytes,
-                CA.duration AS other_duration
-         FROM (SELECT *
-               FROM cupti_memory
-               UNION ALL
-               SELECT *
-               FROM cupti_memory_overlap
-              ) AS CA
-              LEFT JOIN StringIds ON shortName = StringIds.id
-     )
+         FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CA
+                  INNER JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CO
+                             ON (CO.start BETWEEN CA.start AND CA.end OR CO.end BETWEEN CA.start AND CA.end) OR
+                                (CA.start BETWEEN CO.start AND CO.end AND CA.end BETWEEN CO.start AND CO.end)),
+     kernel_overlap AS (SELECT correlationId,
+                               SUM(MIN(CA.end, CO.end) - MAX(CA.start, CO.start)) overlap_duration
+                        FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CA
+                                 INNER JOIN (SELECT start, end FROM EXTRAP_CONCURRENT_KERNELS) AS CO
+                                            ON (CO.start BETWEEN CA.start AND CA.end OR
+                                                CO.end BETWEEN CA.start AND CA.end) OR
+                                               (CA.start BETWEEN CO.start AND CO.end AND
+                                                CA.end BETWEEN CO.start AND CO.end)
+                        GROUP BY correlationId),
+     base_memory_overlap AS (SELECT CA.correlationId         AS correlationId1,
+                                    CAO.correlationId        AS correlationId2,
+                                    MAX(CA.start, CAO.start) AS startO,
+                                    MIN(CA.end, CAO.end)     AS endO,
+                                    CA.start,
+                                    CAO.start,
+                                    CA.end,
+                                    CAO.end,
+                                    CA.copyKind              AS copyKind1,
+                                    CAO.copyKind             AS copyKind2
+                             FROM CUPTI_ACTIVITY_KIND_MEMCPY AS CA
+                                      INNER JOIN (SELECT start, end, copyKind, correlationId
+                                                  FROM CUPTI_ACTIVITY_KIND_MEMCPY) AS CAO
+                                                 ON (CAO.start BETWEEN CA.start AND CA.end OR
+                                                     CAO.end BETWEEN CA.start AND CA.end) AND
+                                                    CAO.correlationId != CA.correlationId),
+     individual_memory_overlaps AS (SELECT correlationId1  AS correlationId,
+                                          startO,
+                                          endO,
+                                          (endO - startO) AS duration,
+                                          copyKind1       AS copyKind
+                                   FROM base_memory_overlap
+                                   UNION ALL
+                                   SELECT correlationId2  AS correlationId,
+                                          startO,
+                                          endO,
+                                          (endO - startO) AS duration,
+                                          copyKind2       AS copyKind
+                                   FROM base_memory_overlap),
+     memory_overlap AS (SELECT correlationId,
+                               CASE
+                                   WHEN CO.end IS NULL AND CO.start IS NULL THEN
+                                       SUM(duration / 2)
+                                   ELSE
+                                       SUM((duration - (MIN(CO.end, CA.endO) - MAX(CO.start, CA.startO))) /
+                                           2) END AS overlap_duration
+                        FROM individual_memory_overlaps AS CA
+                                 LEFT JOIN (SELECT start, end
+                                            FROM EXTRAP_CONCURRENT_KERNELS) AS CO
+                                           ON (CO.start BETWEEN CA.startO AND CA.endO OR
+                                               CO.end BETWEEN CA.startO AND CA.endO) OR
+                                              (CA.startO BETWEEN CO.start AND CO.end AND
+                                               CA.endO BETWEEN CO.start AND CO.end)),
+     overlap AS (SELECT correlationId, SUM(overlap_duration) AS overlap_duration
+                 FROM (SELECT * FROM kernel_overlap UNION ALL SELECT * FROM memory_overlap)
+                 GROUP BY correlationId),
+     cupti_activity AS (SELECT cupti_memory.correlationId,
+                               NULL AS demangledName,
+                               copyKind,
+                               pageable,
+                               bytes,
+                               duration,
+                               overlap_duration
+                        FROM cupti_memory
+                                 LEFT JOIN overlap
+                                           ON cupti_memory.correlationId = overlap.correlationId),
+     individual_overlaps AS (SELECT correlationId, startO, endO, value
+                             FROM individual_kernel_overlaps
+                                      LEFT JOIN StringIds ON shortName = StringIds.id
+                             UNION ALL
+                             SELECT correlationId,
+                                    startO,
+                                    endO,
+                                    CASE copyKind
+                                        WHEN 0 THEN 'UNKNOWN'
+                                        WHEN 1 THEN 'HOST_TO_DEVICE'
+                                        WHEN 2 THEN 'DEVICE_TO_HOST'
+                                        WHEN 3 THEN 'HOST_TO_DEVICE_ARRAY'
+                                        WHEN 4 THEN 'DEVICE_ARRAY_TO_HOST'
+                                        WHEN 5 THEN 'DEVICE_ARRAY_TO_DEVICE_ARRAY'
+                                        WHEN 6 THEN 'DEVICE_ARRAY_TO_DEVICE'
+                                        WHEN 7 THEN 'DEVICE_TO_DEVICE_ARRAY'
+                                        WHEN 8 THEN 'DEVICE_TO_DEVICE'
+                                        WHEN 9 THEN 'HOST_TO_HOST'
+                                        WHEN 10 THEN 'PEER_TO_PEER'
+                                        WHEN 11 THEN 'UMA_HOST_TO_DEVICE'
+                                        WHEN 12 THEN 'UMA_DEVICE_TO_HOST'
+                                        ELSE 'UNKNOWN_COPY_KIND_' || copyKind
+                                        END AS value
+                             FROM individual_memory_overlaps),
+     cupti_activity_overlap AS (SELECT IO.correlationId,
+                                       value         AS demangledName,
+                                       copyKind,
+                                       pageable,
+                                       NULL          AS bytes,
+                                       NULL          AS duration,
+                                       endO - startO AS overlap_duration
+                                FROM individual_overlaps AS IO
+                                         LEFT JOIN cupti_activity
+                                                   ON cupti_activity.correlationId = IO.correlationId)
 SELECT paths.correlationId,
        callpath,
-       demangledName       AS name,
-       SUM(duration)       AS duration,
-       SUM(bytes)          AS bytes,
+       demangledName                              AS name,
+       SUM(duration)                              AS duration,
+       SUM(bytes)                                 AS bytes,
        copyKind,
        pageable OR NOT (callpath GLOB '*Async_*') AS blocking,
-       SUM(other_duration) AS other_duration
+       SUM(gpu_duration)                          AS gpu_duration,
+       SUM(overlap_duration)                      AS overlap_duration
 FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
              callpath,
              demangledName,
-             duration,
+             EXTRAP_RESOLVED_CALLPATHS.duration,
              copyKind,
              pageable,
-             other_duration,
-             bytes
+             CA.duration AS gpu_duration,
+             bytes,
+             overlap_duration
       FROM EXTRAP_RESOLVED_CALLPATHS
-               INNER JOIN cupti_activity
-                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
+               INNER JOIN (SELECT * FROM cupti_activity UNION ALL SELECT * FROM cupti_activity_overlap) AS CA
+                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CA.correlationId) AS paths
 GROUP BY callpath, demangledName, copyKind, blocking 
     """)
         return [
-            (correlation_id, self.decode_callpath(callpath), name, duration, bytes, copyKind, blocking, other_duration)
-            for correlation_id, callpath, name, duration, bytes, copyKind, blocking, other_duration in query_result]
+            (correlation_id, self.decode_callpath(callpath), name, duration, bytes, copyKind, blocking, gpu_duration,
+             overlap_duration)
+            for correlation_id, callpath, name, duration, bytes, copyKind, blocking, gpu_duration, overlap_duration in
+            query_result]
 
     # TODO overlap multiple kernels
     def get_synchronization(self) -> List[Tuple[int, str, str, float, float, str, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION'):
             return []
-        result = self.db.execute("""WITH cupti_synchronization AS (
-    SELECT correlationId,
-           (end - start) AS duration,
-           NULL          AS durationGPU,
-           CASE syncType
-               WHEN 0 THEN 'UNKNOWN'
-               WHEN 1 THEN 'EVENT_SYNCHRONIZE'
-               WHEN 2 THEN 'STREAM_WAIT_EVENT'
-               WHEN 3 THEN 'STREAM_SYNCHRONIZE'
-               WHEN 4 THEN 'CONTEXT_SYNCHRONIZE'
-               END       AS syncType,
-           NULL          AS shortName
-    FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION),
-     cupti_synchronization_kernels AS (
-         SELECT correlationId,
-                NULL                                                    AS duration,
-                (MIN(CAKS.end, CAKK.end) - MAX(CAKS.start, CAKK.start)) AS durationGPU,
-                CASE syncType
-                    WHEN 0 THEN 'UNKNOWN'
-                    WHEN 1 THEN 'EVENT_SYNCHRONIZE'
-                    WHEN 2 THEN 'STREAM_WAIT_EVENT'
-                    WHEN 3 THEN 'STREAM_SYNCHRONIZE'
-                    WHEN 4 THEN 'CONTEXT_SYNCHRONIZE'
-                    END                                                 AS syncType,
-                shortName
-         FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS CAKS
-                  LEFT JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
-                            ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR CAKK.end BETWEEN CAKS.start AND CAKS.end
-     ),
-     cupti_activity AS (
-         SELECT correlationId,
-                value         AS demangledName,
-                syncType,
-                durationGPU,
-                CAKK.duration AS other_duration
-         FROM (SELECT *
-               FROM cupti_synchronization
-               UNION ALL
-               SELECT *
-               FROM cupti_synchronization_kernels) AS CAKK
+        result = self.db.execute("""WITH cupti_synchronization AS (SELECT correlationId,
+                                      (end - start) AS duration,
+                                      NULL          AS durationGPU,
+                                      CASE syncType
+                                          WHEN 0 THEN 'UNKNOWN'
+                                          WHEN 1 THEN 'EVENT_SYNCHRONIZE'
+                                          WHEN 2 THEN 'STREAM_WAIT_EVENT'
+                                          WHEN 3 THEN 'STREAM_SYNCHRONIZE'
+                                          WHEN 4 THEN 'CONTEXT_SYNCHRONIZE'
+                                          END       AS syncType,
+                                      NULL          AS shortName
+                               FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION),
+     cupti_synchronization_kernels AS (SELECT correlationId,
+                                              NULL                                                    AS duration,
+                                              (MIN(CAKS.end, CAKK.end) - MAX(CAKS.start, CAKK.start)) AS durationGPU,
+                                              CASE syncType
+                                                  WHEN 0 THEN 'UNKNOWN'
+                                                  WHEN 1 THEN 'EVENT_SYNCHRONIZE'
+                                                  WHEN 2 THEN 'STREAM_WAIT_EVENT'
+                                                  WHEN 3 THEN 'STREAM_SYNCHRONIZE'
+                                                  WHEN 4 THEN 'CONTEXT_SYNCHRONIZE'
+                                                  END                                                 AS syncType,
+                                              shortName
+                                       FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS CAKS
+                                                LEFT JOIN (SELECT start, end, shortName FROM CUPTI_ACTIVITY_KIND_KERNEL) AS CAKK
+                                                          ON CAKK.start BETWEEN CAKS.start AND CAKS.end OR
+                                                             CAKK.end BETWEEN CAKS.start AND CAKS.end),
+     kernel_overlap AS (SELECT correlationId, SUM((MIN(CA.end, CO.end) - MAX(CA.start, CO.start))) AS overlap_duration
+                        FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS CA
+                                 INNER JOIN EXTRAP_CONCURRENT_KERNELS AS CO ON (CO.start BETWEEN CA.start AND CA.end OR
+                                                                                CO.end BETWEEN CA.start AND CA.end)
+                        GROUP BY correlationId),
+                        memory_overlap AS (SELECT CA.correlationId, SUM((MIN(CA.end, CO.end) - MAX(CA.start, CO.start))) AS overlap_duration
+                        FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS CA
+                                 INNER JOIN CUPTI_ACTIVITY_KIND_MEMCPY AS CO ON (CO.start BETWEEN CA.start AND CA.end OR
+                                                                                CO.end BETWEEN CA.start AND CA.end)
+                        GROUP BY CA.correlationId),
+     cupti_activity AS (SELECT correlationId,
+                               value         AS demangledName,
+                               syncType,
+                               durationGPU,
+                               CAKK.duration AS other_duration
+                        FROM (SELECT *
+                              FROM cupti_synchronization
+                              UNION ALL
+                              SELECT *
+                              FROM cupti_synchronization_kernels) AS CAKK
 
-                  LEFT JOIN StringIds ON shortName = StringIds.id
-     )
+
+                                 LEFT JOIN StringIds ON shortName = StringIds.id)
 SELECT paths.correlationId,
        callpath,
        demangledName       AS kernelName,
@@ -457,10 +650,11 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
              duration,
              durationGPU,
              syncType,
-             other_duration
+             other_duration,
+             overlap_duration
       FROM EXTRAP_RESOLVED_CALLPATHS
-               INNER JOIN cupti_activity
-                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId) AS paths
+               INNER JOIN cupti_activity ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId
+               LEFT JOIN kernel_overlap ON kernel_overlap.correlationId = cupti_activity.correlationId) AS paths
 GROUP BY callpath, demangledName, syncType 
     """)
         return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, syncType, other_duration)
