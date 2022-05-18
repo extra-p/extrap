@@ -148,22 +148,33 @@ class NsightFileReader(AbstractDirectoryReader):
                             elif duration:
                                 cp_obj = Callpath(callpath + "->GPU MEM", )
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
-                        for id, callpath, overlap_name, duration, bytes, kind, blocking, durationCopy in parsed.get_mem_copies():
+                        for id, callpath, overlap_name, duration, bytes, kind, blocking, duration_copy, duration_overlap in parsed.get_mem_copies():
                             pbar.update(0)
                             if duration:
+                                if duration_copy and blocking:
+                                    duration -= duration_copy
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
-                            if durationCopy:
+                            if duration_copy:
+                                if duration_overlap:
+                                    duration_copy -= duration_overlap
                                 sep = "->BLOCKING " if blocking else "->"
                                 cp_obj = Callpath(callpath + sep + kind, gpu__mem_copy=True)
                                 if blocking:
                                     cp_obj.tags['gpu__blocking__mem_copy'] = True
-                                    cp_obj.tags['agg__usage_disabled'] = True
                                 else:
                                     cp_obj.tags['agg__category'] = 'GPU MEM',
                                     cp_obj.tags['gpu__blocking__mem_copy'] = False
                                     cp_obj.tags['agg__category__comparison_cpu_gpu'] = None
-                                aggregated_values[(cp_obj, metric)].append(durationCopy / ns_per_s)
+                                aggregated_values[(cp_obj, metric)].append(duration_copy / ns_per_s)
                                 aggregated_values[(cp_obj, metric_bytes)].append(bytes)
+                                if duration_overlap:
+                                    cp_overlap = cp_obj.concat('OVERLAP', gpu__overlap=True, agg__disabled=True)
+                                    aggregated_values[(cp_overlap, metric)].append(duration_overlap / ns_per_s)
+                            elif duration_overlap:
+                                sep = "->BLOCKING " if blocking else "->"
+                                cp_obj = Callpath(callpath + sep + kind + '->OVERLAP->' + overlap_name,
+                                                  gpu__overlap=True)
+                                aggregated_values[(cp_obj, metric)].append(duration_overlap / ns_per_s)
 
                         for id, callpath, overlap_name, duration, bytes, blocking, duration_set in parsed.get_mem_sets():
                             pbar.update(0)

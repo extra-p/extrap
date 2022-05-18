@@ -62,7 +62,6 @@ class MeasurementPointsPlot(GraphDisplayWindow):
             callpath_color = dict_callpath_color[callpath]
             points = model.measurements
             if not points:
-                breakpoint()
                 continue
             if parameter_x.id >= 0:
                 xs = np.array([m.coordinate[parameter_x.id] for m in points])
