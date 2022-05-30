@@ -6,6 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 import unittest
+from itertools import groupby
 from pathlib import Path
 
 from extrap.entities.metric import Metric
@@ -267,17 +268,72 @@ class TestNsysDbReader(unittest.TestCase):
         mem_copies = report.get_mem_copies()
         self.assertEqual(11, len([m[-2] for m in mem_copies if m[-2] is not None]))
 
-        self.assertEqual(4, len([correlation_id for (
-            correlation_id, callpath, name, duration, bytes, copyKind, blocking, gpu_duration, overlap_duration) in
-                                 mem_copies if
-                                 '6' in callpath and bytes is None and gpu_duration is None
+        self.assertEqual(4, len([correlation_id
+                                 for correlation_id, callpath, name, duration, bytes, copyKind, blocking, gpu_duration,
+                                     overlap_duration
+                                 in mem_copies
+                                 if '6' in callpath and bytes is None and gpu_duration is None
                                  and overlap_duration is not None]))
+        for correlation_id, callpath, name, duration, bytes, copyKind, blocking, gpu_duration, overlap_duration in mem_copies:
+            if overlap_duration is not None:
+                self.assertGreaterEqual(overlap_duration, 0)
+            if name is None and overlap_duration is not None:
+                self.assertGreaterEqual(gpu_duration, overlap_duration)
         print(mem_copies)
         kernels = report.get_kernel_runtimes()
-        self.assertEqual(7, len([(correlation_id, callpath, name, duration, durationGPU, other_duration)
-                                 for correlation_id, callpath, name, duration, durationGPU, other_duration in kernels if
-                                 durationGPU is not None and name is not None]))
+        self.assertEqual(7,
+                         len([(correlation_id, callpath, name, duration, durationGPU, other_duration, overlap_duration)
+                              for correlation_id, callpath, name, duration, durationGPU, other_duration,
+                                  overlap_duration
+                              in kernels
+                              if durationGPU is not None and name is not None]))
+        for correlation_id, callpath, name, duration, durationGPU, other_duration, overlap_duration in kernels:
+            self.assertGreaterEqual(overlap_duration, 0)
+            self.assertGreaterEqual(durationGPU, overlap_duration)
         print(kernels)
+        sync = report.get_synchronization()
+        self.assertEqual(6, len([(correlation_id, callpath, name, duration, syncType, other_duration, overlap_duration)
+                                 for
+                                 correlation_id, callpath, name, duration, syncType, other_duration, overlap_duration
+                                 in sync
+                                 if name is None]))
+        for correlation_id, callpath, name, duration, syncType, other_duration, overlap_duration in sync:
+            if overlap_duration is not None:
+                self.assertGreaterEqual(overlap_duration, 0)
+            if name is None and overlap_duration is not None:
+                self.assertGreaterEqual(other_duration, overlap_duration)
+        for correlation_id, grp in groupby(sorted(sync, key=lambda x: x[0]), lambda x: x[0]):
+            # checks if overlap_duration greater or equal than max(all(overlap_durations of the same correlationId))
+            grp = list(grp)
+            agg = [(correlation_id, name, other_duration, overlap_duration)
+                   for correlation_id, _, name, _, _, other_duration, overlap_duration in grp if name is None]
+            self.assertEqual(1, len(agg))
+            max_overlap_duration = max(grp, key=lambda x: x[-1])
+            if max_overlap_duration[-1] is None:
+                self.assertEqual(agg[0][-1], max_overlap_duration[-1])
+            else:
+                self.assertLessEqual(max_overlap_duration[-1], agg[0][-1])
+        print(sync)
+
+        mem_alloc = report.get_mem_alloc_overlap()
+        self.assertEqual(3, len([(correlation_id, callpath, name, duration, overlap_duration)
+                                 for
+                                 correlation_id, callpath, name, duration, overlap_duration
+                                 in mem_alloc
+                                 if name is None]))
+
+        print(mem_alloc)
+
+        mem_set = report.get_mem_sets()
+        self.assertEqual(1, len([(correlation_id, callpath, name, duration, bytes, blocking, other_duration,
+                                  overlap_duration)
+                                 for
+                                 correlation_id, callpath, name, duration, bytes, blocking, other_duration,
+                                 overlap_duration
+                                 in mem_set
+                                 if name is None]))
+        self.assertEqual(mem_set[0][-2], mem_set[0][-1])
+        print(mem_set)
 
 
 if __name__ == '__main__':
