@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Tuple, List, Generator
 
 from extrap.util.caching import cached_property
-from extrap.util.deprecation import deprecated
 from extrap.util.exceptions import FileFormatError
 
 UNIT_SEPARATOR = '\x1F'
@@ -21,8 +20,9 @@ _FILE_FORMAT_VERSION = 2
 
 
 class NsysReport:
-    def __init__(self, filename):
+    def __init__(self, filename, number_threads_fallback=1):
         filename = Path(filename)
+        self.number_threads_fallback = number_threads_fallback
         self._check_file(filename)
         self.db = sqlite3.connect(filename)
         self._prepare_shared()
@@ -110,15 +110,33 @@ SELECT numMultiprocessors * numThreadsPerWarp * maxWarpsPerMultiprocessor AS max
 FROM TARGET_INFO_CUDA_GPU
 WHERE computeCapabilityMajor > 0
             """)
-        else:
+        elif self._check_table_exists('TARGET_INFO_GPU') \
+                and self.db.execute("""SELECT name AS CNTREC FROM pragma_table_info('TARGET_INFO_GPU')
+                                        WHERE name = 'smCount'""").fetchone() is not None:
             self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_GPU_INFO AS
 SELECT smCount * threadsPerWarp * maxWarpsPerSm AS maxThreads
 FROM TARGET_INFO_GPU
 WHERE computeMajor > 0
             """)
+        else:
+            self.db.execute(f"""CREATE VIEW IF NOT EXISTS EXTRAP_GPU_INFO AS
+SELECT {self.number_threads_fallback} AS maxThreads
+FROM sqlite_master
+LIMIT 1            """)
 
     def _create_concurrent_kernel_view(self):
-        self.db.execute("""-- Creates a view which contains time spans of kernel execution and the number of concurrently executing kernels
+        if self._check_table_exists('CUPTI_ACTIVITY_KIND_MEMSET'):
+            memset_activities = """SELECT correlationId      AS correlationIdK,
+           start              AS startK,
+           end                AS endK,
+           'MEMSET ' || value AS shortNameK,
+           0                  AS roof_threads
+    FROM CUPTI_ACTIVITY_KIND_MEMSET
+            """
+            memset_activities = "UNION ALL " + memset_activities
+        else:
+            memset_activities = ""
+        self.db.execute(f"""-- Creates a view which contains time spans of kernel execution and the number of concurrently executing kernels
 CREATE VIEW IF NOT EXISTS EXTRAP_CONCURRENT_KERNELS AS
 WITH kernel_overlap_base AS (SELECT correlationId                                                     AS correlationIdK,
                                     start                                                             AS startK,
@@ -126,7 +144,8 @@ WITH kernel_overlap_base AS (SELECT correlationId                               
                                     shortName                                                         AS shortNameK,
                                     MIN(gridX * gridY * gridZ * blockX * blockY * blockZ, maxThreads) AS roof_threads
                              FROM CUPTI_ACTIVITY_KIND_KERNEL,
-                                  EXTRAP_GPU_INFO),
+                                  EXTRAP_GPU_INFO
+                             {memset_activities}),
      kernel_overlap_events AS ( -- A single event stream of kernel starts/ends
          SELECT *
          FROM (SELECT correlationIdK, startK AS eventK, shortNameK, 0 AS endCount, roof_threads
@@ -221,7 +240,7 @@ FROM CUPTI_ACTIVITY_KIND_MEMSET"""),
 
         self.db.execute(f"""CREATE VIEW IF NOT EXISTS EXTRAP_GPU_ACTIVITIES AS {activity_command}""")
 
-        command = f"""CREATE VIEW IF NOT EXISTS EXTRAP_OVERLAP_ACTIVITIES AS
+        self.db.execute("""CREATE VIEW IF NOT EXISTS EXTRAP_OVERLAP_ACTIVITIES AS
 WITH overlap_events AS ( -- A single event stream of activity starts/ends
          SELECT correlationId, start AS eventK, 0 AS endCount
          FROM EXTRAP_GPU_ACTIVITIES
@@ -250,9 +269,7 @@ FROM concurrency_per_event AS agg_end
          INNER JOIN concurrency_per_event AS agg_start
                     ON agg_start.rowNum + 1 == agg_end.rowNum
 WHERE agg_start.concurrency - agg_start.endCount > 0
-        """
-        print(command)
-        self.db.execute(command)
+        """)
 
     def _ep_nvtx_domain_id(self):
         domain_id = self.db.execute(
@@ -702,14 +719,14 @@ GROUP BY callpath, name, syncType
                                      name
                               FROM CUPTI_ACTIVITY_KIND_MEMSET AS CA
                                        INNER JOIN EXTRAP_GPU_ACTIVITIES AS GO
-                                                  ON CA.correlationId != GO.correlationId AND
+                                                  ON GO.type!=1 AND CA.correlationId != GO.correlationId AND
                                                      ((GO.start BETWEEN CA.start AND CA.end OR
                                                        GO.end BETWEEN CA.start AND CA.end) OR
                                                       (CA.start BETWEEN GO.start AND GO.end AND
                                                        CA.end BETWEEN GO.start AND GO.end))),
      overlap AS (SELECT correlationId, SUM((MIN(CA.end, GO.end) - MAX(CA.start, GO.start))) AS overlap_duration
                  FROM cupti_memory AS CA
-                          INNER JOIN EXTRAP_OVERLAP_ACTIVITIES AS GO ON (GO.start BETWEEN CA.start AND CA.end OR
+                          INNER JOIN EXTRAP_CONCURRENT_KERNELS AS GO ON (GO.start BETWEEN CA.start AND CA.end OR
                                                                          GO.end BETWEEN CA.start AND CA.end) OR
                                                                         (CA.start BETWEEN GO.start AND GO.end AND
                                                                          CA.end BETWEEN GO.start AND GO.end)
@@ -803,63 +820,80 @@ FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
       FROM cupti_activity
                LEFT JOIN EXTRAP_RESOLVED_CALLPATHS
                          ON EXTRAP_RESOLVED_CALLPATHS.correlationId = CUPTI_ACTIVITY.correlationId
-               LEFT JOIN overlap ON cupti_activity.correlationId = overlap.correlationId) AS paths
+               LEFT JOIN overlap ON cupti_activity.correlationId = overlap.correlationId
+      WHERE NOT (demangledName GLOB 'cudaFree*' OR demangledName GLOB 'cudaMalloc*' OR
+                 demangledName GLOB 'cudaHostAlloc*')) AS paths
 GROUP BY callpath, demangledName 
 """)
         return [(correlation_id, self.decode_callpath(callpath), name, duration, durationGPU, other_duration,
                  overlap_duration)
                 for correlation_id, callpath, name, duration, durationGPU, other_duration, overlap_duration in result]
 
-    def get_mem_alloc_overlap(self) -> List[Tuple[int, str, str, float, float]]:
+    def get_mem_alloc_free(self) -> List[Tuple[int, str, str, float, bool, bool, float]]:
         if not self._check_table_exists('CUPTI_ACTIVITY_KIND_KERNEL'):
             return []
-        result = self.db.execute("""WITH mem_alloc_activities AS (SELECT correlationId, start, end, (end - start) AS duration
+        result = self.db.execute("""WITH mem_alloc_activities AS (SELECT correlationId,
+                                     start,
+                                     end,
+                                     (end - start)            AS duration,
+                                     value NOT LIKE '%async%' AS blocking,
+                                     value LIKE '%host%'      AS host
                               FROM main.CUPTI_ACTIVITY_KIND_RUNTIME AS CA
                                        LEFT JOIN StringIds ON nameId = id
                               WHERE value GLOB 'cudaFree*'
-                                 OR value GLOB 'cudaMalloc*'),
+                                 OR value GLOB 'cudaMalloc*'
+                                 OR value GLOB 'cudaHostAlloc*'),
      cupti_sync_overlap AS (SELECT CA.correlationId,
+                                   blocking,
+                                   host,
                                    (MIN(CA.end, GA.end) - MAX(CA.start, GA.start)) AS overlap_duration,
                                    name
                             FROM mem_alloc_activities AS CA
                                      LEFT JOIN EXTRAP_GPU_ACTIVITIES AS GA
                                                ON GA.correlationId != CA.correlationId AND
                                                   (GA.end BETWEEN CA.start AND CA.end)
-         -- only end needs to be within the operation, to be considered overlapping. 
-         -- All actions running after the end of the operation are not synced with it
-     ),
+                                 -- only end needs to be within the operation, to be considered overlapping. 
+                                 -- All actions running after the end of the operation are not synced with it
+                            WHERE NOT host),
      overlap AS (SELECT correlationId, SUM((MIN(CA.end, GO.end) - MAX(CA.start, GO.start))) AS overlap_duration
                  FROM mem_alloc_activities AS CA
                           INNER JOIN EXTRAP_OVERLAP_ACTIVITIES AS GO ON (GO.start BETWEEN CA.start AND CA.end OR
                                                                          GO.end BETWEEN CA.start AND CA.end)
+                 WHERE NOT host
                  GROUP BY correlationId),
      cupti_activity AS (SELECT mem_alloc_activities.correlationId,
                                duration,
+                               blocking,
+                               host,
                                NULL                  AS name,
                                SUM(overlap_duration) AS overlap_duration
                         FROM mem_alloc_activities
                                  LEFT JOIN overlap ON overlap.correlationId = mem_alloc_activities.correlationId
                         GROUP BY mem_alloc_activities.correlationId
                         UNION ALL
-                        SELECT correlationId, NULL AS duration, name, overlap_duration
+                        SELECT correlationId, NULL AS duration, blocking, host, name, overlap_duration
                         FROM cupti_sync_overlap)
 SELECT paths.correlationId,
        callpath,
        name,
-       SUM(duration)    AS duration,
+       SUM(duration)         AS duration,
+       blocking,
+       host,
        SUM(overlap_duration) AS overlap_duration
 FROM (SELECT EXTRAP_RESOLVED_CALLPATHS.correlationId,
              callpath,
              name,
              EXTRAP_RESOLVED_CALLPATHS.duration,
+             blocking,
+             host,
              cupti_activity.duration AS other_duration,
              overlap_duration
       FROM EXTRAP_RESOLVED_CALLPATHS
                INNER JOIN cupti_activity
                           ON EXTRAP_RESOLVED_CALLPATHS.correlationId = cupti_activity.correlationId) AS paths
 GROUP BY callpath, name""")
-        return [(correlation_id, self.decode_callpath(callpath), name, duration, overlap_duration)
-                for correlation_id, callpath, name, duration, overlap_duration in result]
+        return [(correlation_id, self.decode_callpath(callpath), name, duration, blocking, host, overlap_duration)
+                for correlation_id, callpath, name, duration, blocking, host, overlap_duration in result]
 
     def get_gpu_idle(self) -> List[Tuple[str, int]]:
         if not self._check_table_exists('EXTRAP_GPU_IDLE'):
@@ -909,34 +943,12 @@ SELECT SUM(numThreadsPerWarp * coreClockRate * maxIPC * numMultiprocessors)
 FROM TARGET_INFO_CUDA_GPU
         """).fetchone()[0]
 
-    @deprecated
-    def get_os_runtimes(self) -> List[Tuple[int, str, str, str, float, float, str, float]]:
-        return []
-
-    #         if not self._check_table_exists('OSRT_API'):
-    #             return []
-    #         c = self.db.cursor()
-    #         return list(c.execute("""WITH osrt_activity AS (
-    #     SELECT callchainId,
-    #            END - START AS duration,
-    #            VALUE       AS NAME
-    #     FROM OSRT_API
-    #              LEFT JOIN StringIds ON nameId = StringIds.id
-    # )
-    # SELECT paths.id,
-    #        path,
-    #        callpath,
-    #        name,
-    #        SUM(duration) AS duration
-    # FROM (SELECT id,
-    #              path,
-    #              name,
-    #              callpath,
-    #              duration
-    #       FROM EXTRAP_RESOLVED_CALLPATHS
-    #                LEFT JOIN osrt_activity ON id = osrt_activity.callchainId) AS paths
-    # GROUP BY path, name
-    #     """))
+    def get_cpu_times(self) -> List[Tuple[str, float]]:
+        result = self.db.execute("""
+        SELECT callpath,duration FROM EXTRAP_RESOLVED_CALLPATHS WHERE correlationId IS NULL
+        """)
+        return [(self.decode_callpath(callpath), duration)
+                for callpath, duration in result]
 
     def __enter__(self):
         return self

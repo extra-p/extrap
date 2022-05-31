@@ -261,6 +261,11 @@ class TestLoadNsightFiles(unittest.TestCase):
                               'sm__sass_inst_executed_op_st.sum', 'smsp__maximum_warps_avg_per_active_cycle']
                              })
 
+    def test_load_concurrent_example(self):
+        experiment = NsightFileReader().read_experiment('data/nsight/concurrent_example')
+
+        print(experiment.callpaths)
+
 
 class TestNsysDbReader(unittest.TestCase):
     def test_concurrent_kernel_execution(self):
@@ -315,10 +320,10 @@ class TestNsysDbReader(unittest.TestCase):
                 self.assertLessEqual(max_overlap_duration[-1], agg[0][-1])
         print(sync)
 
-        mem_alloc = report.get_mem_alloc_overlap()
-        self.assertEqual(3, len([(correlation_id, callpath, name, duration, overlap_duration)
+        mem_alloc = report.get_mem_alloc_free()
+        self.assertEqual(4, len([(correlation_id, callpath, name, duration, blocking, host, overlap_duration)
                                  for
-                                 correlation_id, callpath, name, duration, overlap_duration
+                                 correlation_id, callpath, name, duration, blocking, host, overlap_duration
                                  in mem_alloc
                                  if name is None]))
 

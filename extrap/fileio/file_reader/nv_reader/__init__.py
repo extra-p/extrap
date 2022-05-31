@@ -4,7 +4,6 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
 import logging
 import multiprocessing
 import os.path
@@ -95,8 +94,14 @@ class NsightFileReader(AbstractDirectoryReader):
                 correponding_agg_ncu_path = None
                 for path, _ in point_group:
                     pbar.update()
+                    logging.info(f"Parsing: {path}")
                     with NsysReport(path) as parsed:
                         # iterate over all callpaths and get time
+                        for callpath, duration in parsed.get_cpu_times():
+                            pbar.update(0)
+                            if duration:
+                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
+
                         for callpath, duration in parsed.get_gpu_idle():
                             pbar.update(0)
                             if duration:
@@ -104,120 +109,142 @@ class NsightFileReader(AbstractDirectoryReader):
                                                   validation__ignore__num_measurements=True)
                                 aggregated_values[(cp_obj, metric)].append(duration / ns_per_s)
 
-                        for id, callpath, overlap_name, duration, durationGPU, syncType, other_duration in parsed.get_synchronization():
+                        for (id, callpath, overlap_name, duration, syncType, other_duration,
+                             overlap_duration) in parsed.get_synchronization():
                             pbar.update(0)
                             if overlap_name:
-                                cp_obj = Callpath(callpath + "->" + syncType + "->OVERLAP",
-                                                  validation__ignore__num_measurements=True,
-                                                  gpu__overlap='agg', agg__usage_disabled=True)
-                                aggregated_values[(cp_obj, metric)] = [0]
-
                                 overlap_cp = Callpath(callpath + "->" + syncType + "->OVERLAP->" + overlap_name,
                                                       gpu__overlap=True, gpu__kernel=True,
                                                       validation__ignore__num_measurements=True)
-                                aggregated_values[(overlap_cp, metric)].append(durationGPU / ns_per_s)
+                                aggregated_values[(overlap_cp, metric)].append(overlap_duration / ns_per_s)
                             else:
-                                if duration:
-                                    cp_obj = Callpath(callpath + "->" + syncType,
-                                                      agg__category__comparison_cpu_gpu='GPU SYNC')
-                                    aggregated_values[(cp_obj, metric)].append(duration / ns_per_s)
+                                cp_obj = Callpath(callpath + "->" + syncType,
+                                                  agg__category__comparison_cpu_gpu='GPU SYNC')
+                                if overlap_duration:
+                                    duration -= overlap_duration
+                                aggregated_values[(cp_obj, metric)].append(duration / ns_per_s)
+                                if overlap_duration:
+                                    cp_overlap = Callpath(callpath + "->" + syncType + "->OVERLAP",
+                                                          validation__ignore__num_measurements=True,
+                                                          gpu__overlap='agg', agg__usage_disabled=True)
+                                    aggregated_values[(cp_overlap, metric)].append(overlap_duration / ns_per_s)
                                 cp_obj = Callpath(callpath + "->" + syncType + "->WAIT", agg__usage_disabled=True)
                                 aggregated_values[(cp_obj, metric)].append(other_duration / ns_per_s)
 
-                        for id, callpath, kernelName, duration, durationGPU, other_duration in parsed.get_kernel_runtimes():
+                        for (id, callpath, name, duration, duration_gpu, other_duration,
+                             overlap_duration) in parsed.get_kernel_runtimes():
                             pbar.update(0)
-                            if kernelName:
+                            if name:
                                 if duration:
-                                    aggregated_values[(Callpath(callpath + "->" + kernelName), metric)].append(
+                                    aggregated_values[(Callpath(callpath + "->" + name), metric)].append(
                                         duration / ns_per_s)
-                                cp_obj = Callpath(callpath + "->" + kernelName + "->GPU " + kernelName,
+                                cp_obj = Callpath(callpath + "->" + name + "->GPU " + name,
                                                   gpu__kernel=True, agg__category='GPU',
                                                   agg__category__comparison_cpu_gpu=None)
-                                aggregated_values[(cp_obj, metric)].append(durationGPU / ns_per_s)
+                                if overlap_duration:
+                                    duration_gpu -= overlap_duration
+                                aggregated_values[(cp_obj, metric)].append(duration_gpu / ns_per_s)
+                                cp_obj = Callpath(callpath + "->" + name + "->GPU " + name + '->OVERLAP',
+                                                  gpu__overlap='agg', gpu__kernel=True, agg__usage_disabled=True)
+                                aggregated_values[(cp_obj, metric)].append(overlap_duration / ns_per_s)
                             elif duration:
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
-                        for id, callpath, overlap_name, duration, durationGPU in parsed.get_mem_alloc_overlap():
+
+                        for (id, callpath, overlap_name, duration, blocking, host,
+                             duration_overlap) in parsed.get_mem_alloc_free():
                             pbar.update(0)
-                            # TODO solve parent cudaFree/cudaMalloc consists of overlap and real value
-                            #   maybe: cudaFree/Malloc<without overlap> ->OVERLAP<actual overlap> ->[Kernels...<overlap of each kernel>]
-                            if overlap_name:
-                                cp_obj = Callpath(callpath + "->OVERLAP->" + overlap_name,
-                                                  gpu__overlap=True, gpu__kernel=True,
-                                                  validation__ignore__num_measurements=True)
-                                aggregated_values[(cp_obj, metric)].append(durationGPU / ns_per_s)
-                            elif duration:
-                                cp_obj = Callpath(callpath + "->GPU MEM", )
+                            if duration:
+                                if duration_overlap and blocking:
+                                    duration -= duration_overlap
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
-                        for id, callpath, overlap_name, duration, bytes, kind, blocking, duration_copy, duration_overlap in parsed.get_mem_copies():
+
+                                if overlap_name:
+                                    cp_obj = Callpath(callpath + "->OVERLAP", gpu__overlap='agg',
+                                                      agg__usage_disabled=True, agg__disabled=True,
+                                                      validation__ignore__num_measurements=True)
+                                    aggregated_values[(cp_obj, metric)].append(duration_overlap / ns_per_s)
+                            elif overlap_name:
+                                cp_obj = Callpath(callpath + "->OVERLAP->" + overlap_name,
+                                                  gpu__overlap=True,
+                                                  validation__ignore__num_measurements=True)
+                                aggregated_values[(cp_obj, metric)].append(duration_overlap / ns_per_s)
+
+                        for (id, callpath, overlap_name, duration, bytes, kind, blocking, duration_copy,
+                             duration_overlap) in parsed.get_mem_copies():
                             pbar.update(0)
                             if duration:
                                 if duration_copy and blocking:
                                     duration -= duration_copy
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
+                            sep = "->BLOCKING " if blocking else "->"
+                            cp_obj = Callpath(callpath + sep + kind, gpu__mem_copy=True)
                             if duration_copy:
-                                if duration_overlap:
-                                    duration_copy -= duration_overlap
-                                sep = "->BLOCKING " if blocking else "->"
-                                cp_obj = Callpath(callpath + sep + kind, gpu__mem_copy=True)
                                 if blocking:
                                     cp_obj.tags['gpu__blocking__mem_copy'] = True
                                 else:
                                     cp_obj.tags['agg__category'] = 'GPU MEM',
                                     cp_obj.tags['gpu__blocking__mem_copy'] = False
                                     cp_obj.tags['agg__category__comparison_cpu_gpu'] = None
+                                if duration_overlap:
+                                    duration_copy -= duration_overlap
                                 aggregated_values[(cp_obj, metric)].append(duration_copy / ns_per_s)
                                 aggregated_values[(cp_obj, metric_bytes)].append(bytes)
                                 if duration_overlap:
                                     cp_overlap = cp_obj.concat('OVERLAP', gpu__overlap=True, agg__disabled=True)
                                     aggregated_values[(cp_overlap, metric)].append(duration_overlap / ns_per_s)
-                            elif duration_overlap:
-                                sep = "->BLOCKING " if blocking else "->"
-                                cp_obj = Callpath(callpath + sep + kind + '->OVERLAP->' + overlap_name,
-                                                  gpu__overlap=True)
+                            elif overlap_name:
+                                cp_obj = cp_obj.concat('OVERLAP', overlap_name, gpu__overlap=True)
                                 aggregated_values[(cp_obj, metric)].append(duration_overlap / ns_per_s)
 
-                        for id, callpath, overlap_name, duration, bytes, blocking, duration_set in parsed.get_mem_sets():
+                        for (id, callpath, overlap_name, duration, bytes, blocking, duration_set,
+                             overlap_duration) in parsed.get_mem_sets():
                             pbar.update(0)
                             if duration:
+                                if duration_set and blocking:
+                                    duration -= duration_set
                                 aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
+                            sep = "->BLOCKING GPU MEMSET" if blocking else "->GPU MEMSET"
+                            cp_obj = Callpath(callpath + sep, gpu__mem_set=True)
                             if duration_set:
-                                sep = "->BLOCKING GPU MEMSET" if blocking else "->GPU MEMSET"
-                                cp_obj = Callpath(callpath + sep, gpu__mem_set=True)
                                 if blocking:
                                     cp_obj.tags['gpu__blocking__mem_set'] = True
-                                    cp_obj.tags['agg__usage_disabled'] = True
                                 else:
-                                    cp_obj.tags['agg__category'] = 'GPU MEM',
+                                    cp_obj.tags['agg__category'] = 'GPU',
                                     cp_obj.tags['gpu__blocking__mem_set'] = False
                                     cp_obj.tags['agg__category__comparison_cpu_gpu'] = None
+                                if overlap_duration:
+                                    duration_set -= overlap_duration
                                 aggregated_values[(cp_obj, metric)].append(duration_set / ns_per_s)
                                 aggregated_values[(cp_obj, metric_bytes)].append(bytes)
+                                if overlap_duration:
+                                    cp_overlap = cp_obj.concat('OVERLAP', gpu__overlap=True, agg__disabled=True,
+                                                               agg__usage__disabled=True)
+                                    aggregated_values[(cp_overlap, metric)].append(overlap_duration / ns_per_s)
+                            elif overlap_name:
+                                cp_overlap = cp_obj.concat('OVERLAP', overlap_name, gpu__overlap=True)
+                                aggregated_values[(cp_overlap, metric)].append(overlap_duration / ns_per_s)
 
-                        for id, callpath, name, duration in parsed.get_os_runtimes():
-                            pbar.update(0)
-                            if duration:
-                                aggregated_values[(Callpath(callpath), metric)].append(duration / ns_per_s)
-
-                        temp_correponding_agg_ncu_path = Path(path).with_suffix(".ncu-rep.agg")
-                        if temp_correponding_agg_ncu_path.exists():
-                            correponding_ncu_path = None
-                            correponding_agg_ncu_path = temp_correponding_agg_ncu_path
-                        else:
-                            correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
-                            if not correponding_ncu_path.exists():
-                                correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
-                        if not correponding_agg_ncu_path and correponding_ncu_path.exists() and not only_time:
-                            if pool is None:
-                                pool = multiprocessing.Pool()
-                            with NcuReport(correponding_ncu_path) as ncu_report:
-                                ignore_metrics = None
-                                if self.ignore_device_attributes:
-                                    ignore_metrics = ['device__attribute', 'nvlink__']
-                                measurements = ncu_report.get_measurements_parallel(parsed.get_kernelid_paths(), pool,
-                                                                                    ignore_metrics=ignore_metrics)
-                                for (callpath, metric_id), v in measurements.items():
-                                    aggregated_values[
-                                        (Callpath(callpath), Metric(ncu_report.string_table[metric_id]))].append(v)
+                    temp_correponding_agg_ncu_path = Path(path).with_suffix(".ncu-rep.agg")
+                    if temp_correponding_agg_ncu_path.exists():
+                        correponding_ncu_path = None
+                        correponding_agg_ncu_path = temp_correponding_agg_ncu_path
+                    else:
+                        correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
+                        if not correponding_ncu_path.exists():
+                            correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
+                    if not correponding_agg_ncu_path and correponding_ncu_path.exists() and not only_time:
+                        if pool is None:
+                            pool = multiprocessing.Pool()
+                        with NcuReport(correponding_ncu_path) as ncu_report:
+                            ignore_metrics = None
+                            if self.ignore_device_attributes:
+                                ignore_metrics = ['device__attribute', 'nvlink__']
+                            measurements = ncu_report.get_measurements_parallel(parsed.get_kernelid_paths(),
+                                                                                pool,
+                                                                                ignore_metrics=ignore_metrics)
+                            for (callpath, metric_id), v in measurements.items():
+                                aggregated_values[
+                                    (Callpath(callpath), Metric(ncu_report.string_table[metric_id]))].append(v)
 
                 # add measurements to experiment
                 for (callpath, metric), values in aggregated_values.items():
