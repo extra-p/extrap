@@ -10,7 +10,7 @@ import copy
 from typing import Optional, List
 
 import numpy
-from marshmallow import fields, post_load
+from marshmallow import fields, post_load, pre_dump
 
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.functions import ConstantFunction
@@ -63,6 +63,12 @@ class ModelSchema(BaseSchema):
         return Model(None)
 
     @post_load
+    def report_progress(self, data, **kwargs):
+        if 'progress_bar' in self.context:
+            self.context['progress_bar'].update()
+        return data
+
+    @pre_dump
     def report_progress(self, data, **kwargs):
         if 'progress_bar' in self.context:
             self.context['progress_bar'].update()
