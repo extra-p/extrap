@@ -71,41 +71,64 @@ class CoordinateTransformationDialog(QDialog):
                 widget.setParent(None)
 
     def accept(self) -> None:
-        old_params = self._experiment.parameters.copy()
+        old_param_names = [p.name for p in self._experiment.parameters]
+        new_param_names = [name_edit.text().strip() for name_edit in self._name_edits]
+
+        for i, (param_name, formula_edit) in enumerate(zip(new_param_names, self._formula_edits)):
+            if not param_name:
+                warnings.warn("Parameters cannot be empty.")
+                return
+            if old_param_names[i] != param_name \
+                    and Parameter(param_name) in self._experiment.parameters:
+                warnings.warn(f"Parameter {param_name} already exists, "
+                              "you cannot have two parameters with the same name.")
+                return
+            if new_param_names.count(param_name) > 1:
+                warnings.warn(f"Parameter {param_name} already exists, "
+                              "you cannot have two parameters with the same name.")
+                return
+
+        changed = False
         formulae = []
-        old_param_names = [p.name for p in old_params]
-        for i, (name_edit, formula_edit) in enumerate(zip(self._name_edits, self._formula_edits)):
+        for i, (param_name, formula_edit) in enumerate(zip(new_param_names, self._formula_edits)):
             try:
-                formula = sympy_parser.parse_expr(formula_edit.text().strip())
+                formula_input = formula_edit.text().strip()
+                if formula_input != old_param_names[i]:
+                    changed = True
+                formula = sympy_parser.parse_expr(formula_input)
             except SyntaxError:
-                warnings.warn(f"Syntax error in formula of parameter {old_params[i].name}")
+                warnings.warn(f"Syntax error in formula of parameter {old_param_names[i]}")
                 return
             logging.debug(f"Coordinate Transformation: Formula: {formula}")
             formulae.append(formula)
 
-        transformation = sympy.lambdify(old_param_names, Matrix(formulae))
+        if changed:
+            transformation = sympy.lambdify(old_param_names, Matrix(formulae))
+        else:
+            transformation = None
 
         super(CoordinateTransformationDialog, self).accept()
 
         def _process():
-            for i, (name_edit, formula_edit) in enumerate(zip(self._name_edits, self._formula_edits)):
-                if old_params[i].name != name_edit.text().strip():
-                    self._experiment.parameters[i] = Parameter(name_edit.text().strip())
-            self._experiment.coordinates = UniqueList(
-                Coordinate(transformation(*coord).reshape(-1)) for coord in self._experiment.coordinates)
-            with ProgressWindow(self, 'Transforming') as pbar:
-                pbar.total += len(self._experiment.measurements)
-                for modeler in self._experiment.modelers:
-                    pbar.total += len(modeler.models)
-                for m in self._experiment.measurements:
-                    measurement_list = self._experiment.measurements[m]
-                    for measurement in measurement_list:
-                        pbar.update(0)
-                        measurement.coordinate = Coordinate(transformation(*measurement.coordinate).reshape(-1))
-                    pbar.update()
-                for modeler in self._experiment.modelers:
-                    modeler.model_all(pbar, auto_append=False)
-                    pbar.total -= len(modeler.models)
+            for i, (param_name, formula_edit) in enumerate(zip(new_param_names, self._formula_edits)):
+                if old_param_names[i] != param_name:
+                    self._experiment.parameters[i] = Parameter(param_name)
+            if transformation:
+                self._experiment.coordinates = UniqueList(
+                    Coordinate(transformation(*coord).reshape(-1)) for coord in self._experiment.coordinates)
+                with ProgressWindow(self, 'Transforming') as pbar:
+                    pbar.total += len(self._experiment.measurements)
+                    for modeler in self._experiment.modelers:
+                        pbar.total += len(modeler.models)
+                    for m in self._experiment.measurements:
+                        measurement_list = self._experiment.measurements[m]
+                        for measurement in measurement_list:
+                            pbar.update(0)
+                            measurement.coordinate = Coordinate(transformation(*measurement.coordinate).reshape(-1))
+                        pbar.update()
+                    for modeler in self._experiment.modelers:
+                        modeler.model_all(pbar, auto_append=False)
+                        pbar.total -= len(modeler.models)
 
             self._main_widget.set_experiment(self._experiment)
 
