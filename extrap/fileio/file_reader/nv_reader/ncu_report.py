@@ -99,7 +99,7 @@ def _convert_and_map_measurements(data):
         for mv in res.MetricResults:
             value = _convert_metric_value(mv.MetricValue)
             if value is not None:
-                aggregated_values[(callpath + '->' + name + '->GPU', mv.NameId)] += value
+                aggregated_values[(callpath + '->' + name + '->GPU ' + name, mv.NameId)] += value
     return aggregated_values
 
 

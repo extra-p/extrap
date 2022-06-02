@@ -232,7 +232,7 @@ int process_files(std::vector<fs::path>& paths)
 									auto key = std::make_tuple(kernel_id, mv.nameid());
 									aggregate_values(num_files, fidx, key, value, aggregated_values_per_kernel);
 
-									auto key2 = std::make_tuple("UNMATCHED->" + name + "->GPU", mv.nameid());
+									auto key2 = std::make_tuple("UNMATCHED->" + name + "->GPU " + name, mv.nameid());
 									aggregate_values(num_files, fidx, key2, value, aggregated_values_per_call);
 								}
 							}
@@ -250,7 +250,7 @@ int process_files(std::vector<fs::path>& paths)
 								if (!std::holds_alternative<empty_value>(value)) {
 									auto key = std::make_tuple(kernel_id, mv.nameid());
 									aggregate_values(num_files, fidx, key, value, aggregated_values_per_kernel);
-									auto key2 = std::make_tuple(callpath + "->" + name + "->GPU", mv.nameid());
+									auto key2 = std::make_tuple(callpath + "->" + name + "->GPU " + name, mv.nameid());
 									aggregate_values(num_files, fidx, key2, value, aggregated_values_per_call);
 								}
 							}
@@ -334,7 +334,16 @@ int main(int argc, char* argv[])
 	}
 	std::vector<fs::path> paths;
 	for (int i = 1; i < argc; i++) {
-		paths.emplace_back(argv[i]);
+		if (fs::exists(argv[i])) {
+			paths.emplace_back(argv[i]);
+		}
+		else {
+			std::cout << "Path does not exist: " << argv[i] << " : Skipped." << std::endl;
+		}
+	}
+	if (paths.empty()) {
+		std::cout << "No valid paths given. Exiting." << std::endl;
+		return 2;
 	}
 	if (std::all_of(paths.cbegin(), paths.cend(), [](auto& path) {
 		return !fs::is_directory(path);
