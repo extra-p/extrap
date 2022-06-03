@@ -113,29 +113,30 @@ class ComparisonExperiment(Experiment):
         comparison_nodes = {}
         for metric, source_metrics in self.metrics_match.items():
             for node, source_nodes in call_tree_match.items():
-                origin_node = comparison_nodes.get(node)
-                if not origin_node:
-                    origin_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
-                    origin_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__comparison
-                    new_matches[origin_node] = [None] * len(source_measurements)
+                comparison_node = comparison_nodes.get(node)
+                if not comparison_node:
+                    comparison_node = Node(COMPARISON_NODE_NAME, node.path.concat(COMPARISON_NODE_NAME))
+                    comparison_node.path.tags[TAG_COMPARISON_NODE] = TAG_COMPARISON_NODE__comparison
+                    new_matches[comparison_node] = [None] * len(source_measurements)
                 for i, (s_node, s_metric, s_measurement, s_name) in enumerate(
                         zip(source_nodes, source_metrics, source_measurements, self.experiment_names)):
                     source_key = (s_node.path, s_metric)
                     if source_key in s_measurement:
                         name = f"[{s_name}] {node.name}"
-                        part_node = origin_node.find_child(node.name)
+                        part_node = comparison_node.find_child(name)
                         if not part_node:
-                            cp = origin_node.path.concat(name)
+                            cp = comparison_node.path.concat(name)
                             ct_node = Node(name, cp)
-                            origin_node.add_child_node(ct_node)
+                            comparison_node.add_child_node(ct_node)
                             new_match = [None] * len(source_measurements)
                             new_match[i] = s_node
                             new_matches[ct_node] = new_match
                         else:
                             cp = part_node.path
                         measurements[cp, metric] = s_measurement[source_key]
-                if origin_node.childs and node not in comparison_nodes:
-                    node.add_child_node(origin_node)
+                if comparison_node.childs and node not in comparison_nodes:
+                    node.add_child_node(comparison_node)
+                    comparison_nodes[node] = comparison_node
 
         call_tree_match.update(new_matches)
         return measurements
