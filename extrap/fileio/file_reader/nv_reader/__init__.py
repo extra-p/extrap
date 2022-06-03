@@ -224,27 +224,27 @@ class NsightFileReader(AbstractDirectoryReader):
                                 cp_overlap = cp_obj.concat('OVERLAP', overlap_name, gpu__overlap=True)
                                 aggregated_values[(cp_overlap, metric)].append(overlap_duration / ns_per_s)
 
-                    temp_correponding_agg_ncu_path = Path(path).with_suffix(".ncu-rep.agg")
-                    if temp_correponding_agg_ncu_path.exists():
-                        correponding_ncu_path = None
-                        correponding_agg_ncu_path = temp_correponding_agg_ncu_path
-                    else:
-                        correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
-                        if not correponding_ncu_path.exists():
-                            correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
-                    if not correponding_agg_ncu_path and correponding_ncu_path.exists() and not only_time:
-                        if pool is None:
-                            pool = multiprocessing.Pool()
-                        with NcuReport(correponding_ncu_path) as ncu_report:
-                            ignore_metrics = None
-                            if self.ignore_device_attributes:
-                                ignore_metrics = ['device__attribute', 'nvlink__']
-                            measurements = ncu_report.get_measurements_parallel(parsed.get_kernelid_paths(),
-                                                                                pool,
-                                                                                ignore_metrics=ignore_metrics)
-                            for (callpath, metric_id), v in measurements.items():
-                                aggregated_values[
-                                    (Callpath(callpath), Metric(ncu_report.string_table[metric_id]))].append(v)
+                        temp_correponding_agg_ncu_path = Path(path).with_suffix(".ncu-rep.agg")
+                        if temp_correponding_agg_ncu_path.exists():
+                            correponding_ncu_path = None
+                            correponding_agg_ncu_path = temp_correponding_agg_ncu_path
+                        else:
+                            correponding_ncu_path = Path(path).with_suffix(".nsight-cuprof-report")
+                            if not correponding_ncu_path.exists():
+                                correponding_ncu_path = Path(path).with_suffix(".ncu-rep")
+                        if not correponding_agg_ncu_path and correponding_ncu_path.exists() and not only_time:
+                            if pool is None:
+                                pool = multiprocessing.Pool()
+                            with NcuReport(correponding_ncu_path) as ncu_report:
+                                ignore_metrics = None
+                                if self.ignore_device_attributes:
+                                    ignore_metrics = ['device__attribute', 'nvlink__']
+                                measurements = ncu_report.get_measurements_parallel(parsed.get_kernelid_paths(),
+                                                                                    pool,
+                                                                                    ignore_metrics=ignore_metrics)
+                                for (callpath, metric_id), v in measurements.items():
+                                    aggregated_values[
+                                        (Callpath(callpath), Metric(ncu_report.string_table[metric_id]))].append(v)
 
                 # add measurements to experiment
                 for (callpath, metric), values in aggregated_values.items():
