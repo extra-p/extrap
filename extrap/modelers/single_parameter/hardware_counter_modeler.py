@@ -41,17 +41,11 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             "PAPI_TOT_INS",
             "PAPI_LD_INS",
             "PAPI_SR_INS",
-            "PAPI_BR_INS",
-            # "PAPI_BR_UCN",
-            # "PAPI_BR_CN",
-            # "PAPI_BR_TKN",
-            # "PAPI_BR_NTK",
-            # "PAPI_BR_MSP",
-            # "PAPI_BR_PRC",
+            #"PAPI_BR_INS",
+            "PAPI_BR_UCN",
+            "PAPI_BR_CN",
             "PAPI_DP_OPS",
             "PAPI_SP_OPS",
-            "PAPI_TLB_IM",
-            "PAPI_TLB_DM"
         ]
         self.coordinates = {}
         self.global_counter_data = {}
@@ -68,12 +62,10 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             "PAPI_LD_INS": [0] * measurements_per_sequence,
             "PAPI_SR_INS": [0] * measurements_per_sequence,
             "PAPI_BR_INS": [0] * measurements_per_sequence,
+            "PAPI_BR_UCN": [0] * measurements_per_sequence,
+            "PAPI_BR_CN": [0] * measurements_per_sequence,
             "PAPI_DP_OPS": [0] * measurements_per_sequence,
-            "PAPI_VEC_DP": [0] * measurements_per_sequence,
             "PAPI_SP_OPS": [0] * measurements_per_sequence,
-            "PAPI_VEC_SP": [0] * measurements_per_sequence,
-            "PAPI_TLB_IM": [0] * measurements_per_sequence,
-            "PAPI_TLB_DM": [0] * measurements_per_sequence,
         }
 
         for callpath in measurements:
@@ -148,6 +140,13 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                         for term in model.hypothesis.function.compound_terms:
                             runtime_function.add_compound_term(copy.copy(term))
                 hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
+                hypothesis.function.reset_coefficients()
+                hypothesis.compute_coefficients(measurement_sequence)
+                hypothesis.compute_cost(measurement_sequence)
+                # Remove terms with small coefficients
+                for term in hypothesis.function.compound_terms:
+                    if term.coefficient < 1e-5:
+                        hypothesis.function.compound_terms.remove(term)
                 hypothesis.compute_coefficients(measurement_sequence)
                 hypothesis.compute_cost(measurement_sequence)
                 runtime_model = Model(hypothesis, callpath, measurement_sequence[0].metric)
