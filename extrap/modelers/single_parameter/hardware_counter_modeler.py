@@ -138,7 +138,8 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                 for model in callpath_models[callpath]:
                     if model.metric in desired_metrics:
                         for term in model.hypothesis.function.compound_terms:
-                            runtime_function.add_compound_term(copy.copy(term))
+                            if not term.coefficient < 1e-5:
+                                runtime_function.add_compound_term(copy.copy(term))
                 hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
                 hypothesis.compute_coefficients(measurement_sequence)
