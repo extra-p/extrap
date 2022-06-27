@@ -108,7 +108,7 @@ You can find it in the examples folder: [examples/input.txt](examples/input.txt)
 Graphical user interface
 ------------------------
 Extra-P can be used in two ways: the graphical user interface or the command-line interface.
-From here on, we will describe basic how you can perform basic tasks with the graphical user interface.
+From here on, we will describe how you can perform basic tasks with the graphical user interface.
 
 ![Screenshot of Extra-P GUI](images/extra-p.png)
 
