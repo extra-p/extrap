@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,6 +11,7 @@ from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.TreeModel import TreeModel
+from extrap.gui.components.annotation_delegate import AnnotationDelegate
 
 
 # TODO Expand largest
@@ -20,6 +21,7 @@ class TreeView(QTreeView):
     def __init__(self, parent):
         super(TreeView, self).__init__(parent)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setItemDelegateForColumn(2, AnnotationDelegate())
         self.setAnimated(True)
         self.setAcceptDrops(True)
 
