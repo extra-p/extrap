@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -14,7 +14,7 @@ import re
 from enum import Enum
 from numbers import Number
 from token import ERRORTOKEN, NUMBER, NAME
-from typing import Union, Optional, Sequence, Mapping, Tuple, cast
+from typing import Union, Optional, Sequence, Mapping, Tuple
 
 import numpy
 import sympy
@@ -137,7 +137,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
     def __init__(self, function: Optional[Function]):
         super().__init__()
         self.original_function: Optional[Function] = function
-        self._params = cast(Tuple[sympy.Symbol], ())
+        self._params: Tuple[sympy.Symbol, ...] = ()
         self._ftype = CFType.NONE
         self._sympy_function: Optional[sympy.Expr] = None
         self._evaluation_function = None
@@ -148,6 +148,27 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             self.sympy_function = self.original_function.sympy_function
         else:
             self.sympy_function = self.original_function.evaluate(_params)
+
+    @classmethod
+    def from_string(cls, expr: str, auto_convert_params=False, ftype: CFType = None) -> ComputationFunction:
+        f = ComputationFunction(None)
+        sympy_f: sympy.Expr = sympy.parse_expr(expr, local_dict={'log2': sympy_functions.log2})
+        
+        if auto_convert_params:
+            org_params = sorted(list(sympy_f.free_symbols), key=lambda s: s.name)
+            sympy_params = sympy.symbols(tuple(PARAM_TOKEN + str(i) for i in range(len(org_params))))
+            f.sympy_function = sympy_f.subs({o: s for o, s in zip(org_params, sympy_params)})
+        else:
+            f.sympy_function = sympy_f
+
+        if ftype is not None:
+            f._ftype = ftype
+        elif len(sympy_f.free_symbols) > 1:
+            f._ftype = CFType.MULTI_PARAMETER
+        else:
+            f._ftype = CFType.SINGLE_MULTI_PARAMETER
+
+        return f
 
     @property
     def constant_coefficient(self):
@@ -165,7 +186,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
     @sympy_function.setter
     def sympy_function(self, val: sympy.Expr):
         self._sympy_function = sympy.sympify(val)
-        max_param_id = max((int(s.name[1:]) for s in self._sympy_function.atoms(sympy.Symbol)), default=-1)
+        max_param_id = max((int(s.name[1:]) for s in self._sympy_function.free_symbols), default=-1)
         if self._ftype == CFType.SINGLE_PARAMETER and max_param_id > 0:
             raise ValueError("This is a single parameter function, you cannot add a multi parameter sympy function.")
         self._params = sympy.symbols(tuple(PARAM_TOKEN + str(i) for i in range(max_param_id + 1)))
