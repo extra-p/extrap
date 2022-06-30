@@ -62,8 +62,9 @@ class TreeModel(QAbstractItemModel):
             return None
 
         getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
+        get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not getDecorationBoxes:
+        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
         call_tree_node = index.internalPointer().data()
@@ -100,14 +101,27 @@ class TreeModel(QAbstractItemModel):
 
             return self.main_widget.color_widget.getColor(relativeValue)
 
+        if get_tooltip_annotations:
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return "\n".join(ann.title(parameters=parameters,
+                                           parameter_values=parameter_values)
+                                 for ann in model.annotations)
+            return None
+
         if index.column() == 0:
             if self.selector_widget.show_parameters.isChecked():
                 return call_tree_node.name
             else:
                 return replace_method_parameters(call_tree_node.name)
         elif index.column() == 2:
-            # if len(model.getComments()) > 0:
-            #     return len(model.getComments())
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return [ann.icon(parameters=parameters,
+                                 parameter_values=parameter_values)
+                        for ann in model.annotations]
             return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
@@ -188,7 +202,7 @@ class TreeModel(QAbstractItemModel):
                 # Severity has logical column index 1, but is visually swapped by swapSections(0,1)
                 return "Severity"
             elif section == 2:
-                return "Comments"
+                return "Annotations"
             elif section == 3:
                 return "Value"
             elif section == 4:

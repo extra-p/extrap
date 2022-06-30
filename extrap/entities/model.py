@@ -1,9 +1,10 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 from __future__ import annotations
 
 import copy
@@ -12,6 +13,7 @@ from typing import Optional, List
 import numpy
 from marshmallow import fields, post_load, pre_dump
 
+from extrap.entities.annotations import Annotation, AnnotationSchema
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import Hypothesis, HypothesisSchema, ConstantHypothesis
@@ -29,6 +31,7 @@ class Model:
         self.callpath = callpath
         self.metric = metric
         self.measurements: Optional[List[Measurement]] = None
+        self.annotations: list[Annotation] = []
 
     @cached_property
     def predictions(self):
@@ -77,6 +80,7 @@ class ModelSchema(BaseSchema):
     hypothesis = fields.Nested(HypothesisSchema)
     callpath = fields.Nested(CallpathSchema)
     metric = fields.Nested(MetricSchema)
+    annotations = fields.List(fields.Nested(AnnotationSchema))
 
 
 class _NullModel(Model):
@@ -100,6 +104,7 @@ class _NullModelSchema(ModelSchema):
     callpath = fields.Constant(None, dump_only=True, load_only=True)
     metric = fields.Constant(None, dump_only=True, load_only=True)
     hypothesis = fields.Constant(None, dump_only=True, load_only=True)
+    annotations = fields.Constant(None, dump_only=True, load_only=True)
 
     @post_load
     def unpack_to_object(self, data, **kwargs):

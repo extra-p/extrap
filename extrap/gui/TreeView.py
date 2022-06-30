@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -16,6 +16,7 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
 from extrap.gui.TreeModel import TreeModel, TreeItem
+from extrap.gui.components.annotation_delegate import AnnotationDelegate
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -30,6 +31,7 @@ class TreeView(QTreeView):
         super(TreeView, self).__init__(parent)
         self._selector_widget = selector_widget
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setItemDelegateForColumn(2, AnnotationDelegate())
         self.setAnimated(True)
         self.setAcceptDrops(True)
 
