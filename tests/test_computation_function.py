@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -382,6 +382,33 @@ class TestDivideNo0(unittest.TestCase):
         self.assertRaises(ZeroDivisionError, divide_no0, 1, cfunction - cfunction)
         self.assertRaises(ZeroDivisionError, divide_no0, 10, cfunction - cfunction)
         self.assertRaises(ZeroDivisionError, divide_no0, 42, cfunction - cfunction)
+
+    def test_comparison(self):
+        def _check_comparison(bigger_function, smaller_function):
+            self.assertEqual(1, bigger_function.partial_compare(smaller_function))
+            self.assertEqual(0, bigger_function.partial_compare(bigger_function))
+            self.assertEqual(0, smaller_function.partial_compare(smaller_function))
+            self.assertEqual(-1, smaller_function.partial_compare(bigger_function))
+
+        func_4x2 = ComputationFunction.from_string("2+4*x**2", True)
+        func_2x2 = ComputationFunction.from_string("2+2*x**2", True)
+        func_x = ComputationFunction.from_string("20+10*x", True)
+        _check_comparison(func_4x2, func_x)
+        _check_comparison(func_4x2, func_2x2)
+        func20 = ComputationFunction.from_string("20", True)
+        _check_comparison(func_4x2, func20)
+        func40 = ComputationFunction.from_string("40", True)
+        _check_comparison(func40, func20)
+
+        func_4x2_6y = ComputationFunction.from_string("2+4*x**2+6*y", True)
+        func_2x2_3y = ComputationFunction.from_string("2+2*x**2+3*y", True)
+        _check_comparison(func_4x2_6y, func_2x2_3y)
+        func_4x2_m6y2 = ComputationFunction.from_string("2+4*x**2-6*y**2", True)
+        func_2x2_m3y2 = ComputationFunction.from_string("2+2*x**2-3*y**2", True)
+        self.assertEqual([1, -1], func_4x2_m6y2.partial_compare(func_2x2_m3y2))
+        self.assertEqual(0, func_4x2_m6y2.partial_compare(func_4x2_m6y2))
+        self.assertEqual(0, func_2x2_m3y2.partial_compare(func_2x2_m3y2))
+        self.assertEqual([-1, 1], func_2x2_m3y2.partial_compare(func_4x2_m6y2))
 
 
 if __name__ == '__main__':

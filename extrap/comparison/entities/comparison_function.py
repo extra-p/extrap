@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -39,7 +39,8 @@ class ComparisonFunction(TermlessFunction):
         #         return function_value[selected_function, :]
         #     else:
         #         return function_value[selected_function]
-        return np.max(function_value)
+        abs_values = np.abs(function_value)
+        return np.max(abs_values) - np.min(abs_values)
 
     def _pos_hash(self, pos):
         pos = np.cast['int32'](pos)

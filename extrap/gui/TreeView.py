@@ -14,6 +14,7 @@ from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
 from extrap.gui.TreeModel import TreeModel, TreeItem
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
@@ -130,7 +131,7 @@ class TreeView(QTreeView):
                 menu.addMenu(self._create_expand_collapse_menu(model))
                 if self._selector_widget.main_widget.developer_mode:
                     menu.addSeparator()
-                    menu.addMenu(self._create_developer_menu(model, selectedCallpath))
+                    menu.addMenu(self._create_developer_menu(model, selectedModel, selectedCallpath))
                 menu.addSeparator()  # --------------------------------------------------
                 # showCommentsAction = menu.addAction("Show Comments")
                 # showCommentsAction.setEnabled(
@@ -168,15 +169,17 @@ class TreeView(QTreeView):
             lambda: self.collapseRecursively(self.selectedIndexes()[0]))
         return expand_collapse_submenu
 
-    def _create_developer_menu(self, selectedModel, selectedCallpath):
+    def _create_developer_menu(self, treeModel, selectedModel, selectedCallpath):
         submenu = QMenu("Developer tools")
         showInfoAction = submenu.addAction("Show tags")
         showInfoAction.triggered.connect(
-            lambda: self.show_info(selectedModel, selectedCallpath.path))
+            lambda: self.show_info(treeModel, selectedCallpath.path))
         submenu.addSeparator()
         showInfoAction = submenu.addAction("Delete subtree")
         showInfoAction.triggered.connect(
-            lambda: self.delete_subtree(selectedModel))
+            lambda: self.delete_subtree(treeModel))
+        showInfoAction = submenu.addAction("Calculate complexity comparison")
+        showInfoAction.triggered.connect(lambda: self._calculate_complexity_comparison(selectedModel))
         return submenu
 
     def copy_model_to_clipboard(self, selectedModel):
@@ -292,3 +295,9 @@ class TreeView(QTreeView):
                     for modeler in experiment.modelers:
                         modeler.models.pop(key, None)
         self.model().valuesChanged()
+
+    def _calculate_complexity_comparison(self, model):
+        if not model:
+            return
+        if isinstance(model, ComparisonModel):
+            model.add_complexity_comparison_annotation()

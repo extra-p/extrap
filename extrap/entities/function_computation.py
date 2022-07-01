@@ -277,6 +277,35 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             return self._sympy_function.evalf(15) == other._sympy_function.evalf(15) and \
                    self._ftype is other._ftype
 
+    def partial_compare(self, other: Function):
+        if not isinstance(other, Function):
+            return NotImplemented
+        if not isinstance(other, ComputationFunction):
+            other = ComputationFunction(other)
+
+        params = self._params
+        if len(params) < len(other._params):
+            params = other._params
+
+        comp_func = self._sympy_function - other._sympy_function
+
+        if comp_func.is_number:
+            res = comp_func
+        else:
+            all_res = [sympy.limit(comp_func, p, sympy.oo) for p in params]
+            if all(r == all_res[0] for r in all_res):
+                res = all_res[0]
+            else:
+                res = [1 if r > 0 else (0 if r == 0 else -1) for r in all_res]
+                return res
+
+        if res > 0:
+            return 1
+        elif res == 0:
+            return 0
+        else:
+            return -1
+
     @classmethod
     def make_one(cls):
         return ComputationFunction(ConstantFunction(1))

@@ -1,10 +1,13 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
+import numbers
 from numbers import Number
 from typing import List, Mapping, Union, Sequence
 
@@ -97,6 +100,30 @@ class Function:
         else:
             return self.__dict__ == other.__dict__
 
+    def partial_compare(self, other: Function) -> Union[tuple[numbers.Number], numbers.Number]:
+        """
+        Compares this function to another function. The comparison happens per parameter, so if the result is the same
+        for all parameters that are not equal only one result is returned.
+        If the results for the parameters contradict each other all of them are returned in a tuple.
+
+        The comparison is based on the calculation of the limit.
+
+        :param other: The function that is compared with this function.
+        :return: A tuple of comparison results if the comparisons per parameter do not agree.
+                 If the comparisons agree, only on result is returned.
+                 A comparison result is a number that is either positive, negative or 0.
+                 If this function is greater than the other function a positive number is returned.
+                 If both functions are equal 0 is returned.
+                 If this function is lower than the other function a negative number is returned.
+        """
+        from extrap.entities.function_computation import ComputationFunction
+        if not isinstance(other, Function):
+            return NotImplemented
+        elif self is other:
+            return 0
+        else:
+            return ComputationFunction(self).partial_compare(other)
+
 
 class TermlessFunction(Function):
 
@@ -130,6 +157,14 @@ class ConstantFunction(TermlessFunction):
         """
         return str(self.constant_coefficient)
 
+    def partial_compare(self, other):
+        if isinstance(other, ConstantFunction):
+            return self.constant_coefficient - other.constant_coefficient
+        elif isinstance(other, SingleParameterFunction):
+            return other.lead_order_term.coefficient
+        else:
+            super().partial_compare(other)
+
 
 class SingleParameterFunction(Function):
     """
@@ -144,6 +179,22 @@ class SingleParameterFunction(Function):
         if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
             parameter_value = parameter_value[0]
         return super().evaluate(parameter_value)
+
+    @property
+    def lead_order_term(self):
+        max_exponents = [0, 0]
+        max_term = None
+        for cterm in self.compound_terms:
+            term_types_order = ['polynomial', 'logarithm']
+            exponents = [0, 0]
+            for term in cterm.simple_terms:
+                for i, tt in enumerate(term_types_order):
+                    if term.term_type == tt:
+                        exponents[i] += term.exponent
+            if exponents > max_exponents:
+                max_exponents = exponents
+                max_term = cterm
+        return max_term
 
 
 class MultiParameterFunction(Function):
