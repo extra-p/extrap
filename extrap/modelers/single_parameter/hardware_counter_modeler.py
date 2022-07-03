@@ -109,6 +109,14 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             callpath_data[callpath].append(measurement_sequence)
         return callpath_data
 
+    def check_model(self, model, coordinate, threshold):
+        model_function = model.hypothesis.function
+        value = model_function.evaluate(coordinate)
+
+        deviation = abs(value / model_function.constant_coefficient)
+
+        return deviation >= threshold
+
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar:...) -> Sequence[Model]:
         self.coordinates = [measurement.coordinate for measurement in measurements[0]]
         #self.global_counter_data = self.accumulate_counter_data(measurements)
@@ -118,6 +126,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         callpath_models = {}
         single_param_modeler = SingleParameterModeler()
         models = []
+        epsilon = 1.05
 
         for measurement_sequence in progress_bar(measurements):
             callpath = measurement_sequence[0].callpath
@@ -136,20 +145,14 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                 desired_metrics = self.determine_relevant_counters(callpath)
                 runtime_function = SingleParameterFunction()
                 for model in callpath_models[callpath]:
-                    if model.metric in desired_metrics:
+                    if model.metric in desired_metrics and self.check_model(model, self.coordinates[-1], epsilon):
                         for term in model.hypothesis.function.compound_terms:
-                            if not term.coefficient < 1e-5:
-                                runtime_function.add_compound_term(copy.copy(term))
+                            runtime_function.add_compound_term(copy.copy(term))
                 hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
                 hypothesis.compute_coefficients(measurement_sequence)
                 hypothesis.compute_cost(measurement_sequence)
-                # Remove terms with small coefficients
-                for term in hypothesis.function.compound_terms:
-                    if term.coefficient < 1e-5:
-                        hypothesis.function.compound_terms.remove(term)
-                hypothesis.compute_coefficients(measurement_sequence)
-                hypothesis.compute_cost(measurement_sequence)
+                
                 runtime_model = Model(hypothesis, callpath, measurement_sequence[0].metric)
                 runtime_model.measurements = measurement_sequence
                 models.append(runtime_model)
