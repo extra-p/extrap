@@ -77,12 +77,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
     def determine_relevant_counters(self, callpath) -> list:
         callpath_data = self.callpath_counter_data[callpath]
-        tot_ins = next(filter(
-            lambda x: str(x[0].metric) == "PAPI_TOT_INS",
-            callpath_data
-        ))
-        tot_ins_sum = sum([measurement.mean for measurement in tot_ins])
-    
+        
         relevant_counters = []
         max_counter_amount = 3
         counter_weights = []
@@ -90,8 +85,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             metric = measurements[0].metric
             if str(metric) in self.counter_list and str(metric) != "PAPI_TOT_INS":
                 val_sum = sum([measurement.mean for measurement in measurements])
-                weight = val_sum / tot_ins_sum
-                counter_weights.append((weight, metric))
+                counter_weights.append((val_sum, metric))
                 
         counter_weights.sort(
             key = lambda x: x[0],
