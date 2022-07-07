@@ -89,6 +89,7 @@ class MultiParameterModeler(AbstractModeler, ABC):
 
 
 class ModelerSchema(BaseSchema):
+    _CONFIG_fail_silently_on_missing_sub_schema = True
     use_median = fields.Bool()
 
     def create_object(self):

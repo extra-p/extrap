@@ -51,6 +51,7 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
 class BaseSchema(Schema):
     _subclasses = None
     type_field = '$type'
+    _CONFIG_fail_silently_on_missing_sub_schema = False
 
     def create_object(self):
         raise NotImplementedError(f"{type(self)} has no create object method.")
@@ -77,6 +78,8 @@ class BaseSchema(Schema):
             try:
                 schema = self._subclasses[type_]()
             except KeyError:
+                if self._CONFIG_fail_silently_on_missing_sub_schema:
+                    return None
                 raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
             return schema.load(data, **kwargs)
         else:
