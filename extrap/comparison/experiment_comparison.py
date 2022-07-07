@@ -7,6 +7,8 @@
 
 from typing import List, Sequence
 
+from marshmallow import fields
+
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
 from extrap.comparison.matchers import AbstractMatcher
@@ -33,11 +35,11 @@ class ComparisonError(RecoverableError):
 class ComparisonExperiment(Experiment):
     def __init__(self, exp1: Experiment, exp2: Experiment, matcher: AbstractMatcher):
         super(ComparisonExperiment, self).__init__()
+        self.experiment_names: List[str] = ['exp1', 'exp2']
         if exp1 is None and exp2 is None:
             self.compared_experiments: List[Experiment] = []
             return
         self.compared_experiments: List[Experiment] = [exp1, exp2]
-        self.experiment_names: List[str] = ['exp1', 'exp2']
         self.matcher = matcher
         self.exp1 = exp1
         self.exp2 = exp2
@@ -192,6 +194,7 @@ class ComparisonExperiment(Experiment):
 
 class ComparisonExperimentSchema(ExperimentSchema):
     callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList)
+    experiment_names = fields.List(fields.String())
 
     def create_object(self):
         return ComparisonExperiment(None, None, None)

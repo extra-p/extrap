@@ -8,6 +8,7 @@
 import signal
 from enum import Enum
 from functools import partial
+from numbers import Number
 from pathlib import Path
 from typing import Optional, Sequence, Tuple
 
@@ -37,6 +38,7 @@ from extrap.gui.components import file_dialog
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.event import Event
 
 DEFAULT_MODEL_NAME = "Default Model"
 
@@ -63,7 +65,9 @@ class MainWidget(QMainWindow):
         self.model_color_map = ModelColorMap()
         self.font_size = 6
         self.experiment_change = True
+        self.min_max_value_updated_event = Event(Number, int)
         self.initUI()
+
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
         # switch for using mean or median measurement values for modeling
@@ -108,6 +112,7 @@ class MainWidget(QMainWindow):
         # bottom widget
         dock = QDockWidget("Color Info", self)
         self.color_widget = ColorWidget()
+        self.min_max_value_updated_event += self.color_widget.update_min_max
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
@@ -175,7 +180,7 @@ class MainWidget(QMainWindow):
                   'Dominating models in a 3D S&catter plot',
                   'Max &z as a single surface plot', 'Dominating models and max z as &heat map',
                   'Selected models in c&ontour plot', 'Selected models in &interpolated contour plots',
-                  '&Measurement points', 'Line &graph plus']
+                  '&Measurement points', 'Line &graph plus', 'C&omparison view']
         graph_actions = [QAction(g, self) for g in graphs]
         for i, g in enumerate(graph_actions):
             slot = (lambda k: lambda: self.data_display.reloadTabs((k,)))(i)
@@ -451,7 +456,7 @@ class MainWidget(QMainWindow):
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
-            self.color_widget.update_min_max(*self.selector_widget.update_min_max_value())
+            self.min_max_value_updated_event(*self.selector_widget.update_min_max_value())
 
     def show_about_dialog(self):
         QMessageBox.about(self, "About " + extrap.__title__,

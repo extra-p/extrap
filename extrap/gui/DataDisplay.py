@@ -5,6 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 from collections import defaultdict
 
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -23,6 +25,7 @@ from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
 #####################################################################
+from extrap.gui.plots.comparison_plot import ComparisonPlot
 from extrap.gui.plots.line_graph_plus import LineGraphPlus
 
 MIN_PARAM_VALUE = 0.01
@@ -269,7 +272,7 @@ class DataDisplayManager(QWidget):
     def __init__(self, main_widget, parent):
         super(DataDisplayManager, self).__init__(parent)
         self.main_widget = main_widget
-        self.axis_selections = list()
+        self.axis_selections: list[AxisSelection] = list()
         self.value_selections = list()
         self._experiment = None
         self.parameters = []
@@ -330,7 +333,8 @@ class DataDisplayManager(QWidget):
             6: ("Contour plot", IsolinesDisplay),
             7: ("Interpolated contour", InterpolatedContourDisplay),
             8: ("Measurement points", MeasurementPointsPlot),
-            9: ("Line graph plus", LineGraphPlus)
+            9: ("Line graph plus", LineGraphPlus),
+            10: ("Comparison plot", ComparisonPlot)
         }
 
         for i in selectedCheckBoxesIndex:
