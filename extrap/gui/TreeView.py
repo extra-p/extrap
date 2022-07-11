@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from PySide2.QtCore import *  # @UnusedWildImport
@@ -16,8 +17,10 @@ from PySide2.QtWidgets import *  # @UnusedWildImport
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
+from extrap.entities.metric import Metric
 from extrap.gui.TreeModel import TreeModel, TreeItem
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
+from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -35,6 +38,7 @@ class TreeView(QTreeView):
         self.setItemDelegateForColumn(2, AnnotationDelegate())
         self.setAnimated(True)
         self.setAcceptDrops(True)
+        self._filter_1_percent_time_state = False
 
     def collapseRecursively(self, index):
         if not index.isValid():
@@ -180,6 +184,10 @@ class TreeView(QTreeView):
             lambda: self.delete_subtree(treeModel))
         showInfoAction = submenu.addAction("Calculate complexity comparison")
         showInfoAction.triggered.connect(lambda: self._calculate_complexity_comparison(selectedModel))
+        showInfoAction = submenu.addAction("Filter: at least 1% of total time")
+        showInfoAction.setCheckable(True)
+        showInfoAction.setChecked(self._filter_1_percent_time_state)
+        showInfoAction.toggled.connect(lambda on: self._filter_1_percent_time(on, treeModel))
         return submenu
 
     def copy_model_to_clipboard(self, selectedModel):
@@ -301,3 +309,37 @@ class TreeView(QTreeView):
             return
         if isinstance(model, ComparisonModel):
             model.add_complexity_comparison_annotation()
+
+    def _filter_1_percent_time(self, on, tree_model):
+        self._filter_1_percent_time_state = on
+        filter_id_percent_time = 'develop__filter_1_percent_time'
+        if on:
+            model_set = self._selector_widget.getCurrentModel()
+            use_median = model_set.modeler.use_median
+            t_metric = Metric('time')
+            total_time = defaultdict(int)
+            for (callpath,
+                 metric), measurements in self._selector_widget.main_widget.getExperiment().measurements.items():
+                if metric != t_metric:
+                    continue
+                if callpath.lookup_tag(SumAggregation.TAG_CATEGORY) is None and \
+                        not callpath.lookup_tag(SumAggregation.TAG_USAGE_DISABLED, False):
+                    for measurement in measurements:
+                        total_time[measurement.coordinate] += measurement.value(use_median)
+
+            def filter_(node):
+                if model_set is None or node.path is None:
+                    return True
+
+                model = model_set.models.get((node.path, t_metric))
+                if model:
+                    ratios = [measurement.value(use_median) / total_time[measurement.coordinate] for measurement in
+                              model.measurements]
+                    node.path.tags['devel__filter__ratio'] = ratios
+                    return any(r >= 0.01 for r in ratios)
+                else:
+                    return True
+
+            tree_model.item_filter.put_condition(filter_id_percent_time, filter_)
+        else:
+            tree_model.item_filter.remove_condition(filter_id_percent_time)
