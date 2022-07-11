@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,7 +13,8 @@ import numpy as np
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
-from extrap.entities.functions import MultiParameterFunction
+from extrap.entities.functions import MultiParameterFunction, ConstantFunction
+from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm
@@ -511,6 +512,25 @@ class TestFindBestMeasurements(unittest.TestCase):
                                 {Coordinate(20), Coordinate(30), Coordinate(40), Coordinate(50), Coordinate(60)})
             self.assertSetEqual(set(m.coordinate for m in f_msm[1]),
                                 {Coordinate(1), Coordinate(2), Coordinate(3), Coordinate(4), Coordinate(5)})
+
+    def test_2parameters_example(self):
+        data = [((48, 262144), 4.94252), ((96, 262144), 4.83981), ((144, 262144), 4.85823), ((192, 262144), 4.83241),
+                ((240, 262144), 5.58763), ((288, 262144), 4.68139), ((48, 524288), 5.37036), ((96, 524288), 5.38705),
+                ((144, 524288), 5.298), ((192, 524288), 5.39656), ((240, 524288), 5.11765), ((288, 524288), 5.15787),
+                ((48, 1048576), 5.95559), ((96, 1048576), 5.61095), ((144, 1048576), 5.25399),
+                ((192, 1048576), 5.24275), ((240, 1048576), 5.2352), ((288, 1048576), 5.24489), ((48, 2097152), 6.5095),
+                ((96, 2097152), 5.39807), ((144, 2097152), 5.40696), ((192, 2097152), 5.39214),
+                ((240, 2097152), 5.39057), ((288, 2097152), 5.39554), ((48, 4194304), 7.26402),
+                ((96, 4194304), 7.27444), ((144, 4194304), 7.28555), ((192, 4194304), 7.26867),
+                ((240, 4194304), 7.29042), ((288, 4194304), 7.31057)]
+        measurements = [Measurement(Coordinate(c), None, None, [v]) for c, v in data]
+        reference = ConstantHypothesis(ConstantFunction(), False)
+        reference.compute_coefficients(measurements)
+        reference.compute_cost(measurements)
+        modeler = MultiParameterModeler()
+        hypothesis = modeler.create_model(measurements).hypothesis
+        self.assertLessEqual(hypothesis.RSS, reference.RSS)
+        self.assertLessEqual(hypothesis.SMAPE, reference.SMAPE)
 
     def test_3parameters_basic(self):
         experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')

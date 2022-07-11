@@ -52,8 +52,12 @@ class ExperimentReader(FileReader):
 
 
 def write_experiment(experiment, path, progress_bar=DUMMY_PROGRESS):
-    progress_bar.total += 3
+    progress_bar.update(0)
+    progress_bar.total += 4
     schema = ExperimentSchema()
+    progress_bar.total += sum((len(m.models) for m in experiment.modelers), 0)
+    schema.set_progress_bar(progress_bar)
+    progress_bar.update()
     try:
         with ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as file:
             progress_bar.update()

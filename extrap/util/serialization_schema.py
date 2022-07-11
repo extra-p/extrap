@@ -10,7 +10,7 @@ import math
 import typing
 from abc import abstractmethod, ABC
 from collections.abc import Mapping
-from typing import Union, Sequence
+from typing import Union, Sequence, Tuple, Type
 
 from marshmallow import post_load, fields, ValidationError, EXCLUDE
 from marshmallow.base import SchemaABC
@@ -30,10 +30,10 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
         unknown = EXCLUDE
 
     @abstractmethod
-    def create_object(self):
+    def create_object(self) -> Union[object, Tuple[type(NotImplemented), Type]]:
         raise NotImplementedError()
 
-    def postprocess_object(self, obj):
+    def postprocess_object(self, obj: object) -> object:
         return obj
 
     @post_load
@@ -52,11 +52,15 @@ class BaseSchema(Schema):
     type_field = '$type'
 
     def create_object(self):
-        raise NotImplementedError()
+        raise NotImplementedError(f"{type(self)} has no create object method.")
 
     def __init_subclass__(cls, **kwargs):
         if not cls.__is_direct_subclass(cls, BaseSchema):
-            cls._subclasses[type(cls().create_object()).__name__] = cls
+            obj = cls().create_object()
+            if isinstance(obj, tuple) and obj[0] == NotImplemented:
+                cls._subclasses[obj[1].__name__] = cls
+            else:
+                cls._subclasses[type(cls().create_object()).__name__] = cls
         else:
             cls._subclasses = {}
         super().__init_subclass__(**kwargs)
@@ -65,6 +69,10 @@ class BaseSchema(Schema):
     def __is_direct_subclass(subclass, classs_):
         return subclass.mro()[1] == classs_
 
+    def on_missing_sub_schema(self, type_, data, **kwargs):
+        """Handles missing subschema. May return a parsed object to fail gracefully."""
+        raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
+
     def load(self, data, **kwargs):
         if self.__is_direct_subclass(type(self), BaseSchema) and self.type_field in data:
             type_ = data[self.type_field]
@@ -72,7 +80,7 @@ class BaseSchema(Schema):
             try:
                 schema = self._subclasses[type_]()
             except KeyError:
-                raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
+                return self.on_missing_sub_schema(type, data, **kwargs)
             return schema.load(data, **kwargs)
         else:
             return super(BaseSchema, self).load(data, **kwargs)
