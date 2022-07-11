@@ -51,7 +51,6 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
 class BaseSchema(Schema):
     _subclasses = None
     type_field = '$type'
-    _CONFIG_fail_silently_on_missing_sub_schema = False
 
     def create_object(self):
         raise NotImplementedError(f"{type(self)} has no create object method.")
@@ -71,6 +70,10 @@ class BaseSchema(Schema):
     def __is_direct_subclass(subclass, classs_):
         return subclass.mro()[1] == classs_
 
+    def on_missing_sub_schema(self, type_, data, **kwargs):
+        """Handles missing subschema. May return a parsed object to fail gracefully."""
+        raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
+
     def load(self, data, **kwargs):
         if self.__is_direct_subclass(type(self), BaseSchema) and self.type_field in data:
             type_ = data[self.type_field]
@@ -78,9 +81,7 @@ class BaseSchema(Schema):
             try:
                 schema = self._subclasses[type_]()
             except KeyError:
-                if self._CONFIG_fail_silently_on_missing_sub_schema:
-                    return None
-                raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
+                return self.on_missing_sub_schema(type, data, **kwargs)
             return schema.load(data, **kwargs)
         else:
             return super(BaseSchema, self).load(data, **kwargs)

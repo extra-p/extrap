@@ -6,6 +6,8 @@
 # See the LICENSE file in the base directory for details.
 
 import copy
+import logging
+import warnings
 from abc import ABC, abstractmethod
 from typing import Sequence, Optional
 
@@ -89,11 +91,16 @@ class MultiParameterModeler(AbstractModeler, ABC):
 
 
 class ModelerSchema(BaseSchema):
-    _CONFIG_fail_silently_on_missing_sub_schema = True
     use_median = fields.Bool()
 
+    def on_missing_sub_schema(self, type_, data, **kwargs):
+        warnings.warn(f"Loaded unknown modeler of type {type_}")
+        data['type_'] = type_
+        return super(BaseSchema, self).load(data, **kwargs)
+
     def create_object(self):
-        raise NotImplementedError()
+        logging.debug(f"Created placeholder for unknown modeler")
+        return _EmptyModeler(False)
 
 
 class _EmptyModeler(AbstractModeler):
