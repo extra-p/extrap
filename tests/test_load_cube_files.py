@@ -13,7 +13,7 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2, SmallKernelFilter
 from extrap.util.exceptions import FileFormatError
 
 
@@ -125,6 +125,21 @@ class TestCubeFileLoader(unittest.TestCase):
             warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
             CubeFileReader2().read_cube_file('data/cubeset/multi_parameter', 'weak')
         self.assertFalse(record)
+
+    def test_small_kernel_filter(self):
+        reader = CubeFileReader2()
+        reader.small_kernel_filter = SmallKernelFilter(0.1, Metric('time'))
+        experiment = reader.read_cube_file('data/cubeset/single_parameter', 'weak')
+        experiment_ref = CubeFileReader2().read_cube_file('data/cubeset/single_parameter', 'weak')
+        self.assertListEqual(experiment_ref.parameters, experiment.parameters)
+        self.assertListEqual(experiment_ref.coordinates, experiment.coordinates)
+        self.assertListEqual(experiment_ref.metrics, experiment.metrics)
+        self.assertNotEqual({}, experiment.measurements)
+        self.assertEqual(experiment_ref.measurements, {**experiment_ref.measurements, **experiment.measurements})
+        self.assertNotEqual(experiment_ref.measurements, experiment.measurements)
+        self.assertNotEqual([], experiment.callpaths)
+        self.assertGreater(len(experiment_ref.callpaths), len(experiment.callpaths))
+        self.assertTrue(all(cp in experiment_ref.callpaths for cp in experiment.callpaths))
 
 
 if __name__ == '__main__':
