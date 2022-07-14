@@ -5,29 +5,22 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from itertools import accumulate
-from subprocess import call
-import warnings
-import numpy as np
 import copy
+from typing import Sequence
 
-from typing import Sequence, Optional, Tuple
-from extrap.entities import measurement
-
+from extrap.entities.functions import SingleParameterFunction
+from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
-from extrap.entities.functions import Function, SingleParameterFunction
-from extrap.entities.metric import Metric
-from extrap.entities.hypotheses import Hypothesis, SingleParameterHypothesis
-from extrap.entities.callpath import Callpath
-from extrap.modelers.abstract_modeler import AbstractModeler
-from extrap.modelers.single_parameter.basic import SingleParameterModeler
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
+from extrap.modelers.single_parameter.basic import SingleParameterModeler
+from extrap.util.progress_bar import DUMMY_PROGRESS
+
 
 class HardwareCounterModeler(AbstractSingleParameterModeler):
     NAME = 'Hardware-Counter'
     DESCRIPTION = 'Creates a runtime model based on data of hardware performance counters'
-    
+
     counter_data = {}
 
     def __init__(self):
@@ -41,7 +34,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             "PAPI_TOT_INS",
             "PAPI_LD_INS",
             "PAPI_SR_INS",
-            #"PAPI_BR_INS",
+            # "PAPI_BR_INS",
             "PAPI_BR_UCN",
             "PAPI_BR_CN",
             "PAPI_DP_OPS",
@@ -50,7 +43,6 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         self.coordinates = {}
         self.global_counter_data = {}
         self.callpath_counter_data = {}
-        
 
     def accumulate_counter_data(self, measurements: Sequence[Sequence[Measurement]]) -> dict:
         measurements_per_sequence = len(measurements[0])
@@ -71,13 +63,14 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         for callpath in measurements:
             current_metric = str(callpath[0].metric)
             if current_metric in counter_data:
-                counter_data[current_metric] = list(map(lambda x: x[0] + x[1].mean, zip(counter_data[current_metric], callpath)))
-                
+                counter_data[current_metric] = list(
+                    map(lambda x: x[0] + x[1].mean, zip(counter_data[current_metric], callpath)))
+
         return counter_data
 
     def determine_relevant_counters(self, callpath) -> list:
         callpath_data = self.callpath_counter_data[callpath]
-        
+
         relevant_counters = []
         max_counter_amount = 3
         counter_weights = []
@@ -86,10 +79,10 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             if str(metric) in self.counter_list and str(metric) != "PAPI_TOT_INS":
                 val_sum = sum([measurement.mean for measurement in measurements])
                 counter_weights.append((val_sum, metric))
-                
+
         counter_weights.sort(
-            key = lambda x: x[0],
-            reverse = True
+            key=lambda x: x[0],
+            reverse=True
         )
         relevant_counters = [tpl[1] for tpl in counter_weights[:max_counter_amount]]
         return relevant_counters
@@ -111,10 +104,10 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
         return deviation >= threshold
 
-    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar:...) -> Sequence[Model]:
+    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
         self.coordinates = [measurement.coordinate for measurement in measurements[0]]
-        #self.global_counter_data = self.accumulate_counter_data(measurements)
-        #self.counter_weights = self.determine_counter_weights(measurements)
+        # self.global_counter_data = self.accumulate_counter_data(measurements)
+        # self.counter_weights = self.determine_counter_weights(measurements)
         self.callpath_counter_data = self.accumulate_callpath_data(measurements)
         counter_weight_distribution = {}
         callpath_models = {}
@@ -146,7 +139,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                 hypothesis.function.reset_coefficients()
                 hypothesis.compute_coefficients(measurement_sequence)
                 hypothesis.compute_cost(measurement_sequence)
-                
+
                 runtime_model = Model(hypothesis, callpath, measurement_sequence[0].metric)
                 runtime_model.measurements = measurement_sequence
                 models.append(runtime_model)
@@ -156,7 +149,3 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                         models.append(model)
 
         return models
-            
-
-
-        
