@@ -100,6 +100,8 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         model_function = model.hypothesis.function
         value = model_function.evaluate(coordinate)
 
+        if model_function.constant_coefficient == 0:
+            return True
         deviation = abs(value / model_function.constant_coefficient)
 
         return deviation >= threshold
