@@ -15,12 +15,15 @@ from extrap.entities.model import Model
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
 from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.modelers.modeler_options import modeler_options
 
 
+@modeler_options
 class HardwareCounterModeler(AbstractSingleParameterModeler):
     NAME = 'Hardware-Counter'
     DESCRIPTION = 'Creates a runtime model based on data of hardware performance counters'
 
+    number_used_counters = modeler_options.add(3, int, range=range(1, 5))
     counter_data = {}
 
     def __init__(self):
@@ -31,10 +34,8 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
         self.min_measurement_points = 5
         self.counter_list = [
-            "PAPI_TOT_INS",
             "PAPI_LD_INS",
             "PAPI_SR_INS",
-            # "PAPI_BR_INS",
             "PAPI_BR_UCN",
             "PAPI_BR_CN",
             "PAPI_DP_OPS",
@@ -60,11 +61,11 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             "PAPI_SP_OPS": [0] * measurements_per_sequence,
         }
 
-        for callpath in measurements:
-            current_metric = str(callpath[0].metric)
+        for measurement in measurements:
+            current_metric = str(measurement[0].metric)
             if current_metric in counter_data:
                 counter_data[current_metric] = list(
-                    map(lambda x: x[0] + x[1].mean, zip(counter_data[current_metric], callpath)))
+                    map(lambda x: x[0] + x[1].mean, zip(counter_data[current_metric], measurement)))
 
         return counter_data
 
@@ -72,11 +73,10 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         callpath_data = self.callpath_counter_data[callpath]
 
         relevant_counters = []
-        max_counter_amount = 3
         counter_weights = []
         for measurements in callpath_data:
             metric = measurements[0].metric
-            if str(metric) in self.counter_list and str(metric) != "PAPI_TOT_INS":
+            if str(metric) in self.counter_list:
                 val_sum = sum([measurement.mean for measurement in measurements])
                 counter_weights.append((val_sum, metric))
 
@@ -84,7 +84,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             key=lambda x: x[0],
             reverse=True
         )
-        relevant_counters = [tpl[1] for tpl in counter_weights[:max_counter_amount]]
+        relevant_counters = [tpl[1] for tpl in counter_weights[:self.number_used_counters]]
         return relevant_counters
 
     def accumulate_callpath_data(self, measurements: Sequence[Sequence[Measurement]]) -> dict:
