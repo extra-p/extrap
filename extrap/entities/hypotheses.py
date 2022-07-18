@@ -8,6 +8,7 @@
 from typing import Sequence
 
 import numpy
+import scipy.optimize
 from marshmallow import fields
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
@@ -88,7 +89,7 @@ class Hypothesis:
             raise RuntimeError("Costs are not calculated.")
         return self._RE
 
-    def compute_coefficients(self, measurements: Sequence[Measurement]):
+    def compute_coefficients(self, measurements: Sequence[Measurement], *, no_negative_coefficients=False):
         raise NotImplementedError()
 
     def compute_cost(self, measurements: Sequence[Measurement]):
@@ -203,7 +204,7 @@ class ConstantHypothesis(Hypothesis):
     def AR2(self):
         return 1
 
-    def compute_coefficients(self, measurements: Sequence[Measurement]):
+    def compute_coefficients(self, measurements: Sequence[Measurement], *, no_negative_coefficients=False):
         """
         Computes the constant_coefficients of the function using the mean.
         """
@@ -274,7 +275,7 @@ class SingleParameterHypothesis(Hypothesis):
         abssum = abs(actual) + abs(predicted)
         if abssum != 0:
             self._SMAPE += (abs(difference) / abssum * 2) / \
-                           len(training_measurements) * 100
+                len(training_measurements) * 100
         self._costs_are_calculated = True
 
     def compute_cost(self, measurements: Sequence[Measurement]):
@@ -313,7 +314,7 @@ class SingleParameterHypothesis(Hypothesis):
         self._AR2 = (1.0 - (1.0 - adjR) *
                      (len(measurements) - 1.0) / degrees_freedom)
 
-    def compute_coefficients(self, measurements: Sequence[Measurement]):
+    def compute_coefficients(self, measurements: Sequence[Measurement], *, no_negative_coefficients=False):
         """
         Computes the coefficients of the function using the least squares solution.
         """
@@ -333,7 +334,10 @@ class SingleParameterHypothesis(Hypothesis):
         A = numpy.concatenate(a_list, axis=0).T
         B = b_list
 
-        X, _, _, _ = numpy.linalg.lstsq(A, B, None)
+        if no_negative_coefficients:
+            X, _ = scipy.optimize.nnls(A, B)
+        else:
+            X, _, _, _ = numpy.linalg.lstsq(A, B, None)
         # logging.debug("Coefficients:"+str(X))
 
         # setting the coefficients for the hypothesis
@@ -419,7 +423,7 @@ class MultiParameterHypothesis(Hypothesis):
         degrees_freedom = len(measurements) - counter - 1
         self._AR2 = (1.0 - (1.0 - adjR) * (len(measurements) - 1.0) / degrees_freedom)
 
-    def compute_coefficients(self, measurements):
+    def compute_coefficients(self, measurements, *, no_negative_coefficients=False):
         """
         Computes the coefficients of the function using the least squares solution.
         """
@@ -446,8 +450,8 @@ class MultiParameterHypothesis(Hypothesis):
         B = numpy.array(b_list)
         try:
             coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
-            if rank < A.shape[1]: # if rcond is to big the rank of A collapses and the coefficients are wrong
-                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1) # retry with rcond = machine precision
+            if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)  # retry with rcond = machine precision
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
             coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
