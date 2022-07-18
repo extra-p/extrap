@@ -9,9 +9,10 @@ from functools import partial
 from threading import Event
 
 from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide2.QtWidgets import *
+from extrap.entities.metric import Metric  # @UnusedWildImport
 
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2, SmallKernelFilter
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
@@ -68,8 +69,11 @@ class CubeFileReader(QDialog):
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
         main_layout = QFormLayout(self)
+
         layout = QFormLayout()
-        self.controls_layout = layout
+        self._controls_widget = QWidget()
+        self._controls_widget.setLayout(layout)
+        layout.setContentsMargins(QMargins(0, 0, 0, 0))
 
         # self.num_params_choice = QSpinBox(self)
         # self.num_params_choice.setMinimum(1)
@@ -116,9 +120,18 @@ class CubeFileReader(QDialog):
 
         layout.addRow("Scaling type:", self.scaling_choice)
 
+        self.kernel_filter = QComboBox(self)
+        self.kernel_filter.addItem("None", None)
+        self.kernel_filter.addItem(">= 0.1% of total time", SmallKernelFilter(0.001, Metric('time')))
+        self.kernel_filter.addItem(">= 1% of total time", SmallKernelFilter(0.01, Metric('time')))
+        self.kernel_filter.addItem(">= 10% of total time", SmallKernelFilter(0.1, Metric('time')))
+
+        layout.addRow("Filter kernels:", self.kernel_filter)
+        main_layout.addRow(self._controls_widget)
+
         self.progress_indicator = QProgressBar(self)
         self.progress_indicator.hide()
-        layout.addRow(self.progress_indicator)
+        main_layout.addRow(self.progress_indicator)
 
         # If the user presses the enter key on any element it activates the
         # first button somehow. Thus, create a fake button, that does nothing
@@ -138,7 +151,7 @@ class CubeFileReader(QDialog):
         # cancel_button = QPushButton(self)
         # cancel_button.setText("Cancel")
         # cancel_button.pressed.connect(self.close)
-        main_layout.addRow(layout)
+
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -233,7 +246,9 @@ class CubeFileReader(QDialog):
 
             # read the cube files
             try:
-                self.experiment = CubeFileReader2().read_cube_file(self.dir_name, self.scaling_type, pbar)
+                reader = CubeFileReader2()
+                reader.small_kernel_filter = self.kernel_filter.currentData()
+                self.experiment = reader.read_cube_file(self.dir_name, self.scaling_type, pbar)
             except Exception as err:
                 self.close()
                 raise err
@@ -251,7 +266,7 @@ class CubeFileReader(QDialog):
             super().accept()
 
     def _show_progressbar(self):
-        self.controls_layout.setEnabled(False)
+        self._controls_widget.setEnabled(False)
         self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
         self.progress_indicator.show()
 
