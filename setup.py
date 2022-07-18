@@ -57,6 +57,7 @@ setup(
         "pycubexr~=1.1",
         "marshmallow~=3.7",
         "packaging~=20.0",
+        "scipy~=1.5",
         "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'"
     ]
 )
