@@ -7,6 +7,7 @@
 
 import copy
 from typing import Sequence
+import numpy
 
 from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
@@ -24,6 +25,8 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
     DESCRIPTION = 'Creates a runtime model based on data of hardware performance counters'
 
     number_used_counters = modeler_options.add(3, int, range=range(1, 5))
+    no_negative_coefficients = modeler_options.add(True, bool)
+
     counter_data = {}
 
     def __init__(self):
@@ -139,7 +142,17 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                             runtime_function.add_compound_term(copy.copy(term))
                 hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
-                hypothesis.compute_coefficients(measurement_sequence)
+                hypothesis.compute_coefficients(
+                    measurement_sequence, no_negative_coefficients=self.no_negative_coefficients)
+                previous = numpy.seterr(divide='ignore', invalid='ignore')
+                # for all compound terms check if they are smaller than minimum allowed contribution
+
+                # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
+                small_terms = [i for i, term in enumerate(hypothesis.function.compound_terms)
+                               if term.coefficient == 0 or hypothesis.calc_term_contribution(term, measurement_sequence) < self.epsilon]
+                for i in reversed(small_terms):
+                    del hypothesis.function.compound_terms[i]
+                numpy.seterr(**previous)
                 hypothesis.compute_cost(measurement_sequence)
 
                 runtime_model = Model(hypothesis, callpath, measurement_sequence[0].metric)
