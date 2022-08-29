@@ -96,7 +96,9 @@ class ComparisonPlot(BaseContourGraph):
                 selected_call_nodes.append(call_node)
                 metric = model.metric
 
-        if model_list_a is None or model_list_b is None:
+        if not isinstance(self.main_widget.getExperiment(),
+                          ComparisonExperiment) or model_list_a is None or model_list_b is None:
+            self.fig.text(0.5, 0.5, "Only available, when comparison model is selected.", ha='center', va='center')
             return
 
         assert len(model_list_a) == len(model_list_b)
@@ -145,6 +147,7 @@ class ComparisonPlot(BaseContourGraph):
         colormap = get_cmap(self.colormap)
         red_patch = tuple(Patch(color=colormap(p / 100)) for p in range(0, 50, 2))
         blue_patch = tuple(Patch(color=colormap(p / 100)) for p in range(52, 102, 2))
+
         experiment_names = cast(ComparisonExperiment, self.main_widget.getExperiment()).experiment_names
         labels = [f'{experiment_names[0]}$\prec${experiment_names[-1]}',
                   f'{experiment_names[0]}$\succ${experiment_names[-1]}']
