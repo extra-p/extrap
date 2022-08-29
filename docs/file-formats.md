@@ -8,6 +8,7 @@ File format documentation
 * [Cube file format](#cube-file-format)
 * [Experiment format](#experiment-format)
 * [Extra-P 3.0 file format](#extra-p-30-file-format)
+* [Nsight Systems with Extra-Prof data file format](#nsight-systems-with-extra-prof-data-file-format)
 
 Text file format
 ----------------
@@ -513,3 +514,52 @@ Extra-P 3.0 file format
 -----------------------
 The Extra-P 3.0 file format uses binary encoding of experiments. 
 It is only included for backwards compatibility and should not be used for new data.  
+
+Nsight Systems with Extra-Prof data file format
+-----------------------------------------------
+The Nsight file format is based on a directory structure similar to the Cube file format.
+All measurements are organized in a directory, which contains directories for each *measurement point and repetition*.
+Each directory for a measurement point must contain one or more SQLite3 files (*.sqlite),
+containing the actual measurements for each rank of the application.
+The names of the SQLite3 files must not start with a dot `.`, otherwise they will be ignored.
+
+The name of the dictionary indicates the measurement point for the different parameters.
+It should be structured in the following way:
+
+```
+NAME = [PREFIX "."] PARAMETER-VALUE-PAIRS [".r" REPETITION-NUMBER]
+PARAMETER-VALUE-PAIRS = PARAMETER-NAME PARAMETER-VALUE *(["."/","] PARAMETER-NAME PARAMETER-VALUE) 
+```
+
+Examples for possible name structures are:
+
+* `mm.a1.1b1.1c1.1`
+* `mm.x1y1z1`
+* `mm.x1y1z1.r1`
+* `mm.a1,1.b1,1.c1,1.r1`
+* `mm.x1.1,y1,1,z1.1.r1`
+* `mm.x1.1.y1.1.z1.1.r1`
+* `mm.x1.y1.z1.r1`
+* `x1y1z1`
+
+The overall directory structure should be similar to the following:
+
+```
+Nisght file folder
+|
++--+mm.x10000y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x1000y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x100y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x10y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x1y1z1.r1
+   +--profile0.sqlite
+   +--profile1.sqlite
+```
