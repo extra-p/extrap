@@ -23,6 +23,8 @@ before_script:
   - source venv/bin/activate
 
 test:
+  tags:
+    - public-docker
   script:    
     - pip install autopep8 pytest pytest-cov
     - autopep8 --recursive --in-place --aggressive --aggressive .
