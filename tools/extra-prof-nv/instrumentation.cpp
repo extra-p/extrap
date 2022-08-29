@@ -190,6 +190,8 @@ extern "C"
         }
         extra_prof::depth++;
     }
+
+
     void __cyg_profile_func_exit(void *this_fn,
                                  void *call_site)
     {
