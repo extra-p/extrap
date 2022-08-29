@@ -28,7 +28,7 @@ test:
     - public-docker
   script:    
     - pip install autopep8 pytest pytest-cov
-    - autopep8 --recursive -j 0 -p 10 --aggressive --aggressive .
+    - autopep8 --recursive --diff -j 0 -p 10 --aggressive --aggressive .
     - cd tests
     - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml
 
