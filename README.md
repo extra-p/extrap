@@ -86,7 +86,7 @@ The graphical user interface can be started by executing the `extrap-gui` comman
 
 The command line interface is available under the `extrap` command:
 
-`extrap` _OPTIONS_ (`--cube` | `--text` | `--talpas` | `--json` | `--extra-p-3`) _FILEPATH_
+`extrap` _OPTIONS_ (`--cube` | `--text` | `--talpas` | `--json` | `--extra-p-3` | `--nsight`) _FILEPATH_
 
 You can use different input formats as shown in the examples below:
 
@@ -110,6 +110,7 @@ The Extra-P command line interface has the following options.
 | `--cube`                                                             | Load a set of CUBE files and generate a new experiment
 | `--extra-p-3`                                                        | Load data from Extra-P 3 (legacy) experiment
 | `--json`                                                             | Load data from JSON or JSON Lines input file
+| `--nsight`                                                           | Load a set of Nsight files and generate a new experiment
 | `--talpas`                                                           | Load data from Talpas data format
 | `--text`                                                             | Load data from text input file
 | `--experiment`                                                       | Load Extra-P experiment and generate new models
