@@ -17,21 +17,21 @@ cache:
 
 before_script:
   - python --version  # For debugging
-  - python -m pip install --upgrade pip
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
+  - python -m pip install --upgrade pip
+  - pip install .
 
 test:
   tags:
     - public-docker
   script:    
     - pip install autopep8 pytest pytest-cov
-    - autopep8 --recursive --in-place --aggressive --aggressive .
+    - autopep8 --recursive -j 0 -p 10 --aggressive --aggressive .
     - cd tests
     - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml
 
 run:
-  script:
-    - pip install .
+  script:    
     - extrap --version
