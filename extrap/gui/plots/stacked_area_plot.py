@@ -7,16 +7,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from matplotlib.axes import Axes, np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 
-class LineGraphPlus(GraphDisplayWindow):
+class StackedAreaPlot(GraphDisplayWindow):
     def draw_figure(self):
         model_list, selected_callpaths = self._get_models_to_draw()
         if model_list is None:

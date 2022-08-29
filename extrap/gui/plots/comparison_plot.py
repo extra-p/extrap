@@ -98,7 +98,7 @@ class ComparisonPlot(BaseContourGraph):
 
         if not isinstance(self.main_widget.getExperiment(),
                           ComparisonExperiment) or model_list_a is None or model_list_b is None:
-            self.fig.text(0.5, 0.5, "Only available, when comparison model is selected.", ha='center', va='center')
+            self.fig.text(0.5, 0.5, "Only available when comparison model is selected.", ha='center', va='center')
             return
 
         assert len(model_list_a) == len(model_list_b)

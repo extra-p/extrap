@@ -29,5 +29,5 @@ Interactive Analysis
 Each entry in the call-tree has an annotation that shows which of the two models is the larger one at a given point.
 You can choose this point via the sliders below the call-tree view.
 
-In addition to the annotation, you can also select the *Comparison View* in the *Plots* menu.
+In addition to the annotation, you can also select the *Comparison plot* in the *Plots* menu.
 The comparison plot shows you the distance between the selected two models depending on the parameters.

@@ -24,9 +24,8 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
-#####################################################################
 from extrap.gui.plots.comparison_plot import ComparisonPlot
-from extrap.gui.plots.line_graph_plus import LineGraphPlus
+from extrap.gui.plots.stacked_area_plot import StackedAreaPlot
 
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = 2000000000
@@ -333,7 +332,7 @@ class DataDisplayManager(QWidget):
             6: ("Contour plot", IsolinesDisplay),
             7: ("Interpolated contour", InterpolatedContourDisplay),
             8: ("Measurement points", MeasurementPointsPlot),
-            9: ("Line graph plus", LineGraphPlus),
+            9: ("Stacked area plot", StackedAreaPlot),
             10: ("Comparison plot", ComparisonPlot)
         }
 
