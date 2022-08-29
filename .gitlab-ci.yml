@@ -27,8 +27,8 @@ test:
   tags:
     - public-docker
   script:    
-    - pip install flake8 pytest pytest-cov
-    - flake8 --max-line-length=120 extrap tests setup.py
+    - pip install pytest pytest-cov # flake8
+#    - flake8 --max-line-length=120 extrap tests setup.py
     - cd tests
     - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml
 
