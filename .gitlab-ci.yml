@@ -67,6 +67,7 @@ upload_release_job:
     - echo "Project located at $CI_PROJECT_DIR" 
   script:
     - mkdir -p /p/project/deepsea/wp2/install_packages/extrap/
+    - rm -rf .git
     - cd ..
     - mv "$CI_PROJECT_DIR" "$CI_PROJECT_NAME-$CI_COMMIT_TAG"
     - tar -czf "/p/project/deepsea/wp2/install_packages/extrap/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.gz" "$CI_PROJECT_NAME-$CI_COMMIT_TAG" 
