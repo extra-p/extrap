@@ -58,6 +58,7 @@ release_job:
 upload_release_job:
   stage: release
   tags: [ deep-sea, jacamar, shell ]
+  cache: {}
   rules:
     - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
       when: never
