@@ -8,10 +8,17 @@
 import logging
 import warnings
 from collections import defaultdict
+from dataclasses import dataclass
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
-from typing import Dict, Union, Sequence, Tuple
+from typing import Dict, Union, Sequence, Tuple, Optional
+import pkg_resources
+
+import numpy
+from pycubexr import CubexParser
+from pycubexr.utils.exceptions import MissingMetricError
+from packaging.version import Version
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -22,8 +29,13 @@ from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
-from pycubexr import CubexParser
-from pycubexr.utils.exceptions import MissingMetricError
+
+
+@dataclass
+class SmallKernelFilter:
+    ratio: float = 0.01
+    metric: Metric = Metric('time')
+    callpath: Optional[Callpath] = None
 
 
 class CubeFileReader2(AbstractDirectoryReader):
@@ -31,15 +43,19 @@ class CubeFileReader2(AbstractDirectoryReader):
     GUI_ACTION = "Open set of &CUBE files"
     DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
     CMD_ARGUMENT = "--cube"
-    LOADS_FROM_DIRECTORY=True
+    LOADS_FROM_DIRECTORY = True
 
     scaling_type = "weak"
     selected_metrics = None
     use_inclusive_measurements = False
+    small_kernel_filter: SmallKernelFilter = None
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
-        cubex_files = self._find_files_in_directory(path, '*/[!.]*.cubex', progress_bar)
+        if isinstance(path, list):
+            cubex_files = path
+        else:
+            cubex_files = self._find_files_in_directory(path, '*/[!.]*.cubex', progress_bar)
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
         # set scaling flag for experiment
@@ -64,6 +80,7 @@ class CubeFileReader2(AbstractDirectoryReader):
 
         show_warning_skipped_metrics = set()
 
+        total_values = {}
         # import data from cube files
         # optimize import memory usage by reordering files and grouping by coordinate
         num_points = 0
@@ -74,7 +91,10 @@ class CubeFileReader2(AbstractDirectoryReader):
             coordinate = Coordinate(parameter_value)
             experiment.add_coordinate(coordinate)
 
-            aggregated_values = self._aggregate_repetitions(point_group, progress_bar, show_warning_skipped_metrics)
+            aggregated_values, total = self._aggregate_repetitions(point_group, progress_bar,
+                                                                   show_warning_skipped_metrics)
+
+            total_values[coordinate] = total
 
             # add measurements to experiment
             for (callpath, metric), values in aggregated_values.items():
@@ -88,6 +108,9 @@ class CubeFileReader2(AbstractDirectoryReader):
         else:
             self._merge_callpaths_into_existing_calltree(experiment, callpaths_to_merge, progress_bar)
 
+        if self.small_kernel_filter:
+            self._remove_small_kernels(experiment, total_values, progress_bar)
+
         # determine calltree
         call_tree = io_helper.create_call_tree(experiment.callpaths, progress_bar, progress_scale=0.1)
         experiment.call_tree = call_tree
@@ -100,12 +123,14 @@ class CubeFileReader2(AbstractDirectoryReader):
         progress_bar.update()
         return experiment
 
-    def _aggregate_repetitions(self, point_group, progress_bar, show_warning_skipped_metrics):
+    def _aggregate_repetitions_legacy(self, point_group, progress_bar, show_warning_skipped_metrics):
+        total_values = defaultdict(list)
         aggregated_values = defaultdict(list)
         for path, _ in point_group:
             progress_bar.update()
             with CubexParser(str(path)) as parsed:
-                callpaths = self._make_callpath_mapping(parsed.get_root_cnodes())
+                root_cnodes = parsed.get_root_cnodes()
+                callpaths = self._make_callpath_mapping(root_cnodes)
                 # iterate over all metrics
                 for cube_metric in parsed.get_metrics():
                     progress_bar.update(0)
@@ -116,6 +141,17 @@ class CubeFileReader2(AbstractDirectoryReader):
                         metric_values = parsed.get_metric_values(metric=cube_metric, cache=False)
                         # create the metrics
                         metric = Metric(cube_metric.name)
+
+                        if self.small_kernel_filter and self.small_kernel_filter.metric == metric:
+                            for r_cnode in root_cnodes:
+                                if self.small_kernel_filter.callpath is not None \
+                                        and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
+                                    continue
+                                cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
+                                if self.scaling_type == "weak":
+                                    total_values[callpaths[r_cnode.id]].extend(map(float, cnode_values))
+                                elif self.scaling_type == "strong":
+                                    total_values[callpaths[r_cnode.id]].append(float(sum(cnode_values)))
 
                         for cnode_id in metric_values.cnode_indices:
                             progress_bar.update(0)
@@ -141,7 +177,62 @@ class CubeFileReader2(AbstractDirectoryReader):
                         show_warning_skipped_metrics.add(e.metric.name)
                         logging.info(
                             f'The cubex file {Path(*path.parts[-2:])} does not contain data for the metric "{e.metric.name}"')
-        return aggregated_values
+        return aggregated_values, total_values
+
+    def _aggregate_repetitions(self, point_group, progress_bar, show_warning_skipped_metrics):
+        total_values = defaultdict(list)
+        aggregated_values = defaultdict(list)
+        for path, _ in point_group:
+            progress_bar.update()
+            with CubexParser(str(path)) as parsed:
+                root_cnodes = parsed.get_root_cnodes()
+                callpaths = self._make_callpath_mapping(root_cnodes)
+                # iterate over all metrics
+                for cube_metric in parsed.get_metrics():
+                    progress_bar.update(0)
+                    # NOTE: here we could choose which metrics to extract
+                    if self.selected_metrics and cube_metric.name not in self.selected_metrics:
+                        continue
+                    try:
+                        metric_values = parsed.get_metric_values(metric=cube_metric, cache=False)
+                        # create the metrics
+                        metric = Metric(cube_metric.name)
+
+                        if self.small_kernel_filter and self.small_kernel_filter.metric == metric:
+                            for r_cnode in root_cnodes:
+                                if self.small_kernel_filter.callpath is not None \
+                                        and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
+                                    continue
+                                cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
+                                if self.scaling_type == "weak":
+                                    total_values[callpaths[r_cnode.id]].extend(cnode_values.astype(float))
+                                elif self.scaling_type == "strong":
+                                    total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
+
+                        for cnode_id in metric_values.cnode_indices:
+                            progress_bar.update(0)
+                            cnode = parsed.get_cnode(cnode_id)
+                            callpath = callpaths[cnode_id]
+                            # NOTE: here we can use clustering algorithm to select only certain node level values
+                            # create the measurements
+                            cnode_values = metric_values.cnode_values(cnode,
+                                                                      convert_to_exclusive=not self.use_inclusive_measurements,
+                                                                      convert_to_inclusive=self.use_inclusive_measurements)
+
+                            # in case of weak scaling calculate mean and median over all mpi process values
+                            if self.scaling_type == "weak":
+                                aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
+
+                                # in case of strong scaling calculate the sum over all mpi process values
+                            elif self.scaling_type == "strong":
+                                aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
+
+                    # Take care of missing metrics
+                    except MissingMetricError as e:  # @UnusedVariable
+                        show_warning_skipped_metrics.add(e.metric.name)
+                        logging.info(
+                            f'The cubex file {Path(*path.parts[-2:])} does not contain data for the metric "{e.metric.name}"')
+        return aggregated_values, total_values
 
     @staticmethod
     def _make_callpath_mapping(cnodes):
@@ -221,3 +312,33 @@ class CubeFileReader2(AbstractDirectoryReader):
         self.scaling_type = scaling_type
         self.selected_metrics = selected_metrics
         return self.read_experiment(dir_name, pbar)
+
+    def _remove_small_kernels(self, experiment, total_values, progress_bar):
+        if not self.small_kernel_filter:
+            return
+        if self.small_kernel_filter.callpath is None and any(len(v) != 1 for v in total_values.values()):
+            warnings.warn("Could not filter small kernels, because multiple root callpaths were found. "
+                          "Please specify one of them.")
+            return
+        assert all(len(v) == 1 for v in total_values.values())
+        total_m = {p: numpy.median(next(iter(v.values()))) for p, v in total_values.items()}
+        filter_ratio = self.small_kernel_filter.ratio
+        filter_metric = self.small_kernel_filter.metric
+        to_delete = []
+        for callpath, metric in experiment.measurements:
+            measurements = experiment.measurements[(callpath, filter_metric)]
+            ratios = [measurement.median / total_m[measurement.coordinate] for measurement in measurements]
+
+            if all(r < filter_ratio for r in ratios):
+                to_delete.append((callpath, metric))
+                try:
+                    experiment.callpaths.remove(callpath)
+                except ValueError:
+                    pass
+        for key in to_delete:
+            del experiment.measurements[key]
+
+
+_pycubexr_version = Version(pkg_resources.get_distribution("pycubexr").version)
+if _pycubexr_version.major == 1:
+    CubeFileReader2._aggregate_repetitions = CubeFileReader2._aggregate_repetitions_legacy
