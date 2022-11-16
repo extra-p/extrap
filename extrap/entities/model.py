@@ -46,6 +46,9 @@ class Model:
                    self.hypothesis == other.hypothesis and \
                    self.measurements == other.measurements
 
+    def __repr__(self):
+        return f'Model({str(self.callpath)}, {str(self.metric)}: {self.hypothesis})'
+
 
 class ModelSchema(Schema):
     def create_object(self):

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import itertools
 from typing import Dict, Union, Tuple, TYPE_CHECKING
+from collections.abc import Collection
 
 from marshmallow import fields
 
@@ -81,6 +82,17 @@ class ModelGenerator:
         self.models = {
             k: m for k, m in zip(self.experiment.measurements.keys(), models)
         }
+        for (callpath, metric), model in self.models.items():
+            model.callpath = callpath
+            model.metric = metric
+            model.measurements = self.experiment.measurements[(callpath, metric)]
+        # add the modeler with the results to the experiment
+        self.experiment.add_modeler(self)
+
+    def model_selected_callpaths(self, callpaths: Collection[Callpath], progress_bar=DUMMY_PROGRESS):
+        measurements = {(callpath, m): v for (callpath, m), v in self.experiment.measurements if callpath in callpaths}
+        models = self._modeler.model(list(measurements.values()), progress_bar)
+        self.models = {k: m for k, m in zip(measurements.keys(), models)}
         for (callpath, metric), model in self.models.items():
             model.callpath = callpath
             model.metric = metric
