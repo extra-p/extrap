@@ -274,8 +274,7 @@ class SingleParameterHypothesis(Hypothesis):
             self._rRSS += relative_difference * relative_difference
         abssum = abs(actual) + abs(predicted)
         if abssum != 0:
-            self._SMAPE += (abs(difference) / abssum * 2) / \
-                len(training_measurements) * 100
+            self._SMAPE += (abs(difference) / abssum * 2) / len(training_measurements) * 100
         self._costs_are_calculated = True
 
     def compute_cost(self, measurements: Sequence[Measurement]):
@@ -448,15 +447,19 @@ class MultiParameterHypothesis(Hypothesis):
         # solving the lgs for coeffs to get the coefficients
         A = numpy.array(a_list)
         B = numpy.array(b_list)
-        try:
-            coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
-            if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
-                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)  # retry with rcond = machine precision
-        except numpy.linalg.LinAlgError as e:
-            # sometimes first try does not work
-            coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
-            if rank < A.shape[1]:
-                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)
+        if no_negative_coefficients:
+            coeffs, _ = scipy.optimize.nnls(A, B)
+        else:
+            try:
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
+                if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
+                    # retry with rcond = machine precision
+                    coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)
+            except numpy.linalg.LinAlgError as e:
+                # sometimes first try does not work
+                coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
+                if rank < A.shape[1]:
+                    coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)
 
         # print("Coefficients:"+str(coeffs))
         # logging.debug("Coefficients:"+str(coeffs[0]))
