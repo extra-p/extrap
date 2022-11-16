@@ -5,16 +5,20 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
 import copy
 from typing import Sequence
+import warnings
 import numpy
 
-from extrap.entities.functions import SingleParameterFunction
-from extrap.entities.hypotheses import SingleParameterHypothesis
+from extrap.entities.functions import SingleParameterFunction, Function
+from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis
 from extrap.entities.measurement import Measurement
+from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
+from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.modelers.modeler_options import modeler_options
 
@@ -26,8 +30,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
     number_used_counters = modeler_options.add(3, int, range=range(1, 5))
     no_negative_coefficients = modeler_options.add(True, bool)
-
-    counter_data = {}
+    weighted_terms = modeler_options.add(False, bool, 'Uses all counters.')
 
     def __init__(self):
         """
@@ -44,25 +47,13 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             "PAPI_DP_OPS",
             "PAPI_SP_OPS",
         ]
-        self.coordinates = {}
-        self.global_counter_data = {}
-        self.callpath_counter_data = {}
+        self.metrics_to_improve = ['time']
+        self.single_param_modeler = SingleParameterModeler()
 
     def accumulate_counter_data(self, measurements: Sequence[Sequence[Measurement]]) -> dict:
         measurements_per_sequence = len(measurements[0])
 
-        counter_data = {
-            "time": [0] * measurements_per_sequence,
-            "PAPI_TOT_INS": [0] * measurements_per_sequence,
-            "PAPI_LST_INS": [0] * measurements_per_sequence,
-            "PAPI_LD_INS": [0] * measurements_per_sequence,
-            "PAPI_SR_INS": [0] * measurements_per_sequence,
-            "PAPI_BR_INS": [0] * measurements_per_sequence,
-            "PAPI_BR_UCN": [0] * measurements_per_sequence,
-            "PAPI_BR_CN": [0] * measurements_per_sequence,
-            "PAPI_DP_OPS": [0] * measurements_per_sequence,
-            "PAPI_SP_OPS": [0] * measurements_per_sequence,
-        }
+        counter_data = {name: [0] * measurements_per_sequence for name in ['time'] + self.counter_list}
 
         for measurement in measurements:
             current_metric = str(measurement[0].metric)
@@ -72,32 +63,21 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
         return counter_data
 
-    def determine_relevant_counters(self, callpath) -> list:
-        callpath_data = self.callpath_counter_data[callpath]
-
-        relevant_counters = []
+    def determine_relevant_counters(self, callpath_models) -> list[Model]:
         counter_weights = []
-        for measurements in callpath_data:
-            metric = measurements[0].metric
+        for model in callpath_models:
+            metric = model.metric
             if str(metric) in self.counter_list:
-                val_sum = sum([measurement.mean for measurement in measurements])
-                counter_weights.append((val_sum, metric))
+                # TODO maybe add median calculation
+                val_sum = sum(measurement.mean for measurement in model.measurements)
+                counter_weights.append((val_sum, model))
 
         counter_weights.sort(
             key=lambda x: x[0],
             reverse=True
         )
-        relevant_counters = [tpl[1] for tpl in counter_weights[:self.number_used_counters]]
-        return relevant_counters
-
-    def accumulate_callpath_data(self, measurements: Sequence[Sequence[Measurement]]) -> dict:
-        callpath_data = {}
-        for measurement_sequence in measurements:
-            callpath = measurement_sequence[0].callpath
-            if not callpath in callpath_data:
-                callpath_data[callpath] = []
-            callpath_data[callpath].append(measurement_sequence)
-        return callpath_data
+        relevant_models = [tpl[1] for tpl in counter_weights[:self.number_used_counters]]
+        return relevant_models
 
     def check_model(self, model, coordinate, threshold):
         model_function = model.hypothesis.function
@@ -110,46 +90,131 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         return deviation >= threshold
 
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
-        self.coordinates = [measurement.coordinate for measurement in measurements[0]]
-        # self.global_counter_data = self.accumulate_counter_data(measurements)
-        # self.counter_weights = self.determine_counter_weights(measurements)
-        self.callpath_counter_data = self.accumulate_callpath_data(measurements)
-        counter_weight_distribution = {}
         callpath_models = {}
-        single_param_modeler = SingleParameterModeler()
-        models = []
-        epsilon = 1.05
+
+        gamma = 1.05
 
         for measurement_sequence in progress_bar(measurements):
             callpath = measurement_sequence[0].callpath
             metric = measurement_sequence[0].metric
-            if callpath not in callpath_models:
-                callpath_models[callpath] = []
-            model = single_param_modeler.create_model(measurement_sequence)
-            model.metric = metric
+            coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
+            key = callpath, coordinates
+
+            if key not in callpath_models:
+                callpath_models[key] = []
+
+            model = self.single_param_modeler.create_model(measurement_sequence)
             model.callpath = callpath
-            callpath_models[callpath].append(model)
+            model.metric = metric
+            model.measurements = measurement_sequence
+            callpath_models[key].append(model)
 
+        if self.weighted_terms:
+            return self._model_weighted(callpath_models, gamma, measurements, progress_bar)
+
+        models = []
         for measurement_sequence in progress_bar(measurements):
             callpath = measurement_sequence[0].callpath
             metric = measurement_sequence[0].metric
-            if str(metric) == "time":
-                desired_metrics = self.determine_relevant_counters(callpath)
+            coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
+            key = callpath, coordinates
+            if str(metric) in self.metrics_to_improve:
+                desired_counters = self.determine_relevant_counters(callpath_models[key])
+                if not desired_counters:
+                    for model in callpath_models[key]:
+                        if model.metric is metric:
+                            models.append(model)
+                    warnings.warn('Missing counter data for at least one callpath, falling back to default modeler.')
+                    continue
+
                 runtime_function = SingleParameterFunction()
-                for model in callpath_models[callpath]:
-                    if model.metric in desired_metrics and self.check_model(model, self.coordinates[-1], epsilon):
-                        for term in model.hypothesis.function.compound_terms:
-                            runtime_function.add_compound_term(copy.copy(term))
+                for model in desired_counters:
+                    for term in model.hypothesis.function.compound_terms:
+                        runtime_function.add_compound_term(copy.copy(term))
+
                 hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
                 hypothesis.compute_coefficients(
                     measurement_sequence, no_negative_coefficients=self.no_negative_coefficients)
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
-                # for all compound terms check if they are smaller than minimum allowed contribution
 
-                # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
+                # for all compound terms check if they are smaller than minimum allowed contribution
+                # ignore the terms that contribute less than epsilon to the function
                 small_terms = [i for i, term in enumerate(hypothesis.function.compound_terms)
-                               if term.coefficient == 0 or hypothesis.calc_term_contribution(term, measurement_sequence) < self.epsilon]
+                               if term.coefficient == 0 or hypothesis.calc_term_contribution(term,
+                                                                                             measurement_sequence) < self.epsilon]
+                for i in reversed(small_terms):
+                    del hypothesis.function.compound_terms[i]
+                numpy.seterr(**previous)
+                hypothesis.compute_cost(measurement_sequence)
+
+                runtime_model = Model(hypothesis, callpath, measurement_sequence[0].metric)
+                runtime_model.measurements = measurement_sequence
+                models.append(runtime_model)
+            else:
+                for model in callpath_models[key]:
+                    if model.metric is metric:
+                        models.append(model)
+
+        return models
+
+    def _model_weighted(self, callpath_models, epsilon, measurements, progress_bar):
+        models = []
+        for measurement_sequence in progress_bar(measurements):
+            callpath = measurement_sequence[0].callpath
+            metric = measurement_sequence[0].metric
+            coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
+            key = callpath, coordinates
+            if str(metric) == "time":
+
+                callpath_data: list = callpath_models[key]
+                counter_weights = {
+                    models.measurements[0].metric: numpy.array(
+                        [measurement.mean for measurement in sorted(measurements, key=lambda m: m.coordinate)])
+                    for models in callpath_data
+                    if models.measurements[0].metric == Metric('PAPI_TOT_INS')
+                    or str(models.measurements[0].metric) in self.counter_list
+                }
+
+                if Metric('PAPI_TOT_INS') not in counter_weights:
+                    raise RecoverableError("Missing PAPI_TOT_INS, which is necessary for weighting.")
+
+                rest_weights = (counter_weights[Metric('PAPI_TOT_INS')] * 2 -
+                                numpy.sum(list(counter_weights.values()), axis=0)) / counter_weights[
+                    Metric('PAPI_TOT_INS')]
+                for metric in counter_weights:
+                    counter_weights[metric] /= counter_weights[Metric('PAPI_TOT_INS')]
+
+                counter_weights[Metric('PAPI_TOT_INS')] = rest_weights
+
+                runtime_function = SingleParameterFunction()
+                measurements_time = list(sorted(measurement_sequence, key=lambda m: m.coordinate))
+
+                for model in callpath_models[key]:
+                    if model.metric in counter_weights:  # and self.check_model(model, self.coordinates[-1], epsilon):
+                        if isinstance(model.hypothesis, ConstantHypothesis):
+                            weighted_measurements = []
+                            for m, w in zip(measurements_time, counter_weights[model.metric]):
+                                weighted_measurements.append(m.value(self.use_median) * w)
+                            runtime_function.constant_coefficient += numpy.mean(weighted_measurements)
+                        else:
+                            hypothesis: SingleParameterHypothesis = copy.deepcopy(model.hypothesis)
+                            hypothesis.function.reset_coefficients()
+                            weighted_measurements = []
+                            for m, w in zip(measurements_time, counter_weights[model.metric]):
+                                weighted_measurements.append(m * w)
+                            hypothesis.compute_coefficients(weighted_measurements)
+                            runtime_function += hypothesis.function.compound_terms[0]
+                            runtime_function.constant_coefficient += hypothesis.function.constant_coefficient
+
+                hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
+                previous = numpy.seterr(divide='ignore', invalid='ignore')
+
+                # for all compound terms check if they are smaller than minimum allowed contribution
+                # ignore the terms that contribute less than epsilon to the function
+                small_terms = [i for i, term in enumerate(hypothesis.function.compound_terms)
+                               if term.coefficient == 0 or hypothesis.calc_term_contribution(term,
+                                                                                             measurement_sequence) < self.epsilon]
                 for i in reversed(small_terms):
                     del hypothesis.function.compound_terms[i]
                 numpy.seterr(**previous)
@@ -162,5 +227,4 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                 for model in callpath_models[callpath]:
                     if model.metric is metric:
                         models.append(model)
-
         return models
