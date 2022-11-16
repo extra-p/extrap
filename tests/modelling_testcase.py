@@ -1,36 +1,56 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import numbers
 import unittest
 from operator import itemgetter
+from typing import Any
 
-from extrap.entities.functions import MultiParameterFunction
+from extrap.entities.functions import MultiParameterFunction, Function
+from extrap.entities.hypotheses import Hypothesis
+from extrap.entities.model import Model
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, SimpleTerm
 
 
 class TestCaseWithFunctionAssertions(unittest.TestCase):
-    def assertApprox(self, function, other, places=6, ctxt=""):
+    def assertApprox(self, value, other, places=6, ctxt=""):
         import math
-        diff = abs(other - function)
-        reference = min(abs(function), abs(other))
+        diff = abs(other - value)
+        reference = min(abs(value), abs(other))
+        diff_scaled = diff
         if reference != 0:
-            nondecimal_places = int(math.log10(reference)) + 1
+            nondecimal_places = int(math.log10(reference))
+            if reference >= 1:
+                nondecimal_places += 1
             diff_scaled = diff / (10 ** nondecimal_places)
-        else:
-            diff_scaled = diff
         diff_rounded = round(diff_scaled, places)
-        self.assertTrue(diff_rounded == 0, msg=f"{other} != {function} in {places} places {ctxt}")
+        self.assertTrue(diff_rounded == 0, msg=f"{other} != {value} in {places} places {ctxt}")
 
     # def test_assertApprox(self):
-    #     self.assertApprox(200, 200.001)
-    #     self.assertApprox(200.002, 200.001)
-    #     self.assertApprox(200.0049, 200.000)
-    #     self.assertApprox(200.000, 199.9951)
+    #     self.assertRaises(AssertionError, self.assertApprox, 200, 200.001)
+    #     self.assertApprox(200, 200.0001)
+    #     self.assertApprox(200.0002, 200.0001)
+    #     self.assertApprox(200.00049, 200.000)
+    #     self.assertApprox(200.0000, 199.99951)
     #     self.assertApprox(200, 200.4999, places=3)
+    #     self.assertRaises(AssertionError, self.assertApprox, 200.5, 200.49, places=5)
+    #     self.assertRaises(AssertionError, self.assertApprox, 0.200, 0.200001)
+    #     self.assertApprox(0.200, 0.2000001)
+    #     self.assertApprox(0.2000002, 0.2000001)
+    #     self.assertApprox(0.20000049, 0.2000000)
+    #     self.assertApprox(0.2000000, 0.19999951)
+    #     self.assertApprox(0.2005, 0.2004999, places=5)
+    #     self.assertRaises(AssertionError, self.assertApprox, 0.2005, 0.20049, places=5)
+    #     self.assertRaises(AssertionError, self.assertApprox, 0.000200, 0.000200001)
+    #     self.assertApprox(0.000200, 0.0002000001)
+    #     self.assertApprox(0.0002000002, 0.0002000001)
+    #     self.assertApprox(0.00020000049, 0.0002000000)
+    #     self.assertApprox(0.0002000000, 0.00019999951)
+    #     self.assertApprox(0.0002005, 0.0002004999, places=5)
 
     def assertApproxFunction(self, function, other, **kwargs):
         if len(kwargs) == 0:
@@ -66,3 +86,25 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
     def assertApproxSimpleTerm(self, stt: SimpleTerm, sto: SimpleTerm, **kwargs):
         self.assertEqual(stt.term_type, sto.term_type)
         self.assertApprox(stt.exponent, sto.exponent, **kwargs)
+
+    def _assertApproxGeneral(self, value: Any, other: Any, **kwargs):
+        for att in value.__dict__:
+            self.assertIn(att, other.__dict__)
+        for att in other.__dict__:
+            self.assertIn(att, value.__dict__)
+            a = value.__dict__[att]
+            b = other.__dict__[att]
+            if isinstance(a, Function):
+                self.assertApproxFunction(a, b, **kwargs)
+            elif isinstance(a, numbers.Number):
+                self.assertApprox(a, b, **kwargs)
+            elif isinstance(a, Hypothesis):
+                self._assertApproxGeneral(a, b, **kwargs)
+            else:
+                self.assertEqual(a, b)
+
+    def assertApproxHypothesis(self, hypothesis: Hypothesis, other: Hypothesis, **kwargs):
+        return self._assertApproxGeneral(hypothesis, other, **kwargs)
+
+    def assertApproxModel(self, model: Model, other: Model, **kwargs):
+        return self._assertApproxGeneral(model, other, **kwargs)
