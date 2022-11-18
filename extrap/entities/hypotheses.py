@@ -108,7 +108,7 @@ class Hypothesis:
 
     def calc_term_contribution(self, term, measurements: Sequence[Measurement]):
         """
-        Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
+        Calculates the term contribution of the term with the given term to see if it is smaller than epsilon.
         """
         if self._use_median:
             actual = numpy.array([m.median for m in measurements])
