@@ -4,6 +4,8 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+import copy
+from numbers import Number, Real
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -62,6 +64,17 @@ class Measurement:
                    self.callpath == other.callpath and \
                    self.mean == other.mean and \
                    self.median == other.median
+
+    def __mul__(self, other: Real):
+        if not isinstance(other, Real):
+            raise ValueError("Only numbers are supported.")
+        result = copy.copy(self)
+        result.median *= other
+        result.mean *= other
+        result.minimum *= other
+        result.maximum *= other
+        result.std *= abs(other)
+        return result
 
 
 class MeasurementSchema(Schema):

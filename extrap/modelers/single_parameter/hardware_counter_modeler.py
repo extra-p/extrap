@@ -7,10 +7,11 @@
 
 from __future__ import annotations
 import copy
-from typing import Sequence
+from typing import Sequence, Collection
 import warnings
 import numpy
 
+from extrap.entities.callpath import Callpath
 from extrap.entities.functions import SingleParameterFunction, Function
 from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis
 from extrap.entities.measurement import Measurement
@@ -40,34 +41,32 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
         self.min_measurement_points = 5
         self.counter_list = [
+            "PAPI_LST_INS",
             "PAPI_LD_INS",
             "PAPI_SR_INS",
+            "PAPI_BR_INS",
             "PAPI_BR_UCN",
             "PAPI_BR_CN",
             "PAPI_DP_OPS",
             "PAPI_SP_OPS",
+            "PAPI_FP_OPS",
+            "PAPI_FP_INS",
+            "PAPI_VEC_DP",
+            "PAPI_VEC_SP",
+            "PAPI_VEC_INS",
         ]
         self.metrics_to_improve = ['time']
+        self.total_count_metric = Metric('PAPI_TOT_INS')
         self.single_param_modeler = SingleParameterModeler()
 
-    def accumulate_counter_data(self, measurements: Sequence[Sequence[Measurement]]) -> dict:
-        measurements_per_sequence = len(measurements[0])
+    def determine_relevant_counter_models(self, callpath_models) -> list[Model]:
 
-        counter_data = {name: [0] * measurements_per_sequence for name in ['time'] + self.counter_list}
+        actual_counter_list = self.determine_relevant_counters(callpath_models)
 
-        for measurement in measurements:
-            current_metric = str(measurement[0].metric)
-            if current_metric in counter_data:
-                counter_data[current_metric] = list(
-                    map(lambda x: x[0] + x[1].mean, zip(counter_data[current_metric], measurement)))
-
-        return counter_data
-
-    def determine_relevant_counters(self, callpath_models) -> list[Model]:
         counter_weights = []
         for model in callpath_models:
             metric = model.metric
-            if str(metric) in self.counter_list:
+            if str(metric) in actual_counter_list:
                 # TODO maybe add median calculation
                 val_sum = sum(measurement.mean for measurement in model.measurements)
                 counter_weights.append((val_sum, model))
@@ -76,8 +75,38 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             key=lambda x: x[0],
             reverse=True
         )
+        if len(counter_weights) < self.number_used_counters:
+            warnings.warn('You have selected more counters than available for modeling. '
+                          f'The modeling will use the maximal number of available counters ({len(counter_weights)}).')
         relevant_models = [tpl[1] for tpl in counter_weights[:self.number_used_counters]]
         return relevant_models
+
+    def determine_relevant_counters(self, callpath_models):
+        actual_counter_list = set(self.counter_list)
+        counters_in_experiment = set(str(m.metric) for m in callpath_models)
+        actual_counter_list.intersection_update(counters_in_experiment)
+
+        def check_and_remove(check_for, remove, also_reverse=False):
+            if all(counter in actual_counter_list for counter in check_for):
+                for counter in remove:
+                    if counter not in check_for:
+                        try:
+                            actual_counter_list.remove(counter)
+                        except KeyError:
+                            pass
+            if also_reverse:
+                check_and_remove(remove, check_for, also_reverse=False)
+
+        check_and_remove(['PAPI_BR_CN', 'PAPI_BR_UCN'], ['PAPI_BR_INS'], True)
+        check_and_remove(['PAPI_LD_INS', 'PAPI_SR_INS'], ['PAPI_LST_INS'], True)
+        all_fp_counters = ["PAPI_DP_OPS", "PAPI_SP_OPS", 'PAPI_FP_OPS', 'PAPI_FP_INS', 'PAPI_VEC_INS', "PAPI_VEC_SP",
+                           "PAPI_VEC_DP", ]
+        check_and_remove(["PAPI_DP_OPS", "PAPI_SP_OPS"], all_fp_counters)
+        check_and_remove(["PAPI_VEC_DP", "PAPI_VEC_SP"], all_fp_counters)
+        check_and_remove(['PAPI_FP_OPS'], all_fp_counters)
+        check_and_remove(['PAPI_FP_INS'], all_fp_counters)
+        check_and_remove(['PAPI_VEC_INS'], all_fp_counters)
+        return actual_counter_list
 
     def check_model(self, model, coordinate, threshold):
         model_function = model.hypothesis.function
@@ -110,7 +139,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             callpath_models[key].append(model)
 
         if self.weighted_terms:
-            return self._model_weighted(callpath_models, gamma, measurements, progress_bar)
+            return self._model_weighted(callpath_models, measurements, progress_bar)
 
         models = []
         for measurement_sequence in progress_bar(measurements):
@@ -119,13 +148,20 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
             coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
             key = callpath, coordinates
             if str(metric) in self.metrics_to_improve:
-                desired_counters = self.determine_relevant_counters(callpath_models[key])
+                desired_counters = self.determine_relevant_counter_models(callpath_models[key])
                 if not desired_counters:
                     for model in callpath_models[key]:
                         if model.metric is metric:
                             models.append(model)
-                    warnings.warn('Missing counter data for at least one callpath, falling back to default modeler.')
+                    warnings.warn(
+                        'Missing counter data completely for at least one callpath, falling back to default modeler.')
                     continue
+                if len(desired_counters) + 1 > len(coordinates):
+                    required_points = len(desired_counters) + 1 - len(coordinates)
+                    warnings.warn('The number of measurements is too low for the number of counters you selected. '
+                                  f'You should add {required_points} additional measurement '
+                                  f'point{"s" if required_points > 1 else ""} or select only {len(coordinates) - 1} '
+                                  f'counter{"s" if (len(coordinates) - 1) > 1 else ""} for modeling.')
 
                 runtime_function = SingleParameterFunction()
                 for model in desired_counters:
@@ -158,40 +194,39 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
         return models
 
-    def _model_weighted(self, callpath_models, epsilon, measurements, progress_bar):
+    def _model_weighted(self, callpath_models, measurements, progress_bar):
         models = []
         for measurement_sequence in progress_bar(measurements):
             callpath = measurement_sequence[0].callpath
             metric = measurement_sequence[0].metric
             coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
             key = callpath, coordinates
-            if str(metric) == "time":
-
+            if str(metric) in self.metrics_to_improve:
                 callpath_data: list = callpath_models[key]
+                desired_counters = self.determine_relevant_counters(callpath_data)
                 counter_weights = {
-                    models.measurements[0].metric: numpy.array(
-                        [measurement.mean for measurement in sorted(measurements, key=lambda m: m.coordinate)])
+                    models.metric: numpy.array(
+                        [measurement.mean for measurement in sorted(models.measurements, key=lambda m: m.coordinate)])
                     for models in callpath_data
-                    if models.measurements[0].metric == Metric('PAPI_TOT_INS')
-                    or str(models.measurements[0].metric) in self.counter_list
+                    if models.metric == self.total_count_metric or str(models.metric) in desired_counters
                 }
 
-                if Metric('PAPI_TOT_INS') not in counter_weights:
-                    raise RecoverableError("Missing PAPI_TOT_INS, which is necessary for weighting.")
+                if self.total_count_metric not in counter_weights:
+                    raise RecoverableError(f"Missing {self.total_count_metric}, which is necessary for weighting.")
 
-                rest_weights = (counter_weights[Metric('PAPI_TOT_INS')] * 2 -
+                rest_weights = (counter_weights[self.total_count_metric] * 2 -
                                 numpy.sum(list(counter_weights.values()), axis=0)) / counter_weights[
-                    Metric('PAPI_TOT_INS')]
+                                   self.total_count_metric]
                 for metric in counter_weights:
-                    counter_weights[metric] /= counter_weights[Metric('PAPI_TOT_INS')]
+                    counter_weights[metric] /= counter_weights[self.total_count_metric]
 
-                counter_weights[Metric('PAPI_TOT_INS')] = rest_weights
+                counter_weights[self.total_count_metric] = rest_weights
 
                 runtime_function = SingleParameterFunction()
                 measurements_time = list(sorted(measurement_sequence, key=lambda m: m.coordinate))
 
                 for model in callpath_models[key]:
-                    if model.metric in counter_weights:  # and self.check_model(model, self.coordinates[-1], epsilon):
+                    if model.metric in counter_weights:
                         if isinstance(model.hypothesis, ConstantHypothesis):
                             weighted_measurements = []
                             for m, w in zip(measurements_time, counter_weights[model.metric]):
@@ -224,7 +259,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                 runtime_model.measurements = measurement_sequence
                 models.append(runtime_model)
             else:
-                for model in callpath_models[callpath]:
+                for model in callpath_models[key]:
                     if model.metric is metric:
                         models.append(model)
         return models
