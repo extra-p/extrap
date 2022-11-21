@@ -7,16 +7,19 @@
 
 from __future__ import annotations
 import copy
+from abc import ABC, abstractmethod
 from typing import Sequence, Collection
 import warnings
 import numpy
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.functions import SingleParameterFunction, Function
-from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis
+from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis, Hypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
+from extrap.entities.terms import Term
+from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
 from extrap.util.exceptions import RecoverableError
@@ -25,19 +28,23 @@ from extrap.modelers.modeler_options import modeler_options
 
 
 @modeler_options
-class HardwareCounterModeler(AbstractSingleParameterModeler):
-    NAME = 'Hardware-Counter'
-    DESCRIPTION = 'Creates a runtime model based on data of hardware performance counters'
-
+class AbstractHardwareCounterModeler(AbstractModeler, ABC):
     number_used_counters = modeler_options.add(3, int, range=range(1, 5))
     no_negative_coefficients = modeler_options.add(True, bool)
     weighted_terms = modeler_options.add(False, bool, 'Uses all counters.')
+    _instruction_counters = modeler_options.add("", str, "List of counters that are used in the modeling process, "
+                                                         "separated by comma.",
+                                                on_change=lambda self, v: self._update_counters(v))
 
-    def __init__(self):
+    source_modeler: AbstractModeler
+
+    def __init__(self, use_median, source_modeler, **kwargs):
         """
         Initialize HardwareCounterModeler object.
         """
-        super().__init__(use_median=False)
+
+        self.source_modeler = source_modeler
+        super().__init__(use_median=use_median, **kwargs)
 
         self.min_measurement_points = 5
         self.counter_list = [
@@ -57,7 +64,41 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         ]
         self.metrics_to_improve = ['time']
         self.total_count_metric = Metric('PAPI_TOT_INS')
-        self.single_param_modeler = SingleParameterModeler()
+        self.epsilon_minimum_term_contribution = 0.0005  # value for the minimum term contribution
+
+    def _update_counters(self, value: str):
+        self.counter_list = [v.strip() for v in value.split(',')]
+
+    def determine_relevant_counters(self, callpath_models):
+        actual_counter_list = set(self.counter_list)
+        counters_in_experiment = set(str(m.metric) for m in callpath_models)
+        actual_counter_list.intersection_update(counters_in_experiment)
+
+        def check_and_remove(check_for, remove, also_reverse=False):
+            if all(counter in actual_counter_list for counter in check_for):
+                for counter in remove:
+                    if counter not in check_for:
+                        try:
+                            actual_counter_list.remove(counter)
+                        except KeyError:
+                            pass
+            if also_reverse:
+                check_and_remove(remove, check_for, also_reverse=False)
+
+        check_and_remove(['PAPI_BR_CN', 'PAPI_BR_UCN'], ['PAPI_BR_INS'], True)
+        check_and_remove(['PAPI_LD_INS', 'PAPI_SR_INS'], ['PAPI_LST_INS'], True)
+        all_fp_counters = ["PAPI_DP_OPS", "PAPI_SP_OPS", 'PAPI_FP_OPS', 'PAPI_FP_INS', 'PAPI_VEC_INS', "PAPI_VEC_SP",
+                           "PAPI_VEC_DP"]
+        check_and_remove(["PAPI_DP_OPS", "PAPI_SP_OPS"], all_fp_counters)
+        check_and_remove(["PAPI_VEC_DP", "PAPI_VEC_SP"], all_fp_counters)
+        check_and_remove(['PAPI_FP_OPS'], all_fp_counters)
+        check_and_remove(['PAPI_FP_INS'], all_fp_counters)
+        check_and_remove(['PAPI_VEC_INS'], all_fp_counters)
+
+        if not actual_counter_list and str(self.total_count_metric) in counters_in_experiment:
+            actual_counter_list.add(str(self.total_count_metric))
+
+        return actual_counter_list
 
     def determine_relevant_counter_models(self, callpath_models) -> list[Model]:
 
@@ -81,58 +122,26 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         relevant_models = [tpl[1] for tpl in counter_weights[:self.number_used_counters]]
         return relevant_models
 
-    def determine_relevant_counters(self, callpath_models):
-        actual_counter_list = set(self.counter_list)
-        counters_in_experiment = set(str(m.metric) for m in callpath_models)
-        actual_counter_list.intersection_update(counters_in_experiment)
+    @abstractmethod
+    def make_function(self, *terms: Term) -> Function:
+        pass
 
-        def check_and_remove(check_for, remove, also_reverse=False):
-            if all(counter in actual_counter_list for counter in check_for):
-                for counter in remove:
-                    if counter not in check_for:
-                        try:
-                            actual_counter_list.remove(counter)
-                        except KeyError:
-                            pass
-            if also_reverse:
-                check_and_remove(remove, check_for, also_reverse=False)
-
-        check_and_remove(['PAPI_BR_CN', 'PAPI_BR_UCN'], ['PAPI_BR_INS'], True)
-        check_and_remove(['PAPI_LD_INS', 'PAPI_SR_INS'], ['PAPI_LST_INS'], True)
-        all_fp_counters = ["PAPI_DP_OPS", "PAPI_SP_OPS", 'PAPI_FP_OPS', 'PAPI_FP_INS', 'PAPI_VEC_INS', "PAPI_VEC_SP",
-                           "PAPI_VEC_DP", ]
-        check_and_remove(["PAPI_DP_OPS", "PAPI_SP_OPS"], all_fp_counters)
-        check_and_remove(["PAPI_VEC_DP", "PAPI_VEC_SP"], all_fp_counters)
-        check_and_remove(['PAPI_FP_OPS'], all_fp_counters)
-        check_and_remove(['PAPI_FP_INS'], all_fp_counters)
-        check_and_remove(['PAPI_VEC_INS'], all_fp_counters)
-        return actual_counter_list
-
-    def check_model(self, model, coordinate, threshold):
-        model_function = model.hypothesis.function
-        value = model_function.evaluate(coordinate)
-
-        if model_function.constant_coefficient == 0:
-            return True
-        deviation = abs(value / model_function.constant_coefficient)
-
-        return deviation >= threshold
+    @abstractmethod
+    def make_hypothesis(self, function: Function, use_median: bool) -> Hypothesis:
+        pass
 
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
+        models = self.source_modeler.model(measurements)
         callpath_models = {}
-
-        gamma = 1.05
-
-        for measurement_sequence in progress_bar(measurements):
+        for model, measurement_sequence in zip(models, measurements):
             callpath = measurement_sequence[0].callpath
             metric = measurement_sequence[0].metric
-            coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
+            coordinates = tuple(m.coordinate.as_tuple() for m in measurement_sequence)
             key = callpath, coordinates
 
             if key not in callpath_models:
                 callpath_models[key] = []
 
-            model = self.single_param_modeler.create_model(measurement_sequence)
             model.callpath = callpath
             model.metric = metric
             model.measurements = measurement_sequence
@@ -145,7 +154,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         for measurement_sequence in progress_bar(measurements):
             callpath = measurement_sequence[0].callpath
             metric = measurement_sequence[0].metric
-            coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
+            coordinates = tuple(m.coordinate.as_tuple() for m in measurement_sequence)
             key = callpath, coordinates
             if str(metric) in self.metrics_to_improve:
                 desired_counters = self.determine_relevant_counter_models(callpath_models[key])
@@ -163,12 +172,12 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                                   f'point{"s" if required_points > 1 else ""} or select only {len(coordinates) - 1} '
                                   f'counter{"s" if (len(coordinates) - 1) > 1 else ""} for modeling.')
 
-                runtime_function = SingleParameterFunction()
+                runtime_function = self.make_function()
                 for model in desired_counters:
                     for term in model.hypothesis.function.compound_terms:
                         runtime_function.add_compound_term(copy.copy(term))
 
-                hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
+                hypothesis = self.make_hypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
                 hypothesis.compute_coefficients(
                     measurement_sequence, no_negative_coefficients=self.no_negative_coefficients)
@@ -178,7 +187,8 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                 # ignore the terms that contribute less than epsilon to the function
                 small_terms = [i for i, term in enumerate(hypothesis.function.compound_terms)
                                if term.coefficient == 0 or hypothesis.calc_term_contribution(term,
-                                                                                             measurement_sequence) < self.epsilon]
+                                                                                             measurement_sequence)
+                               < self.epsilon_minimum_term_contribution]
                 for i in reversed(small_terms):
                     del hypothesis.function.compound_terms[i]
                 numpy.seterr(**previous)
@@ -199,7 +209,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
         for measurement_sequence in progress_bar(measurements):
             callpath = measurement_sequence[0].callpath
             metric = measurement_sequence[0].metric
-            coordinates = tuple(m.coordinate[0] for m in measurement_sequence)
+            coordinates = tuple(m.coordinate.as_tuple() for m in measurement_sequence)
             key = callpath, coordinates
             if str(metric) in self.metrics_to_improve:
                 callpath_data: list = callpath_models[key]
@@ -222,7 +232,7 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
 
                 counter_weights[self.total_count_metric] = rest_weights
 
-                runtime_function = SingleParameterFunction()
+                runtime_function = self.make_function()
                 measurements_time = list(sorted(measurement_sequence, key=lambda m: m.coordinate))
 
                 for model in callpath_models[key]:
@@ -233,23 +243,25 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                                 weighted_measurements.append(m.value(self.use_median) * w)
                             runtime_function.constant_coefficient += numpy.mean(weighted_measurements)
                         else:
-                            hypothesis: SingleParameterHypothesis = copy.deepcopy(model.hypothesis)
+                            hypothesis: Hypothesis = copy.deepcopy(model.hypothesis)
                             hypothesis.function.reset_coefficients()
                             weighted_measurements = []
                             for m, w in zip(measurements_time, counter_weights[model.metric]):
                                 weighted_measurements.append(m * w)
                             hypothesis.compute_coefficients(weighted_measurements)
-                            runtime_function += hypothesis.function.compound_terms[0]
+                            for compound_term in hypothesis.function.compound_terms:
+                                runtime_function += compound_term
                             runtime_function.constant_coefficient += hypothesis.function.constant_coefficient
 
-                hypothesis = SingleParameterHypothesis(runtime_function, self.use_median)
+                hypothesis = self.make_hypothesis(runtime_function, self.use_median)
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
 
                 # for all compound terms check if they are smaller than minimum allowed contribution
                 # ignore the terms that contribute less than epsilon to the function
                 small_terms = [i for i, term in enumerate(hypothesis.function.compound_terms)
                                if term.coefficient == 0 or hypothesis.calc_term_contribution(term,
-                                                                                             measurement_sequence) < self.epsilon]
+                                                                                             measurement_sequence)
+                               < self.epsilon_minimum_term_contribution]
                 for i in reversed(small_terms):
                     del hypothesis.function.compound_terms[i]
                 numpy.seterr(**previous)
@@ -263,3 +275,28 @@ class HardwareCounterModeler(AbstractSingleParameterModeler):
                     if model.metric is metric:
                         models.append(model)
         return models
+
+    def check_model(self, model, coordinate, threshold):
+        model_function = model.hypothesis.function
+        value = model_function.evaluate(coordinate)
+
+        if model_function.constant_coefficient == 0:
+            return True
+        deviation = abs(value / model_function.constant_coefficient)
+
+        return deviation >= threshold
+
+
+@modeler_options
+class HardwareCounterModeler(AbstractHardwareCounterModeler):
+    NAME = 'Hardware Counter'
+    DESCRIPTION = 'Creates a runtime model based on data of hardware performance counters'
+
+    def __init__(self):
+        """
+        Initialize HardwareCounterModeler object.
+        """
+        super().__init__(use_median=False, source_modeler=SingleParameterModeler())
+
+    make_function = SingleParameterFunction
+    make_hypothesis = SingleParameterHypothesis
