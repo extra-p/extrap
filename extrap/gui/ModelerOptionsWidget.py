@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,7 +12,7 @@ from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinB
     QComboBox, QVBoxLayout, QLabel, QPushButton
 
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
+from extrap.modelers.abstract_modeler import AbstractModeler, AbstractMultiParameterModeler
 from extrap.modelers.modeler_options import ModelerOption, ModelerOptionsGroup, modeler_options
 
 
@@ -37,7 +37,7 @@ class ModelerOptionsWidget(QWidget):
                 layout.addRow(reset_button)
             self._create_options(layout, getattr(self._modeler, 'OPTIONS').items())
 
-        if isinstance(self._modeler, MultiParameterModeler) and self._modeler.single_parameter_modeler is not None:
+        if isinstance(self._modeler, AbstractMultiParameterModeler) and self._modeler.single_parameter_modeler is not None:
             group = self._create_single_parameter_selection()
             layout.addRow(group)
             self.parent().setEnabled(True)
@@ -48,7 +48,7 @@ class ModelerOptionsWidget(QWidget):
         layout = self.layout()
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(cast(QWidget, None))
-        if isinstance(self._modeler, MultiParameterModeler):
+        if isinstance(self._modeler, AbstractMultiParameterModeler):
             self._modeler.reset_single_parameter_modeler()
         self.initUI(cast(QFormLayout, layout), False)
         self.update()
@@ -67,7 +67,7 @@ class ModelerOptionsWidget(QWidget):
                 layout.addRow(group)
 
     def _create_single_parameter_selection(self):
-        self._modeler: MultiParameterModeler
+        self._modeler: AbstractMultiParameterModeler
 
         group = QGroupBox('Single-parameter modeler')
         g_layout = QVBoxLayout()

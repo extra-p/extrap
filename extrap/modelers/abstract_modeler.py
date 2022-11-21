@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -16,6 +16,7 @@ from marshmallow import fields, post_load
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
 from extrap.util.classproperty import classproperty
+from extrap.util.deprecation import deprecated
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import BaseSchema
 
@@ -73,7 +74,7 @@ class SingularModeler(AbstractModeler, ABC):
         raise NotImplementedError
 
 
-class MultiParameterModeler(AbstractModeler, ABC):
+class AbstractMultiParameterModeler(AbstractModeler, ABC):
 
     def __init__(self, use_median, single_parameter_modeler):
         super().__init__(use_median)
@@ -88,6 +89,12 @@ class MultiParameterModeler(AbstractModeler, ABC):
     def use_median(self, value):
         self._use_median = value
         self.single_parameter_modeler.use_median = value
+
+
+class MultiParameterModeler(AbstractMultiParameterModeler, ABC):
+    @deprecated
+    def __init__(self, use_median, single_parameter_modeler):
+        super(MultiParameterModeler, self).__init__(use_median, single_parameter_modeler)
 
 
 class ModelerSchema(BaseSchema):

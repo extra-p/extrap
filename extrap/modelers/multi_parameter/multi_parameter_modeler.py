@@ -21,7 +21,7 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
 from extrap.entities.terms import MultiParameterTerm
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import MultiParameterModeler as AbstractMultiParameterModeler
+from extrap.modelers.abstract_modeler import AbstractMultiParameterModeler
 from extrap.modelers.abstract_modeler import SingularModeler
 from extrap.modelers.modeler_options import modeler_options
 

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -21,7 +21,7 @@ from extrap.fileio.io_helper import save_output
 from extrap.fileio.output import format_output
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import MultiParameterModeler
+from extrap.modelers.abstract_modeler import AbstractMultiParameterModeler
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.options_parser import ModelerOptionsAction, ModelerHelpAction
@@ -154,7 +154,7 @@ def main(args=None, prog=None):
 
         # apply modeler options
         modeler = model_generator.modeler
-        if isinstance(modeler, MultiParameterModeler) and arguments.modeler_options:
+        if isinstance(modeler, AbstractMultiParameterModeler) and arguments.modeler_options:
             # set single-parameter modeler of multi-parameter modeler
             single_modeler = arguments.modeler_options[SINGLE_PARAMETER_MODELER_KEY]
             if single_modeler is not None:

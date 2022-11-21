@@ -18,7 +18,7 @@ from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
-from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
+from extrap.modelers.abstract_modeler import AbstractModeler, AbstractMultiParameterModeler, ModelerSchema
 from extrap.modelers.modeler_options import modeler_options
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -66,7 +66,7 @@ class ModelGenerator:
         elif modeler is NotImplemented:
             result_modeler = NotImplemented
         else:
-            if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
+            if (len(self.experiment.parameters) > 1) == isinstance(modeler, AbstractMultiParameterModeler):
                 # single-parameter model generator init here...
                 result_modeler = modeler
                 if use_median is not None:
