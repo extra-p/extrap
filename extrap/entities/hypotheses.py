@@ -75,7 +75,7 @@ class Hypothesis:
             raise RuntimeError("Costs are not calculated.")
         return self._RE
 
-    def compute_coefficients(self, measurements: Sequence[Measurement], *, no_negative_coefficients=False):
+    def compute_coefficients(self, measurements: Sequence[Measurement], *, negative_coefficients=True):
         raise NotImplementedError()
 
     def compute_cost(self, measurements: Sequence[Measurement]):
@@ -163,7 +163,7 @@ class ConstantHypothesis(Hypothesis):
     def AR2(self):
         return 1
 
-    def compute_coefficients(self, measurements: Sequence[Measurement], *, no_negative_coefficients=False):
+    def compute_coefficients(self, measurements: Sequence[Measurement], *, negative_coefficients=True):
         """
         Computes the constant_coefficients of the function using the mean.
         """
@@ -272,7 +272,7 @@ class SingleParameterHypothesis(Hypothesis):
         self._AR2 = (1.0 - (1.0 - adjR) *
                      (len(measurements) - 1.0) / degrees_freedom)
 
-    def compute_coefficients(self, measurements: Sequence[Measurement], *, no_negative_coefficients=False):
+    def compute_coefficients(self, measurements: Sequence[Measurement], *, negative_coefficients=True):
         """
         Computes the coefficients of the function using the least squares solution.
         """
@@ -292,7 +292,7 @@ class SingleParameterHypothesis(Hypothesis):
         A = numpy.concatenate(a_list, axis=0).T
         B = b_list
 
-        if no_negative_coefficients:
+        if not negative_coefficients:
             X, _ = scipy.optimize.nnls(A, B)
         else:
             X, _, _, _ = numpy.linalg.lstsq(A, B, None)
@@ -381,7 +381,7 @@ class MultiParameterHypothesis(Hypothesis):
         degrees_freedom = len(measurements) - counter - 1
         self._AR2 = (1.0 - (1.0 - adjR) * (len(measurements) - 1.0) / degrees_freedom)
 
-    def compute_coefficients(self, measurements, *, no_negative_coefficients=False):
+    def compute_coefficients(self, measurements, *, negative_coefficients=True):
         """
         Computes the coefficients of the function using the least squares solution.
         """
@@ -406,7 +406,7 @@ class MultiParameterHypothesis(Hypothesis):
         # solving the lgs for coeffs to get the coefficients
         A = numpy.array(a_list)
         B = numpy.array(b_list)
-        if no_negative_coefficients:
+        if not negative_coefficients:
             coeffs, _ = scipy.optimize.nnls(A, B)
         else:
             try:

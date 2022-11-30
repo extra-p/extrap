@@ -8,6 +8,7 @@
 from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
+import logging
 from typing import Sequence, Collection
 import warnings
 import numpy
@@ -30,11 +31,11 @@ from extrap.modelers.modeler_options import modeler_options
 @modeler_options
 class AbstractHardwareCounterModeler(AbstractModeler, ABC):
     number_used_counters = modeler_options.add(3, int, range=range(1, 5))
-    no_negative_coefficients = modeler_options.add(True, bool)
     weighted_terms = modeler_options.add(False, bool, 'Uses all counters.')
     _instruction_counters = modeler_options.add("", str, "List of counters that are used in the modeling process, "
                                                          "separated by comma.",
                                                 on_change=lambda self, v: self._update_counters(v))
+    negative_coefficients = modeler_options.add(True, bool)
 
     source_modeler: AbstractModeler
 
@@ -131,6 +132,8 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
         pass
 
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
+        if hasattr(self.source_modeler, 'negative_coefficients'):
+            self.source_modeler.negative_coefficients = self.negative_coefficients
         models = self.source_modeler.model(measurements)
         callpath_models = {}
         for model, measurement_sequence in zip(models, measurements):
@@ -164,6 +167,7 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
                             models.append(model)
                     warnings.warn(
                         'Missing counter data completely for at least one callpath, falling back to default modeler.')
+                    logging.info('Missing counter data completely for:' + str(key))
                     continue
                 if len(desired_counters) + 1 > len(coordinates):
                     required_points = len(desired_counters) + 1 - len(coordinates)
@@ -179,8 +183,8 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
 
                 hypothesis = self.make_hypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
-                hypothesis.compute_coefficients(
-                    measurement_sequence, no_negative_coefficients=self.no_negative_coefficients)
+                hypothesis.compute_coefficients(measurement_sequence,
+                                                negative_coefficients=self.negative_coefficients)
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
 
                 # for all compound terms check if they are smaller than minimum allowed contribution
