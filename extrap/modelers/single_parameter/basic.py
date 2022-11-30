@@ -48,7 +48,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                                                       name='Force combination',
                                                       on_change=lambda self, v: self._exponents_changed())
     allow_negative_exponents = modeler_options.add(False, bool,
-                                                   'If set adds neagtive exponents for strong scaling.',
+                                                   'If set adds negative exponents for strong scaling.',
                                                    name='Negative exponents',
                                                    on_change=lambda self, v: self._exponents_changed())
     modeler_options.group('Exponents', poly_exponents, log_exponents, retain_default_exponents,

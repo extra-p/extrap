@@ -46,6 +46,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     compare_with_RSS = modeler_options.add(False, bool,
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
+    negative_coefficients = modeler_options.add(True, bool)
 
     def __init__(self):
         """
@@ -81,10 +82,14 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                 measurement.minimum = np.mean([m.minimum for m in ms])
                 measurement.std = np.mean([m.std for m in ms])
             else:
-                ms = [m for m in ms if m.mean != 0]
-                measurement.maximum = np.nanmean([m.maximum / m.mean for m in ms]) * measurement.mean
-                measurement.minimum = np.nanmean([m.minimum / m.mean for m in ms]) * measurement.mean
-                measurement.std = np.nanmean([m.std / m.mean for m in ms]) * measurement.mean
+                try:
+                    measurement.maximum = np.nanmean([m.maximum / m.mean for m in ms]) * measurement.mean
+                    measurement.minimum = np.nanmean([m.minimum / m.mean for m in ms]) * measurement.mean
+                    measurement.std = np.nanmean([m.std / m.mean for m in ms]) * measurement.mean
+                except ZeroDivisionError:
+                    measurement.maximum = np.mean([m.maximum for m in ms])
+                    measurement.minimum = np.mean([m.minimum for m in ms])
+                    measurement.std = np.mean([m.std for m in ms])
 
             return measurement
 
@@ -199,6 +204,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # model all single parameter experiments using only the selected points from the step before
         # parameters = list(range(measurements[0].coordinate.dimensions))
 
+        if hasattr(self.single_parameter_modeler, 'negative_coefficients'):
+            self.single_parameter_modeler.negative_coefficients = self.negative_coefficients
+
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
 
@@ -252,7 +260,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             # multi parameter function with newly calculated coefficients using all values
             recomputed_coeffficients_hypothesis = MultiParameterHypothesis(
                 MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_median)
-            recomputed_coeffficients_hypothesis.compute_coefficients(measurements)
+            recomputed_coeffficients_hypothesis.compute_coefficients(measurements,
+                                                                     negative_coefficients=self.negative_coefficients)
             recomputed_coeffficients_hypothesis.compute_cost(measurements)
 
             # select best
@@ -360,23 +369,23 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # select one function as the bestHypothesis for the start
         best_hypothesis = copy.deepcopy(hypotheses[0])
-        best_hypothesis.compute_coefficients(measurements)
+        best_hypothesis.compute_coefficients(measurements, negative_coefficients=self.negative_coefficients)
         best_hypothesis.compute_cost(measurements)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-        logging.info(f"hypothesis 0: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
-                     f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
-                     f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
+        logging.debug(f"hypothesis 0: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
+                      f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
+                      f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
 
         # find the best hypothesis
         for i, hypothesis in enumerate(hypotheses):
-            hypothesis.compute_coefficients(measurements)
+            hypothesis.compute_coefficients(measurements, negative_coefficients=self.negative_coefficients)
             hypothesis.compute_cost(measurements)
             hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-            logging.info(f"hypothesis {i}: {hypothesis.function} --- smape: {hypothesis.SMAPE} "
-                         f"--- ar2: {hypothesis.AR2} --- rss: {hypothesis.RSS} "
-                         f"--- rrss: {hypothesis.rRSS} --- re: {hypothesis.RE}")
+            logging.debug(f"hypothesis {i}: {hypothesis.function} --- smape: {hypothesis.SMAPE} "
+                          f"--- ar2: {hypothesis.AR2} --- rss: {hypothesis.RSS} "
+                          f"--- rrss: {hypothesis.rRSS} --- re: {hypothesis.RE}")
 
             term_contribution_big_enough = True
             # for all compound terms check if they are smaller than minimum allowed contribution
@@ -397,8 +406,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # add the best found hypothesis to the model list
         model = Model(best_hypothesis)
 
-        logging.info(f"best hypothesis: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
-                     f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
-                     f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
+        logging.debug(f"best hypothesis: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
+                      f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
+                      f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
 
         return model
