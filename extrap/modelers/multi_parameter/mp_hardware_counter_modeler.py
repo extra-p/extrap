@@ -30,9 +30,9 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 @modeler_options
 class MpHardwareCounterModeler(AbstractHardwareCounterModeler, AbstractMultiParameterModeler):
     """
-    This class represents the modeler for multi parameter functions.
-    In order to create a model measurements at least 5 points are needed.
-    The result is either a constant function or one based on the PMNF.
+    This class represents the hardware counter modeler for multi parameter functions.
+    It uses the multi parameter modeler to create models for selected hardware counters and combines them into a
+    hypothesis for runtime modeling.
     """
 
     NAME = 'Hardware Counter MP'

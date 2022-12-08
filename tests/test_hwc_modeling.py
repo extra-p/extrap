@@ -13,7 +13,7 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.fileio.experiment_io import read_experiment
 from extrap.modelers.model_generator import ModelGenerator
-from extrap.modelers.multi_parameter.multi_parameter_hwc_modeler import MpHardwareCounterModeler
+from extrap.modelers.multi_parameter.mp_hardware_counter_modeler import MpHardwareCounterModeler
 from extrap.modelers.single_parameter.hardware_counter_modeler import HardwareCounterModeler
 from extrap.util.exceptions import RecoverableError
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
