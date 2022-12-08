@@ -109,6 +109,47 @@ class TestHwcModeler(TestCaseWithFunctionAssertions):
         measurements.append(tot_ins)
         return measurements
 
+    def _prepare_measurements_mp_similar(self):
+        coordinates = list(product([10, 20, 30, 40, 50], repeat=2))
+        main = Callpath('main')
+        time = Metric('time')
+        PAPI_DP_OPS = Metric('PAPI_DP_OPS')
+        PAPI_BR_INS = Metric('PAPI_BR_INS')
+        PAPI_LD_INS = Metric('PAPI_LD_INS')
+        PAPI_SR_INS = Metric('PAPI_SR_INS')
+        PAPI_SP_OPS = Metric('PAPI_SP_OPS')
+        PAPI_CA_CLN = Metric('PAPI_CA_CLN')
+        PAPI_TOT_INS = Metric('PAPI_TOT_INS')
+        measurements = [
+            [Measurement(Coordinate(x, y), main, time,
+                         300 + 4 * x ** 2
+                         + 60 * x * 10 * y
+                         + 90 * x ** (1 / 2) * 10 * y ** (1 / 3)
+                         + 2 * x ** (5 / 4) + 8 * y ** (6 / 4)
+                         + 0.5 * x ** (3 / 2) * log(x) / log(2) + 0.8 * y ** (3 / 4))
+             for x, y in coordinates],
+            [Measurement(Coordinate(x, y), main, PAPI_DP_OPS, 10 + 15 * x * 10 * y) for x, y in coordinates],
+            [Measurement(Coordinate(x, y), main, PAPI_BR_INS,
+                         120 + 30 * x ** (1 / 2) * 10 * y ** (1 / 3)) for x, y in coordinates],
+            [Measurement(Coordinate(x, y), main, PAPI_LD_INS,
+                         50 + 5 * x * 4 * y) for x, y in coordinates],
+            [Measurement(Coordinate(x, y), main, PAPI_SR_INS,
+                         5 + 2 * x ** (5 / 4) + 8 * y ** (6 / 4)) for x, y in coordinates],
+            [Measurement(Coordinate(x, y), main, PAPI_SP_OPS,
+                         5 + 0.05 * x ** (3 / 2) * log(x) / log(2) + 0.8 * y ** (3 / 4)) for x, y in coordinates],
+            [Measurement(Coordinate(x, y), main, PAPI_CA_CLN,
+                         5 + 0.05 * x ** (1 / 2) * log(x) / log(2) + 0.8 * y ** (1 / 4)) for x, y in coordinates],
+        ]
+        tot_ins = [
+            Measurement(Coordinate(x, y), main, PAPI_TOT_INS, 15 + 0.1 * log(x) ** 2 / log(2) * 0.2 * y ** (1 / 2))
+            for x, y in
+            coordinates]
+        for measurement_seq in measurements[1:]:
+            for index, value in enumerate(measurement_seq):
+                tot_ins[index].merge(value)
+        measurements.append(tot_ins)
+        return measurements
+
     def _prepare_measurements_tot_ins_mp(self):
         coordinates = list(product([10, 20, 30, 40, 50], repeat=2))
         main = Callpath('main')
@@ -255,6 +296,22 @@ class TestHwcModeler(TestCaseWithFunctionAssertions):
                     self.assertEqual(None, time_model)
                     time_model = m
             self.assertLessEqual(i, len(time_model.hypothesis.function.compound_terms))
+
+    def test_hwc_mp_modeler_short_terms(self):
+
+        measurements = self._prepare_measurements_mp_similar()
+        for i in range(1, 5):
+            hwcm = MpHardwareCounterModeler()
+            hwcm.number_used_counters = i
+            models = hwcm.model(measurements)
+            self.assertEqual(len(measurements), len(models))
+            time_model = None
+            for m in models:
+                if m.metric.name == 'time':
+                    self.assertEqual(None, time_model)
+                    time_model = m
+            print(time_model.hypothesis.function)
+            self.assertEqual(1, len(time_model.hypothesis.function.compound_terms))
 
     def test_hwc_modeler_weighted_mp(self):
         measurements = self._prepare_measurements_mp()

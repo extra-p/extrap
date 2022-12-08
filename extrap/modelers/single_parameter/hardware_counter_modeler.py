@@ -176,10 +176,7 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
                                   f'point{"s" if required_points > 1 else ""} or select only {len(coordinates) - 1} '
                                   f'counter{"s" if (len(coordinates) - 1) > 1 else ""} for modeling.')
 
-                runtime_function = self.make_function()
-                for model in desired_counters:
-                    for term in model.hypothesis.function.compound_terms:
-                        runtime_function.add_compound_term(copy.copy(term))
+                runtime_function = self._make_runtime_function(desired_counters)
 
                 hypothesis = self.make_hypothesis(runtime_function, self.use_median)
                 hypothesis.function.reset_coefficients()
@@ -207,6 +204,19 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
                         models.append(model)
 
         return models
+
+    def _make_runtime_function(self, desired_counters):
+        runtime_function = self.make_function()
+        for model in desired_counters:
+            for term in model.hypothesis.function.compound_terms:
+                reset_term = copy.copy(term)
+                reset_term.reset_coefficients()
+                if runtime_function.compound_terms and reset_term in runtime_function.compound_terms:
+                    # if a term occurs again in another counter, that is less important, then we have probably seen all
+                    # important terms
+                    return runtime_function
+                runtime_function.add_compound_term(reset_term)
+        return runtime_function
 
     def _model_weighted(self, callpath_models, measurements, progress_bar):
         models = []
