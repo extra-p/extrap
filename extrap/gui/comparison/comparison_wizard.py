@@ -12,16 +12,17 @@ from pathlib import Path
 from typing import Optional, Type
 
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QWizard, QCommandLinkButton, QSpacerItem, QSizePolicy, QFileDialog, QWizardPage, \
-    QFormLayout, QLineEdit, QLabel
+from PySide2.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
+                               QLabel, QLineEdit, QSizePolicy, QSpacerItem,
+                               QWizard, QWizardPage, QVBoxLayout, QComboBox)
 
 from extrap.comparison import matchers
 from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.fileio.experiment_io import ExperimentReader
-from extrap.fileio.file_reader import all_readers, FileReader
+from extrap.fileio.file_reader import FileReader, all_readers
 from extrap.gui.comparison.interactive_matcher import InteractiveMatcher
 from extrap.gui.components import file_dialog
-from extrap.gui.components.wizard_pages import ScrollAreaPage, ProgressPage
+from extrap.gui.components.wizard_pages import ProgressPage, ScrollAreaPage
 from extrap.modelers.model_generator import ModelGenerator
 
 
@@ -38,6 +39,7 @@ class ComparisonWizard(QWizard):
             self.addPage(FileSelectionPage(self))
             self.addPage(FileLoadingPage(self))
         self.addPage(NamingPage(self))
+        self.addPage(ModelSelectionPage(self))
         self.addPage(MatcherSelectionPage(self))
         self.comparing_page_id = self.addPage(ComparingPage(self))
         self.matcher = None
@@ -45,6 +47,7 @@ class ComparisonWizard(QWizard):
         self.experiment1 = experiment1
         self.experiment2 = experiment2
         self.experiment: Optional[ComparisonExperiment] = None
+        self.model_mapping = {}
         self.is_cancelled = Event()
         self.rejected.connect(self.on_reject)
 
@@ -125,7 +128,7 @@ class ComparingPage(ProgressPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle('Comparing experiments')
-
+        
     def cleanupPage(self) -> None:
         self._override_next_id = None
         super().cleanupPage()
@@ -138,6 +141,7 @@ class ComparingPage(ProgressPage):
             matcher = wizard.matcher()
         wizard.experiment = ComparisonExperiment(wizard.experiment1, wizard.experiment2, matcher=matcher)
         wizard.experiment.experiment_names = wizard.exp_names
+        wizard.experiment.modelers_match = wizard.model_mapping
         if wizard.matcher == InteractiveMatcher:
             self._override_next_id = matcher.determine_next_page_id()
         else:
@@ -173,3 +177,44 @@ class NamingPage(QWizardPage):
             wizard.exp_names[0] += '1'
             wizard.exp_names[1] += '2'
         return super().validatePage()
+
+class ModelSelectionPage(QWizardPage):
+    def __init__(self, parent: ComparisonWizard):
+        super().__init__(parent)
+        self.setTitle('Choose Models for Comparison')
+        self.layout = QFormLayout(self)
+        self.setLayout(self.layout)
+        #self.experiment_name1 = QLabel("Experiment1 Model")
+        #self.experiment_name2 = QLabel("Experiment2 Model")
+        # layout.addWidget(self.experiment_name1)
+        # layout.addWidget(self.model_list1)
+        # layout.addWidget(self.experiment_name2)
+        # layout.addWidget(self.model_list2)
+        self.model_lists = []
+        
+    def initializePage(self) -> None:
+        wizard: ComparisonWizard = self.wizard()
+        # self.model_list1.clear()
+        # self.model_list2.clear()
+        # self.experiment_name1.setText(f'Choose Model for {wizard.exp_names[0]}')
+        # self.model_list1.addItems([model.name for model in wizard.experiment1.modelers])
+        # self.experiment_name2.setText(f'Choose Model for {wizard.exp_names[1]}')
+        # self.model_list2.addItems([model.name for model in wizard.experiment2.modelers])
+        for modeler in wizard.experiment1.modelers:
+            if len(self.model_lists) < len(wizard.experiment1.modelers):
+                model_list = QComboBox()
+                model_list.addItems([model.name for model in wizard.experiment2.modelers])
+                self.model_lists.append(model_list)
+                self.layout.addRow(f"Compare {modeler.name} with: ", model_list)
+
+    def validatePage(self) -> bool:
+        wizard: ComparisonWizard = self.wizard()
+        exp1_models = wizard.experiment1.modelers
+        exp2_models = wizard.experiment2.modelers
+        wizard.model_mapping = {
+            m.name: [m, exp2_models[self.model_lists[i].currentIndex()]] for i, m in enumerate(exp1_models)
+        }
+
+        return super().validatePage()
+        
+        
