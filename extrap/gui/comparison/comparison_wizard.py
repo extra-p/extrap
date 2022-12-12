@@ -184,26 +184,17 @@ class ModelSelectionPage(QWizardPage):
         self.setTitle('Choose Models for Comparison')
         self.layout = QFormLayout(self)
         self.setLayout(self.layout)
-        #self.experiment_name1 = QLabel("Experiment1 Model")
-        #self.experiment_name2 = QLabel("Experiment2 Model")
-        # layout.addWidget(self.experiment_name1)
-        # layout.addWidget(self.model_list1)
-        # layout.addWidget(self.experiment_name2)
-        # layout.addWidget(self.model_list2)
         self.model_lists = []
         
     def initializePage(self) -> None:
         wizard: ComparisonWizard = self.wizard()
-        # self.model_list1.clear()
-        # self.model_list2.clear()
-        # self.experiment_name1.setText(f'Choose Model for {wizard.exp_names[0]}')
-        # self.model_list1.addItems([model.name for model in wizard.experiment1.modelers])
-        # self.experiment_name2.setText(f'Choose Model for {wizard.exp_names[1]}')
-        # self.model_list2.addItems([model.name for model in wizard.experiment2.modelers])
         for modeler in wizard.experiment1.modelers:
             if len(self.model_lists) < len(wizard.experiment1.modelers):
                 model_list = QComboBox()
                 model_list.addItems([model.name for model in wizard.experiment2.modelers])
+                default_value = model_list.findText(modeler.name)
+                if default_value >= 0:
+                    model_list.setCurrentIndex(default_value)
                 self.model_lists.append(model_list)
                 self.layout.addRow(f"Compare {modeler.name} with: ", model_list)
 
