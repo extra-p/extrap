@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,12 +13,12 @@ from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
 from typing import Dict, Union, Sequence, Tuple, Optional
-import pkg_resources
 
 import numpy
+import pkg_resources
+from packaging.version import Version
 from pycubexr import CubexParser
 from pycubexr.utils.exceptions import MissingMetricError
-from packaging.version import Version
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -290,7 +290,8 @@ class CubeFileReader2(AbstractDirectoryReader):
         for id, kernel_callpath in callsite_kernels.items():
             if id in callsites:
                 callsite_callpath = callsites[id]
-                kernel_callpath.name = callsite_callpath.name + '->[GPU]'
+                kernel_name = kernel_callpath.name[kernel_callpath.name.rfind('->') + 2:]
+                kernel_callpath.name = callsite_callpath.name + '->[GPU] ' + kernel_name
             else:
                 warnings.warn(f"Could not find call-site ({id}) for the following kernel: {kernel_callpath.name}")
 
