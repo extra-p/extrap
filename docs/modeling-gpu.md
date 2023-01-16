@@ -60,6 +60,8 @@ After you have executed the command you will find a new folder that contains the
 You can customize the name of the folder, that contains the result by setting the `EXTRA_PROF_EXPERIMENT_DIRECTORY`
 environment variable. For compatibility reasons the `SCOREP_EXPERIMENT_DIRECTORY` variable can be used instead. *Please
 note, that the folder will be overridden, when a new measurement is performed with the same results directory.*
+You can additionally specify the callpath-depth, by setting the `EXTRA_PROF_MAX_DEPTH` environment variable. 
+This might be needed if your measurements crashes, because the reports get to big.
 
 
 Modeling
