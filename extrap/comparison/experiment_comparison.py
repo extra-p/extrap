@@ -43,6 +43,7 @@ class ComparisonExperiment(Experiment):
         self.matcher = matcher
         self.exp1 = exp1
         self.exp2 = exp2
+        self.modelers_match = {}
 
     def do_comparison(self, progress_bar=DUMMY_PROGRESS):
         progress_bar.total += 3
@@ -144,7 +145,8 @@ class ComparisonExperiment(Experiment):
         return measurements
 
     def do_model_set_merge(self, progress_bar=DUMMY_PROGRESS):
-        self.modelers_match = self.matcher.match_modelers(self.exp1.modelers, self.exp2.modelers)
+        if not self.modelers_match:
+            self.modelers_match = self.matcher.match_modelers(self.exp1.modelers, self.exp2.modelers)
         if hasattr(self.matcher, 'make_model_generator'):
             self.modelers = [self.matcher.make_model_generator(self, k, match, progress_bar) for k, match in
                              self.modelers_match.items()]

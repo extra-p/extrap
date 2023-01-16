@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -125,6 +125,53 @@ class TestCubeFileLoader(unittest.TestCase):
             warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
             CubeFileReader2().read_cube_file('data/cubeset/multi_parameter', 'weak')
         self.assertFalse(record)
+
+    def test_cuda_callsites(self):
+        with warnings.catch_warnings(record=True) as record:
+            reader = CubeFileReader2()
+            warnings.filterwarnings('ignore', r'^((?!Could not find call-site).)*$')
+            warnings.filterwarnings('ignore', r'^((?!The following metrics were skipped).)*$')
+            experiment = reader.read_cube_file('data/cubeset/cuda_callsite_data', 'weak')
+        self.assertFalse(record)
+        self.assertIn(Callpath(
+            'lulesh2.0-cuda-scorep8->main->_INTERNALbb6aa09e::LagrangeLeapFrog->_INTERNALbb6aa09e::LagrangeNodal->'
+            '_INTERNALbb6aa09e::CalcForceForNodes->_INTERNALbb6aa09e::CalcVolumeForceForElems->'
+            '_INTERNALbb6aa09e::CalcVolumeForceForElems->void CalcVolumeForceForElems_kernel<true>->'
+            'void _INTERNALbb6aa09e::__wrapper__device_stub_CalcVolumeForceForElems_kernel<true>->'
+            '_INTERNALbb6aa09e::__device_stub__Z30CalcVolumeForceForElems_kernelILb1EEvPKdS1_S1_S1_'
+            'diiPKiS1_S1_S1_S1_S1_S1_S1_S1_PdS4_S4_Pii->'
+            'cudaError _INTERNALbb6aa09e::cudaLaunchKernel<char>->cudaLaunchKernel->cuLaunchKernel'),
+            experiment.callpaths)
+        self.assertTrue(any(c.name.startswith(
+            'lulesh2.0-cuda-scorep8->main->_INTERNALbb6aa09e::LagrangeLeapFrog->_INTERNALbb6aa09e::LagrangeNodal->'
+            '_INTERNALbb6aa09e::CalcForceForNodes->_INTERNALbb6aa09e::CalcVolumeForceForElems->'
+            '_INTERNALbb6aa09e::CalcVolumeForceForElems->void CalcVolumeForceForElems_kernel<true>->'
+            'void _INTERNALbb6aa09e::__wrapper__device_stub_CalcVolumeForceForElems_kernel<true>->'
+            '_INTERNALbb6aa09e::__device_stub__Z30CalcVolumeForceForElems_kernelILb1EEvPKdS1_S1_S1_'
+            'diiPKiS1_S1_S1_S1_S1_S1_S1_S1_PdS4_S4_Pii->'
+            'cudaError _INTERNALbb6aa09e::cudaLaunchKernel<char>->cudaLaunchKernel->cuLaunchKernel->') for c in
+                            experiment.callpaths))
+        self.assertIn(Callpath(
+            'lulesh2.0-cuda-scorep8->main->_INTERNALbb6aa09e::LagrangeLeapFrog->_INTERNALbb6aa09e::LagrangeNodal->'
+            '_INTERNALbb6aa09e::CalcForceForNodes->_INTERNALbb6aa09e::CalcVolumeForceForElems->'
+            '_INTERNALbb6aa09e::CalcVolumeForceForElems->void CalcVolumeForceForElems_kernel<true>->'
+            'void _INTERNALbb6aa09e::__wrapper__device_stub_CalcVolumeForceForElems_kernel<true>->'
+            '_INTERNALbb6aa09e::__device_stub__Z30CalcVolumeForceForElems_kernelILb1EEvPKdS1_S1_S1_'
+            'diiPKiS1_S1_S1_S1_S1_S1_S1_S1_PdS4_S4_Pii->'
+            'cudaError _INTERNALbb6aa09e::cudaLaunchKernel<char>->cudaLaunchKernel->cuLaunchKernel->'
+            '[GPU] CalcVolumeForceForElems_kernel<true>'),
+            experiment.callpaths)
+        for c in experiment.callpaths:
+            if c.name.startswith(
+                    'lulesh2.0-cuda-scorep8->main->_INTERNALbb6aa09e::LagrangeLeapFrog->_INTERNALbb6aa09e::LagrangeNodal->'
+                    '_INTERNALbb6aa09e::CalcForceForNodes->_INTERNALbb6aa09e::CalcVolumeForceForElems->'
+                    '_INTERNALbb6aa09e::CalcVolumeForceForElems->void CalcVolumeForceForElems_kernel<true>->'
+                    'void _INTERNALbb6aa09e::__wrapper__device_stub_CalcVolumeForceForElems_kernel<true>->'
+                    '_INTERNALbb6aa09e::__device_stub__Z30CalcVolumeForceForElems_kernelILb1EEvPKdS1_S1_S1_'
+                    'diiPKiS1_S1_S1_S1_S1_S1_S1_S1_PdS4_S4_Pii->'
+                    'cudaError _INTERNALbb6aa09e::cudaLaunchKernel<char>->cudaLaunchKernel->cuLaunchKernel->'
+                    '[GPU] CalcVolumeForceForElems_kernel<true>'):
+                self.assertIn('gpu__kernel', c.tags)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -49,7 +49,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             # parameters = folder_name.split(".")
 
             param_list = re.split('([0-9.,]+)', parameters)
-            param_list.remove("")
+            if "" in param_list:
+                param_list.remove("")
 
             parameter_names = [n for i, n in enumerate(param_list) if i % 2 == 0]
             parameter_value = [float(n.replace(',', '.').rstrip('.')) for i, n in enumerate(param_list) if i % 2 == 1]
