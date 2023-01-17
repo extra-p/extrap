@@ -323,8 +323,13 @@ class SelectorWidget(QWidget):
             if model is not None:
                 formula = model.hypothesis.function
                 value = formula.evaluate(param_value_list)
-                if not math.isinf(value) and not math.isnan(value):
-                    value_list.append(value)
+                if isinstance(value, Sequence):
+                    for v in value:
+                        if not math.isinf(v) and not math.isnan(v):
+                            value_list.append(v)
+                else:
+                    if not math.isinf(value) and not math.isnan(value):
+                        value_list.append(value)
             children = callpath.childs
             value_list += self.iterate_children(models, param_value_list, children, metric)
         return value_list

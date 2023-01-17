@@ -41,9 +41,9 @@ class ComparisonAnnotation(Annotation):
         if math.isclose(res_a, res_b, rel_tol=self.relative_tolerance):
             return f'Comparison result: {res_a} ≈ {res_b}'
         elif comparison > 0:
-            return f'Comparison result: {res_a} > {res_b}'
+            return f'Comparison result: {res_a} > {res_b}\nDifference: {abs(res_a - res_b)}'
         elif comparison < 0:
-            return f'Comparison result: {res_a} < {res_b}'
+            return f'Comparison result: {res_a} < {res_b}\nDifference: {abs(res_a - res_b)}'
         else:
             return ''
 

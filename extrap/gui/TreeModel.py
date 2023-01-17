@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import copy
 from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING, List, Callable
+from typing import Optional, TYPE_CHECKING, List, Callable, Sequence
 
 import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
+from PySide2.QtGui import QPixmap, QPainter, QIcon
 
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
@@ -96,10 +97,23 @@ class TreeModel(QAbstractItemModel):
             # added for two-parameter models here
             value = self.get_comparison_value(model)
 
-            # convert value to relative value between 0 and 1
-            relativeValue = max(0.0, (value - self.main_widget.min_value) / delta)
+            if isinstance(value, Sequence):
+                pixmap = QPixmap(32, 32)
+                painter = QPainter(pixmap)
+                section_width = pixmap.width() / len(value)
+                x_pos = 0
+                for v in value:
+                    relativeValue = max(0.0, (v - self.main_widget.min_value) / delta)
+                    color = self.main_widget.color_widget.getColor(relativeValue)
+                    painter.fillRect(x_pos, 0, section_width, pixmap.height(), color)
+                    x_pos += section_width
+                del painter
+                return QIcon(pixmap)
+            else:
+                # convert value to relative value between 0 and 1
+                relativeValue = max(0.0, (value - self.main_widget.min_value) / delta)
 
-            return self.main_widget.color_widget.getColor(relativeValue)
+                return self.main_widget.color_widget.getColor(relativeValue)
 
         if get_tooltip_annotations:
             if model.annotations:
@@ -132,7 +146,16 @@ class TreeModel(QAbstractItemModel):
             else:
                 parameters = self.selector_widget.getParameterValues()
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
-                res = formatNumber(str(formula.evaluate(parameters)))
+                value = formula.evaluate(parameters)
+                if isinstance(value, Sequence):
+                    res = '('
+                    for v in value:
+                        res += formatNumber(str(v))
+                        res += ', '
+                    res = res[:-2]
+                    res += ')'
+                else:
+                    res = formatNumber(str(value))
                 numpy.seterr(**previous)
                 return res
         elif index.column() == 4:
