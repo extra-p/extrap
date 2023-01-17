@@ -39,7 +39,7 @@ class ComparisonFunction(TermlessFunction):
         #         return function_value[selected_function, :]
         #     else:
         #         return function_value[selected_function]
-        return np.max(function_value)
+        return function_value
 
     def _pos_hash(self, pos):
         pos = np.cast['int32'](pos)
