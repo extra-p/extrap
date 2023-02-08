@@ -48,9 +48,6 @@ def main(*, args=None, test=False):
 
     window = MainWidget()
 
-    if sys.platform.startswith('darwin'):
-        _macos_update_title_bar(window)
-
     _init_warning_system(window, test)
 
     window.show()
@@ -246,20 +243,6 @@ def _update_mac_app_info():
             NSWindow.setAllowsAutomaticWindowTabbing_(False)
         except ImportError:
             pass
-        
-def _macos_update_title_bar(window):
-    try:
-        import objc
-        from AppKit import NSWindow, NSView, NSColor, NSColorSpace
-        ns_view = objc.objc_object(c_void_p=int(window.winId()))
-        ns_window = ns_view.window()
-        ns_window.setTitlebarAppearsTransparent_(True)
-        ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
-        c=window.palette().window().color()
-        ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
-        ns_window.setBackgroundColor_(ns_window_color)
-    except ImportError:
-        pass
 
 
 if __name__ == "__main__":

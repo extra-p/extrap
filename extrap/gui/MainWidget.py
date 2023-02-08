@@ -6,6 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 import signal
+import sys
 from enum import Enum
 from functools import partial
 from pathlib import Path
@@ -65,11 +66,15 @@ class MainWidget(QMainWindow):
         # is used when loading the data from a file and then modeling directly
         self.median = False
 
+        if sys.platform.startswith('darwin'):
+            self._macos_update_title_bar()
+
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         """
         Initializes the User Interface of the extrap widget. E.g. the menus.
         """
+
         self.setWindowTitle(extrap.__title__)
         # Status bar
         # self.statusBar()
@@ -426,7 +431,24 @@ class MainWidget(QMainWindow):
     activate_event_handlers = []
 
     def event(self, e: QEvent) -> bool:
-        if e.type() == QEvent.WindowActivate:
+        if e.type() == QEvent.Type.WindowActivate:
             for h in self.activate_event_handlers:
                 h(e)
+        elif e.type() == QEvent.Type.LayoutRequest or e.type() == QEvent.Type.WinIdChange:
+            if sys.platform.startswith('darwin'):
+                self._macos_update_title_bar()
         return super().event(e)
+
+    def _macos_update_title_bar(self):
+        try:
+            import objc
+            from AppKit import NSWindow, NSView, NSColor, NSColorSpace
+            ns_view = objc.objc_object(c_void_p=int(self.winId()))
+            ns_window = ns_view.window()
+            ns_window.setTitlebarAppearsTransparent_(True)
+            ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
+            c = self.palette().window().color()
+            ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
+            ns_window.setBackgroundColor_(ns_window_color)
+        except ImportError:
+            pass
