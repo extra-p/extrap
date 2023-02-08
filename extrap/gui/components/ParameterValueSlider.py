@@ -7,9 +7,9 @@
 
 import math
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 
 class ParameterValueSlider(QWidget):

@@ -11,7 +11,7 @@ import math
 from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric

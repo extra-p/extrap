@@ -12,7 +12,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide2.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QSizePolicy
 from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure

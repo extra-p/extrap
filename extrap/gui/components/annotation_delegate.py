@@ -7,10 +7,10 @@
 
 from __future__ import annotations
 
-from PySide2.QtCore import QXmlStreamReader, QModelIndex, QMargins, QRect, QSize
-from PySide2.QtGui import Qt
-from PySide2.QtSvg import QSvgRenderer
-from PySide2.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
+from PySide6.QtCore import QXmlStreamReader, QModelIndex, QMargins, QRect, QSize
+from PySide6.QtGui import Qt
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 
 from extrap.entities.annotations import AnnotationIconSVG
 

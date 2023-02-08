@@ -7,8 +7,8 @@
 
 from typing import Mapping, Collection, cast
 
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
     QComboBox, QVBoxLayout, QLabel, QPushButton
 
 from extrap.modelers import single_parameter

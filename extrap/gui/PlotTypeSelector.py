@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 
 class PlotTypeSelector(QDialog):

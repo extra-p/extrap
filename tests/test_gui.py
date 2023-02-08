@@ -10,8 +10,8 @@ import unittest
 import warnings
 from threading import Thread
 
-from PySide2.QtCore import QRect, QItemSelectionModel
-from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
+from PySide6.QtCore import QRect, QItemSelectionModel
+from PySide6.QtWidgets import QApplication, QCheckBox, QPushButton
 
 from extrap.extrap import extrapgui
 from extrap.fileio.file_reader.text_file_reader import TextFileReader

@@ -12,7 +12,7 @@ from enum import Enum, auto
 from typing import Optional, TYPE_CHECKING, List, Callable
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node

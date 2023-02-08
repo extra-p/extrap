@@ -7,7 +7,7 @@
 
 from typing import Mapping, Dict
 
-from PySide2.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from extrap.entities.calltree import Node
 

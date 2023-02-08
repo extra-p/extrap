@@ -9,7 +9,7 @@ import sys
 
 import matplotlib.patches as mpatches
 import numpy as np
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 

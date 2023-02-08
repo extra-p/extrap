@@ -53,7 +53,7 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 * marshmallow
 * packaging
 * tqdm
-* PySide2 (for GUI)
+* PySide6 (for GUI)
 * matplotlib (for GUI)
 * pyobjc-framework-Cocoa (only for GUI on macOS)
 

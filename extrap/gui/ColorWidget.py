@@ -5,9 +5,9 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.Utils import formatNumber
 
@@ -71,7 +71,9 @@ class ColorWidget(QWidget):
 
         rect_width = self.frameGeometry().width()
         rect_height = self.frameGeometry().height()
-        (mleft, mtop, mright, mbottom) = self.getContentsMargins()
+
+        cm = self.contentsMargins()
+        mleft, mtop, mright, mbottom = cm.left(), cm.top(), cm.right(), cm.bottom()
 
         for position in range(mleft, rect_width - mright):
             ratio = float(position) / rect_width

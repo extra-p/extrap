@@ -7,8 +7,8 @@
 
 from threading import Event
 
-from PySide2.QtCore import Qt, QCoreApplication, Slot
-from PySide2.QtWidgets import QProgressDialog, QLabel
+from PySide6.QtCore import Qt, QCoreApplication, Slot
+from PySide6.QtWidgets import QProgressDialog, QLabel
 
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar

@@ -11,9 +11,9 @@ from functools import partial
 from pathlib import Path
 from typing import Optional, Sequence, Tuple
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 import extrap
 from extrap.entities.calltree import Node

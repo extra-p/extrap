@@ -7,8 +7,8 @@
 
 import sys
 
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QToolButton, QSizePolicy, QWidget, QGroupBox, QVBoxLayout, QApplication
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QToolButton, QSizePolicy, QWidget, QGroupBox, QVBoxLayout, QApplication
 
 
 class ExpanderWidget(QGroupBox):
