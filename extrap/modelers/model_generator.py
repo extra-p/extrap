@@ -90,7 +90,8 @@ class ModelGenerator:
         self.experiment.add_modeler(self)
 
     def model_selected_callpaths(self, callpaths: Collection[Callpath], progress_bar=DUMMY_PROGRESS):
-        measurements = {(callpath, m): v for (callpath, m), v in self.experiment.measurements if callpath in callpaths}
+        measurements = {(callpath, m): v for (callpath, m), v in self.experiment.measurements.items() if
+                        callpath in callpaths}
         models = self._modeler.model(list(measurements.values()), progress_bar)
         self.models = {k: m for k, m in zip(measurements.keys(), models)}
         for (callpath, metric), model in self.models.items():
