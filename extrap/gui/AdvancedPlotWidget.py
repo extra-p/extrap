@@ -120,4 +120,4 @@ class MyCustomToolbar(NavigationToolbar):
        and save the figure.
     """
     toolitems = [toolitem for toolitem in NavigationToolbar.toolitems if
-                 toolitem[0] in ('Home1', 'Save')]
+                 toolitem[0] in ('Home', 'Save')]

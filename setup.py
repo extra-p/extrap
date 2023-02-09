@@ -48,11 +48,11 @@ setup(
         "Topic :: Software Development",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=[
         "pyside6~=6.4",
         "numpy~=1.18",
-        "matplotlib~=3.2",
+        "matplotlib~=3.4",
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",

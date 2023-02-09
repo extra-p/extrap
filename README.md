@@ -47,7 +47,7 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 
 ### Requirements
 
-* Python 3.7 or higher
+* Python 3.8 or higher
 * numpy
 * pycubexr
 * marshmallow
