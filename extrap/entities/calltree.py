@@ -146,3 +146,12 @@ class CallTree(Node):
 
     def ensure_callpaths_exist(self, parent_path: str = ''):
         super(CallTree, self).ensure_callpaths_exist(parent_path)
+
+    def iterate_nodes(self):
+        """ Iterates through all nodes from root to leafs and in order of the children. Traversal happens as DFS."""
+        stack = list(reversed(self.childs))
+        while stack:
+            node = stack.pop()
+            yield node
+            for child in reversed(node.childs):
+                stack.append(child)

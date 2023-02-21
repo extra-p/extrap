@@ -66,8 +66,10 @@ class _EmptyCallpath(Callpath):
         if not self.__is_init:
             raise NotImplementedError()
 
-    def concat(self, *other, copy_tags=False):
-        raise NotImplementedError()
+    def concat(self, *other, copy_tags=False, **tags):
+        cp = Callpath('->'.join(itertools.chain(other)))
+        cp.tags.update(tags)
+        return cp
 
 
 class CallpathSchema(NamedEntityWithTagsSchema):
