@@ -9,24 +9,47 @@ class MemoryReusePool {
     size_t _size;
     size_t _num_buffers = 0;
 
+    T *alloc_aligned(size_t size) {
+        uint8_t *memory = reinterpret_cast<uint8_t *>(malloc(size * sizeof(T) + alignment_));
+
+        size_t offset = alignment_ - reinterpret_cast<size_t>(memory) % alignment_;
+        uint8_t *ret = memory + static_cast<uint8_t>(offset);
+
+        // store the number of extra bytes in the byte before the returned pointer
+        memory[offset - 1] = offset;
+
+        return reinterpret_cast<T *>(ret);
+    }
+
+    void free_aligned(T *aligned_ptr) {
+        uint8_t *raw_ptr = static_cast<uint8_t *>(aligned_ptr);
+        int offset = *(raw_ptr - 1);
+        free(raw_ptr - offset);
+    }
+
 public:
     explicit MemoryReusePool(size_t size_) : _size(size_) {}
 
     [[nodiscard]] T *get_mem() {
         if (available_ressources.empty()) {
             _num_buffers++;
-            if (_size == 0) {
-                if (alignment_ == 0) {
+            if (alignment_ == 0) {
+                if (_size == 0) {
                     return new T;
                 } else {
-                    return new (std::align_val_t(alignment_)) T;
-                }
-            } else {
-                if (alignment_ == 0) {
                     return new T[_size];
-                } else {
-                    return new (std::align_val_t(alignment_)) T[_size];
                 }
+
+            } else {
+                size_t size = _size;
+                if (size == 0) {
+                    size = 1;
+                }
+                T *ptr = alloc_aligned(size);
+                for (size_t i = 0; i < size; i++) {
+                    new (ptr + i) T;
+                }
+                return ptr;
             }
         } else {
             T *memory = available_ressources.back();
@@ -51,11 +74,22 @@ public:
     }
 
     ~MemoryReusePool() {
-        for (auto &&i : available_ressources) {
-            if (_size == 0) {
-                delete i;
+        for (auto *mem : available_ressources) {
+            if (alignment_ == 0) {
+                if (_size == 0) {
+                    delete mem;
+                } else {
+                    delete[] mem;
+                }
             } else {
-                delete[] i;
+                auto size = _size;
+                if (size == 0) {
+                    size = 1;
+                }
+                for (size_t j = 0; j < size; j++) {
+                    mem[j].~T();
+                }
+                free_aligned(mem);
             }
         }
         available_ressources.clear();
