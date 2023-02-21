@@ -155,7 +155,7 @@ namespace cupti {
         return "Memcpy Unknown";
     }
 
-    void process_activity_kernel(CUpti_ActivityKernel7 *record) {
+    void process_activity_kernel(CUpti_ActivityKernel5 *record) {
 #ifdef EXTRA_PROF_DEBUG
         if (record->kind == CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL) {
             std::cout << "Concurrent";
@@ -206,7 +206,7 @@ namespace cupti {
         addEventPair(event_stream, EventType::OVERHEAD, record->start, record->end, node, 0, 0, -3);
     }
 
-    void process_activity_memcpy(CUpti_ActivityMemcpy5 *record) {
+    void process_activity_memcpy(CUpti_ActivityMemcpy3 *record) {
         auto *memcopy_kind = getMemcpyKindString(static_cast<CUpti_ActivityMemcpyKind>(record->copyKind),
                                                  static_cast<CUpti_ActivityFlag>(record->flags));
 #ifdef EXTRA_PROF_DEBUG
@@ -223,7 +223,7 @@ namespace cupti {
                      record->streamId);
     }
 
-    void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP4 *record) {
+    void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2 *record) {
         auto *memcopy_kind = getMemcpyKindString(static_cast<CUpti_ActivityMemcpyKind>(record->copyKind),
                                                  static_cast<CUpti_ActivityFlag>(record->flags));
 #ifdef EXTRA_PROF_DEBUG
@@ -241,7 +241,7 @@ namespace cupti {
                      record->streamId);
     }
 
-    void process_activity_memset(CUpti_ActivityMemset4 *record) {
+    void process_activity_memset(CUpti_ActivityMemset2 *record) {
         auto is_async = ((CUPTI_ACTIVITY_FLAG_MEMSET_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMSET_ASYNC);
         auto *memset_kind = is_async ? MEMSET_ASYNC : MEMSET;
 #ifdef EXTRA_PROF_DEBUG
@@ -276,19 +276,19 @@ namespace cupti {
                     switch (record->kind) {
                     case CUPTI_ACTIVITY_KIND_KERNEL:
                     case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
-                        process_activity_kernel((CUpti_ActivityKernel7 *)record);
+                        process_activity_kernel((CUpti_ActivityKernel5 *)record);
                         break;
                     case CUPTI_ACTIVITY_KIND_OVERHEAD:
                         process_activity_overhead((CUpti_ActivityOverhead *)record);
                         break;
                     case CUPTI_ACTIVITY_KIND_MEMCPY:
-                        process_activity_memcpy((CUpti_ActivityMemcpy5 *)record);
+                        process_activity_memcpy((CUpti_ActivityMemcpy3 *)record);
                         break;
                     case CUPTI_ACTIVITY_KIND_MEMSET:
-                        process_activity_memset((CUpti_ActivityMemset4 *)record);
+                        process_activity_memset((CUpti_ActivityMemset2 *)record);
                         break;
                     case CUPTI_ACTIVITY_KIND_MEMCPY2:
-                        process_activity_memcpyp2p((CUpti_ActivityMemcpyPtoP4 *)record);
+                        process_activity_memcpyp2p((CUpti_ActivityMemcpyPtoP2 *)record);
                         break;
                     default:
                         std::cerr << "EXTRA PROF: WARNING: Unknown CUPTI activity " << record->kind << '\n';
