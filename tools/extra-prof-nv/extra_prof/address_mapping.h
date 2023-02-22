@@ -1,0 +1,70 @@
+#pragma once
+
+#include <atomic>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <msgpack.hpp>
+#include <mutex>
+#include <vector>
+namespace extra_prof {
+inline std::unordered_map<intptr_t, std::string> name_register;
+inline uintptr_t main_function_ptr;
+inline std::string currentDateTime() {
+    time_t now = time(0);
+    struct tm tstruct {};
+    char buf[80];
+    tstruct = *localtime(&now);
+    strftime(buf, sizeof(buf), "%Y-%m-%d_%X", &tstruct);
+
+    return buf;
+}
+
+inline void create_address_mapping(std::filesystem::path output_dir) {
+    std::string nm_command("nm --numeric-sort --demangle ");
+    auto filename = std::filesystem::read_symlink(std::filesystem::path("/proc/self/exe"));
+
+    std::string result_str = nm_command + filename.string();
+
+    const char *result = result_str.c_str();
+
+    // printf("Command: %s", result);
+
+    FILE *fp;
+    /* Open the command for reading. */
+    fp = popen(result, "r");
+    if (fp == nullptr) {
+        std::cerr << "EXTRA PROF: ERROR: Failed to load the symbol table" << std::endl;
+        exit(1);
+    }
+
+    char buffer[2001];
+    char path[2001];
+    char modifier;
+    unsigned long long adress = 0;
+
+    // std::ofstream stream(output_dir / "symbols.txt");
+
+    while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
+        int parsed = sscanf(buffer, "%llx %1c %[^\n]", &adress, &modifier, path);
+        if (parsed != 3)
+            continue;
+
+        if (modifier == 't' || modifier == 'T' || modifier == 'w' || modifier == 'W') {
+
+            name_register.emplace(adress, path);
+
+            if (strcmp(path, "main") == 0) {
+                main_function_ptr = adress;
+            }
+
+            // stream << adress << ' ' << path << '\n';
+        }
+    }
+
+    /* close */
+    pclose(fp);
+}
+}

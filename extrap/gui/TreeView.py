@@ -8,22 +8,18 @@
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
-from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
-from extrap.entities.metric import Metric
 from extrap.gui.TreeModel import TreeModel, TreeItem
+from extrap.gui.components import developer_tools
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
-from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 
 if TYPE_CHECKING:
-    from extrap.gui.MainWidget import MainWidget
     from extrap.gui.SelectorWidget import SelectorWidget
 
 
@@ -175,19 +171,17 @@ class TreeView(QTreeView):
 
     def _create_developer_menu(self, treeModel, selectedModel, selectedCallpath):
         submenu = QMenu("Developer tools")
-        showInfoAction = submenu.addAction("Show tags")
-        showInfoAction.triggered.connect(
-            lambda: self.show_info(treeModel, selectedCallpath.path))
+        action = submenu.addAction("Show tags")
+        action.triggered.connect(lambda: developer_tools.show_info(treeModel, selectedCallpath.path))
         submenu.addSeparator()
-        showInfoAction = submenu.addAction("Delete subtree")
-        showInfoAction.triggered.connect(
-            lambda: self.delete_subtree(treeModel))
-        showInfoAction = submenu.addAction("Calculate complexity comparison")
-        showInfoAction.triggered.connect(lambda: self._calculate_complexity_comparison(selectedModel))
-        showInfoAction = submenu.addAction("Filter: at least 1% of total time")
-        showInfoAction.setCheckable(True)
-        showInfoAction.setChecked(self._filter_1_percent_time_state)
-        showInfoAction.toggled.connect(lambda on: self._filter_1_percent_time(on, treeModel))
+        action = submenu.addAction("Delete subtree")
+        action.triggered.connect(lambda: developer_tools.delete_subtree(self, treeModel))
+        action = submenu.addAction("Calculate complexity comparison")
+        action.triggered.connect(lambda: developer_tools.calculate_complexity_comparison(selectedModel))
+        action = submenu.addAction("Filter: at least 1% of total time")
+        action.setCheckable(True)
+        action.setChecked(self._filter_1_percent_time_state)
+        action.toggled.connect(lambda on: developer_tools.filter_1_percent_time(self, on, treeModel))
         return submenu
 
     def copy_model_to_clipboard(self, selectedModel):
@@ -205,22 +199,6 @@ class TreeView(QTreeView):
                                 for c in model.getComments())
         msg.setInformativeText(allComments)
         msg.setWindowTitle("Model Comments")
-        # msg.setDetailedText("The details are as follows:")
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
-
-    @staticmethod
-    def show_info(model, callpath):
-        if not model and not callpath:
-            return
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
-        if callpath:
-            msg.setText(
-                f"Tags for callpath {callpath}:")
-            allComments = '\n'.join(f"{tag}: {value}" for tag, value in callpath.tags.items())
-            msg.setInformativeText(allComments)
-        msg.setWindowTitle("Model Info")
         # msg.setDetailedText("The details are as follows:")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
@@ -280,66 +258,3 @@ class TreeView(QTreeView):
         if mimeData:
             file_name = mimeData.urls()[0].toLocalFile()  # Make sure to pass only python types into lambda
             QTimer.singleShot(0, lambda: self._selector_widget.main_widget.open_experiment(file_name))
-
-    def delete_subtree(self, model):
-        if not self.selectedIndexes():
-            return
-        selectedCallpaths = [model.getValue(i) for i in self.selectedIndexes()]
-
-        for selectedCallpath in selectedCallpaths:
-            if not selectedCallpath.path:
-                continue
-            callpath = selectedCallpath.path
-            main_widget: MainWidget = self._selector_widget.main_widget
-            experiment = main_widget.getExperiment()
-            callpaths_to_delete = [(i, c) for i, c in enumerate(experiment.callpaths) if
-                                   c.name.startswith(callpath.name)]
-
-            for callpath_index, callpath_to_delete in reversed(callpaths_to_delete):
-                del experiment.callpaths[callpath_index]  # make sure to delete only once
-                for metric in experiment.metrics:
-                    key = (callpath_to_delete, metric)
-                    experiment.measurements.pop(key, None)
-                    for modeler in experiment.modelers:
-                        modeler.models.pop(key, None)
-        self.model().valuesChanged()
-
-    def _calculate_complexity_comparison(self, model):
-        if not model:
-            return
-        if isinstance(model, ComparisonModel):
-            model.add_complexity_comparison_annotation()
-
-    def _filter_1_percent_time(self, on, tree_model):
-        self._filter_1_percent_time_state = on
-        filter_id_percent_time = 'develop__filter_1_percent_time'
-        if on:
-            model_set = self._selector_widget.getCurrentModel()
-            use_median = model_set.modeler.use_median
-            t_metric = Metric('time')
-            total_time = defaultdict(int)
-            for (callpath,
-                 metric), measurements in self._selector_widget.main_widget.getExperiment().measurements.items():
-                if metric != t_metric:
-                    continue
-                if callpath.lookup_tag(SumAggregation.TAG_CATEGORY) is None and \
-                        not callpath.lookup_tag(SumAggregation.TAG_USAGE_DISABLED, False):
-                    for measurement in measurements:
-                        total_time[measurement.coordinate] += measurement.value(use_median)
-
-            def filter_(node):
-                if model_set is None or node.path is None:
-                    return True
-
-                model = model_set.models.get((node.path, t_metric))
-                if model:
-                    ratios = [measurement.value(use_median) / total_time[measurement.coordinate] for measurement in
-                              model.measurements]
-                    node.path.tags['devel__filter__ratio'] = ratios
-                    return any(r >= 0.01 for r in ratios)
-                else:
-                    return True
-
-            tree_model.item_filter.put_condition(filter_id_percent_time, filter_)
-        else:
-            tree_model.item_filter.remove_condition(filter_id_percent_time)
