@@ -101,6 +101,10 @@ class ExtraProf2Reader(AbstractDirectoryReader):
                 child_durations = np.sum([c.duration for c in node.childs if not c.disable_exclusive_conversion],
                                          axis=0)
 
+                if np.any(child_durations > node.duration):
+                    print("overflow", node.path, (node.duration - child_durations) / 10 ** 9)
+                    continue
+
                 experiment.add_measurement(
                     Measurement(coordinate, node.path, METRIC_TIME, (node.duration - child_durations) / 10 ** 9))
                 experiment.add_measurement(Measurement(coordinate, node.path, METRIC_VISITS, node.visits))
@@ -161,14 +165,14 @@ class ExtraProf2Reader(AbstractDirectoryReader):
         def _read_calltree_node(parent_node: _ExtraProfInputNode, ep_node):
             name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node
             n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
+            if n_type == CallTreeNodeType.KERNEL_LAUNCH:
+                name = "LAUNCH " + cls._demangle_name(name)
+            elif n_type == CallTreeNodeType.KERNEL:
+                name = "GPU " + cls._demangle_name(name)
+            elif n_type == CallTreeNodeType.MEMSET or n_type == CallTreeNodeType.MEMCPY:
+                name = "GPU " + name
             node = parent_node.find_child(name)
             if not node:
-                if n_type == CallTreeNodeType.KERNEL_LAUNCH:
-                    name = "LAUNCH " + cls._demangle_name(name)
-                elif n_type == CallTreeNodeType.KERNEL:
-                    name = "GPU " + cls._demangle_name(name)
-                elif n_type == CallTreeNodeType.MEMSET or n_type == CallTreeNodeType.MEMCPY:
-                    name = "GPU " + name
                 node = _ExtraProfInputNode(name, parent_node.path.concat(name), num_values)
                 if CallTreeNodeFlags.OVERLAP in flags:
                     node.path.tags['gpu__overlap'] = True
