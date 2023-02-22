@@ -262,7 +262,8 @@ class CubeFileReader2(AbstractDirectoryReader):
                 if cnode.region.paradigm == 'cuda':
                     if cnode.region.role == 'function':
                         callpath.tags['gpu__kernel'] = True
-                        callsite_kernels[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsite_kernels[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
                     elif cnode.region.role == 'wrapper':
                         if CUBE_CALLSITE_ID_KEY in cnode.parameters:
                             callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
