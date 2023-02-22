@@ -71,12 +71,25 @@ inline std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTr
     return {time, current_node};
 }
 
-inline time_point pop_time() {
+template <typename T>
+inline time_point pop_time(T *fn_ptr) {
+    auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
+    if (name_register.find(ptr) == name_register.end()) {
+        std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
+        throw std::runtime_error("EXTRA PROF: ERROR unknown function pointer.");
+    }
+    return pop_time(name_register[ptr].c_str());
+}
+template <>
+inline time_point pop_time(char const *name) {
     time_point time;
     CUPTI_CALL(cuptiGetTimestamp(&time));
     auto duration = time - extra_prof::timer_stack.back();
     if (current_node->name() == nullptr) {
         std::cerr << "EXTRA PROF: WARNING: accessing calltree root\n";
+    }
+    if (current_node->name() != name) {
+        std::cerr << "EXTRA PROF: ERROR: popping wrong node\n";
     }
     current_node->visits++;
     current_node->duration += duration;

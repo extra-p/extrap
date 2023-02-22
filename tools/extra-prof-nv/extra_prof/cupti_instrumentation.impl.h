@@ -74,7 +74,13 @@ namespace cupti {
                 std::cout << "RT API START: " << rtdata->functionName << " " << rtdata->correlationId << '\n';
 #endif
             } else if (rtdata->callbackSite == CUPTI_API_EXIT) {
-                auto time = extra_prof::pop_time();
+                time_point time = 0;
+                if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000 ||
+                    cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunch_v3020) {
+                    time = extra_prof::pop_time(rtdata->symbolName);
+                } else {
+                    time = extra_prof::pop_time(rtdata->functionName);
+                }
                 auto evt_type = EventType::NONE;
                 int stream_id = 0;
                 if (cbid_is_synchronization) {
