@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,6 +13,7 @@ import warnings
 from itertools import chain
 
 import extrap
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
@@ -33,8 +34,7 @@ def main(args=None, prog=None):
     # argparse
     modelers_list = list(set(k.lower() for k in
                              chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
-    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False,
-                                     formatter_class=WideHelpFormatter)
+    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False)
     positional_arguments = parser.add_argument_group("Positional arguments")
     basic_arguments = parser.add_argument_group("Optional arguments")
     basic_arguments.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -44,7 +44,7 @@ def main(args=None, prog=None):
                                  help="Show program's version number and exit")
     basic_arguments.add_argument("--log", action="store", dest="log_level", type=str.lower, default='warning',
                                  choices=['debug', 'info', 'warning', 'error', 'critical'],
-                                 help="Set program's log level (default: warning)")
+                                 help="Set program's log level (default: %(default)s)")
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
@@ -53,16 +53,22 @@ def main(args=None, prog=None):
                            help=reader.DESCRIPTION)
     group.add_argument(ExperimentReader.CMD_ARGUMENT, action="store_true", default=False, dest=ExperimentReader.NAME,
                        help='Load Extra-P experiment and generate new models')
-    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
-                               choices=["weak", "strong"],
-                               help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
+
+    names_of_scaling_conversion_readers = ", ".join(reader.NAME + " files" for reader in all_readers.values()
+                                                    if issubclass(reader, AbstractScalingConversionReader))
+
+    input_options.add_argument("--scaling", action="store", dest="scaling_type", default=ScalingType.WEAK,
+                               type=ScalingType, choices=ScalingType,
+                               help="Set scaling type when loading data from per-thread/per-rank files (" +
+                                    names_of_scaling_conversion_readers + ") (default: %(default)s)")
 
     modeling_options = parser.add_argument_group("Modeling options")
     modeling_options.add_argument("--median", action="store_true", dest="median",
                                   help="Use median values for computation instead of mean values")
     modeling_options.add_argument("--modeler", action="store", dest="modeler", default='default', type=str.lower,
                                   choices=modelers_list,
-                                  help="Selects the modeler for generating the performance models")
+                                  help="Selects the modeler for generating the performance models "
+                                       "(default: %(default)s)")
     modeling_options.add_argument("--options", dest="modeler_options", default={}, nargs='+', metavar="KEY=VALUE",
                                   action=ModelerOptionsAction,
                                   help="Options for the selected modeler")
@@ -76,16 +82,16 @@ def main(args=None, prog=None):
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
                                 metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
                                 help="Set which information should be displayed after modeling. Use one of "
-                                     "{all, callpaths, metrics, parameters, functions} or specify a "
-                                     "formatting string using placeholders "
-                                     f"(see {extrap.__documentation_link__}/output-formatting.md).")
+                                     "the presets or specify a formatting string using placeholders "
+                                     f"(see {extrap.__documentation_link__}/output-formatting.md). "
+                                     f"(default: %(default)s)")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
                                 help="Saves the experiment including all models as Extra-P experiment "
                                      "(if no extension is specified, '.extra-p' is appended)")
     output_options.add_argument("--model-set-name", action="store", metavar="NAME", default='New model',
                                 dest="model_name", type=str,
-                                help="Sets the name of the generated set of models when outputting an "
-                                     "experiment (default: 'New model')")
+                                help="Sets the name of the generated set of models when outputting an experiment "
+                                     '(default: "%(default)s")')
 
     positional_arguments.add_argument("path", metavar="FILEPATH", type=str, action="store",
                                       help="Specify a file path for Extra-P to work with")
@@ -201,18 +207,6 @@ def main(args=None, prog=None):
     else:
         logging.error("No file path given to load files.")
         sys.exit(1)
-
-
-class WideHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
-
-    def __init__(self, *args, **kwargs):
-        try:
-            kwargs['width'] = 100
-            super().__init__(*args, **kwargs)
-        except TypeError:
-            warnings.warn("Wide argparse help formatter failed, falling back.")
-            del kwargs['width']
-            super().__init__(*args, **kwargs)
 
 
 if __name__ == "__main__":
