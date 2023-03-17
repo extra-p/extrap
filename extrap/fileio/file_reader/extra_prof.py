@@ -1,3 +1,10 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2023, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 from __future__ import annotations
 
 from enum import Enum, Flag
@@ -103,10 +110,13 @@ class ExtraProf2Reader(AbstractDirectoryReader):
 
                 if np.any(child_durations > node.duration):
                     print("overflow", node.path, (node.duration - child_durations) / 10 ** 9)
-                    continue
+                    duration = node.duration / 10 ** 9
+                    node.childs = []
+                else:
+                    duration = (node.duration - child_durations) / 10 ** 9
 
                 experiment.add_measurement(
-                    Measurement(coordinate, node.path, METRIC_TIME, (node.duration - child_durations) / 10 ** 9))
+                    Measurement(coordinate, node.path, METRIC_TIME, duration))
                 experiment.add_measurement(Measurement(coordinate, node.path, METRIC_VISITS, node.visits))
                 if np.any(node.bytes != 0):
                     experiment.add_measurement(Measurement(coordinate, node.path, METRIC_BYTES, node.bytes))
