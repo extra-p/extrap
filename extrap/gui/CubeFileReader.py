@@ -11,6 +11,7 @@ from threading import Event
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
@@ -111,8 +112,8 @@ class CubeFileReader(QDialog):
         # layout.addRow("Repetitions:", self.spin_box)
         #
         self.scaling_choice = QComboBox(self)
-        self.scaling_choice.addItem("weak")
-        self.scaling_choice.addItem("strong")
+        for st in ScalingType:
+            self.scaling_choice.addItem(str(st), st)
 
         layout.addRow("Scaling type:", self.scaling_choice)
 
@@ -224,7 +225,7 @@ class CubeFileReader(QDialog):
         # self.postfix = self.postfix_edit.text()
         # self.filename = self.filename_edit.text()
         # self.repetitions = self.spin_box.value()
-        self.scaling_type = self.scaling_choice.currentText()
+        self.scaling_type = self.scaling_choice.currentData()
 
         with ProgressBar(total=0, gui=True) as pbar:
             self._show_progressbar()
