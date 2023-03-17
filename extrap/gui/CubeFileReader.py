@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,6 +11,7 @@ from threading import Event
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
@@ -111,12 +112,12 @@ class CubeFileReader(QDialog):
         # layout.addRow("Repetitions:", self.spin_box)
         #
         self.scaling_choice = QComboBox(self)
-        self.scaling_choice.addItem("weak")
-        self.scaling_choice.addItem("strong")
+        for st in ScalingType:
+            self.scaling_choice.addItem(str(st), st)
 
         layout.addRow("Scaling type:", self.scaling_choice)
 
-        self._demangle_cb = QCheckBox("Demangle function names",self)
+        self._demangle_cb = QCheckBox("Demangle function names", self)
         self._demangle_cb.setChecked(True)
         layout.addRow(self._demangle_cb)
 
@@ -228,7 +229,7 @@ class CubeFileReader(QDialog):
         # self.postfix = self.postfix_edit.text()
         # self.filename = self.filename_edit.text()
         # self.repetitions = self.spin_box.value()
-        self.scaling_type = self.scaling_choice.currentText()
+        self.scaling_type = self.scaling_choice.currentData()
 
         with ProgressBar(total=0, gui=True) as pbar:
             self._show_progressbar()

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -18,6 +18,7 @@ from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
@@ -82,9 +83,9 @@ def parse_arguments(args=None):
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
                         help="specify a file path for Extra-P to work with")
 
-    parser.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
-                        choices=["weak", "strong"],
-                        help="set weak or strong scaling when loading data from cube files [weak (default), strong]")
+    parser.add_argument("--scaling", action="store", dest="scaling_type", default=ScalingType.WEAK, type=ScalingType,
+                        choices=ScalingType,
+                        help="Set weak or strong scaling when loading data from cube files [weak (default), strong]")
     arguments = parser.parse_args(args)
     return arguments
 
