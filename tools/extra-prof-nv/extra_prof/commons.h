@@ -40,7 +40,7 @@ inline CallTreeNode *current_node = &call_tree;
 inline std::filesystem::path output_dir;
 
 #ifdef EXTRA_PROF_EVENT_TRACE
-inline std::map<time_point, Event> cpu_event_stream;
+inline std::deque<Event> cpu_event_stream;
 inline std::vector<Event *> event_stack;
 #endif
 
@@ -65,8 +65,8 @@ inline std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTr
     current_node = current_node->findOrAddChild(name, type);
     timer_stack.push_back(time);
 #ifdef EXTRA_PROF_EVENT_TRACE
-    auto [map_iter, created] = cpu_event_stream.try_emplace(time, EventType::START, EventStart{current_node});
-    event_stack.push_back(&map_iter->second);
+    auto &ref = cpu_event_stream.emplace_back(time, EventType::START, EventStart{current_node});
+    event_stack.push_back(&ref);
 #endif
     return {time, current_node};
 }
@@ -99,7 +99,7 @@ inline time_point pop_time(char const *name) {
     }
     current_node = current_node->parent();
 #ifdef EXTRA_PROF_EVENT_TRACE
-    cpu_event_stream.try_emplace(time, EventType::END, EventEnd{event_stack.back()});
+    cpu_event_stream.emplace_back(time, EventType::END, EventEnd{event_stack.back()});
     event_stack.pop_back();
 #endif
     return time;

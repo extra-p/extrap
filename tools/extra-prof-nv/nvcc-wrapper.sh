@@ -25,10 +25,15 @@ while test $# -gt 0; do
     shift
 done
 
-instrumentation_arguments=("-Xcompiler" "-finstrument-functions" "-Xcompiler" "-no-pie" "-Xlinker" "-no-pie")
-extra_prof_arguments=("-c" "-O2" "$compiler_dir" "-std" "c++17" "-I$(dirname "${BASH_SOURCE[0]}")/msgpack/include")
+instrumentation_arguments=("-Xcompiler" "-finstrument-functions" "-Xcompiler" "-no-pie" "-Xlinker" "--no-pie")
+extra_prof_arguments=("-c" "$compiler_dir" "-std" "c++17" "-I$(dirname "${BASH_SOURCE[0]}")/msgpack/include")
 if test "${EXTRA_PROF_EVENT_TRACE}" = on || test "${EXTRA_PROF_EVENT_TRACE}" = ON; then
     extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=1")
+fi
+if test "${EXTRA_PROF_DEBUG_BUILD}" = on || test "${EXTRA_PROF_DEBUG_BUILD}" = ON; then
+    extra_prof_arguments+=("-g")
+else
+    extra_prof_arguments+=("-O2")
 fi
 
 if $compile_only; then
