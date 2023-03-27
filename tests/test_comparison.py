@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -391,3 +391,13 @@ class TestComparison(TestCase):
         self.assertSetEqual(set(experiment.coordinates), set(experiment1.coordinates))
         self.assertListEqual(experiment.parameters, experiment1.parameters)
         self.assertTrue(set(experiment.metrics) <= set(experiment1.metrics))
+
+    def test_name_normalization(self):
+        self.assertEqual("test", SmartMatcher._normalize_name("test"))
+        self.assertEqual("test", SmartMatcher._normalize_name("test()"))
+        self.assertEqual("test", SmartMatcher._normalize_name("test(int, char*, void)"))
+        self.assertEqual("test", SmartMatcher._normalize_name("void test(int, char*, void)"))
+        self.assertEqual("test", SmartMatcher._normalize_name("T<> test(int, char*, void)"))
+        self.assertEqual("test", SmartMatcher._normalize_name("T<int> test(int, char*, void)"))
+        self.assertEqual("test", SmartMatcher._normalize_name("T<int(int)> test(int, char*, void)"))
+        self.assertEqual("test", SmartMatcher._normalize_name("int* test(T<int>, char*, void)"))

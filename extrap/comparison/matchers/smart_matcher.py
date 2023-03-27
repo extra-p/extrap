@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import warnings
 from typing import Sequence, Tuple, Mapping, List, Optional, Dict, TYPE_CHECKING
 
@@ -190,7 +191,11 @@ class SmartMatcher(AbstractMatcher):
 
     @staticmethod
     def _normalize_name(name):
-        return replace_method_parameters(name, "")
+        result: str = replace_method_parameters(name, "").replace('()', '')
+        space_idx = result.find(' ')
+        if space_idx >= 0:
+            result = result[space_idx + 1:]
+        return result
 
     def _merge_call_trees(self, parent: Node, parent1: Node, parent2: Node, path, matches, progress_bar):
         for n1 in parent1.childs:
@@ -204,8 +209,11 @@ class SmartMatcher(AbstractMatcher):
                     self._merge_call_trees(n, n1, n2, new_path, matches, progress_bar)
         progress_bar.update()
 
+    _re_main = re.compile(r'(?:\w+\s+)?main(?:\(.*?\))?$')
+
     def _find_main(self, node: Node):
-        if 'main' == node.name.strip().casefold():
+        # int main(int, char**)
+        if self._re_main.match(node.name.strip().casefold()):
             return node
         else:
             for child in node:
