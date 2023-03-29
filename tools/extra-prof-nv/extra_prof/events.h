@@ -75,41 +75,47 @@ public:
 
 struct Event {
 public:
-    // time_point timestamp;
+    time_point timestamp;
     union {
         EventStart start_event;
         EventEnd end_event;
     };
-    EventType type;
+    EventType type = EventType::NONE;
     uint8_t correlationId = 0;
     uint16_t streamId = 0;
-    uint32_t threads = 0;
+    float resourceUsage = 0;
 
-    Event() = default;
+    Event(){};
     Event(Event &&evt) = default;
-    Event(EventType type_, EventStart start, uint16_t streamId_ = 0, uint8_t correlationId_ = 0, uint32_t threads_ = 0)
-        : type(type_), streamId(streamId_), correlationId(correlationId_), threads(threads_), start_event(start) {}
-    Event(EventType type_, EventEnd end, uint16_t streamId_ = 0, uint8_t correlationId_ = 0)
-        : type(type_), streamId(streamId_), correlationId(correlationId_), threads(0), end_event(end) {}
+    Event(time_point timestamp_, EventType type_, EventStart start, uint16_t streamId_ = 0, uint8_t correlationId_ = 0,
+          float resourceUsage_ = 0)
+        : timestamp(timestamp_), type(type_), streamId(streamId_), correlationId(correlationId_),
+          resourceUsage(resourceUsage_), start_event(start) {}
+    Event(time_point timestamp_, EventType type_, EventEnd end, uint16_t streamId_ = 0, uint8_t correlationId_ = 0)
+        : timestamp(timestamp_), type(type_), streamId(streamId_), correlationId(correlationId_), end_event(end) {}
 
     inline bool is_start() const { return (type & EventType::END) == EventType::START; }
     inline bool is_end() const { return (type & EventType::END) == EventType::END; }
     inline EventType get_type() const { return type & EventType::TYPE_MASK; }
 
+    inline bool operator<(const Event &other) const { return timestamp < other.timestamp; }
+
+    Event &operator=(Event &&other) = default;
+
     // MSGPACK_DEFINE(type, threads);
 };
 
-inline void addEventPair(std::map<time_point, Event> &event_stream, EventType type, time_point start, time_point stop,
-                         CallTreeNode *node, uint32_t threads, uint32_t correlation_id, uint32_t stream_id) {
+inline void addEventPair(std::deque<Event> &event_stream, EventType type, time_point start, time_point stop,
+                         CallTreeNode *node, float resourceUsage, uint32_t correlation_id, uint32_t stream_id) {
 
-    auto [map_iter, created] =
-        event_stream.try_emplace(start, type | EventType::START, EventStart{node}, static_cast<uint16_t>(stream_id),
-                                 static_cast<uint8_t>(correlation_id), threads);
-    event_stream.try_emplace(stop, type | EventType::END, EventEnd{&(map_iter->second)},
-                             static_cast<uint16_t>(stream_id), static_cast<uint8_t>(correlation_id));
+    auto &ref =
+        event_stream.emplace_back(start, type | EventType::START, EventStart{node}, static_cast<uint16_t>(stream_id),
+                                  static_cast<uint8_t>(correlation_id), resourceUsage);
+    event_stream.emplace_back(stop, type | EventType::END, EventEnd{&ref}, static_cast<uint16_t>(stream_id),
+                              static_cast<uint8_t>(correlation_id));
 }
 
-void write_event(std::ofstream &stream, const time_point &timestamp, const Event &event, const int pid = 0) {
+void write_event(std::ofstream &stream, const Event &event, const int pid = 0) {
     stream << "{\"name\": \"";
 
     if (event.is_start()) {
@@ -118,7 +124,7 @@ void write_event(std::ofstream &stream, const time_point &timestamp, const Event
         stream << event.end_event.start->start_event.node->name();
     }
 
-    stream << "\", \"cat\": \"" << event.get_type() << "\", \"ts\": " << timestamp / 1000 << ",";
+    stream << "\", \"cat\": \"" << event.get_type() << "\", \"ts\": " << event.timestamp / 1000 << ",";
     if (event.is_start()) {
         stream << "\"ph\": \"B\"";
     } else {
@@ -130,15 +136,14 @@ void write_event(std::ofstream &stream, const time_point &timestamp, const Event
     stream << ", \"pid\": \"" << pid << "\" },\n";
 }
 
-void write_event_stream(
-    std::filesystem::path filename,
-    const std::initializer_list<std::reference_wrapper<std::map<time_point, Event>>> &event_streams) {
+void write_event_stream(std::filesystem::path filename,
+                        const std::initializer_list<std::reference_wrapper<std::deque<Event>>> &event_streams) {
     std::ofstream stream(filename);
     stream << '[';
     int pid_ctr = 0;
     for (auto event_stream : event_streams) {
-        for (auto &[timestamp, event] : event_stream.get()) {
-            write_event(stream, timestamp, event, pid_ctr);
+        for (auto &event : event_stream.get()) {
+            write_event(stream, event, pid_ctr);
         }
         pid_ctr++;
     }

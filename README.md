@@ -114,7 +114,7 @@ The Extra-P command line interface has the following options.
 | `--talpas`                                                           | Load data from Talpas data format
 | `--text`                                                             | Load data from text input file
 | `--experiment`                                                       | Load Extra-P experiment and generate new models
-| `--scaling` {`weak`, `strong`}                                       | Set weak or strong scaling when loading data from CUBE files (default: `weak`) 
+| `--scaling` {`weak`, `weak_parallel`, `strong`}                      | Set weak or strong scaling when loading data from CUBE files (default: `weak`) 
 | **Modeling options**                                                 |                                              
 | `--median`                                                           | Use median values for computation instead of mean values  
 | `--modeler` {`default`, `basic`, `refining`, `multi-parameter`}      | Selects the modeler for generating the performance models 

@@ -151,9 +151,14 @@ class ComputationFunction(TermlessFunction, CalculationElement):
 
     @classmethod
     def from_string(cls, expr: str, auto_convert_params=False, ftype: CFType = None) -> ComputationFunction:
-        f = ComputationFunction(None)
         sympy_f: sympy.Expr = sympy.parse_expr(expr, local_dict={'log2': sympy_functions.log2})
-        
+
+        return cls.from_sympy(sympy_f, auto_convert_params, ftype)
+
+    @classmethod
+    def from_sympy(cls, sympy_f: sympy.Expr, auto_convert_params=False, ftype: CFType = None) -> ComputationFunction:
+        f = ComputationFunction(None)
+
         if auto_convert_params:
             org_params = sorted(list(sympy_f.free_symbols), key=lambda s: s.name)
             sympy_params = sympy.symbols(tuple(PARAM_TOKEN + str(i) for i in range(len(org_params))))
@@ -202,7 +207,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         return self._PRINTER.doprint(result)
 
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
-                                              Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
+    Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
         if not self._evaluation_function:  # lazy init of evaluation function
             self._evaluation_function = sympy.lambdify(self._params, self.sympy_function, 'numpy')
 
@@ -275,7 +280,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             return True
         else:
             return self._sympy_function.evalf(15) == other._sympy_function.evalf(15) and \
-                   self._ftype is other._ftype
+                self._ftype is other._ftype
 
     def partial_compare(self, other: Function):
         if not isinstance(other, Function):
@@ -287,17 +292,33 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         if len(params) < len(other._params):
             params = other._params
 
-        comp_func = self._sympy_function - other._sympy_function
+        # self_func = self._sympy_function
+        # other_func = other._sympy_function
+        self_func = self._remove_negative_terms(self._sympy_function)
+        other_func = self._remove_negative_terms(other._sympy_function)
+
+        comp_func0 = self_func - other_func
+        dummy_params = {p: sympy.Dummy(str(p)[1:], real=True, positive=True) for p in params}
+        comp_func = comp_func0.subs((o, n + 1) for o, n in dummy_params.items())
 
         if comp_func.is_number:
             res = comp_func
         else:
-            all_res = [sympy.limit(comp_func, p, sympy.oo) for p in params]
+            all_res = [sympy.limit(comp_func, dummy_params[p], sympy.oo) for p in params]
+            for i, r in enumerate(all_res):
+                while not r.is_number and r.free_symbols:
+                    d = sympy.Dummy(real=True, positive=True, nonzero=True)
+                    r = r.subs(next(iter(r.free_symbols)), d + 1)
+                    r = sympy.limit(r, d, sympy.oo)
+                all_res[i] = r
+
             if all(r == all_res[0] for r in all_res):
                 res = all_res[0]
             else:
-                res = [1 if r > 0 else (0 if r == 0 else -1) for r in all_res]
-                return res
+                try:
+                    return tuple(1 if r > 0 else (0 if r == 0 else -1) for r in all_res)
+                except TypeError:
+                    return tuple("Cannot evaluate: " + str(r) for r in all_res)
 
         if res > 0:
             return 1
@@ -309,6 +330,19 @@ class ComputationFunction(TermlessFunction, CalculationElement):
     @classmethod
     def make_one(cls):
         return ComputationFunction(ConstantFunction(1))
+
+    @staticmethod
+    def _remove_negative_terms(_sympy_function):
+        nodes_to_replace = []
+        for node in sympy.preorder_traversal(_sympy_function):
+            if isinstance(node, sympy.Mul):
+                for arg in node.args:
+                    if arg.is_number and (arg < 0) == sympy.S.true:
+                        nodes_to_replace.append(node)
+                        break
+
+        function_subs = _sympy_function.subs((old, 0) for old in nodes_to_replace)
+        return function_subs
 
 
 def param_transformation(tokens, local_dict, global_dict):

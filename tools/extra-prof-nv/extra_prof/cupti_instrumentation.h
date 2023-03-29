@@ -21,6 +21,16 @@
         }                                                                                                              \
     } while (0)
 
+#define GPU_CALL(call)                                                                                                 \
+    do {                                                                                                               \
+        cudaError_t _status = call;                                                                                    \
+        if (_status != cudaSuccess) {                                                                                  \
+            const char *errstr = cudaGetErrorString(_status);                                                          \
+            fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n", __FILE__, __LINE__, #call, errstr);   \
+            exit(-1);                                                                                                  \
+        }                                                                                                              \
+    } while (0)
+
 namespace extra_prof {
 namespace cupti {
     inline extra_prof::MemoryReusePool<uint8_t, ACTIVITY_RECORD_ALIGNMENT> buffer_pool(1024 * 1024);
@@ -33,9 +43,7 @@ namespace cupti {
     void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size,
                                      size_t validSize);
 
-    inline uint32_t maxThreadsPerMultiProcessor;
-    inline uint32_t maxBlocksPerMultiProcessor;
-    inline uint32_t multiProcessorCount;
+    inline int multiProcessorCount;
 
     inline void init() {
 
@@ -54,11 +62,7 @@ namespace cupti {
         CUPTI_CALL(cuptiActivityRegisterCallbacks(&on_buffer_request, &on_buffer_complete));
 
         cudaDeviceProp prop;
-        cudaError_t err = cudaGetDeviceProperties(&prop, 0);
-        if (err != cudaSuccess)
-            printf("%s\n", cudaGetErrorString(err));
-        maxThreadsPerMultiProcessor = prop.maxThreadsPerMultiProcessor;
-        maxBlocksPerMultiProcessor = prop.maxBlocksPerMultiProcessor;
+        GPU_CALL(cudaGetDeviceProperties(&prop, 0));
         multiProcessorCount = prop.multiProcessorCount;
 
         CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));

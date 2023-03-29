@@ -98,10 +98,13 @@ class BaseSchema(Schema):
             if serialization_type != obj_type:
                 raise SerializationError(f"The serialization schema ({type(self)}, {serialization_type}) does not "
                                          f"match the type of the serialized object ({obj_type}).")
-            result = super(BaseSchema, self).dump(obj, **kwargs)
-            if obj_type.__name__ in self._subclasses:
-                result[self.type_field] = obj_type.__name__
-            return result
+            try:
+                result = super(BaseSchema, self).dump(obj, **kwargs)
+                if obj_type.__name__ in self._subclasses:
+                    result[self.type_field] = obj_type.__name__
+                return result
+            except Exception as e:
+                raise SerializationError(f"Serialization in {type(self).__name__} failed. " + str(e)) from e
 
 
 def make_value_schema(class_, value):

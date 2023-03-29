@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -110,7 +110,7 @@ class Function:
 
         :param other: The function that is compared with this function.
         :return: A tuple of comparison results if the comparisons per parameter do not agree.
-                 If the comparisons agree, only on result is returned.
+                 If the comparisons agree, only one result is returned.
                  A comparison result is a number that is either positive, negative or 0.
                  If this function is greater than the other function a positive number is returned.
                  If both functions are equal 0 is returned.
@@ -163,7 +163,7 @@ class ConstantFunction(TermlessFunction):
         elif isinstance(other, SingleParameterFunction):
             return other.lead_order_term.coefficient
         else:
-            super().partial_compare(other)
+            return super().partial_compare(other)
 
 
 class SingleParameterFunction(Function):

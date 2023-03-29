@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,6 +13,7 @@ import warnings
 from itertools import chain
 
 import extrap
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
@@ -53,8 +54,8 @@ def main(args=None, prog=None):
                            help=reader.DESCRIPTION)
     group.add_argument(ExperimentReader.CMD_ARGUMENT, action="store_true", default=False, dest=ExperimentReader.NAME,
                        help='Load Extra-P experiment and generate new models')
-    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
-                               choices=["weak", "strong"],
+    input_options.add_argument("--scaling", action="store", dest="scaling_type", default=ScalingType.WEAK,
+                               type=ScalingType, choices=ScalingType,
                                help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
 
     modeling_options = parser.add_argument_group("Modeling options")

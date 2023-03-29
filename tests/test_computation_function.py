@@ -8,11 +8,14 @@
 import unittest
 
 import numpy
+import sympy
+from sympy import sqrt
 
 from extrap.entities.calculation_element import divide_no0
 from extrap.entities.function_computation import ComputationFunction, ComputationFunctionSchema, CFType
 from extrap.entities.functions import MultiParameterFunction, SingleParameterFunction, ConstantFunction
 from extrap.entities.terms import MultiParameterTerm, CompoundTerm
+from extrap.util.sympy_functions import log2
 
 
 class TestComputationFunction(unittest.TestCase):
@@ -409,6 +412,33 @@ class TestDivideNo0(unittest.TestCase):
         self.assertEqual(0, func_4x2_m6y2.partial_compare(func_4x2_m6y2))
         self.assertEqual(0, func_2x2_m3y2.partial_compare(func_2x2_m3y2))
         self.assertEqual([-1, 1], func_2x2_m3y2.partial_compare(func_4x2_m6y2))
+
+    def test_comparison2(self):
+        x, y = sympy.symbols("x y")
+
+        function1 = ComputationFunction.from_sympy(
+            2.99282397640853e-12 * x ** (1 / 4) * y ** 1.0 * log2(x) ** 1.0 * log2(y) ** 2.0
+            + 3.84170052232049e-6 * y ** (4 / 5) + 7.32869337615323e-12 * y ** (7 / 4) * log2(x) ** 1.0
+            + 9.19975733591332e-9 * y ** (5 / 4) * log2(x) ** 1.0 + 9.06931910256152e-8 * y ** (5 / 4)
+            + 4.95206699247291e-7 * y ** (3 / 4) * log2(x) ** 1.0 * log2(y) ** 1.0
+            + 4.94391792663575e-9 * y ** (3 / 4) * log2(x) ** 1.0 * log2(y) ** 2.0
+            + 3.75243440720389e-5 * y ** (3 / 4) * log2(y) ** 1.0
+            + 6.40388623126029e-8 * y ** (3 / 4) * log2(y) ** 2.0
+            + 2.32099054121271e-9 * y ** (4 / 3) * log2(x) ** 1.0
+            + 3.83668968235658e-10 * y ** (4 / 3) * log2(y) ** 1.0
+            + 1.1282958780038e-7 * y ** (2 / 3) * log2(y) ** 2.0
+            + 4.09728231488919e-5 * y ** (2 / 3) + 9.69235729849133e-6 * sqrt(y) * log2(y) ** 1.0
+            + 4.77269442589002e-10 * y ** 1.0 * log2(x) ** 1.0 * log2(y) ** 2.0
+            + 1.59514663069127e-5 * y ** 1.0 * log2(x) ** 1.0 + 5.65563952047474e-7 * y ** 1.0 * log2(x) ** 2.0
+            + 8.23105213553003e-5 * y ** 1.0 * log2(y) ** 1.0 + 2.57407151606923e-8 * y ** 1.0 * log2(y) ** 2.0
+            + 0.00497298479804067 * y ** 1.0 + 0.000176924180369964 * log2(x) ** 2.0 * log2(y) ** 1.0
+            + 0.265461380651489 * log2(y) ** 2.0 + 112.666239617699, True)
+        function2 = ComputationFunction.from_sympy(
+            2.2629016309694e-8 * y ** (1 / 4) * log2(y) ** 2.0 + 1.88151692234547e-5 * y ** (1 / 4)
+            + 1.01913082929858e-6 * y ** 1.0 * log2(x) ** 1.0 + 4.7749894541112e-9 * log2(x) ** 2.0
+            + 0.0033137278925434 * log2(y) ** 1.0 + 5.58928003633693e-5 * log2(y) ** 2.0 + 5.35640853256365, True)
+
+        self.assertEqual(1, function1.partial_compare(function2))
 
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import *  # @UnusedWildImport
@@ -70,8 +70,15 @@ class TreeView(QTreeView):
         node_index = model.index(node.row(), 0, parent_index)  # get index of current node
         children = [self.max_path(model, c, node_index) for c in node.child_items]  # call max_path on children
 
-        children_max = [max(v for v, _, _ in c) for c in
-                        children]  # find the maximum value in each c, where c is a list of tuples
+        children_max = []
+        for c in children:
+            vs = []
+            for v, _, _ in c:
+                if isinstance(v, Sequence):
+                    vs.extend(v)
+                else:
+                    vs.append(v)
+            children_max.append(max(vs))
 
         ret_list = children[children_max.index(max(children_max))]
         ret_list.insert(0, curr_tuple)

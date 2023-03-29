@@ -1,10 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import warnings
 from asyncio import Event
 from functools import partial
 from itertools import chain
@@ -14,10 +15,11 @@ from typing import Optional, Type
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
                                QLabel, QLineEdit, QSizePolicy, QSpacerItem,
-                               QWizard, QWizardPage, QVBoxLayout, QComboBox)
+                               QWizard, QWizardPage, QComboBox, QGridLayout)
 
 from extrap.comparison import matchers
 from extrap.comparison.experiment_comparison import ComparisonExperiment
+from extrap.entities.parameter import Parameter
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import FileReader, all_readers
 from extrap.gui.comparison.interactive_matcher import InteractiveMatcher
@@ -40,6 +42,7 @@ class ComparisonWizard(QWizard):
             self.addPage(FileLoadingPage(self))
         self.addPage(NamingPage(self))
         self.addPage(ModelSelectionPage(self))
+        self.addPage(ParameterMappingPage(self))
         self.addPage(MatcherSelectionPage(self))
         self.comparing_page_id = self.addPage(ComparingPage(self))
         self.matcher = None
@@ -128,7 +131,7 @@ class ComparingPage(ProgressPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle('Comparing experiments')
-        
+
     def cleanupPage(self) -> None:
         self._override_next_id = None
         super().cleanupPage()
@@ -139,9 +142,11 @@ class ComparingPage(ProgressPage):
             matcher = wizard.matcher(wizard)
         else:
             matcher = wizard.matcher()
+
         wizard.experiment = ComparisonExperiment(wizard.experiment1, wizard.experiment2, matcher=matcher)
         wizard.experiment.experiment_names = wizard.exp_names
         wizard.experiment.modelers_match = wizard.model_mapping
+        wizard.experiment.parameter_mapping = wizard.parameter_mapping
         if wizard.matcher == InteractiveMatcher:
             self._override_next_id = matcher.determine_next_page_id()
         else:
@@ -178,6 +183,7 @@ class NamingPage(QWizardPage):
             wizard.exp_names[1] += '2'
         return super().validatePage()
 
+
 class ModelSelectionPage(QWizardPage):
     def __init__(self, parent: ComparisonWizard):
         super().__init__(parent)
@@ -185,7 +191,7 @@ class ModelSelectionPage(QWizardPage):
         self.layout = QFormLayout(self)
         self.setLayout(self.layout)
         self.model_lists = []
-        
+
     def initializePage(self) -> None:
         wizard: ComparisonWizard = self.wizard()
         for modeler in wizard.experiment1.modelers:
@@ -207,5 +213,69 @@ class ModelSelectionPage(QWizardPage):
         }
 
         return super().validatePage()
-        
-        
+
+
+class ParameterMappingPage(QWizardPage):
+    def __init__(self, parent: ComparisonWizard):
+        super().__init__(parent)
+        self.setTitle('Apply parameter mapping')
+        self._layout = QGridLayout(self)
+        self._param_lists = []
+        self._name_edits = []
+        self.setLayout(self._layout)
+
+    def initializePage(self) -> None:
+        self._clear_layout()
+        self._name_edits.clear()
+        wizard: ComparisonWizard = self.wizard()
+        r_ctr = 0
+        self._layout.addWidget(QLabel('Parameter Experiment 1'), r_ctr, 0)
+        self._layout.addWidget(QLabel('Parameter Experiment 2'), r_ctr, 1)
+        self._layout.addWidget(QLabel('New Parameter Name'), r_ctr, 2)
+        r_ctr = 3
+        for param in wizard.experiment1.parameters:
+            self._layout.addWidget(QLabel(param.name + ':'), r_ctr, 0)
+            param_list = QComboBox()
+            param_list.addItems([param2.name for param2 in wizard.experiment2.parameters])
+            default_value = param_list.findText(param.name)
+            if default_value >= 0:
+                param_list.setCurrentIndex(default_value)
+            self._param_lists.append(param_list)
+            self._layout.addWidget(param_list, r_ctr, 1)
+
+            name_edit = QLineEdit(param.name)
+            self._name_edits.append(name_edit)
+            self._layout.addWidget(name_edit, r_ctr, 2)
+            r_ctr += 1
+
+    def _clear_layout(self):
+        for i in reversed(range(self._layout.count())):
+            widget = self._layout.itemAt(i).widget()
+            self._layout.removeWidget(widget)
+            widget.setParent(None)
+
+    def validatePage(self) -> bool:
+        wizard: ComparisonWizard = self.wizard()
+        old_param_names = [p.name for p in wizard.experiment1.parameters]
+        new_param_names = [name_edit.text().strip() for name_edit in self._name_edits]
+
+        for i, param_name in enumerate(new_param_names):
+            if not param_name:
+                warnings.warn("Parameters cannot be empty.")
+                return False
+            if old_param_names[i] != param_name \
+                    and Parameter(param_name) in wizard.experiment1.parameters:
+                warnings.warn(f"Parameter {param_name} already exists, "
+                              "you cannot have two parameters with the same name.")
+                return False
+            if new_param_names.count(param_name) > 1:
+                warnings.warn(f"Parameter {param_name} already exists, "
+                              "you cannot have two parameters with the same name.")
+                return False
+            
+        wizard.parameter_mapping = {
+            name: [str(param1), cb_param2.currentText()] for name, param1, cb_param2 in
+            zip(new_param_names, wizard.experiment1.parameters, self._param_lists)
+        }
+
+        return super().validatePage()

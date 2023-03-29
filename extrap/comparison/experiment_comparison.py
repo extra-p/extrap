@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -17,6 +17,7 @@ from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment, ExperimentSchema
+from extrap.entities.parameter import Parameter
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -44,6 +45,7 @@ class ComparisonExperiment(Experiment):
         self.exp1 = exp1
         self.exp2 = exp2
         self.modelers_match = {}
+        self.parameter_mapping = {}
 
     def do_comparison(self, progress_bar=DUMMY_PROGRESS):
         progress_bar.total += 3
@@ -54,6 +56,8 @@ class ComparisonExperiment(Experiment):
         progress_metrics_target = progress_bar.create_target(num_metrics)
         progress_call_tree_target = progress_bar.create_target(num_callpaths)
         progress_modelers_target = progress_bar.create_target(num_models * num_metrics * num_callpaths)
+
+        self.do_parameter_mapping()
 
         self.do_initial_checks()
         progress_bar.update(3)
@@ -192,6 +196,14 @@ class ComparisonExperiment(Experiment):
                                 model_set.models[callpath, converter.new_metric] = model
                         except ZeroDivisionError:
                             continue
+
+    def do_parameter_mapping(self):
+        for name, old_names in self.parameter_mapping.items():
+            for old_name, experiment in zip(old_names, self.compared_experiments):
+                if name == old_name:
+                    continue
+                idx = experiment.parameters.index(Parameter(old_name))
+                experiment.parameters[idx] = Parameter(name)
 
 
 class ComparisonExperimentSchema(ExperimentSchema):

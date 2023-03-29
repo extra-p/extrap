@@ -1,5 +1,13 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2023, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 from __future__ import annotations
 
+import logging
 from enum import Enum, Flag
 from itertools import groupby
 from operator import itemgetter
@@ -102,11 +110,14 @@ class ExtraProf2Reader(AbstractDirectoryReader):
                                          axis=0)
 
                 if np.any(child_durations > node.duration):
-                    print("overflow", node.path, (node.duration - child_durations) / 10 ** 9)
-                    continue
+                    logging.info("Extra-Prof overflow", node.path, (node.duration - child_durations) / 10 ** 9)
+                    duration = node.duration / 10 ** 9
+                    node.childs = []
+                else:
+                    duration = (node.duration - child_durations) / 10 ** 9
 
                 experiment.add_measurement(
-                    Measurement(coordinate, node.path, METRIC_TIME, (node.duration - child_durations) / 10 ** 9))
+                    Measurement(coordinate, node.path, METRIC_TIME, duration))
                 experiment.add_measurement(Measurement(coordinate, node.path, METRIC_VISITS, node.visits))
                 if np.any(node.bytes != 0):
                     experiment.add_measurement(Measurement(coordinate, node.path, METRIC_BYTES, node.bytes))

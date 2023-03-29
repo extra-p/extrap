@@ -6,6 +6,7 @@ if test "${EXTRA_PROF_WRAPPER}" = off || test "${EXTRA_PROF_WRAPPER}" = OFF; the
 fi
 arguments=("$@")
 compile_only=false
+shared_library=false
 while test $# -gt 0; do
     #echo "$#: $1"
     case "$1" in
@@ -15,6 +16,9 @@ while test $# -gt 0; do
     --compile)
         compile_only=true
         ;;
+    -shared)
+        shared_library=true
+        ;;   
     -ccbin)
         compiler_dir="$1 $2"
         ;;
@@ -25,13 +29,21 @@ while test $# -gt 0; do
     shift
 done
 
-instrumentation_arguments=("-Xcompiler" "-finstrument-functions" "-Xcompiler" "-no-pie" "-Xlinker" "-no-pie")
-extra_prof_arguments=("-c" "-O2" "$compiler_dir" "-std" "c++17" "-I$(dirname "${BASH_SOURCE[0]}")/msgpack/include")
+instrumentation_arguments=("-Xcompiler" "-finstrument-functions")
+extra_prof_arguments=("-c" "$compiler_dir" "-std" "c++17" "-I$(dirname "${BASH_SOURCE[0]}")/msgpack/include")
 if test "${EXTRA_PROF_EVENT_TRACE}" = on || test "${EXTRA_PROF_EVENT_TRACE}" = ON; then
     extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=1")
 fi
+if test "${EXTRA_PROF_DEBUG_BUILD}" = on || test "${EXTRA_PROF_DEBUG_BUILD}" = ON; then
+    extra_prof_arguments+=("-g")
+else
+    extra_prof_arguments+=("-O2")
+fi
 
-if $compile_only; then
+if $shared_library; then
+    echo "EXTRA PROF SHARED LIBRARY: " $COMPILER "${arguments[@]}"
+    exec $COMPILER "${arguments[@]}"
+elif $compile_only; then
     combined=("${instrumentation_arguments[@]}" "${arguments[@]}")
     echo "EXTRA PROF COMPILE: " $COMPILER ${combined[*]}
     exec $COMPILER ${combined[*]}
@@ -51,9 +63,9 @@ else
     fi
 
     # no exec otherwise this script will end here
-    combined=("${extra_prof_arguments[@]}" "-o" "extra_prof_instrumentation.o" "$(dirname "${BASH_SOURCE[0]}")/extra_prof/instrumentation.cpp")
-    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $COMPILER ${combined[*]}
-    $COMPILER ${combined[*]}
+    combined=("${extra_prof_arguments[@]}" "-o" "extra_prof_instrumentation.o" "$(dirname "${BASH_SOURCE[0]}")/extra_prof/instrumentation.cpp") 
+    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $COMPILER $EXTRA_PROF_COMPILATION_ARGUMENTS ${combined[*]}
+    $COMPILER $EXTRA_PROF_COMPILATION_ARGUMENTS ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
     combined=("${instrumentation_arguments[@]}" "-lcupti" "-L" "$CUDA_HOME/extras/CUPTI/lib64" "extra_prof_instrumentation.o" "${arguments[@]}")
