@@ -28,6 +28,9 @@ class ComplexityComparisonAnnotation(Annotation):
             result = "Comparison result for complexity: "
             parameters = context.get('parameters', (f'p{i}' for i in itertools.count(1)))
             for p, c in zip(parameters, self.comparison):
+                if isinstance(c, str):
+                    result += f"{p.name}: {c} "
+                    continue
                 if c > 0:
                     cr = '<'
                 elif c < 0:
@@ -35,13 +38,14 @@ class ComplexityComparisonAnnotation(Annotation):
                 else:
                     cr = '='
                 result += f"{p.name}: {cr} "
+            return result
         elif self.comparison > 0:
             return "Comparison result for complexity: >"
         elif self.comparison == 0:
             return "Comparison result for complexity: ="
         elif self.comparison < 0:
             return "Comparison result for complexity: <"
-        raise ValueError()
+        raise ValueError(f"Unknown comparison value: {self.comparison}")
 
     def icon(self, **context) -> AnnotationIconSVG:
         if self.comparison is None:
@@ -66,4 +70,17 @@ class ComplexityComparisonAnnotationSchema(AnnotationSchema):
     def create_object(self):
         return ComplexityComparisonAnnotation()
 
-    comparison = fields.Integer()
+    @staticmethod
+    def _comparison_serialize(value):
+        data = value.comparison
+        return data
+
+    @staticmethod
+    def _comparison_deserialize(value):
+        if isinstance(value, list):
+            data = tuple(value)
+        else:
+            data = value
+        return data
+
+    comparison = fields.Method("_comparison_serialize", "_comparison_deserialize")
