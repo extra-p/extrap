@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
 
 import logging
 import warnings
@@ -63,6 +64,10 @@ class CubeFileReader2(AbstractDirectoryReader):
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
         # set scaling flag for experiment
+
+        if isinstance(self.scaling_type, str):
+            self.scaling_type = ScalingType(self.scaling_type)
+
         if self.scaling_type in ScalingType:
             experiment.scaling = self.scaling_type
 
@@ -374,8 +379,12 @@ class CubeFileReader2(AbstractDirectoryReader):
             # delete current measurements
             del experiment.measurements[key]
 
-    def read_cube_file(self, dir_name, scaling_type: ScalingType, pbar=DUMMY_PROGRESS, selected_metrics=None):
-        self.scaling_type = scaling_type
+    def read_cube_file(self, dir_name, scaling_type: Union[str, ScalingType], pbar=DUMMY_PROGRESS,
+                       selected_metrics=None):
+        if isinstance(scaling_type, str):
+            self.scaling_type = ScalingType(scaling_type)
+        else:
+            self.scaling_type = scaling_type
         self.selected_metrics = selected_metrics
         return self.read_experiment(dir_name, pbar)
 
