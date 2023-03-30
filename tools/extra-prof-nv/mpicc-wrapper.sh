@@ -1,5 +1,6 @@
 #!/bin/bash
 COMPILER=mpicc
+MSGPACK_VERSION=5.0.0
 if test "${EXTRA_PROF_WRAPPER}" = off || test "${EXTRA_PROF_WRAPPER}" = OFF; then
     exec $COMPILER "$@"
 fi

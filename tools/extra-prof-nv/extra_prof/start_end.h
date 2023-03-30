@@ -6,6 +6,9 @@
 #include <numeric>
 
 namespace extra_prof {
+
+void finalize();
+
 void initialize() {
     std::cerr << "EXTRA PROF: Initialising" << std::endl;
     show_data_sizes();
@@ -32,6 +35,7 @@ void initialize() {
 
     create_address_mapping(output_dir);
     cupti::init();
+    std::atexit(finalize);
     std::cerr << "EXTRA PROF: Profiling started" << std::endl;
 }
 
