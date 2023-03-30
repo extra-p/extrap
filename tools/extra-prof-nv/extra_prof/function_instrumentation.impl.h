@@ -35,11 +35,6 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
         extra_prof::depth--;
         if (extra_prof::depth < extra_prof::MAX_DEPTH) {
             extra_prof::pop_time(this_fn);
-            if (extra_prof::depth == 0) {
-                if (reinterpret_cast<uintptr_t>(this_fn) == extra_prof::main_function_ptr) {
-                    extra_prof::finalize();
-                }
-            }
         }
     }
 }
