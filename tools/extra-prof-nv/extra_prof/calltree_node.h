@@ -1,6 +1,6 @@
 #pragma once
-
 #include "common_types.h"
+
 #include "memory_pool.h"
 #include "msgpack_adaptors.h"
 #include <array>
@@ -49,7 +49,7 @@ public:
         }
     }
 };
-NonReusableBlockPool<CallTreeNode, 64> calltree_nodes_allocator;
+
 class CallTreeNode {
     CallTreeNodeList _children;
     CallTreeNode *_parent = nullptr;
@@ -87,17 +87,7 @@ public:
     ~CallTreeNode(){};
 
     CallTreeNode *findOrAddChild(char const *name, CallTreeNodeType type = CallTreeNodeType::NONE,
-                                 CallTreeNodeFlags flags = CallTreeNodeFlags::NONE) {
-        std::lock_guard lg(mutex);
-        for (auto [node_name, node] : _children) {
-            if (node_name == name) {
-                return node;
-            }
-        }
-
-        auto [name_, node] = _children.emplace_back(name, calltree_nodes_allocator.construct(name, this, type, flags));
-        return node;
-    }
+                                 CallTreeNodeFlags flags = CallTreeNodeFlags::NONE);
     inline CallTreeNode *parent() const { return _parent; }
     inline char const *name() const { return _name; }
 

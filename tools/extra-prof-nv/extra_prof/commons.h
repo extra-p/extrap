@@ -5,6 +5,7 @@
 #include "common_types.h"
 #include "cupti_instrumentation.h"
 #include "events.h"
+#include "globals.h"
 
 #include <dlfcn.h>
 
@@ -20,39 +21,11 @@
 #include <vector>
 
 namespace extra_prof {
-inline std::atomic<bool> initialised(false);
-inline std::mutex initialising;
-
-inline std::atomic<bool> in_main(false);
-inline std::mutex checking_in_main;
-
-#ifndef EXTRA_PROF_MAX_MAX_DEPTH
-constexpr uint32_t MAX_MAX_DEPTH = 1000;
-#else
-constexpr uint32_t MAX_MAX_DEPTH = EXTRA_PROF_MAX_MAX_DEPTH;
-#endif
-
-inline std::thread::id main_thread_id;
-
-static unsigned int depth = 0;
-static std::vector<time_point> timer_stack;
-
-inline CallTreeNode call_tree;
-inline CallTreeNode *current_node = &call_tree;
-
-inline std::filesystem::path output_dir;
-
-#ifdef EXTRA_PROF_EVENT_TRACE
-inline std::deque<Event> cpu_event_stream;
-inline std::vector<Event *> event_stack;
-#endif
-
-inline intptr_t adress_offset = 0;
-
-inline uint32_t MAX_DEPTH = 30;
 
 template <typename T>
 inline std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
+    auto &name_register = GLOBALS.name_register;
+    auto &adress_offset = GLOBALS.adress_offset;
     auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
     if (name_register.find(ptr - adress_offset) == name_register.end()) {
         Dl_info info;
@@ -61,9 +34,12 @@ inline std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeT
             intptr_t base_ptr = reinterpret_cast<intptr_t>(info.dli_fbase);
             if (name_register.find(ptr - base_ptr) == name_register.end()) {
                 if (info.dli_sname == nullptr) {
-
-                    std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-                    name_register[ptr - adress_offset] = std::to_string(ptr);
+                    if (GLOBALS.in_main) {
+                        std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
+                        name_register[ptr - adress_offset] = std::to_string(ptr);
+                    } else {
+                        name_register[ptr - adress_offset] = "UNKNOWN_INIT_" + std::to_string(ptr);
+                    }
                 } else {
                     // size_t length = 0;
                     // int status;
@@ -73,6 +49,7 @@ inline std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeT
             } else {
                 if (adress_offset == 0) {
                     adress_offset = base_ptr;
+                    GLOBALS.in_main = true;
                 } else if (adress_offset != base_ptr) {
                     std::cerr << "EXTRA PROF: WARNING base offset " << base_ptr << " of function pointer " << fn_ptr
                               << " not matching adress offset " << adress_offset << '\n';
@@ -91,8 +68,9 @@ template <>
 inline std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTreeNodeType type) {
     time_point time;
     CUPTI_CALL(cuptiGetTimestamp(&time));
+    auto &current_node = GLOBALS.current_node;
     current_node = current_node->findOrAddChild(name, type);
-    timer_stack.push_back(time);
+    GLOBALS.timer_stack.push_back(time);
 #ifdef EXTRA_PROF_EVENT_TRACE
     auto &ref = cpu_event_stream.emplace_back(time, EventType::START, EventStart{current_node});
     event_stack.push_back(&ref);
@@ -102,6 +80,8 @@ inline std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTr
 
 template <typename T>
 inline time_point pop_time(T *fn_ptr) {
+    auto &name_register = GLOBALS.name_register;
+    auto &adress_offset = GLOBALS.adress_offset;
     auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
     if (name_register.find(ptr - adress_offset) == name_register.end()) {
         std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
@@ -113,7 +93,8 @@ template <>
 inline time_point pop_time(char const *name) {
     time_point time;
     CUPTI_CALL(cuptiGetTimestamp(&time));
-    auto duration = time - extra_prof::timer_stack.back();
+    auto &current_node = GLOBALS.current_node;
+    auto duration = time - GLOBALS.timer_stack.back();
     if (current_node->name() == nullptr) {
         std::cerr << "EXTRA PROF: WARNING: accessing calltree root\n";
     }
@@ -122,7 +103,7 @@ inline time_point pop_time(char const *name) {
     }
     current_node->visits++;
     current_node->duration += duration;
-    extra_prof::timer_stack.pop_back();
+    GLOBALS.timer_stack.pop_back();
     if (current_node->parent() == nullptr) {
         throw std::runtime_error("EXTRA PROF: pop_time: Cannot go to parent of root");
     }

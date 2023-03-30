@@ -10,35 +10,16 @@
 namespace extra_prof {
 namespace cupti {
 
-    const char *MEMSET = "Memset";
-    const char *MEMSET_ASYNC = "Memset Async";
-
-    const char *OVERLAP = "OVERLAP";
-    std::atomic<std::thread::id> activity_thread;
-
-    std::deque<Event> event_stream;
-
-    struct CorrelationData {
-        CallTreeNode *node = nullptr;
-        const void *function_ptr = nullptr;
-
-    public:
-        CorrelationData() = default;
-        CorrelationData(CorrelationData &&other) = default;
-        CorrelationData(CallTreeNode *node_) : node(node_) {}
-        CorrelationData(CallTreeNode *node_, const void *function_ptr_) : node(node_), function_ptr(function_ptr_) {}
-    };
-
-    std::unordered_map<uint64_t, CorrelationData> callpath_correlation;
-
     void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void *cbdata) {
-        if (std::this_thread::get_id() != extra_prof::main_thread_id) {
-            if (activity_thread == std::this_thread::get_id()) {
+        if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
+            if (GLOBALS.gpu.activity_thread == std::this_thread::get_id()) {
                 return; // Do not show error when called from cupti activity thread
             }
             std::cerr << "EXTRA PROF: WARNING: callback: Ignored additional threads.\n";
             return;
         }
+        auto &callpath_correlation = GLOBALS.gpu.callpath_correlation;
+        auto &event_stream = GLOBALS.gpu.event_stream;
         if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
             const CUpti_CallbackData *rtdata = reinterpret_cast<const CUpti_CallbackData *>(cbdata);
             auto cbid_is_synchronization = cbid == CUPTI_RUNTIME_TRACE_CBID_cudaDeviceSynchronize_v3020 ||
@@ -191,7 +172,7 @@ namespace cupti {
         std::cout << "Kernel" << record->name << " " << record->correlationId << "  from " << record->start << "  to "
                   << record->end << '\n';
 #endif
-        auto &correlation_data = callpath_correlation[record->correlationId];
+        auto &correlation_data = GLOBALS.gpu.callpath_correlation[record->correlationId];
         auto *node = correlation_data.node->findOrAddChild(record->name, CallTreeNodeType::KERNEL);
         node->setAsync(true);
         node->duration += record->end - record->start;
@@ -201,10 +182,10 @@ namespace cupti {
                                                                record->blockX * record->blockY * record->blockZ,
                                                                record->dynamicSharedMemory));
 
-        float activeBlocks =
-            std::min(record->gridX * record->gridY * record->gridZ, maxActiveBlocksPerMP * cupti::multiProcessorCount);
-        float resourceUsage = activeBlocks / (maxActiveBlocksPerMP * cupti::multiProcessorCount);
-        addEventPair(event_stream, EventType::KERNEL, record->start, record->end, node, resourceUsage,
+        float activeBlocks = std::min(record->gridX * record->gridY * record->gridZ,
+                                      maxActiveBlocksPerMP * GLOBALS.gpu.multiProcessorCount);
+        float resourceUsage = activeBlocks / (maxActiveBlocksPerMP * GLOBALS.gpu.multiProcessorCount);
+        addEventPair(GLOBALS.gpu.event_stream, EventType::KERNEL, record->start, record->end, node, resourceUsage,
                      record->correlationId, record->streamId);
     }
 
@@ -233,10 +214,10 @@ namespace cupti {
 #ifdef EXTRA_PROF_DEBUG
         std::cout << "OVERHEAD " << overheadKind << " from " << record->start << " to " << record->end << '\n';
 #endif
-        auto *node = call_tree.findOrAddChild(overheadKind, CallTreeNodeType::OVERHEAD);
+        auto *node = GLOBALS.call_tree.findOrAddChild(overheadKind, CallTreeNodeType::OVERHEAD);
         node->duration += record->end - record->start;
         node->visits++;
-        addEventPair(event_stream, EventType::OVERHEAD, record->start, record->end, node, 0, 0, -3);
+        addEventPair(GLOBALS.gpu.event_stream, EventType::OVERHEAD, record->start, record->end, node, 0, 0, -3);
     }
 
     void process_activity_memcpy(CUpti_ActivityMemcpy3 *record) {
@@ -245,15 +226,15 @@ namespace cupti {
 #ifdef EXTRA_PROF_DEBUG
         std::cout << "MEMCPY " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
 #endif
-        auto *node =
-            callpath_correlation[record->correlationId].node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
+        auto *node = GLOBALS.gpu.callpath_correlation[record->correlationId].node->findOrAddChild(
+            memcopy_kind, CallTreeNodeType::MEMCPY);
         node->duration += record->end - record->start;
         node->visits++;
         node->bytes += record->bytes;
         node->setAsync((CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC);
 
-        addEventPair(event_stream, EventType::MEMCPY, record->start, record->end, node, 0, record->correlationId,
-                     record->streamId);
+        addEventPair(GLOBALS.gpu.event_stream, EventType::MEMCPY, record->start, record->end, node, 0,
+                     record->correlationId, record->streamId);
     }
 
     void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2 *record) {
@@ -263,44 +244,44 @@ namespace cupti {
         std::cout << "MEMCPY P2P " << record->correlationId << " from " << record->start << " to " << record->end
                   << '\n';
 #endif
-        auto *node =
-            callpath_correlation[record->correlationId].node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
+        auto *node = GLOBALS.gpu.callpath_correlation[record->correlationId].node->findOrAddChild(
+            memcopy_kind, CallTreeNodeType::MEMCPY);
         node->duration += record->end - record->start;
         node->visits++;
         node->bytes += record->bytes;
         node->setAsync((CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC);
 
-        addEventPair(event_stream, EventType::MEMCPY, record->start, record->end, node, 0, record->correlationId,
-                     record->streamId);
+        addEventPair(GLOBALS.gpu.event_stream, EventType::MEMCPY, record->start, record->end, node, 0,
+                     record->correlationId, record->streamId);
     }
 
     void process_activity_memset(CUpti_ActivityMemset2 *record) {
         auto is_async = ((CUPTI_ACTIVITY_FLAG_MEMSET_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMSET_ASYNC);
-        auto *memset_kind = is_async ? MEMSET_ASYNC : MEMSET;
+        auto *memset_kind = is_async ? GLOBALS.gpu.MEMSET_ASYNC : GLOBALS.gpu.MEMSET;
 #ifdef EXTRA_PROF_DEBUG
         std::cout << "MEMSET " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
 #endif
-        auto *node =
-            callpath_correlation[record->correlationId].node->findOrAddChild(memset_kind, CallTreeNodeType::MEMSET);
+        auto *node = GLOBALS.gpu.callpath_correlation[record->correlationId].node->findOrAddChild(
+            memset_kind, CallTreeNodeType::MEMSET);
         node->duration += record->end - record->start;
         node->visits++;
         node->bytes += record->bytes;
         node->setAsync(is_async);
-        addEventPair(event_stream, EventType::MEMSET, record->start, record->end, node, 0, record->correlationId,
-                     record->streamId);
+        addEventPair(GLOBALS.gpu.event_stream, EventType::MEMSET, record->start, record->end, node, 0,
+                     record->correlationId, record->streamId);
     }
 
     void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
-        *buffer = buffer_pool.get_mem();
+        *buffer = GLOBALS.gpu.buffer_pool.get_mem();
         if (((uintptr_t)(buffer) & ((ACTIVITY_RECORD_ALIGNMENT)-1))) {
             throw std::runtime_error("EXTRA PROF: misaligned cupti buffer memory");
         }
-        *size = sizeof(uint8_t) * buffer_pool.size();
+        *size = sizeof(uint8_t) * GLOBALS.gpu.buffer_pool.size();
         *maxNumRecords = 0;
     }
     void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size,
                                      size_t validSize) {
-        activity_thread = std::this_thread::get_id();
+        GLOBALS.gpu.activity_thread = std::this_thread::get_id();
 
         CUptiResult status;
         CUpti_Activity *record = NULL;
@@ -344,11 +325,13 @@ namespace cupti {
                 std::cerr << "EXTRA PROF: WARNING: Dropped " << dropped << " activity records\n";
             }
         }
-        buffer_pool.return_mem(buffer);
+        GLOBALS.gpu.buffer_pool.return_mem(buffer);
     }
 
-    size_t event_stream_size() { return cupti::event_stream.size() * (sizeof(Event) + sizeof(time_point)); }
-    size_t cupti_mappings_size() { return callpath_correlation.size() * (sizeof(uint32_t) + sizeof(CallTreeNode *)); }
+    size_t event_stream_size() { return GLOBALS.gpu.event_stream.size() * (sizeof(Event) + sizeof(time_point)); }
+    size_t cupti_mappings_size() {
+        return GLOBALS.gpu.callpath_correlation.size() * (sizeof(uint32_t) + sizeof(CallTreeNode *));
+    }
 
     void make_overlap(std::vector<Event *> &stack, Event *current_event, CallTreeNode *overlap, time_point duration) {
         for (auto &ke : stack) {
@@ -366,7 +349,7 @@ namespace cupti {
 
     void postprocess_event_stream() {
         std::vector<Event *> sorted_stream;
-        for (Event &evt : event_stream) {
+        for (Event &evt : GLOBALS.gpu.event_stream) {
             sorted_stream.emplace_back(&evt);
         }
         std::stable_sort(sorted_stream.begin(), sorted_stream.end(),
@@ -397,8 +380,8 @@ namespace cupti {
                 }
                 for (auto &se : stack) {
                     time_point duration = event.timestamp - previous_timestamp;
-                    CallTreeNode *overlap = se->start_event.node->findOrAddChild(OVERLAP, CallTreeNodeType::OVERLAP,
-                                                                                 CallTreeNodeFlags::OVERLAP);
+                    CallTreeNode *overlap = se->start_event.node->findOrAddChild(
+                        GLOBALS.gpu.OVERLAP, CallTreeNodeType::OVERLAP, CallTreeNodeFlags::OVERLAP);
 
                     if (se->get_type() == EventType::KERNEL) {
                         overlap->duration += (total_MP_usage - se->resourceUsage) * duration / total_MP_usage;

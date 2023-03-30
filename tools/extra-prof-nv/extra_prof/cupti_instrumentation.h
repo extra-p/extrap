@@ -33,17 +33,13 @@
 
 namespace extra_prof {
 namespace cupti {
-    inline extra_prof::MemoryReusePool<uint8_t, ACTIVITY_RECORD_ALIGNMENT> buffer_pool(1024 * 1024);
 
-    inline CUpti_SubscriberHandle subscriber;
     extern void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid,
                                      const void *cbdata);
 
-    void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRecords);
-    void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size,
-                                     size_t validSize);
-
-    inline int multiProcessorCount;
+    extern void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRecords);
+    extern void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size,
+                                            size_t validSize);
 
     inline void init() {
 
@@ -55,17 +51,17 @@ namespace cupti {
                 number = 1024;
             }
             std::cerr << "EXTRA PROF: CUPTI BUFFER SIZE: " << number << '\n';
-            buffer_pool.initial_buffer_resize(number);
+            GLOBALS.gpu.buffer_pool.initial_buffer_resize(number);
         }
 
-        CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)&on_callback, nullptr));
+        CUPTI_CALL(cuptiSubscribe(&GLOBALS.gpu.subscriber, (CUpti_CallbackFunc)&on_callback, nullptr));
         CUPTI_CALL(cuptiActivityRegisterCallbacks(&on_buffer_request, &on_buffer_complete));
 
         cudaDeviceProp prop;
         GPU_CALL(cudaGetDeviceProperties(&prop, 0));
-        multiProcessorCount = prop.multiProcessorCount;
+        GLOBALS.gpu.multiProcessorCount = prop.multiProcessorCount;
 
-        CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+        CUPTI_CALL(cuptiEnableDomain(1, GLOBALS.gpu.subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
         CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
         CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
         CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));

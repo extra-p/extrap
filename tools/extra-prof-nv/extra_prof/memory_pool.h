@@ -1,6 +1,8 @@
 
 #pragma once
+#include <cstdlib>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 namespace extra_prof {
 template <typename T, size_t alignment_ = 0>

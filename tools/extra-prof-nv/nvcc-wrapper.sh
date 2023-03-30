@@ -30,7 +30,7 @@ while test $# -gt 0; do
 done
 
 instrumentation_arguments=("-Xcompiler" "-finstrument-functions")
-extra_prof_arguments=("-c" "$compiler_dir" "-std" "c++17" "-I$(dirname "${BASH_SOURCE[0]}")/msgpack/include")
+extra_prof_arguments=("-c" "$compiler_dir"  "-std=c++17" "-I$(dirname "${BASH_SOURCE[0]}")/msgpack/include")
 if test "${EXTRA_PROF_EVENT_TRACE}" = on || test "${EXTRA_PROF_EVENT_TRACE}" = ON; then
     extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=1")
 fi
@@ -39,11 +39,11 @@ if test "${EXTRA_PROF_DEBUG_BUILD}" = on || test "${EXTRA_PROF_DEBUG_BUILD}" = O
 else
     extra_prof_arguments+=("-O2")
 fi
-
 if $shared_library; then
-    echo "EXTRA PROF SHARED LIBRARY: " $COMPILER "${arguments[@]}"
-    exec $COMPILER "${arguments[@]}"
-elif $compile_only; then
+    extra_prof_arguments+=("-Xcompiler" "-fPIC")
+fi
+
+if $compile_only; then
     combined=("${instrumentation_arguments[@]}" "${arguments[@]}")
     echo "EXTRA PROF COMPILE: " $COMPILER ${combined[*]}
     exec $COMPILER ${combined[*]}

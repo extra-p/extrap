@@ -1,5 +1,6 @@
 #pragma once
-
+#include "common_types.h"
+#include "globals.h"
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -10,8 +11,7 @@
 #include <mutex>
 #include <vector>
 namespace extra_prof {
-inline std::unordered_map<intptr_t, std::string> name_register;
-inline uintptr_t main_function_ptr;
+
 inline std::string currentDateTime() {
     time_t now = time(0);
     struct tm tstruct {};
@@ -23,6 +23,8 @@ inline std::string currentDateTime() {
 }
 
 inline void create_address_mapping(std::filesystem::path output_dir) {
+    auto &name_register = GLOBALS.name_register;
+    auto &main_function_ptr = GLOBALS.main_function_ptr;
     std::string nm_command("nm --numeric-sort --demangle ");
     auto filename = std::filesystem::read_symlink(std::filesystem::path("/proc/self/exe"));
 
