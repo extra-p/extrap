@@ -40,9 +40,6 @@ if $compile_only; then
     combined=("${instrumentation_arguments[@]}" "${arguments[@]}")
     echo "EXTRA PROF COMPILE: " $COMPILER ${combined[*]}
     exec $COMPILER ${combined[*]}
-elif $shared_library; then
-    echo "EXTRA PROF SHARED LIBRARY: " $COMPILER "${arguments[@]}"
-    exec $COMPILER "${arguments[@]}"
 else
     if [ -d "$(dirname "${BASH_SOURCE[0]}")/msgpack" ]; then
         echo "EXTRA PROF: Found msgpack"
