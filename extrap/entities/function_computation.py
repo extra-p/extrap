@@ -292,10 +292,10 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         if len(params) < len(other._params):
             params = other._params
 
-        # self_func = self._sympy_function
-        # other_func = other._sympy_function
-        self_func = self._remove_negative_terms(self._sympy_function)
-        other_func = self._remove_negative_terms(other._sympy_function)
+        self_func = self._sympy_function
+        other_func = other._sympy_function
+        # self_func = self._remove_negative_terms(self._sympy_function)
+        # other_func = self._remove_negative_terms(other._sympy_function)
 
         comp_func0 = self_func - other_func
         dummy_params = {p: sympy.Dummy(str(p)[1:], real=True, positive=True) for p in params}

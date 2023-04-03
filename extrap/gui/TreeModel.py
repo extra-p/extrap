@@ -15,8 +15,10 @@ import numpy
 from PySide2.QtCore import *  # @UnusedWildImport
 from PySide2.QtGui import QPixmap, QPainter, QIcon
 
+from extrap.comparison.entities.comparison_function import ComparisonFunction
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
+from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
@@ -140,9 +142,14 @@ class TreeModel(QAbstractItemModel):
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
             formula = model.hypothesis.function
+            prefix = ""
+            if self.selector_widget.show_difference.isChecked() \
+                    and isinstance(formula, ComparisonFunction) and len(formula.functions) == 2:
+                prefix = "[DIFF] "
+                formula = ComputationFunction(formula.functions[1]) - ComputationFunction(formula.functions[0])
             if self.selector_widget.asymptoticCheckBox.isChecked():
                 parameters = tuple(experiment.parameters)
-                return formatFormula(formula.to_string(*parameters))
+                return prefix + formatFormula(formula.to_string(*parameters))
             else:
                 parameters = self.selector_widget.getParameterValues()
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
