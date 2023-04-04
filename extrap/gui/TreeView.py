@@ -184,7 +184,8 @@ class TreeView(QTreeView):
         action = submenu.addAction("Delete subtree")
         action.triggered.connect(lambda: developer_tools.delete_subtree(self, treeModel))
         action = submenu.addAction("Calculate complexity comparison")
-        action.triggered.connect(lambda: developer_tools.calculate_complexity_comparison(selectedModel))
+        action.triggered.connect(
+            lambda: developer_tools.calculate_complexity_comparison(treeModel, self.selectedIndexes()))
         action = submenu.addAction("Filter: at least 1% of total time")
         action.setCheckable(True)
         action.setChecked(self._filter_1_percent_time_state)

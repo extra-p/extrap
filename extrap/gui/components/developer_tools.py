@@ -11,11 +11,14 @@ if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
 
 
-def calculate_complexity_comparison(model):
-    if not model:
-        return
-    if isinstance(model, ComparisonModel):
-        model.add_complexity_comparison_annotation()
+def calculate_complexity_comparison(tree_model, selected_indices):
+    selected_callpaths = (tree_model.getValue(idx) for idx in selected_indices)
+    selected_models = (tree_model.getSelectedModel(sc.path) for sc in selected_callpaths if sc is not None)
+    for model in selected_models:
+        if not model:
+            continue
+        if isinstance(model, ComparisonModel):
+            model.add_complexity_comparison_annotation()
 
 
 def show_info(model, callpath):

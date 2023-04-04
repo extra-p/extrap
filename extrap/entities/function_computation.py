@@ -304,7 +304,12 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         if comp_func.is_number:
             res = comp_func
         else:
-            all_res = [sympy.limit(comp_func, dummy_params[p], sympy.oo) for p in params]
+            all_res = []
+            for p in params:
+                try:
+                    all_res.append(sympy.limit(comp_func, dummy_params[p], sympy.oo))
+                except RecursionError:
+                    all_res.append(sympy.nan)
             for i, r in enumerate(all_res):
                 while not r.is_number and r.free_symbols:
                     d = sympy.Dummy(real=True, positive=True, nonzero=True)
