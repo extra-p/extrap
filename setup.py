@@ -63,6 +63,7 @@ setup(
         "sympy~=1.8",
         "typing-extensions~=4.3.0",
         "msgpack~=1.0.4",
+        "scipy~=1.5",
         "pyobjc-framework-Cocoa~=6.2; sys_platform == 'darwin'"
     ]
 )

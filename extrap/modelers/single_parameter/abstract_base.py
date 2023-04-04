@@ -33,6 +33,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
     compare_with_RSS = modeler_options.add(False, bool,
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
+    negative_coefficients = modeler_options.add(True, bool)
 
     def __init__(self, use_median: bool):
         super().__init__(use_median)
@@ -109,7 +110,8 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     validation_measurement = measurements[element_id]
 
                     # compute the model coefficients based on the training data
-                    next_hypothesis.compute_coefficients(training_measurements)
+                    next_hypothesis.compute_coefficients(training_measurements,
+                                                         negative_coefficients=self.negative_coefficients)
 
                     # check if the constant coefficient should actually be 0
                     next_hypothesis.clean_constant_coefficient(self.epsilon, training_measurements)
@@ -118,11 +120,13 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     next_hypothesis.compute_cost_leave_one_out(training_measurements, validation_measurement)
 
                 # compute the model coefficients using all data
-                next_hypothesis.compute_coefficients(measurements)
+                next_hypothesis.compute_coefficients(measurements,
+                                                     negative_coefficients=self.negative_coefficients)
                 logging.debug(f"single-parameter model {i}: " + next_hypothesis.function.to_string(Parameter('p')))
             else:
                 # compute the model coefficients based on the training data
-                next_hypothesis.compute_coefficients(measurements)
+                next_hypothesis.compute_coefficients(measurements,
+                                                     negative_coefficients=self.negative_coefficients)
 
                 # check if the constant coefficient should actually be 0
                 next_hypothesis.clean_constant_coefficient(

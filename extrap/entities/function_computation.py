@@ -292,10 +292,10 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         if len(params) < len(other._params):
             params = other._params
 
-        # self_func = self._sympy_function
-        # other_func = other._sympy_function
-        self_func = self._remove_negative_terms(self._sympy_function)
-        other_func = self._remove_negative_terms(other._sympy_function)
+        self_func = self._sympy_function
+        other_func = other._sympy_function
+        # self_func = self._remove_negative_terms(self._sympy_function)
+        # other_func = self._remove_negative_terms(other._sympy_function)
 
         comp_func0 = self_func - other_func
         dummy_params = {p: sympy.Dummy(str(p)[1:], real=True, positive=True) for p in params}
@@ -304,7 +304,12 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         if comp_func.is_number:
             res = comp_func
         else:
-            all_res = [sympy.limit(comp_func, dummy_params[p], sympy.oo) for p in params]
+            all_res = []
+            for p in params:
+                try:
+                    all_res.append(sympy.limit(comp_func, dummy_params[p], sympy.oo))
+                except RecursionError:
+                    all_res.append(sympy.nan)
             for i, r in enumerate(all_res):
                 while not r.is_number and r.free_symbols:
                     d = sympy.Dummy(real=True, positive=True, nonzero=True)

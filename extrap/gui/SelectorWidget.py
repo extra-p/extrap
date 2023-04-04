@@ -95,6 +95,11 @@ class SelectorWidget(QWidget):
             self.changeAsymptoticBehavior)
         self.toolbar.addWidget(self.asymptoticCheckBox)
 
+        self.show_difference = QCheckBox('Show difference', self.toolbar)
+        self.show_difference.stateChanged.connect(
+            self.changeAsymptoticBehavior)
+        self.toolbar.addWidget(self.show_difference)
+
         self.show_parameters = QCheckBox('Show parameters', self.toolbar)
         # self.show_parameters.toggle()
         self.show_parameters.stateChanged.connect(
