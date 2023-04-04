@@ -71,7 +71,9 @@ namespace cupti {
 
     extern void postprocess_event_stream();
     inline void finalize() {
+        cudaDeviceSynchronize();
         cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED);
+        cuptiFinalize();
         postprocess_event_stream();
     }
 

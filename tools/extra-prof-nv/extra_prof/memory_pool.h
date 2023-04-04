@@ -2,6 +2,7 @@
 #pragma once
 #include <cstdlib>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <vector>
 namespace extra_prof {
@@ -102,6 +103,7 @@ class NonReusableBlockPool {
 
     std::vector<T *> blocks;
     size_t next_element = 0;
+    std::mutex mutex;
 
 public:
     NonReusableBlockPool() {
@@ -110,6 +112,7 @@ public:
     }
 
     T *get_mem() {
+        std::lock_guard lg(mutex);
         if (block_size <= next_element) {
             blocks.push_back(reinterpret_cast<T *>(::operator new(block_size * sizeof(T))));
             next_element = 0;
@@ -123,7 +126,10 @@ public:
         return new (get_mem()) T(std::forward<_Args>(__args)...);
     }
 
-    size_t unused_space() { return sizeof(T) * (block_size - next_element); }
+    size_t unused_space() {
+        std::lock_guard lg(mutex);
+        return sizeof(T) * (block_size - next_element);
+    }
 
     ~NonReusableBlockPool() {
         for (auto block = blocks.begin(); block != blocks.end() - 1; ++block) {

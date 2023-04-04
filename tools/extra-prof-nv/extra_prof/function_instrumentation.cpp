@@ -16,7 +16,10 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site) {
         }
     }
     if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
-        std::cerr << "EXTRA PROF: WARNING: Ignored additional threads.\n";
+        if (!GLOBALS.notMainThreadAlreadyWarned.load(std::memory_order_relaxed)) {
+            std::cerr << "EXTRA PROF: WARNING: Ignored additional threads.\n";
+            GLOBALS.notMainThreadAlreadyWarned.store(true, std::memory_order_relaxed);
+        }
         return;
     }
     if (GLOBALS.depth < GLOBALS.MAX_DEPTH) {
@@ -31,7 +34,10 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 
     if (GLOBALS.initialised.load(std::memory_order_relaxed)) {
         if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
-            std::cerr << "EXTRA PROF: WARNING: Ignored additional threads.\n";
+            if (!GLOBALS.notMainThreadAlreadyWarned.load(std::memory_order_relaxed)) {
+                std::cerr << "EXTRA PROF: WARNING: Ignored additional threads.\n";
+                GLOBALS.notMainThreadAlreadyWarned.store(true, std::memory_order_relaxed);
+            }
             return;
         }
         GLOBALS.depth--;

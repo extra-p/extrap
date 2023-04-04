@@ -11,11 +11,15 @@ namespace extra_prof {
 namespace cupti {
 
     void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void *cbdata) {
+
         if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
             if (GLOBALS.gpu.activity_thread == std::this_thread::get_id()) {
                 return; // Do not show error when called from cupti activity thread
             }
-            std::cerr << "EXTRA PROF: WARNING: callback: Ignored additional threads.\n";
+            if (!GLOBALS.notMainThreadAlreadyWarned.load(std::memory_order_relaxed)) {
+                std::cerr << "EXTRA PROF: WARNING: callback: Ignored additional threads.\n";
+                GLOBALS.notMainThreadAlreadyWarned.store(true, std::memory_order_relaxed);
+            }
             return;
         }
         auto &callpath_correlation = GLOBALS.gpu.callpath_correlation;
@@ -172,7 +176,12 @@ namespace cupti {
         std::cout << "Kernel" << record->name << " " << record->correlationId << "  from " << record->start << "  to "
                   << record->end << '\n';
 #endif
-        auto &correlation_data = GLOBALS.gpu.callpath_correlation[record->correlationId];
+        auto iterator = GLOBALS.gpu.callpath_correlation.find(record->correlationId);
+        if (iterator == GLOBALS.gpu.callpath_correlation.end()) {
+            std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " " << record->name << "\n";
+            return;
+        }
+        auto &correlation_data = iterator->second;
         auto *node = correlation_data.node->findOrAddChild(record->name, CallTreeNodeType::KERNEL);
         node->setAsync(true);
         node->duration += record->end - record->start;
@@ -226,8 +235,13 @@ namespace cupti {
 #ifdef EXTRA_PROF_DEBUG
         std::cout << "MEMCPY " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
 #endif
-        auto *node = GLOBALS.gpu.callpath_correlation[record->correlationId].node->findOrAddChild(
-            memcopy_kind, CallTreeNodeType::MEMCPY);
+        auto iterator = GLOBALS.gpu.callpath_correlation.find(record->correlationId);
+        if (iterator == GLOBALS.gpu.callpath_correlation.end()) {
+            std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCPY\n";
+            return;
+        }
+        auto &correlation_data = iterator->second;
+        auto *node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
         node->duration += record->end - record->start;
         node->visits++;
         node->bytes += record->bytes;
@@ -244,8 +258,13 @@ namespace cupti {
         std::cout << "MEMCPY P2P " << record->correlationId << " from " << record->start << " to " << record->end
                   << '\n';
 #endif
-        auto *node = GLOBALS.gpu.callpath_correlation[record->correlationId].node->findOrAddChild(
-            memcopy_kind, CallTreeNodeType::MEMCPY);
+        auto iterator = GLOBALS.gpu.callpath_correlation.find(record->correlationId);
+        if (iterator == GLOBALS.gpu.callpath_correlation.end()) {
+            std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCPY P2P\n";
+            return;
+        }
+        auto &correlation_data = iterator->second;
+        auto *node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
         node->duration += record->end - record->start;
         node->visits++;
         node->bytes += record->bytes;
@@ -261,8 +280,13 @@ namespace cupti {
 #ifdef EXTRA_PROF_DEBUG
         std::cout << "MEMSET " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
 #endif
-        auto *node = GLOBALS.gpu.callpath_correlation[record->correlationId].node->findOrAddChild(
-            memset_kind, CallTreeNodeType::MEMSET);
+        auto iterator = GLOBALS.gpu.callpath_correlation.find(record->correlationId);
+        if (iterator == GLOBALS.gpu.callpath_correlation.end()) {
+            std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMSET\n ";
+            return;
+        }
+        auto &correlation_data = iterator->second;
+        auto *node = correlation_data.node->findOrAddChild(memset_kind, CallTreeNodeType::MEMSET);
         node->duration += record->end - record->start;
         node->visits++;
         node->bytes += record->bytes;
@@ -282,6 +306,11 @@ namespace cupti {
     void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size,
                                      size_t validSize) {
         GLOBALS.gpu.activity_thread = std::this_thread::get_id();
+
+        if (GLOBALS.magic_number != 0x1A2B3C4D) {
+            std::cout << "EXTRA PROF: ERROR: Global State is corrupted. \n";
+            return;
+        }
 
         CUptiResult status;
         CUpti_Activity *record = NULL;

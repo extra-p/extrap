@@ -15,6 +15,7 @@ constexpr uint32_t MAX_MAX_DEPTH = EXTRA_PROF_MAX_MAX_DEPTH;
 #endif
 
 struct GlobalState {
+    const uint32_t magic_number = 0x1A2B3C4D;
     std::atomic<bool> initialised = false;
     std::mutex initialising;
 
@@ -27,6 +28,7 @@ struct GlobalState {
 
     std::atomic<bool> in_main = false;
     std::thread::id main_thread_id;
+    std::atomic<bool> notMainThreadAlreadyWarned = false;
 
     uint32_t depth = 0;
     uint32_t MAX_DEPTH = 30;
@@ -44,6 +46,7 @@ struct GlobalState {
     gpu::State gpu;
 };
 extern GlobalState &GLOBALS;
+
 namespace globals_init {
     static struct GlobalStateInitializer {
         GlobalStateInitializer();
