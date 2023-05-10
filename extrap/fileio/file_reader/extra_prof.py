@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import logging
+import numbers
+from collections import defaultdict
 from enum import Enum, Flag
 from itertools import groupby
 from operator import itemgetter
@@ -61,6 +63,7 @@ class _ExtraProfInputNode(Node):
         self.bytes = np.zeros(num_values)
         self.visits = np.zeros(num_values)
         self.disable_exclusive_conversion = False
+        self.gpu_metrics: dict[Metric, list[numbers.Number]] = defaultdict(list)
 
 
 class ExtraProf2Reader(AbstractDirectoryReader):
@@ -84,6 +87,8 @@ class ExtraProf2Reader(AbstractDirectoryReader):
 
         call_tree = None
 
+        all_gpu_metrics = set()
+
         reordered_files = sorted(zip(files, parameter_values), key=itemgetter(1))
         for parameter_value, point_group in groupby(reordered_files, key=itemgetter(1)):
             point_group = list(point_group)
@@ -94,14 +99,20 @@ class ExtraProf2Reader(AbstractDirectoryReader):
             call_tree.path = Callpath.EMPTY
             for i, (path, _) in enumerate(point_group):
                 with open(path, 'rb') as profile_file:
-                    profile_data = msgpack.Unpacker(profile_file, raw=False)
+                    profile_data_raw = msgpack.Unpacker(profile_file, raw=False)
                     try:
-                        magic_string, version, ep_call_tree = next(iter(profile_data))
+                        profile_data = next(iter(profile_data_raw))
+                        magic_string, version, ep_call_tree = profile_data[0:3]
+                        if len(profile_data) >= 4:
+                            gpu_metrics = [Metric(m) for m in profile_data[3]]
+                            all_gpu_metrics.update(gpu_metrics)
+                        else:
+                            gpu_metrics = []
                     except ValueError as e:
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.") from e
                     if magic_string != "EXTRA PROF":
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.")
-                    self._read_calltree(call_tree, ep_call_tree, len(point_group), i)
+                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, i)
             for node in call_tree.iterate_nodes():
                 node: _ExtraProfInputNode
                 progress_bar.update(0)
@@ -121,11 +132,15 @@ class ExtraProf2Reader(AbstractDirectoryReader):
                 experiment.add_measurement(Measurement(coordinate, node.path, METRIC_VISITS, node.visits))
                 if np.any(node.bytes != 0):
                     experiment.add_measurement(Measurement(coordinate, node.path, METRIC_BYTES, node.bytes))
+                for metric, values in node.gpu_metrics.items():
+                    experiment.add_measurement(Measurement(coordinate, node.path, metric, values))
+
                 del node.duration
                 del node.bytes
                 del node.visits
+                del node.gpu_metrics
 
-        experiment.metrics = [METRIC_VISITS, METRIC_TIME, METRIC_BYTES]
+        experiment.metrics = [METRIC_VISITS, METRIC_TIME, METRIC_BYTES] + list(all_gpu_metrics)
         experiment.callpaths = [node.path for node in call_tree.iterate_nodes()]
         experiment.call_tree = call_tree
         io_helper.validate_experiment(experiment, progress_bar)
@@ -172,9 +187,9 @@ class ExtraProf2Reader(AbstractDirectoryReader):
         return name.replace('->', '- >')
 
     @classmethod
-    def _read_calltree(cls, call_tree, ep_root_node, num_values, i):
+    def _read_calltree(cls, call_tree, ep_root_node, num_values, gpu_metrics, i):
         def _read_calltree_node(parent_node: _ExtraProfInputNode, ep_node):
-            name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node
+            name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
             n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
             if n_type == CallTreeNodeType.KERNEL_LAUNCH:
                 name = "LAUNCH " + cls._demangle_name(name)
@@ -197,16 +212,20 @@ class ExtraProf2Reader(AbstractDirectoryReader):
                 else:
                     cls._assign_tags(node, n_type, flags)
                 parent_node.add_child_node(node)
-            node.duration[i] = m_duration
-            node.bytes[i] = m_bytes
-            node.visits[i] = m_visits
+            if gpu_metrics and len(ep_node) >= 8:
+                for metric, value in zip(gpu_metrics, ep_node[7]):
+                    node.gpu_metrics[metric].append(value)
+            else:
+                node.duration[i] = m_duration
+                node.bytes[i] = m_bytes
+                node.visits[i] = m_visits
             for child in childs:
                 _read_calltree_node(node, child)
 
-        r_name, r_childs, r_type, r_flags, rm_duration, rm_visits, rm_bytes = ep_root_node
+        r_name, r_childs, r_type, r_flags, rm_duration, rm_visits, rm_bytes = ep_root_node[0:7]
         assert r_name == ""
-        assert rm_duration == 0
-        assert rm_visits == 0
-        assert rm_bytes == 0
+        assert not rm_duration
+        assert not rm_visits
+        assert not rm_bytes
         for r_child in r_childs:
             _read_calltree_node(call_tree, r_child)
