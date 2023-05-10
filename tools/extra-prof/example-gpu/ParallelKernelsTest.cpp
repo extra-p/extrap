@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
         // test_thread.join();
     }
 
-    // #pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < 16; i++) {
         process(scaling);
         PUSH_RANGE("Test parallel GPU");

@@ -30,10 +30,6 @@ while test $# -gt 0; do
 done
 
 
-
-
-
-
 extra_prof_root="$(dirname "${BASH_SOURCE[0]}")"
 msg_pack_root="$extra_prof_root/msgpack"
 instrumentation_arguments=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-finstrument-functions")
@@ -99,12 +95,10 @@ else
     [ $? -eq 0 ] || exit $?
 
 
-    
-#"-Xlinker" "--wrap=pthread_create"
     combined=("$link_extra_prof_wrap" "${instrumentation_arguments[@]}"  "extra_prof_instrumentation.o" "${arguments[@]}")
 
     if test "${EXTRA_PROF_GPU}" = on || test "${EXTRA_PROF_GPU}" = ON; then
-        combined+=("-lcupti -lnvperf_host" "-lnvperf_target")
+        combined+=("-lcupti -lnvperf_host -lnvperf_target")
     fi
 
     echo "EXTRA PROF CALL: " $EXTRA_PROF_COMPILER ${combined[*]}

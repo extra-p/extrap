@@ -1,2 +1,7 @@
 msgpack/
 msgpack-cxx.tar.gz
+example-*/extra_prof_*/
+example-*/*.o
+example-*/*.so
+example-*/test_exe
+example-*/test_exe_no_profile
