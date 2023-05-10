@@ -1,5 +1,6 @@
 #pragma once
 #include "common_types.h"
+#include "concurrent_map.h"
 
 #include "memory_pool.h"
 #include "msgpack_adaptors.h"
@@ -27,6 +28,7 @@ inline CallTreeNodeFlags operator~(CallTreeNodeFlags lhs) {
     return static_cast<CallTreeNodeFlags>(~static_cast<uint16_t>(lhs));
 }
 enum class CallTreeNodeType : uint8_t {
+    // Use 7-bits max, because of reuse in enum EventType
     NONE = 0,
     KERNEL_LAUNCH = 1,
     KERNEL = 2,
@@ -35,7 +37,7 @@ enum class CallTreeNodeType : uint8_t {
     SYNCHRONIZE = 5,
     OVERHEAD = 6,
     OVERLAP = 7,
-    MEMMGMT = 8
+    MEMMGMT = 8,
 };
 
 class CallTreeNode;
@@ -50,10 +52,34 @@ public:
     }
 };
 
+struct Metrics {
+    std::atomic<uint64_t> duration = 0;
+    std::atomic<uint64_t> bytes = 0;
+    std::atomic<uint64_t> visits = 0;
+};
+
+struct MetricAdapter {
+    const ConcurrentMap<pthread_t, Metrics> &map;
+    std::function<uint64_t(const Metrics &)> func;
+    MetricAdapter(const ConcurrentMap<pthread_t, Metrics> &map_, std::function<uint64_t(const Metrics &)> func_)
+        : map(map_), func(func_) {}
+
+    template <typename Packer>
+    void msgpack_pack(Packer &msgpack_pk) const {
+
+        msgpack_pk.pack_array(map.size());
+        auto end = map.cend();
+        for (auto iter = map.cbegin(); iter != end; ++iter) {
+            msgpack_pk.pack(func(iter->second));
+        }
+    }
+};
+
 class CallTreeNode {
     CallTreeNodeList _children;
     CallTreeNode *_parent = nullptr;
     char const *_name = nullptr;
+
     mutable std::mutex mutex;
     // thread_local time_point _temp_start_point = 0;
 
@@ -63,7 +89,7 @@ class CallTreeNode {
         for (auto const &fptr : callpath) {
             stream << fptr << " ";
         }
-        stream << ": " << duration << '\n';
+        // stream << ": " << duration << '\n';
         for (auto [name, child] : _children) {
             child->print_internal(callpath, stream);
         }
@@ -74,9 +100,8 @@ class CallTreeNode {
     CallTreeNode(const CallTreeNode &node) = delete;
 
 public:
-    std::atomic<uint64_t> duration = 0;
-    std::atomic<uint64_t> bytes = 0;
-    std::atomic<uint64_t> visits = 0;
+    ConcurrentMap<pthread_t, Metrics> per_thread_metrics;
+    std::vector<double> gpu_metrics;
     CallTreeNodeFlags flags = CallTreeNodeFlags::NONE;
     CallTreeNodeType type = CallTreeNodeType::NONE;
 
@@ -107,6 +132,11 @@ public:
         }
     }
 
+    inline Metrics &my_metrics() {
+        static thread_local Metrics &thread_metrics = per_thread_metrics[pthread_self()];
+        return thread_metrics;
+    }
+
     // time_point temp_start_point() { return _temp_start_point; }
     // void temp_start_point(time_point point) { _temp_start_point = point; }
 
@@ -135,7 +165,12 @@ public:
         if (name == nullptr) {
             name = "";
         }
-        msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes)
+
+        MetricAdapter duration(per_thread_metrics, [](const auto &metrics) { return metrics.duration.load(); });
+        MetricAdapter visits(per_thread_metrics, [](const auto &metrics) { return metrics.visits.load(); });
+        MetricAdapter bytes(per_thread_metrics, [](const auto &metrics) { return metrics.bytes.load(); });
+
+        msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes, gpu_metrics)
             .msgpack_pack(msgpack_pk);
     }
 };

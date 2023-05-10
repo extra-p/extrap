@@ -11,6 +11,7 @@ CallTreeNode *CallTreeNode::findOrAddChild(char const *name, CallTreeNodeType ty
 
     auto [name_, node] =
         _children.emplace_back(name, GLOBALS.calltree_nodes_allocator.construct(name, this, type, flags));
+
     return node;
 }
 }

@@ -12,6 +12,8 @@
 #include <vector>
 namespace extra_prof {
 
+// TODO write name registry class
+
 inline std::string currentDateTime() {
     time_t now = time(0);
     struct tm tstruct {};
