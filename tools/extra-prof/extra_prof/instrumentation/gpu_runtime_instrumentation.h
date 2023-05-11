@@ -3,7 +3,7 @@
 #include "gpu_instrumentation.h"
 
 namespace extra_prof::gpu::runtime {
-void enable() {
+void init() {
     CUPTI_CALL(cuptiActivityRegisterCallbacks(&on_buffer_request, &on_buffer_complete));
     CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
     CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));

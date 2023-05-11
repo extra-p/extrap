@@ -1,13 +1,18 @@
 #!/bin/bash
-#COMPILER=g++
 MSGPACK_VERSION=5.0.0
-if test "${EXTRA_PROF_WRAPPER}" = off || test "${EXTRA_PROF_WRAPPER}" = OFF; then
+
+if [ -z ${EXTRA_PROF_COMPILER+y} ]; then
+    >&2 echo "EXTRA PROF ERROR: No compiler set, either set EXTRA_PROF_COMPILER or use one of the compiler-specific wrappers."
+    exit -1
+fi
+
+if [ "${EXTRA_PROF_WRAPPER}" = off ] || [ "${EXTRA_PROF_WRAPPER}" = OFF ]; then
     exec $EXTRA_PROF_COMPILER "$@"
 fi
 arguments=("$@")
 compile_only=false
 shared_library=false
-while test $# -gt 0; do
+while [ $# -gt 0 ]; do
     #echo "$#: $1"
     case "$1" in
     -c)
@@ -29,7 +34,6 @@ while test $# -gt 0; do
     shift
 done
 
-
 extra_prof_root="$(dirname "${BASH_SOURCE[0]}")"
 msg_pack_root="$extra_prof_root/msgpack"
 instrumentation_arguments=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-finstrument-functions")
@@ -44,21 +48,21 @@ if [ $EXTRA_PROF_COMPILER = "nvcc" ]; then
     extra_prof_arguments+=($compiler_dir)
 fi
 
-if test "${EXTRA_PROF_GPU}" = on || test "${EXTRA_PROF_GPU}" = ON; then
+if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_GPU=1")
 fi
 
-if test "${EXTRA_PROF_EVENT_TRACE}" = on || test "${EXTRA_PROF_EVENT_TRACE}" = ON; then
+if [ "${EXTRA_PROF_EVENT_TRACE}" = on ] || [ "${EXTRA_PROF_EVENT_TRACE}" = ON ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=1")
 fi
 
-if test "${EXTRA_PROF_DEBUG_BUILD}" = on || test "${EXTRA_PROF_DEBUG_BUILD}" = ON; then
+if [ "${EXTRA_PROF_DEBUG_BUILD}" = on ] || [ "${EXTRA_PROF_DEBUG_BUILD}" = ON ]; then
     extra_prof_arguments+=("-g -O0")
 else
     extra_prof_arguments+=("-O2")
 fi
 
-if test "${EXTRA_PROF_DEBUG_SANITIZE}" = on || test "${EXTRA_PROF_DEBUG_SANITIZE}" = ON; then
+if [ "${EXTRA_PROF_DEBUG_SANITIZE}" = on ] || [ "${EXTRA_PROF_DEBUG_SANITIZE}" = ON ]; then
     instrumentation_arguments+=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-fsanitize=address")
     extra_prof_arguments+=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-fsanitize=address")
 fi
@@ -97,8 +101,8 @@ else
 
     combined=("$link_extra_prof_wrap" "${instrumentation_arguments[@]}"  "extra_prof_instrumentation.o" "${arguments[@]}")
 
-    if test "${EXTRA_PROF_GPU}" = on || test "${EXTRA_PROF_GPU}" = ON; then
-        combined+=("-lcupti -lnvperf_host -lnvperf_target")
+    if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
+        combined+=("-lcupti -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
     fi
 
     echo "EXTRA PROF CALL: " $EXTRA_PROF_COMPILER ${combined[*]}

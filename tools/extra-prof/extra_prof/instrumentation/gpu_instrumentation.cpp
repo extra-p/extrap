@@ -243,7 +243,7 @@ namespace cupti {
         if (EXTRA_PROF_GPU_METRICS != nullptr) {
             extra_prof::gpu::hwc::init();
         } else {
-            extra_prof::gpu::runtime::enable();
+            extra_prof::gpu::runtime::init();
         }
 
         CUPTI_CALL(cuptiEnableDomain(1, GLOBALS.gpu.subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
@@ -256,8 +256,9 @@ namespace cupti {
             cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED);
         }
         cuptiFinalize();
-
-        extra_prof::gpu::hwc::postprocess_counter_data();
+        if (!GLOBALS.gpu.metricNames.empty()) {
+            extra_prof::gpu::hwc::postprocess_counter_data();
+        }
         postprocess_event_stream();
     }
 };
