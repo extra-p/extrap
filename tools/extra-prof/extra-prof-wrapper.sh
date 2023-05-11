@@ -3,7 +3,7 @@ MSGPACK_VERSION=5.0.0
 
 if [ -z ${EXTRA_PROF_COMPILER+y} ]; then
     >&2 echo "EXTRA PROF ERROR: No compiler set, either set EXTRA_PROF_COMPILER or use one of the compiler-specific wrappers."
-    exit -1
+    exit 1
 fi
 
 if [ "${EXTRA_PROF_WRAPPER}" = off ] || [ "${EXTRA_PROF_WRAPPER}" = OFF ]; then
