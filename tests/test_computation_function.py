@@ -413,6 +413,8 @@ class TestDivideNo0(unittest.TestCase):
         self.assertEqual(0, func_2x2_m3y3.partial_compare(func_2x2_m3y3))
         self.assertEqual((-1, 1), func_2x2_m3y3.partial_compare(func_4x2_m6y2))
         func_2x2_m3y3_m1y4 = ComputationFunction.from_string("2+2*x**2+3*y**3-y**4", True)
+        self.assertEqual(1, func_4x2_m6y2.partial_compare(func_2x2_m3y3_m1y4))
+        func_2x2_m3y3_m1y4 = ComputationFunction.from_string("2+2*x**2+3*y**3+y**4", True)
         self.assertEqual((1, -1), func_4x2_m6y2.partial_compare(func_2x2_m3y3_m1y4))
         self.assertEqual(0, func_4x2_m6y2.partial_compare(func_4x2_m6y2))
         self.assertEqual(0, func_2x2_m3y3_m1y4.partial_compare(func_2x2_m3y3_m1y4))
