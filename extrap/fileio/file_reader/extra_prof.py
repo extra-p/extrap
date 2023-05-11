@@ -121,7 +121,7 @@ class ExtraProf2Reader(AbstractDirectoryReader):
                                          axis=0)
 
                 if np.any(child_durations > node.duration):
-                    logging.info("Extra-Prof overflow", node.path, (node.duration - child_durations) / 10 ** 9)
+                    logging.info(f"Extra-Prof overflow {node.path} {(node.duration - child_durations) / 10 ** 9}")
                     duration = node.duration / 10 ** 9
                     node.childs = []
                 else:
