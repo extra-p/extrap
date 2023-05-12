@@ -38,6 +38,8 @@ namespace gpu {
         std::atomic<void (*)(const CUpti_CallbackData *)> onKernelLaunch = nullptr;
 
         // HWC State
+
+        // Number of ranges recorded by HWC profiler per session
         uint32_t NUM_HWC_RANGES = 256;
 
         std::string chipName;

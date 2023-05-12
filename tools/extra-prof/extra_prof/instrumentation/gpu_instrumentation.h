@@ -32,6 +32,20 @@
         }                                                                                                              \
     } while (0)
 
+#define GPU_LL_CALL(call)                                                                                              \
+    do {                                                                                                               \
+        CUresult _status = call;                                                                                       \
+        if (_status != CUDA_SUCCESS) {                                                                                 \
+            const char *errstr;                                                                                        \
+            if (cuGetErrorString(_status, &errstr) != CUDA_SUCCESS) {                                                  \
+                fprintf(stderr, "%s:%d: error: while decoding error of function %s.\n", __FILE__, __LINE__, #call);    \
+                exit(-1);                                                                                              \
+            };                                                                                                         \
+            fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n", __FILE__, __LINE__, #call, errstr);   \
+            exit(-1);                                                                                                  \
+        }                                                                                                              \
+    } while (0)
+
 namespace extra_prof {
 namespace gpu::runtime {
     extern void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRecords);

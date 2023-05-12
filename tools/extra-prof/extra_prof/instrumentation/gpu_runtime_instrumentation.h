@@ -22,7 +22,7 @@ void process_activity_kernel(CUpti_ActivityKernel5 *record) {
 #endif
     auto correlation_data_ptr = GLOBALS.gpu.callpath_correlation.try_get(record->correlationId);
     if (correlation_data_ptr == nullptr) {
-        std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " " << record->name << "\n";
+        std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " " << record->name << "\n";
         return;
     }
     auto &correlation_data = *correlation_data_ptr;
@@ -141,7 +141,7 @@ void process_activity_memcpy(CUpti_ActivityMemcpy3 *record) {
 #endif
     auto correlation_data_ptr = GLOBALS.gpu.callpath_correlation.try_get(record->correlationId);
     if (correlation_data_ptr == nullptr) {
-        std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCOPY\n";
+        std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCOPY\n";
         return;
     }
     auto &correlation_data = *correlation_data_ptr;
@@ -164,7 +164,7 @@ void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2 *record) {
 #endif
     auto correlation_data_ptr = GLOBALS.gpu.callpath_correlation.try_get(record->correlationId);
     if (correlation_data_ptr == nullptr) {
-        std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCPY\n";
+        std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCPY\n";
         return;
     }
     auto &correlation_data = *correlation_data_ptr;
@@ -187,7 +187,7 @@ void process_activity_memset(CUpti_ActivityMemset2 *record) {
 #endif
     auto correlation_data_ptr = GLOBALS.gpu.callpath_correlation.try_get(record->correlationId);
     if (correlation_data_ptr == nullptr) {
-        std::cout << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMSET\n";
+        std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMSET\n";
         return;
     }
     auto &correlation_data = *correlation_data_ptr;
@@ -213,7 +213,7 @@ void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *
     GLOBALS.gpu.activity_thread = pthread_self();
 
     if (GLOBALS.magic_number != 0x1A2B3C4D) {
-        std::cout << "EXTRA PROF: ERROR: Global State is corrupted. \n";
+        std::cerr << "EXTRA PROF: ERROR: Global State is corrupted. \n";
         return;
     }
 

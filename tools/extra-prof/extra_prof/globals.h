@@ -73,8 +73,6 @@ struct GlobalState {
         return state;
     }
 
-    size_t number_of_metrics() { return 4; }
-
     GlobalState();
 
 #ifdef EXTRA_PROF_EVENT_TRACE

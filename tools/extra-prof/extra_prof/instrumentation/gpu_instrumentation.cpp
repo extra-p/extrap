@@ -14,17 +14,10 @@ namespace cupti {
 
     void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void *cbdata) {
         pthread_t this_thread = pthread_self();
-        if (GLOBALS.gpu.activity_thread == this_thread) {
-            return; // Do not show error when called from cupti activity thread
-        }
-        // if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
 
-        //     if (!GLOBALS.notMainThreadAlreadyWarned.load(std::memory_order_relaxed)) {
-        //         std::cerr << "EXTRA PROF: WARNING: callback: Ignored additional threads.\n";
-        //         GLOBALS.notMainThreadAlreadyWarned.store(true, std::memory_order_relaxed);
-        //     }
-        //     return;
-        // }
+        if (GLOBALS.gpu.activity_thread == this_thread) {
+            return; // Do not register activity if called from cupti activity thread
+        }
         auto &callpath_correlation = GLOBALS.gpu.callpath_correlation;
         auto &event_stream = GLOBALS.gpu.event_stream;
         if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
@@ -45,6 +38,13 @@ namespace cupti {
                                     cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMallocArray_v3020 ||
                                     cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMallocHost_v3020 ||
                                     cbid == CUPTI_RUNTIME_TRACE_CBID_cudaHostAlloc_v3020;
+            auto cbid_is_memset = cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMemset_v3020 ||
+                                  cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMemsetAsync_v3020 ||
+                                  cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMemset2D_v3020 ||
+                                  cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMemset2DAsync_v3020 ||
+                                  cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMemset3D_v3020 ||
+                                  cbid == CUPTI_RUNTIME_TRACE_CBID_cudaMemset3DAsync_v3020;
+
             if (rtdata->callbackSite == CUPTI_API_ENTER) {
                 if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000 ||
                     cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunch_v3020) {
@@ -53,7 +53,7 @@ namespace cupti {
                     }
                     auto [time, call_tree_node] =
                         extra_prof::push_time(rtdata->symbolName, CallTreeNodeType::KERNEL_LAUNCH);
-                    std::cout << "Kernel " << rtdata->symbolName << " Id: " << rtdata->correlationId << '\n';
+                    // std::cout << "Kernel " << rtdata->symbolName << " Id: " << rtdata->correlationId << '\n';
                     if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000) {
                         const auto *params =
                             reinterpret_cast<const cudaLaunchKernel_v7000_params *>(rtdata->functionParams);
@@ -64,6 +64,13 @@ namespace cupti {
                                                      CorrelationData{call_tree_node, this_thread});
                     }
                 } else {
+                    if (cbid_is_memset) {
+                        // Cuda memset also launches a kernel, which needs to be registered for correctly assigning GPU
+                        // HWC values.
+                        if (GLOBALS.gpu.onKernelLaunch != nullptr) {
+                            (*GLOBALS.gpu.onKernelLaunch)(rtdata);
+                        }
+                    }
                     auto [time, call_tree_node] = extra_prof::push_time(rtdata->functionName);
                     callpath_correlation.emplace(rtdata->correlationId, CorrelationData{call_tree_node, this_thread});
                     auto evt_type = EventType::NONE;

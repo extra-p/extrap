@@ -8,13 +8,23 @@
 #include <mutex>
 namespace extra_prof::gpu::hwc {
 
+CUpti_ProfilerReplayMode get_replay_mode() {
+    const char *EXTRA_PROF_GPU_HWC_REPLAY = getenv("EXTRA_PROF_GPU_HWC_REPLAY");
+    if (EXTRA_PROF_GPU_HWC_REPLAY != nullptr) {
+        if (strcmp(EXTRA_PROF_GPU_HWC_REPLAY, "none") == 0) {
+            return CUPTI_ApplicationReplay;
+        }
+    }
+    return CUPTI_KernelReplay;
+}
+
 void start_profiling_phase() {
     int currentDeviceIdx;
     GPU_CALL(cudaGetDevice(&currentDeviceIdx));
     CUdevice currentDevice;
-    CUresult resul1 = cuDeviceGet(&currentDevice, currentDeviceIdx);
+    GPU_LL_CALL(cuDeviceGet(&currentDevice, currentDeviceIdx));
     CUcontext currentContext;
-    CUresult result = cuDevicePrimaryCtxRetain(&currentContext, currentDevice);
+    GPU_LL_CALL(cuDevicePrimaryCtxRetain(&currentContext, currentDevice));
     // std::cout << "Res: " << result << " Context: " << currentContext << std::endl;
 
     size_t numRanges = GLOBALS.gpu.NUM_HWC_RANGES;
@@ -26,7 +36,7 @@ void start_profiling_phase() {
         .counterDataScratchBufferSize = GLOBALS.gpu.counterDataScratchBuffer.size(),
         .pCounterDataScratchBuffer = GLOBALS.gpu.counterDataScratchBuffer.data(),
         .range = CUPTI_AutoRange,
-        .replayMode = CUPTI_KernelReplay,
+        .replayMode = get_replay_mode(),
         .maxRangesPerPass = numRanges,
         .maxLaunchesPerPass = numRanges,
     };
@@ -42,6 +52,14 @@ void start_profiling_phase() {
     };
     CUPTI_CALL(cuptiProfilerSetConfig(&setConfigParams));
 
+    if (beginSessionParams.replayMode != CUPTI_KernelReplay) {
+        CUpti_Profiler_BeginPass_Params beginPassParams = {
+            CUpti_Profiler_BeginPass_Params_STRUCT_SIZE,
+            .ctx = currentContext,
+        };
+        CUPTI_CALL(cuptiProfilerBeginPass(&beginPassParams));
+    }
+
     CUpti_Profiler_EnableProfiling_Params enableProfilingParams = {
         CUpti_Profiler_EnableProfiling_Params_STRUCT_SIZE,
         .ctx = currentContext,
@@ -53,6 +71,15 @@ void end_profiling_phase() {
     CUpti_Profiler_DisableProfiling_Params disableProfilingParams = {
         CUpti_Profiler_DisableProfiling_Params_STRUCT_SIZE};
     CUPTI_CALL(cuptiProfilerDisableProfiling(&disableProfilingParams));
+
+    if (get_replay_mode() != CUPTI_KernelReplay) {
+        CUpti_Profiler_EndPass_Params endPassParams = {CUpti_Profiler_EndPass_Params_STRUCT_SIZE};
+        CUPTI_CALL(cuptiProfilerEndPass(&endPassParams));
+    }
+
+    CUpti_Profiler_FlushCounterData_Params cuptiFlushCounterDataParams = {
+        CUpti_Profiler_FlushCounterData_Params_STRUCT_SIZE};
+    CUPTI_CALL(cuptiProfilerFlushCounterData(&cuptiFlushCounterDataParams));
 
     CUpti_Profiler_UnsetConfig_Params unsetConfigParams = {CUpti_Profiler_UnsetConfig_Params_STRUCT_SIZE};
     CUPTI_CALL(cuptiProfilerUnsetConfig(&unsetConfigParams));
@@ -160,6 +187,7 @@ void postprocess_counter_data() {
 void onKernelLaunch(const CUpti_CallbackData *cbdata) {
     std::lock_guard lg(GLOBALS.gpu.kernelLaunchMutex);
 
+    GPU_LL_CALL(cuCtxSynchronize());
     if (GLOBALS.gpu.rangeCounter >= GLOBALS.gpu.NUM_HWC_RANGES) {
         end_profiling_phase();
         postprocess_counter_data();
@@ -215,12 +243,12 @@ void init() {
     }
     if (!GetImages(GLOBALS.gpu.chipName.c_str(), GLOBALS.gpu.metricNames, GLOBALS.gpu.configImage,
                    GLOBALS.gpu.counterDataImagePrefix)) {
-        std::cout << "Failed to create configImage" << std::endl;
+        std::cerr << "EXTRA PROF: Failed to create configImage" << std::endl;
         exit(-1);
     }
     if (!CreateCounterDataImage(GLOBALS.gpu.counterDataImage, GLOBALS.gpu.counterDataScratchBuffer,
                                 GLOBALS.gpu.counterDataImagePrefix)) {
-        std::cout << "Failed to create counterDataImage" << std::endl;
+        std::cerr << "EXTRA PROF: Failed to create counterDataImage" << std::endl;
         exit(-1);
     }
 
@@ -233,7 +261,7 @@ void init() {
 }
 void finalize() {
     end_profiling_phase();
-    CUresult result = cuDevicePrimaryCtxRelease(0);
+    GPU_LL_CALL(cuDevicePrimaryCtxRelease(0));
 
     CUpti_Profiler_DeInitialize_Params profilerDeInitializeParams = {CUpti_Profiler_DeInitialize_Params_STRUCT_SIZE};
     CUPTI_CALL(cuptiProfilerDeInitialize(&profilerDeInitializeParams));
