@@ -36,16 +36,16 @@ done
 
 extra_prof_root="$(dirname "${BASH_SOURCE[0]}")"
 msg_pack_root="$extra_prof_root/msgpack"
-instrumentation_arguments=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-finstrument-functions")
+instrumentation_arguments=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions")
 extra_prof_arguments=("$extra_prof_optimization" "-std=c++17" "-I$msg_pack_root/include" "$extra_prof_event_trace")
 link_extra_prof_wrap="-Xlinker --no-as-needed -Xlinker --rpath=. -l_extra_prof -Xlinker --as-needed -L."
 
 if $shared_library; then
-    extra_prof_arguments+=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-fPIC")
+    extra_prof_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC")
 fi
 
 if [ $EXTRA_PROF_COMPILER = "nvcc" ]; then
-    extra_prof_arguments+=($compiler_dir)
+    extra_prof_arguments+=("$compiler_dir")
 fi
 
 if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
@@ -63,8 +63,8 @@ else
 fi
 
 if [ "${EXTRA_PROF_DEBUG_SANITIZE}" = on ] || [ "${EXTRA_PROF_DEBUG_SANITIZE}" = ON ]; then
-    instrumentation_arguments+=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-fsanitize=address")
-    extra_prof_arguments+=($EXTRA_PROF_COMPILER_OPTION_REDIRECT "-fsanitize=address")
+    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
+    extra_prof_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
 fi
 
 if $compile_only; then
@@ -86,7 +86,7 @@ else
         echo "EXTRA PROF: Finished unpacking msgpack. Continuing..."
     fi
 
-    combined=("--shared" "${extra_prof_arguments[@]}" $EXTRA_PROF_COMPILER_OPTION_REDIRECT "-fPIC" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/lib/lib_extra_prof.cpp")
+    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
 
     echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
     $EXTRA_PROF_COMPILER ${combined[*]}
@@ -94,8 +94,8 @@ else
 
     # no exec otherwise this script will end here
     combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_instrumentation.o" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp") 
-    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $EXTRA_PROF_COMPILER $EXTRA_PROF_COMPILATION_ARGUMENTS ${combined[*]}
-    $EXTRA_PROF_COMPILER $EXTRA_PROF_COMPILATION_ARGUMENTS ${combined[*]}
+    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $EXTRA_PROF_COMPILER ${combined[*]}
+    $EXTRA_PROF_COMPILER ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
 
