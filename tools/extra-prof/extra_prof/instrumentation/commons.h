@@ -117,7 +117,7 @@ inline time_point pop_time(char const *name) {
     }
     auto &metrics = current_node->my_metrics();
     metrics.visits++;
-    metrics.duration;
+    metrics.duration += duration;
     GLOBALS.my_thread_state().timer_stack.pop_back();
     if (current_node->parent() == nullptr) {
         throw std::runtime_error("EXTRA PROF: pop_time: Cannot go to parent of root");
