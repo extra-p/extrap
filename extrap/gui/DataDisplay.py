@@ -282,13 +282,31 @@ class DataDisplayManager(QWidget):
         self.display_widget.setMovable(True)
         self.display_widget.setTabsClosable(True)
         self.display_widget.tabCloseRequested.connect(self.closeTab)
+
+        self.context_menu_button = QPushButton("Graph options", self)
+        self.context_menu_button.setEnabled(False)
+        self.context_menu_button.clicked.connect(self._context_menu_button_clicked)
+        button_layout = QVBoxLayout()
+        button_layout.setContentsMargins(15, 15, 15, 15)
+        button_layout.addWidget(self.context_menu_button)
+
         grid.addWidget(self.display_widget, 0, 0)
+        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignLeft | Qt.AlignBottom)
         # loading this tab as default view (Line graph)
         self.reloadTabs([0])
 
         self.display_widget.tabsClosable()
         self.display_widget.currentChanged.connect(self.experimentChange)
         self.show()
+
+
+    def _context_menu_button_clicked(self):
+        graph_widget = self.display_widget.currentWidget()
+        if graph_widget:
+            button_pos = self.context_menu_button.pos()
+            button_pos -= QPoint(0, self.context_menu_button.height() + 350)
+            graph_widget.showContextMenu(button_pos)
+
 
     def closeTab(self, currentIndex):
         self.display_widget.removeTab(currentIndex)
@@ -398,6 +416,12 @@ class DataDisplayManager(QWidget):
             display.update()
         else:
             display.drawGraph()
+
+        model_list, selected_call_nodes = self.main_widget.get_selected_models()
+        if model_list:
+            self.context_menu_button.setEnabled(True)
+        else:
+            self.context_menu_button.setEnabled(False)
 
 
 class GraphLimitsWidget(QWidget):
