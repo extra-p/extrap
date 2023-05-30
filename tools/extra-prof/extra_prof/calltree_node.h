@@ -1,6 +1,11 @@
 #pragma once
 #include "common_types.h"
+
 #include "concurrent_map.h"
+
+#include "containers/string.h"
+#include "containers/pair.h"
+#include "containers/vector.h"
 
 #include "memory_pool.h"
 #include "msgpack_adaptors.h"
@@ -41,7 +46,7 @@ enum class CallTreeNodeType : uint8_t {
 };
 
 class CallTreeNode;
-class CallTreeNodeList : public std::vector<std::pair<char const *, CallTreeNode *>> {
+class CallTreeNodeList : public std::vector<containers::pair<char const *, CallTreeNode *>> {
 public:
     template <typename Packer>
     void msgpack_pack(Packer &msgpack_pk) const {
@@ -145,7 +150,7 @@ public:
         print_internal(callpath, stream);
     }
 
-    void print(std::string filename) const {
+    void print(containers::string filename) const {
         std::ofstream stream(filename);
         std::vector<char const *> callpath;
         print_internal(callpath, stream);

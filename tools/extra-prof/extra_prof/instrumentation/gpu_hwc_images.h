@@ -1,5 +1,5 @@
-
 #pragma once
+#include "../common_types.h"
 
 #include <cuda.h>
 #include <cupti_profiler_target.h>
@@ -23,9 +23,10 @@
 
 namespace extra_prof::gpu::hwc {
 
-bool GetRawMetricRequests(NVPA_MetricsContext *pMetricsContext, std::vector<std::string> metricNames,
-                          std::vector<NVPA_RawMetricRequest> &rawMetricRequests, std::vector<std::string> &temp) {
-    std::string reqName;
+bool GetRawMetricRequests(NVPA_MetricsContext *pMetricsContext, std::vector<containers::string> metricNames,
+                          std::vector<NVPA_RawMetricRequest> &rawMetricRequests,
+                          std::vector<containers::string> &temp) {
+    containers::string reqName;
     bool isolated = true;
     bool keepInstances = true;
 
@@ -170,7 +171,7 @@ void GetCounterDataPrefixImage(const char *chipName, std::vector<NVPA_RawMetricR
     NVPW_CALL(NVPW_CounterDataBuilder_GetCounterDataPrefix(&getCounterDataPrefixParams));
 }
 
-bool GetImages(const char *chipName, std::vector<std::string> metricNames, std::vector<uint8_t> &configImage,
+bool GetImages(const char *chipName, std::vector<containers::string> metricNames, std::vector<uint8_t> &configImage,
                std::vector<uint8_t> &counterDataImagePrefix) {
     NVPW_CUDA_MetricsContext_Create_Params metricsContextCreateParams = {
         NVPW_CUDA_MetricsContext_Create_Params_STRUCT_SIZE,
@@ -185,7 +186,7 @@ bool GetImages(const char *chipName, std::vector<std::string> metricNames, std::
     OnExit exit0([&]() { NVPW_MetricsContext_Destroy(&metricsContextDestroyParams); });
 
     std::vector<NVPA_RawMetricRequest> rawMetricRequests;
-    std::vector<std::string> temp;
+    std::vector<containers::string> temp;
 
     GetRawMetricRequests(metricsContextCreateParams.pMetricsContext, metricNames, rawMetricRequests, temp);
     GetConfigImage(chipName, rawMetricRequests, configImage);

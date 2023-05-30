@@ -1,4 +1,5 @@
 #pragma once
+#include "common_types.h"
 #include <atomic>
 #include <mutex>
 #include <vector>

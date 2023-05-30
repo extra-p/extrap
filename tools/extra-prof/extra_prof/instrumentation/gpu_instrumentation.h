@@ -1,9 +1,10 @@
 #pragma once
+#include "../common_types.h"
 
 #include "../memory_pool.h"
 
+#include "../containers/string.h"
 #include <cupti.h>
-#include <filesystem>
 #include <iostream>
 #include <string>
 #include <unordered_set>
@@ -62,7 +63,7 @@ namespace cupti {
     extern void postprocess_event_stream();
     void finalize();
 
-    extern void write_event_stream(std::filesystem::path filename);
+    extern void write_event_stream(containers::string filename);
     extern size_t event_stream_size();
     extern size_t cupti_mappings_size();
 } // namespace cupti

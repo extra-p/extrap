@@ -1,20 +1,22 @@
-
 #pragma once
+#include "../common_types.h"
+
 #include "../address_mapping.h"
 #include "../calltree_node.h"
-#include "../common_types.h"
+
 #include "../events.h"
 #include "../globals.h"
 
 #ifdef EXTRA_PROF_GPU
 #include "gpu_instrumentation.h"
+#else
+#include <time.h>
 #endif
 
 #include <dlfcn.h>
 
 #include <atomic>
 #include <chrono>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -25,19 +27,25 @@
 
 namespace extra_prof {
 
-inline time_point get_timestamp() {
+EP_INLINE time_point get_timestamp() {
 #ifdef EXTRA_PROF_GPU
     time_point time;
     CUPTI_CALL(cuptiGetTimestamp(&time));
     return time;
 #else
-    auto val = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(val.time_since_epoch()).count();
+    struct timespec time;
+    int status = clock_gettime(CLOCK_REALTIME, &time);
+    if (status == EINVAL || status == EFAULT || status == ENOTSUP) {
+        exit(-1);
+    };
+    time_point result = time.tv_nsec;
+    result += 1000000000 * time.tv_sec;
+    return result;
 #endif
 }
 
 template <typename T>
-inline std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
+EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
     auto &name_register = GLOBALS.name_register;
     auto &adress_offset = GLOBALS.adress_offset;
     auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
@@ -51,7 +59,8 @@ inline std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeT
                 if (info.dli_sname == nullptr) {
                     if (GLOBALS.in_main) {
                         std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-                        name_register.try_emplace(ptr - adress_offset, std::move(std::to_string(ptr - adress_offset)));
+                        name_register.try_emplace(ptr - adress_offset,
+                                                  std::move(containers::string::format("%x", ptr - adress_offset)));
                     } else {
                         name_register.try_emplace(ptr - adress_offset, "_GLOBAL_INIT");
                     }
@@ -73,14 +82,14 @@ inline std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeT
             }
         } else {
             std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-            name_register[ptr - adress_offset] = std::to_string(ptr);
+            name_register[ptr - adress_offset] = containers::string::format("%x", ptr);
         }
     }
     return push_time(name_register[ptr - adress_offset].c_str(), type);
 }
 
 template <>
-inline std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTreeNodeType type) {
+EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTreeNodeType type) {
     time_point time = get_timestamp();
     auto &current_node = GLOBALS.my_thread_state().current_node;
     current_node = current_node->findOrAddChild(name, type);
@@ -94,18 +103,19 @@ inline std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTr
 }
 
 template <typename T>
-inline time_point pop_time(T *fn_ptr) {
+EP_INLINE time_point pop_time(T *fn_ptr) {
     auto &name_register = GLOBALS.name_register;
     auto &adress_offset = GLOBALS.adress_offset;
     auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
-    if (name_register.try_get(ptr - adress_offset) == nullptr) {
+    auto name_ptr = name_register.try_get(ptr - adress_offset);
+    if (name_ptr == nullptr) {
         std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
         throw std::runtime_error("EXTRA PROF: ERROR unknown function pointer.");
     }
-    return pop_time(name_register[ptr - adress_offset].c_str());
+    return pop_time(name_ptr->c_str());
 }
 template <>
-inline time_point pop_time(char const *name) {
+EP_INLINE time_point pop_time(char const *name) {
     time_point time = get_timestamp();
     auto &current_node = GLOBALS.my_thread_state().current_node;
     auto duration = time - GLOBALS.my_thread_state().timer_stack.back();

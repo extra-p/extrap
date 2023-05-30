@@ -15,19 +15,25 @@ struct WrappedThreadArgs {
     void *argument;
 };
 void *wrap_start_thread(void *wrapped_args_ptr) {
+
     WrappedThreadArgs *wrapped_args = reinterpret_cast<WrappedThreadArgs *>(wrapped_args_ptr);
     pthread_t new_tid = pthread_self();
-    extra_prof::GLOBALS.threads.emplace(new_tid, std::move(wrapped_args->thread_state));
+    {
+        extra_prof_scope sc;
+        extra_prof::GLOBALS.threads.emplace(new_tid, std::move(wrapped_args->thread_state));
+    }
     auto start_routine = wrapped_args->start_routine;
     auto args = wrapped_args->argument;
     delete wrapped_args;
+
     return start_routine(args);
 }
 }
 #define BT_BUF_SIZE 100
 extern "C" {
 
-int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg) {
+EXTRA_PROF_SO_EXPORT int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *),
+                                        void *arg) {
     static void *handle = NULL;
     static P_CREATE old_create = NULL;
     if (!handle) {

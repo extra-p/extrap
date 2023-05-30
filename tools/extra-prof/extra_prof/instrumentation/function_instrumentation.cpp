@@ -2,11 +2,16 @@
 #include "start_end.h"
 
 extern "C" {
-void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void *this_fn, void *call_site) {
     using namespace extra_prof;
-    // if (!GLOBALS.profiling) {
-    //     return;
-    // }
+    if (!extra_prof_globals_initialised) {
+        return;
+    }
+    if (extra_prof_scope_counter > 0) {
+        return;
+    }
+    extra_prof_scope sc;
+
     // std::cout << "Start: " << this_fn << std::endl;
     if (!GLOBALS.initialised.load(std::memory_order_acquire)) {
         std::lock_guard<std::mutex> lk(GLOBALS.initialising);
@@ -31,9 +36,16 @@ void __cyg_profile_func_enter(void *this_fn, void *call_site) {
     GLOBALS.my_thread_state().depth++;
 }
 
-void __cyg_profile_func_exit(void *this_fn, void *call_site) {
+EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void *this_fn, void *call_site) {
     using namespace extra_prof;
+    if (!extra_prof_globals_initialised) {
+        return;
+    }
     // std::cout << "End: " << this_fn << std::endl;
+    if (extra_prof_scope_counter > 0) {
+        return;
+    }
+    extra_prof_scope sc;
 
     if (GLOBALS.initialised.load(std::memory_order_relaxed)) {
         // if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
@@ -43,10 +55,11 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
         //     }
         //     return;
         // }
-        GLOBALS.my_thread_state().depth--;
-        if (GLOBALS.my_thread_state().depth < GLOBALS.MAX_DEPTH) {
+        auto &thread_state = GLOBALS.my_thread_state();
+        thread_state.depth--;
+        if (thread_state.depth < GLOBALS.MAX_DEPTH) {
             pop_time(this_fn);
-            if (GLOBALS.my_thread_state().depth == 0) {
+            if (thread_state.depth == 0) {
                 if (reinterpret_cast<uintptr_t>(this_fn) - GLOBALS.adress_offset == GLOBALS.main_function_ptr) {
                     finalize();
                 }

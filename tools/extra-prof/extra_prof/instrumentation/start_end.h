@@ -1,5 +1,10 @@
 #pragma once
+#include "../common_types.h"
+
+#include "../containers/string.h"
+
 #include "../address_mapping.h"
+#include "../filesystem.h"
 #include "../profile.h"
 #include "commons.h"
 #ifdef EXTRA_PROF_GPU
@@ -26,13 +31,13 @@ void initialize() {
     }
     auto output_dir_string = std::getenv("EXTRA_PROF_EXPERIMENT_DIRECTORY");
     if (output_dir_string == nullptr) {
-        GLOBALS.output_dir = std::filesystem::path(std::string("extra_prof_") + currentDateTime());
+        GLOBALS.output_dir = containers::string("extra_prof_") + currentDateTime();
     } else {
-        GLOBALS.output_dir = std::filesystem::path(output_dir_string);
+        GLOBALS.output_dir = containers::string(output_dir_string);
     }
 
-    if (!std::filesystem::is_directory(GLOBALS.output_dir)) {
-        std::filesystem::create_directory(GLOBALS.output_dir);
+    if (!filesystem::is_directory(GLOBALS.output_dir)) {
+        filesystem::create_directory(GLOBALS.output_dir);
     }
 
     create_address_mapping(GLOBALS.output_dir);
@@ -52,7 +57,7 @@ void finalize() {
     std::cerr << "EXTRA PROF: Size of calltree: "
               << GLOBALS.call_tree.calculate_size() + GLOBALS.calltree_nodes_allocator.unused_space() << '\n';
     std::cerr << "EXTRA PROF: Size of name_register: "
-              << name_register.size() * (sizeof(intptr_t) + sizeof(std::string)) +
+              << name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
                      std::accumulate(name_register.begin(), name_register.end(), 0,
                                      [](size_t size, auto &kv) { return size + kv.second.size(); })
               << '\n';
@@ -64,12 +69,12 @@ void finalize() {
 #endif
 
     const char *slurm_procid = getenv("SLURM_PROCID");
-    // if (slurm_procid == nullptr || std::string(slurm_procid) == "0") {
+    // if (slurm_procid == nullptr || containers::string(slurm_procid) == "0") {
     //     cupti::write_cupti_names(output_dir);
     // }
 
 #ifdef EXTRA_PROF_EVENT_TRACE
-    auto output_file_event_stream = GLOBALS.output_dir / "event_stream";
+    auto output_file_event_stream = GLOBALS.output_dir + "/event_stream";
     if (slurm_procid) {
         output_file_event_stream += slurm_procid;
     }
@@ -82,7 +87,7 @@ void finalize() {
                                                  });
 #endif
 
-    auto output_file = GLOBALS.output_dir / "profile";
+    auto output_file = GLOBALS.output_dir + "/profile";
     if (slurm_procid) {
         output_file += slurm_procid;
     }

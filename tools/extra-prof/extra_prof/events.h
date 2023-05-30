@@ -1,7 +1,9 @@
 #pragma once
+#include "common_types.h"
+
 #include "calltree_node.h"
 #include "concurrent_array_list.h"
-#include <filesystem>
+#include "containers/string.h"
 #include <initializer_list>
 
 namespace extra_prof {
@@ -157,11 +159,11 @@ inline void write_event(std::ofstream &stream, const Event &event, const int pid
 }
 
 inline void write_event_stream(
-    std::filesystem::path filename,
+    containers::string filename,
     const std::initializer_list<std::pair<const char *, std::reference_wrapper<ConcurrentArrayList<Event>>>>
         &event_streams) {
 
-    std::ofstream stream(filename);
+    std::ofstream stream(filename.c_str());
     stream << '[';
 
     int pid_ctr = 0;

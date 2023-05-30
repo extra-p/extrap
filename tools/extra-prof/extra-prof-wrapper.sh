@@ -40,9 +40,9 @@ instrumentation_arguments=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-
 extra_prof_arguments=("$extra_prof_optimization" "-std=c++17" "-I$msg_pack_root/include" "$extra_prof_event_trace")
 link_extra_prof_wrap="-Xlinker --no-as-needed -Xlinker --rpath=. -l_extra_prof -Xlinker --as-needed -L."
 
-if $shared_library; then
+#if $shared_library; then
     extra_prof_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC")
-fi
+#fi
 
 if [ $EXTRA_PROF_COMPILER = "nvcc" ]; then
     extra_prof_arguments+=("$compiler_dir")
@@ -59,12 +59,52 @@ fi
 if [ "${EXTRA_PROF_DEBUG_BUILD}" = on ] || [ "${EXTRA_PROF_DEBUG_BUILD}" = ON ]; then
     extra_prof_arguments+=("-g -O0")
 else
-    extra_prof_arguments+=("-O2")
+    extra_prof_arguments+=("-O3")
 fi
 
 if [ "${EXTRA_PROF_DEBUG_SANITIZE}" = on ] || [ "${EXTRA_PROF_DEBUG_SANITIZE}" = ON ]; then
     instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
     extra_prof_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
+fi
+
+if [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "off" ] && [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "OFF" ]; then
+#find path to headers that should be excluded
+combined=("$compiler_dir" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -H "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -E $extra_prof_root/extra_prof/compiler_information/find_libstd_include.cpp)
+echo "EXTRA PROF FIND INCLUDES: " $EXTRA_PROF_COMPILER ${combined[*]}
+potential_include_paths=$($EXTRA_PROF_COMPILER ${combined[*]} 2>&1)
+
+declare -a all_include_paths
+while IFS= read -r line; do
+  if [[ $line == .* ]]; then
+    line_without_dot="${line#*. }"  # Remove the dot and space from the beginning of the line
+    
+    if [[ $line_without_dot != *"/tmp/"* ]]; then
+      all_include_paths+=($(dirname "$line_without_dot"))
+    fi
+  fi
+done <<< "$potential_include_paths"
+
+path_string=$(printf "%s\n" "${all_include_paths[@]}")
+IFS=$'\n' read -rd '' -a unique_include_paths <<< "$(echo "$path_string" | sort -r -u)"
+
+remove_entries() {
+  local -n arr=$1
+  local prev_entry=${arr[-1]}
+  for ((i=${#arr[@]}-2; i>0; i--)); do
+    if [[ ${arr[$i]} == "$prev_entry"* ]]; then
+      unset 'arr[i]'  # Remove the entry if it begins with the previous entry
+    else
+      prev_entry=${arr[$i]}
+    fi
+  done
+}
+
+remove_entries unique_include_paths
+
+
+for unique_include_path in "${unique_include_paths[@]}"; do
+    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$unique_include_path")
+done
 fi
 
 if $compile_only; then
@@ -86,20 +126,22 @@ else
         echo "EXTRA PROF: Finished unpacking msgpack. Continuing..."
     fi
 
-    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
+
+
+    # no exec otherwise this script will end here
+    combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_instrumentation.o"  "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp") 
+    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $EXTRA_PROF_COMPILER ${combined[*]}
+    $EXTRA_PROF_COMPILER ${combined[*]}
+    [ $? -eq 0 ] || exit $?
+
+    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "-o" "lib_extra_prof.so" "extra_prof_instrumentation.o" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
 
     echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
     $EXTRA_PROF_COMPILER ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
-    # no exec otherwise this script will end here
-    combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_instrumentation.o" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp") 
-    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $EXTRA_PROF_COMPILER ${combined[*]}
-    $EXTRA_PROF_COMPILER ${combined[*]}
-    [ $? -eq 0 ] || exit $?
-
-
-    combined=("$link_extra_prof_wrap" "${instrumentation_arguments[@]}"  "extra_prof_instrumentation.o" "${arguments[@]}")
+    #"extra_prof_instrumentation.o"
+    combined=("$link_extra_prof_wrap" "${instrumentation_arguments[@]}" "${arguments[@]}")
 
     if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
         combined+=("-lcupti -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")

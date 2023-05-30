@@ -1,14 +1,17 @@
 #pragma once
+#include "common_types.h"
+
 #include "calltree_node.h"
+#include "common_types.h"
 #include "concurrent_map.h"
 #ifdef EXTRA_PROF_GPU
 #include "globals_gpu.h"
 #endif
+#include "containers/string.h"
 #include "globals_thread.h"
 #include "memory_pool.h"
 #include <atomic>
 #include <deque>
-#include <filesystem>
 #include <shared_mutex>
 #include <string>
 
@@ -47,13 +50,12 @@ struct GlobalState {
 
     const uint32_t magic_number = 0x1A2B3C4D;
 
-    std::atomic<bool> profiling = false;
     std::atomic<bool> initialised = false;
     std::mutex initialising;
 
-    std::filesystem::path output_dir;
+    containers::string output_dir;
 
-    ConcurrentMap<intptr_t, std::string> name_register;
+    ConcurrentMap<intptr_t, containers::string> name_register;
     uintptr_t main_function_ptr;
 
     std::atomic<intptr_t> adress_offset = 0;
@@ -68,12 +70,13 @@ struct GlobalState {
 
     ConcurrentMap<pthread_t, ThreadState> threads;
 
-    ThreadState &my_thread_state() {
+    EP_INLINE ThreadState &my_thread_state() {
         static thread_local ThreadState &state = threads[pthread_self()];
         return state;
     }
 
     GlobalState();
+    ~GlobalState();
 
 #ifdef EXTRA_PROF_EVENT_TRACE
     ConcurrentArrayList<Event> cpu_event_stream;
@@ -84,6 +87,12 @@ struct GlobalState {
 #endif
 };
 extern const uint64_t lib_enabled_features;
+extern std::atomic<bool> extra_prof_globals_initialised;
+extern thread_local int extra_prof_scope_counter;
 extern GlobalState GLOBALS;
 
+struct extra_prof_scope {
+    extra_prof_scope() { extra_prof_scope_counter++; }
+    ~extra_prof_scope() { extra_prof_scope_counter--; }
+};
 }

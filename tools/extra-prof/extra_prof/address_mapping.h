@@ -1,9 +1,11 @@
 #pragma once
 #include "common_types.h"
+
+#include "containers/string.h"
+#include "filesystem.h"
 #include "globals.h"
 #include <atomic>
 #include <chrono>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -14,7 +16,7 @@ namespace extra_prof {
 
 // TODO write name registry class
 
-inline std::string currentDateTime() {
+inline containers::string currentDateTime() {
     time_t now = time(0);
     struct tm tstruct {};
     char buf[80];
@@ -24,13 +26,14 @@ inline std::string currentDateTime() {
     return buf;
 }
 
-inline void create_address_mapping(std::filesystem::path output_dir) {
+inline void create_address_mapping(containers::string output_dir) {
     auto &name_register = GLOBALS.name_register;
     auto &main_function_ptr = GLOBALS.main_function_ptr;
-    std::string nm_command("nm --numeric-sort --demangle ");
-    auto filename = std::filesystem::read_symlink(std::filesystem::path("/proc/self/exe"));
+    containers::string nm_command("nm --numeric-sort --demangle ");
 
-    std::string result_str = nm_command + filename.string();
+    auto filename = filesystem::read_symlink("/proc/self/exe");
+
+    containers::string result_str = nm_command + filename;
 
     const char *result = result_str.c_str();
 

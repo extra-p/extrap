@@ -1,5 +1,7 @@
 
 #pragma once
+#include "common_types.h"
+
 #include <cstdlib>
 #include <memory>
 #include <mutex>

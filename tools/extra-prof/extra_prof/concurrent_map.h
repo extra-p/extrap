@@ -1,4 +1,5 @@
 #pragma once
+#include "common_types.h"
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -46,7 +47,7 @@ public:
         const typename std::unordered_map<K, V>::value_type *operator->() const { return iter.operator->(); }
     };
 
-    V *try_get(const K &key) {
+    EP_INLINE V *try_get(const K &key) {
         std::shared_lock lk(mutex);
         auto iterator = map.find(key);
         if (iterator != map.end()) {
@@ -55,25 +56,25 @@ public:
         return nullptr;
     }
 
-    iterator begin() {
+    EP_INLINE iterator begin() {
         std::shared_lock lk(mutex);
         return iterator(mutex, map.begin());
     }
-    iterator end() {
+    EP_INLINE iterator end() {
         std::shared_lock lk(mutex);
         return iterator(mutex, map.end());
     }
 
-    const_iterator cbegin() const {
+    EP_INLINE const_iterator cbegin() const {
         std::shared_lock lk(mutex);
         return const_iterator(mutex, map.cbegin());
     }
-    const_iterator cend() const {
+    EP_INLINE const_iterator cend() const {
         std::shared_lock lk(mutex);
         return const_iterator(mutex, map.cend());
     }
 
-    V &operator[](const K &key) {
+    EP_INLINE V &operator[](const K &key) {
         {
             std::shared_lock lk(mutex);
             auto iterator = map.find(key);
@@ -88,7 +89,7 @@ public:
     }
 
     template <typename... _Args>
-    std::pair<std::reference_wrapper<V>, bool> try_emplace(const K &key, _Args &&...__args) {
+    EP_INLINE std::pair<std::reference_wrapper<V>, bool> try_emplace(const K &key, _Args &&...__args) {
         {
             std::shared_lock lk(mutex);
             auto iterator = map.find(key);
@@ -104,12 +105,12 @@ public:
     }
 
     template <typename... _Args>
-    bool emplace(_Args &&...__args) {
+    EP_INLINE bool emplace(_Args &&...__args) {
         std::unique_lock lk(mutex);
         return map.emplace(std::forward<_Args>(__args)...).second;
     }
 
-    size_t size() const {
+    EP_INLINE size_t size() const {
         std::shared_lock lk(mutex);
         return map.size();
     }

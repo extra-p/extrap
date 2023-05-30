@@ -1,5 +1,6 @@
 
 #pragma once
+
 #include <memory>
 typedef uint64_t time_point;
 typedef uint64_t duration;
@@ -11,3 +12,11 @@ public:
     ~OnExit() { t(); }
     T t;
 };
+
+#ifdef __GNUC__
+#define EP_INLINE __attribute__((always_inline)) inline
+#else
+#define EP_INLINE inline
+#endif
+
+#define EXTRA_PROF_SO_EXPORT

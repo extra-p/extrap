@@ -13,6 +13,8 @@ namespace extra_prof {
 namespace cupti {
 
     void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void *cbdata) {
+        extra_prof_scope sc;
+
         pthread_t this_thread = pthread_self();
 
         if (GLOBALS.gpu.activity_thread == this_thread) {

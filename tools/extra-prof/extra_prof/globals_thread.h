@@ -1,5 +1,8 @@
-#include "calltree_node.h"
+#pragma once
 #include "common_types.h"
+
+#include "calltree_node.h"
+
 #include "events.h"
 #include <csignal>
 #include <vector>

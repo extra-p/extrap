@@ -1,6 +1,7 @@
-
 #pragma once
 #include "../common_types.h"
+
+#include "../containers/pair.h"
 #include "../globals.h"
 #include "gpu_instrumentation.h"
 
@@ -87,19 +88,21 @@ void end_profiling_phase() {
     CUPTI_CALL(cuptiProfilerEndSession(&endSessionParams));
 }
 
-std::string GetHwUnit(const std::string &metricName) { return metricName.substr(0, metricName.find("__", 0)); }
+containers::string GetHwUnit(const containers::string &metricName) {
+    return metricName.substr(0, metricName.find("__", 0));
+}
 
 struct MetricNameValue {
-    std::string metricName;
+    containers::string metricName;
     int numRanges;
     // <rangeName , metricValue> pair
-    std::vector<std::pair<std::string, double>> rangeNameMetricValueMap;
+    std::vector<containers::pair<containers::string, double>> rangeNameMetricValueMap;
 };
 
 void postprocess_counter_data() {
     const char *chipName = GLOBALS.gpu.chipName.c_str();
     const std::vector<uint8_t> &counterDataImage = GLOBALS.gpu.counterDataImage;
-    const std::vector<std::string> &metricNames = GLOBALS.gpu.metricNames;
+    const std::vector<containers::string> &metricNames = GLOBALS.gpu.metricNames;
 
     if (!counterDataImage.size()) {
         throw std::runtime_error("Counter Data Image is empty!");
@@ -143,7 +146,7 @@ void postprocess_counter_data() {
         getRangeDescParams.ppDescriptions = descriptionPtrs.data();
         NVPW_CALL(NVPW_Profiler_CounterData_GetRangeDescriptions(&getRangeDescParams));
 
-        std::string rangeName;
+        containers::string rangeName;
         for (size_t descriptionIndex = 0; descriptionIndex < getRangeDescParams.numDescriptions; ++descriptionIndex) {
             if (descriptionIndex) {
                 rangeName += "/";
@@ -172,7 +175,8 @@ void postprocess_counter_data() {
         auto correlationId = GLOBALS.gpu.rangeToCorrelationId[rangeIndex];
         auto *correlationData = GLOBALS.gpu.callpath_correlation.try_get(correlationId);
         if (correlationData == nullptr) {
-            throw std::runtime_error(std::string("Correlation data not found for id ") + std::to_string(correlationId));
+            throw std::runtime_error(containers::string("Correlation data not found for id ") +
+                                     containers::string::format("%u", correlationId));
         }
         auto &gpu_metrics = correlationData->node->gpu_metrics;
 
@@ -185,8 +189,10 @@ void postprocess_counter_data() {
 }
 
 void onKernelLaunch(const CUpti_CallbackData *cbdata) {
+    extra_prof_scope sc;
     std::lock_guard lg(GLOBALS.gpu.kernelLaunchMutex);
 
+    // TODO Save cbdata before calling synchronize, just in case.
     GPU_LL_CALL(cuCtxSynchronize());
     if (GLOBALS.gpu.rangeCounter >= GLOBALS.gpu.NUM_HWC_RANGES) {
         end_profiling_phase();
@@ -228,10 +234,10 @@ void init() {
 
     const char *EXTRA_PROF_GPU_METRICS = getenv("EXTRA_PROF_GPU_METRICS");
     if (EXTRA_PROF_GPU_METRICS != nullptr) {
-        std::string metrics_string(EXTRA_PROF_GPU_METRICS);
+        containers::string metrics_string(EXTRA_PROF_GPU_METRICS);
         metrics_string += ',';
 
-        for (size_t start = 0, end = metrics_string.find(',', start); end != std::string::npos;
+        for (size_t start = 0, end = metrics_string.find(',', start); end != containers::string::npos;
              start = end + 1, end = metrics_string.find(',', start)) {
             GLOBALS.gpu.metricNames.emplace_back(metrics_string.substr(start, end - start));
         }

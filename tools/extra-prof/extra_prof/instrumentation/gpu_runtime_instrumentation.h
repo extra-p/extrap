@@ -1,4 +1,6 @@
 #pragma once
+#include "../common_types.h"
+
 #include "../globals.h"
 #include "gpu_instrumentation.h"
 
@@ -202,6 +204,7 @@ void process_activity_memset(CUpti_ActivityMemset2 *record) {
 }
 
 void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
+    extra_prof_scope sc;
     *buffer = GLOBALS.gpu.buffer_pool.get_mem();
     if (((uintptr_t)(buffer) & ((ACTIVITY_RECORD_ALIGNMENT)-1))) {
         throw std::runtime_error("EXTRA PROF: misaligned cupti buffer memory");
@@ -210,6 +213,7 @@ void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRe
     *maxNumRecords = 0;
 }
 void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize) {
+    extra_prof_scope sc;
     GLOBALS.gpu.activity_thread = pthread_self();
 
     if (GLOBALS.magic_number != 0x1A2B3C4D) {
