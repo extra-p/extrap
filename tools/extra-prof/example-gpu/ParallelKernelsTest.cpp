@@ -34,6 +34,7 @@ int main(int argc, char *argv[]) {
         PUSH_RANGE("Testp");
     }
     dynamicHello();
+    runDynamicKernel();
     int scaling = std::stoi(argv[1]);
     global::nvtx_domain = nvtxDomainCreateA("de.tu-darmstadt.parallel.extra_prof");
     PUSH_RANGE("main");

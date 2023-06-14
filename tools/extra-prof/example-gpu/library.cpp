@@ -1,7 +1,9 @@
-#include <iostream>
 #include "library.hpp"
+#include <iostream>
 
-void dynamicHello()
-{
-    std::cout << "Hello World from dynamic library!\n";
+std::string values;
+
+void dynamicHello() {
+    values += "1";
+    std::cout << "Hello World from dynamic library!" << values.size() << "\n";
 }

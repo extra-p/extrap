@@ -2,5 +2,6 @@
 #define LIB_H
 
 void dynamicHello();
+void runDynamicKernel();
 
 #endif
