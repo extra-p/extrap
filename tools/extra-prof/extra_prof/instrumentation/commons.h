@@ -6,14 +6,13 @@
 
 #include "../events.h"
 #include "../globals.h"
+#include "../profile.h"
 
 #ifdef EXTRA_PROF_GPU
 #include "gpu_instrumentation.h"
 #else
 #include <time.h>
 #endif
-
-#include <dlfcn.h>
 
 #include <atomic>
 #include <chrono>
@@ -47,45 +46,8 @@ EP_INLINE time_point get_timestamp() {
 template <typename T>
 EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
     auto &name_register = GLOBALS.name_register;
-    auto &adress_offset = GLOBALS.adress_offset;
-    auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
 
-    if (name_register.try_get(ptr - adress_offset) == nullptr) {
-        Dl_info info;
-        int status = dladdr(fn_ptr, &info);
-        if (status != 0) {
-            intptr_t base_ptr = reinterpret_cast<intptr_t>(info.dli_fbase);
-            if (name_register.try_get(ptr - base_ptr) == nullptr) {
-                if (info.dli_sname == nullptr) {
-                    if (GLOBALS.in_main) {
-                        std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-                        name_register.try_emplace(ptr - adress_offset,
-                                                  std::move(containers::string::format("%x", ptr - adress_offset)));
-                    } else {
-                        name_register.try_emplace(ptr - adress_offset, "_GLOBAL_INIT");
-                    }
-                } else {
-                    // size_t length = 0;
-                    // int status;
-                    // char*demangled_name = abi::__cxa_demangle(info.dli_sname, NULL, &length, &status);
-                    name_register.try_emplace(ptr - adress_offset, info.dli_sname);
-                }
-            } else {
-                intptr_t tmp_adress_offset = 0;
-                if (adress_offset.compare_exchange_strong(tmp_adress_offset, base_ptr)) {
-                    GLOBALS.in_main = true;
-                } else if (tmp_adress_offset != base_ptr) {
-                    std::cerr << "EXTRA PROF: WARNING base offset " << base_ptr << " of function pointer " << fn_ptr
-                              << " not matching adress offset " << adress_offset << '\n';
-                    name_register[ptr - adress_offset] = name_register[ptr - base_ptr];
-                }
-            }
-        } else {
-            std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-            name_register[ptr - adress_offset] = containers::string::format("%x", ptr);
-        }
-    }
-    return push_time(name_register[ptr - adress_offset].c_str(), type);
+    return push_time(name_register.get_name_ptr(fn_ptr).c_str(), type);
 }
 
 template <>
@@ -105,20 +67,15 @@ EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(char const *name, Cal
 template <typename T>
 EP_INLINE time_point pop_time(T *fn_ptr) {
     auto &name_register = GLOBALS.name_register;
-    auto &adress_offset = GLOBALS.adress_offset;
-    auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
-    auto name_ptr = name_register.try_get(ptr - adress_offset);
-    if (name_ptr == nullptr) {
-        std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-        throw std::runtime_error("EXTRA PROF: ERROR unknown function pointer.");
-    }
-    return pop_time(name_ptr->c_str());
+
+    return pop_time(name_register.check_ptr(fn_ptr)->c_str());
 }
 template <>
 EP_INLINE time_point pop_time(char const *name) {
     time_point time = get_timestamp();
-    auto &current_node = GLOBALS.my_thread_state().current_node;
-    auto duration = time - GLOBALS.my_thread_state().timer_stack.back();
+    auto &thread_state = GLOBALS.my_thread_state();
+    auto &current_node = thread_state.current_node;
+    auto duration = time - thread_state.timer_stack.back();
     if (current_node->name() == nullptr) {
         std::cerr << "EXTRA PROF: WARNING: accessing calltree root\n";
     }
@@ -128,14 +85,14 @@ EP_INLINE time_point pop_time(char const *name) {
     auto &metrics = current_node->my_metrics();
     metrics.visits++;
     metrics.duration += duration;
-    GLOBALS.my_thread_state().timer_stack.pop_back();
+    thread_state.timer_stack.pop_back();
     if (current_node->parent() == nullptr) {
         throw std::runtime_error("EXTRA PROF: pop_time: Cannot go to parent of root");
     }
     current_node = current_node->parent();
 #ifdef EXTRA_PROF_EVENT_TRACE
-    GLOBALS.cpu_event_stream.emplace(time, EventType::END, EventEnd{GLOBALS.my_thread_state().event_stack.back()});
-    GLOBALS.my_thread_state().event_stack.pop_back();
+    GLOBALS.cpu_event_stream.emplace(time, EventType::END, EventEnd{thread_state.event_stack.back()});
+    thread_state.event_stack.pop_back();
 #endif
     return time;
 }

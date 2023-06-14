@@ -34,10 +34,9 @@ void process_activity_kernel(CUpti_ActivityKernel5 *record) {
     metrics.duration += record->end - record->start;
     metrics.visits++;
     int maxActiveBlocksPerMP = 0;
-    GPU_CALL(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerMP, correlation_data.function_ptr,
-                                                           record->blockX * record->blockY * record->blockZ,
-                                                           record->dynamicSharedMemory));
-
+    extra_prof::gpu::calculateMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerMP, correlation_data.function_ptr,
+                                                               record->blockX * record->blockY * record->blockZ,
+                                                               record->dynamicSharedMemory);
     float activeBlocks =
         std::min(record->gridX * record->gridY * record->gridZ, maxActiveBlocksPerMP * GLOBALS.gpu.multiProcessorCount);
     float resourceUsage = activeBlocks / (maxActiveBlocksPerMP * GLOBALS.gpu.multiProcessorCount);
@@ -214,7 +213,6 @@ void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRe
 }
 void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize) {
     extra_prof_scope sc;
-    GLOBALS.gpu.activity_thread = pthread_self();
 
     if (GLOBALS.magic_number != 0x1A2B3C4D) {
         std::cerr << "EXTRA PROF: ERROR: Global State is corrupted. \n";

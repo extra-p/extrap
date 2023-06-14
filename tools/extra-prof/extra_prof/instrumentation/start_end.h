@@ -31,7 +31,7 @@ void initialize() {
     }
     auto output_dir_string = std::getenv("EXTRA_PROF_EXPERIMENT_DIRECTORY");
     if (output_dir_string == nullptr) {
-        GLOBALS.output_dir = containers::string("extra_prof_") + currentDateTime();
+        GLOBALS.output_dir = GLOBALS.name_register.defaultExperimentDirName();
     } else {
         GLOBALS.output_dir = containers::string(output_dir_string);
     }
@@ -40,7 +40,7 @@ void initialize() {
         filesystem::create_directory(GLOBALS.output_dir);
     }
 
-    create_address_mapping(GLOBALS.output_dir);
+    GLOBALS.name_register.create_address_mapping(GLOBALS.output_dir);
 #ifdef EXTRA_PROF_GPU
     cupti::init();
 #endif
@@ -56,11 +56,11 @@ void finalize() {
 
     std::cerr << "EXTRA PROF: Size of calltree: "
               << GLOBALS.call_tree.calculate_size() + GLOBALS.calltree_nodes_allocator.unused_space() << '\n';
-    std::cerr << "EXTRA PROF: Size of name_register: "
-              << name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
-                     std::accumulate(name_register.begin(), name_register.end(), 0,
-                                     [](size_t size, auto &kv) { return size + kv.second.size(); })
-              << '\n';
+    // std::cerr << "EXTRA PROF: Size of name_register: "
+    //           << name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
+    //                  std::accumulate(name_register.begin(), name_register.end(), 0,
+    //                                  [](size_t size, auto &kv) { return size + kv.second.size(); })
+    //           << '\n';
 #ifdef EXTRA_PROF_GPU
     std::cerr << "EXTRA PROF: Size of cupti_buffers: "
               << GLOBALS.gpu.buffer_pool.num_buffers() * GLOBALS.gpu.buffer_pool.size() << '\n';

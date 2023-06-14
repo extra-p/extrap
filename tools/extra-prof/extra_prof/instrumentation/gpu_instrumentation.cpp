@@ -13,13 +13,13 @@ namespace extra_prof {
 namespace cupti {
 
     void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void *cbdata) {
+        if (extra_prof_scope_counter > 0) {
+            return; // Do not register activity if called from extra prof scope
+        }
         extra_prof_scope sc;
 
         pthread_t this_thread = pthread_self();
 
-        if (GLOBALS.gpu.activity_thread == this_thread) {
-            return; // Do not register activity if called from cupti activity thread
-        }
         auto &callpath_correlation = GLOBALS.gpu.callpath_correlation;
         auto &event_stream = GLOBALS.gpu.event_stream;
         if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
@@ -155,7 +155,8 @@ namespace cupti {
         sorted_stream.reserve(GLOBALS.gpu.event_stream.estimate_size());
         auto end = GLOBALS.gpu.event_stream.cend();
         for (auto iter = GLOBALS.gpu.event_stream.cbegin(); iter != end; ++iter) {
-            sorted_stream.emplace_back(&(*iter));
+            auto &event = *iter;
+            sorted_stream.emplace_back(&event);
         }
 
         // for (auto event : sorted_stream) {

@@ -2,6 +2,7 @@
 #include "../common_types.h"
 
 #include "../memory_pool.h"
+#include "../so_specific_gpu_functions.h"
 
 #include "../containers/string.h"
 #include <cupti.h>

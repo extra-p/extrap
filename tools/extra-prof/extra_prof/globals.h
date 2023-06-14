@@ -1,6 +1,5 @@
 #pragma once
-#include "common_types.h"
-
+#include "address_mapping.h"
 #include "calltree_node.h"
 #include "common_types.h"
 #include "concurrent_map.h"
@@ -55,12 +54,7 @@ struct GlobalState {
 
     containers::string output_dir;
 
-    ConcurrentMap<intptr_t, containers::string> name_register;
-    uintptr_t main_function_ptr;
-
-    std::atomic<intptr_t> adress_offset = 0;
-
-    std::atomic<bool> in_main = false;
+    NameRegistry name_register;
 
     uint32_t MAX_DEPTH = 30;
 

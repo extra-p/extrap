@@ -3,8 +3,8 @@
 
 #include "concurrent_map.h"
 
-#include "containers/string.h"
 #include "containers/pair.h"
+#include "containers/string.h"
 #include "containers/vector.h"
 
 #include "memory_pool.h"
@@ -85,11 +85,11 @@ class CallTreeNode {
     CallTreeNode *_parent = nullptr;
     char const *_name = nullptr;
 
-    mutable std::mutex mutex;
+    mutable std::shared_mutex mutex;
     // thread_local time_point _temp_start_point = 0;
 
     void print_internal(std::vector<char const *> &callpath, std::ostream &stream) const {
-        std::lock_guard lg(mutex);
+        std::shared_lock lg(mutex);
         callpath.push_back(_name);
         for (auto const &fptr : callpath) {
             stream << fptr << " ";
@@ -137,10 +137,7 @@ public:
         }
     }
 
-    inline Metrics &my_metrics() {
-        static thread_local Metrics &thread_metrics = per_thread_metrics[pthread_self()];
-        return thread_metrics;
-    }
+    inline Metrics &my_metrics() { return per_thread_metrics[pthread_self()]; }
 
     // time_point temp_start_point() { return _temp_start_point; }
     // void temp_start_point(time_point point) { _temp_start_point = point; }
@@ -157,7 +154,7 @@ public:
     }
 
     size_t calculate_size() const {
-        std::lock_guard lg(mutex);
+        std::shared_lock lg(mutex);
         size_t size = sizeof(*this);
         for (auto [node_name, node] : _children) {
             size += node->calculate_size() + sizeof(const char *) + sizeof(CallTreeNode *);

@@ -37,7 +37,7 @@ template <typename T, typename S>
 inline T enum_cast(S lhs);
 template <>
 inline CallTreeNodeType enum_cast(EventType lhs) {
-    return static_cast<CallTreeNodeType>(static_cast<uint8_t>(lhs) >> 1);
+    return static_cast<CallTreeNodeType>(static_cast<uint8_t>(lhs) >> static_cast<uint8_t>(EventType::NUM_FLAGS));
 }
 
 template <typename S>
@@ -85,7 +85,7 @@ public:
 struct Event {
 public:
     typedef uint16_t StreamIdType;
-    time_point timestamp;
+    time_point timestamp = 0;
     union {
         EventStart start_event;
         EventEnd end_event;

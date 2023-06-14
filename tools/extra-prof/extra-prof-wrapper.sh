@@ -129,19 +129,19 @@ else
 
 
     # no exec otherwise this script will end here
-    combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_instrumentation.o"  "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp") 
-    echo "EXTRA PROF COMPILE INSTRUMENTATION: " $EXTRA_PROF_COMPILER ${combined[*]}
+    combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_injection.o"  "$extra_prof_root/extra_prof/injection/injection.cpp") 
+    echo "EXTRA PROF COMPILE INJECTION: " $EXTRA_PROF_COMPILER ${combined[*]}
     $EXTRA_PROF_COMPILER ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
-    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "-o" "lib_extra_prof.so" "extra_prof_instrumentation.o" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
+    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
 
     echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
     $EXTRA_PROF_COMPILER ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
-    #"extra_prof_instrumentation.o"
-    combined=("$link_extra_prof_wrap" "${instrumentation_arguments[@]}" "${arguments[@]}")
+    #
+    combined=("$link_extra_prof_wrap" "extra_prof_injection.o" "${instrumentation_arguments[@]}" "${arguments[@]}")
 
     if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
         combined+=("-lcupti -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")

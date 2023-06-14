@@ -1,0 +1,2 @@
+echo $@
+exec gcc $@

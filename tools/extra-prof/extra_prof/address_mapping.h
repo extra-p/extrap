@@ -1,9 +1,11 @@
 #pragma once
 #include "common_types.h"
-
+#include "concurrent_map.h"
 #include "containers/string.h"
 #include "filesystem.h"
-#include "globals.h"
+
+#include <dlfcn.h>
+
 #include <atomic>
 #include <chrono>
 #include <fstream>
@@ -14,64 +16,61 @@
 #include <vector>
 namespace extra_prof {
 
-// TODO write name registry class
+class NameRegistry {
+    std::unordered_map<intptr_t, containers::string> name_register;
+    ConcurrentMap<intptr_t, containers::string> dynamic_name_register;
 
-inline containers::string currentDateTime() {
-    time_t now = time(0);
-    struct tm tstruct {};
-    char buf[80];
-    tstruct = *localtime(&now);
-    strftime(buf, sizeof(buf), "%Y-%m-%d_%X", &tstruct);
+    static constexpr uintptr_t adress_offset = 0;
 
-    return buf;
-}
+    uintptr_t main_function_ptr;
 
-inline void create_address_mapping(containers::string output_dir) {
-    auto &name_register = GLOBALS.name_register;
-    auto &main_function_ptr = GLOBALS.main_function_ptr;
-    containers::string nm_command("nm --numeric-sort --demangle ");
+public:
+    containers::string defaultExperimentDirName();
+    void create_address_mapping(containers::string output_dir);
 
-    auto filename = filesystem::read_symlink("/proc/self/exe");
-
-    containers::string result_str = nm_command + filename;
-
-    const char *result = result_str.c_str();
-
-    // printf("Command: %s", result);
-
-    FILE *fp;
-    /* Open the command for reading. */
-    fp = popen(result, "r");
-    if (fp == nullptr) {
-        std::cerr << "EXTRA PROF: ERROR: Failed to load the symbol table" << std::endl;
-        exit(1);
+    EP_INLINE containers::string *check_ptr(const void *fn_ptr) {
+        auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
+        auto iter = name_register.find(ptr - adress_offset);
+        if (iter != name_register.end()) {
+            return &iter->second;
+        }
+        auto name_ptr = dynamic_name_register.try_get(ptr - adress_offset);
+        if (name_ptr == nullptr) {
+            std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
+            throw std::runtime_error("EXTRA PROF: ERROR unknown function pointer.");
+        }
+        return name_ptr;
     }
 
-    char buffer[2001];
-    char path[2001];
-    char modifier;
-    unsigned long long adress = 0;
+    EP_INLINE bool is_main_function(void *this_fn) {
+        return reinterpret_cast<uintptr_t>(this_fn) - adress_offset == main_function_ptr;
+    }
 
-    // std::ofstream stream(output_dir / "symbols.txt");
-
-    while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
-        int parsed = sscanf(buffer, "%llx %1c %[^\n]", &adress, &modifier, path);
-        if (parsed != 3)
-            continue;
-
-        if (modifier == 't' || modifier == 'T' || modifier == 'w' || modifier == 'W') {
-
-            name_register.emplace(adress, path);
-
-            if (strcmp(path, "main") == 0) {
-                main_function_ptr = adress;
+    EP_INLINE containers::string &get_name_ptr(const void *fn_ptr) {
+        auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
+        auto iter = name_register.find(ptr - adress_offset);
+        if (iter != name_register.end()) {
+            return iter->second;
+        }
+        auto dynamic_name = dynamic_name_register.try_get(ptr - adress_offset);
+        if (dynamic_name != nullptr) {
+            return *dynamic_name;
+        }
+        Dl_info info;
+        int status = dladdr(fn_ptr, &info);
+        if (status != 0) {
+            intptr_t base_ptr = reinterpret_cast<intptr_t>(info.dli_fbase);
+            if (info.dli_sname == nullptr) {
+                dynamic_name_register.try_emplace(ptr - adress_offset, "_GLOBAL_INIT");
+            } else {
+                dynamic_name_register.try_emplace(ptr - adress_offset, info.dli_sname);
             }
 
-            // stream << adress << ' ' << path << '\n';
+        } else {
+            std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
+            dynamic_name_register[ptr - adress_offset] = containers::string::format("%x", ptr);
         }
+        return dynamic_name_register[ptr - adress_offset];
     }
-
-    /* close */
-    pclose(fp);
-}
+};
 }

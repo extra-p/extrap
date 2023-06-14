@@ -98,6 +98,9 @@ public:
     static constexpr size_t npos = -1;
 
     const char *c_str() const { return _string; }
+    char *data() { return _string; }
+    size_t &internal_size() { return _size; }
+
     operator const char *() const { return _string; }
 
     size_t size() const { return _size; }
@@ -189,6 +192,17 @@ public:
         return new_string;
     }
 
+    bool operator==(const string &rhs) const {
+        if (_size != rhs._size) {
+            return false;
+        } else if (_string == rhs._string) {
+            return true;
+        } else if (_string == nullptr || rhs._string == nullptr) {
+            return false;
+        }
+        return strcmp(_string, rhs._string) == 0;
+    }
+
     static string format(const char *format, ...) {
         va_list arglist;
         va_start(arglist, format);
@@ -219,3 +233,15 @@ inline string operator+(const char *&lhs, const string &rhs) {
 }
 
 }
+
+template <>
+struct std::hash<extra_prof::containers::string> {
+    std::size_t operator()(extra_prof::containers::string const &s) const noexcept {
+        size_t h = 5381;
+        int c;
+        const char *cstr = s.c_str();
+        while ((c = *cstr++))
+            h = ((h << 5) + h) + c;
+        return h;
+    }
+};

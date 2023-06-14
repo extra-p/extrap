@@ -48,19 +48,12 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void *this_fn, void *call_site
     extra_prof_scope sc;
 
     if (GLOBALS.initialised.load(std::memory_order_relaxed)) {
-        // if (std::this_thread::get_id() != GLOBALS.main_thread_id) {
-        //     if (!GLOBALS.notMainThreadAlreadyWarned.load(std::memory_order_relaxed)) {
-        //         std::cerr << "EXTRA PROF: WARNING: Ignored additional threads.\n";
-        //         GLOBALS.notMainThreadAlreadyWarned.store(true, std::memory_order_relaxed);
-        //     }
-        //     return;
-        // }
         auto &thread_state = GLOBALS.my_thread_state();
         thread_state.depth--;
         if (thread_state.depth < GLOBALS.MAX_DEPTH) {
             pop_time(this_fn);
             if (thread_state.depth == 0) {
-                if (reinterpret_cast<uintptr_t>(this_fn) - GLOBALS.adress_offset == GLOBALS.main_function_ptr) {
+                if (GLOBALS.name_register.is_main_function(this_fn)) {
                     finalize();
                 }
             }

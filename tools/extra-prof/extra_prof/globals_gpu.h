@@ -31,7 +31,6 @@ namespace gpu {
         int multiProcessorCount;
 
         ConcurrentMap<uint64_t, cupti::CorrelationData> callpath_correlation;
-        std::atomic<pthread_t> activity_thread;
 
         const char *MEMSET = "Memset";
         const char *MEMSET_ASYNC = "Memset Async";
