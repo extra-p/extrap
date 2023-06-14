@@ -153,7 +153,12 @@ public:
             if (ptr + 1 < chunk->data + chunk->fill_size) {
                 ptr++;
             } else {
-                advance_to_next_chunk();
+                do {
+                    advance_to_next_chunk();
+                    if (chunk == nullptr) {
+                        return *this;
+                    }
+                } while (ptr == nullptr);
             }
             return *this;
         }
