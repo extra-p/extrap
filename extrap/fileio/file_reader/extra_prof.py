@@ -215,6 +215,10 @@ class ExtraProf2Reader(AbstractDirectoryReader):
             if gpu_metrics and len(ep_node) >= 8:
                 for metric, value in zip(gpu_metrics, ep_node[7]):
                     node.gpu_metrics[metric].append(value)
+            elif isinstance(m_duration, list):
+                node.duration[i] = np.mean(m_duration)
+                node.bytes[i] = np.mean(m_bytes)
+                node.visits[i] = np.mean(m_visits)
             else:
                 node.duration[i] = m_duration
                 node.bytes[i] = m_bytes
