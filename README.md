@@ -8,7 +8,7 @@
 [![PyPI - License](https://img.shields.io/pypi/l/extrap?style=plastic)](https://badge.fury.io/py/extrap)
 ![GitHub issues](https://img.shields.io/github/issues/extra-p/extrap?style=plastic)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/extra-p/extrap?style=plastic)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/extra-p/extrap/python-package.yml?branch=main&style=plastic)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/extra-p/extrap/python-package.yml?style=plastic)
 
 [<img alt="Screenshot of Extra-P" src="https://github.com/extra-p/extrap/raw/master/docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
 Extra-P is an automatic performance-modeling tool that supports the user in the identification of *scalability bugs*. 
