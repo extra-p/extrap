@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -8,6 +8,7 @@
 import abc
 import logging
 import re
+import warnings
 from collections import defaultdict
 from pathlib import Path
 
@@ -63,6 +64,13 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             for n, v in zip(parameter_names, parameter_value):
                 parameter_dict[n].add(v)
             parameter_values.append(parameter_value)
+
+            if len(parameter_names)>=1 and parameter_names[0]=="scorep-":
+                warnings.warn(
+                    f"Could not detect any parameter names in the name of folder: {folder_name}. "
+                    f"Please follow the usage guide under "
+                    f"<a href=https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format>"
+                    f"https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format</a>.")
 
         # determine and remove non-constant parameters
 
