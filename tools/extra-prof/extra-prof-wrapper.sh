@@ -36,7 +36,7 @@ done
 
 extra_prof_root="$(dirname "${BASH_SOURCE[0]}")"
 msg_pack_root="$extra_prof_root/msgpack"
-instrumentation_arguments=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions")
+instrumentation_arguments=("-g" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions")
 extra_prof_arguments=("$extra_prof_optimization" "-std=c++17" "-I$msg_pack_root/include" "$extra_prof_event_trace")
 link_extra_prof_wrap="-Xlinker --no-as-needed -Xlinker --rpath=. -l_extra_prof -Xlinker --as-needed -L."
 
@@ -148,7 +148,7 @@ else
     combined=("$link_extra_prof_wrap" "extra_prof_injection.o" "${instrumentation_arguments[@]}" "${arguments[@]}")
 
     if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
-        combined+=("-lcupti -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
+        combined+=("-lcupti -lcuda -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
     fi
 
     echo "EXTRA PROF CALL: " $EXTRA_PROF_COMPILER ${combined[*]}

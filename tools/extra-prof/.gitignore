@@ -5,3 +5,6 @@ example-*/*.o
 example-*/*.so
 example-*/test_exe
 example-*/test_exe_no_profile
+example-*/lulesh
+example-gpu-lulesh/src/sedov15oct.lmesh
+example-gpu-lulesh/src/sedov21oct.lmesh

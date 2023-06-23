@@ -8,9 +8,27 @@ namespace extra_prof {
 namespace gpu {
     void calculateMaxActiveBlocksPerMultiprocessor(int *numBlocks, const void *func, int blockSize,
                                                    size_t dynamicSmemSize) {
+        /**
+         * Calls cudaOccupancyMaxActiveBlocksPerMultiprocessor indirectly, because the command has to be called in the
+         * same lib/executable that also contains the kernel, otherwise it does not work.
+         */
+
         Dl_info info;
         int status = dladdr(func, &info);
         if (status != 0) {
+
+            // if func is in the same lib/executable as this function call
+            // SO_PRIVATE(calculateMaxActiveBlocksPerMultiprocessor) directly
+            Dl_info this_info;
+            int this_status = dladdr((void *)calculateMaxActiveBlocksPerMultiprocessor, &this_info);
+            if (this_status != 0) {
+                if (info.dli_fbase == this_info.dli_fbase) {
+                    return SO_PRIVATE(calculateMaxActiveBlocksPerMultiprocessor)(numBlocks, func, blockSize,
+                                                                                 dynamicSmemSize);
+                }
+            }
+
+            // else call it via dynamic function resolution
             auto handle = dlopen(info.dli_fname, RTLD_LAZY);
             dlerror();
             void (*private_function)(int *, const void *, int, size_t) =
@@ -18,8 +36,8 @@ namespace gpu {
                     handle, SO_PRIVATE_NAME(calculateMaxActiveBlocksPerMultiprocessor));
             if (private_function == nullptr) {
                 char *error = dlerror();
-                fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n", __FILE__, __LINE__, "dlsym",
-                        error);
+                fprintf(stderr, "%s:%d: error: function %s failed with error %s when loading: %s.\n", __FILE__,
+                        __LINE__, "dlsym", error, info.dli_fname);
             } else {
                 return private_function(numBlocks, func, blockSize, dynamicSmemSize);
             }
