@@ -36,7 +36,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
 
         do {
             length = getline(&buffer, &buffer_length, main_program_handle);
-            int parsed = sscanf(buffer, "%lx-%*x %4c %lx %*d:%*d %*d %[^\n]", &offset.ram, perm, &offset.file, path);
+            int parsed = sscanf(buffer, "%lx-%*x %4c %lx %*x:%*x %*d %[^\n]", &offset.ram, perm, &offset.file, path);
 
             if (parsed != 4 || path[0] != '/') {
                 continue;
