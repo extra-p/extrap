@@ -9,6 +9,7 @@
 namespace extra_prof {
 struct ThreadState {
     uint32_t depth = 0;
+
     CallTreeNode *current_node;
 
     std::vector<time_point> timer_stack;
@@ -16,11 +17,22 @@ struct ThreadState {
     std::vector<Event *> event_stack;
 #endif
 
+#ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
+    uint32_t creation_depth = 0;
+    CallTreeNode *creation_node;
+#endif
+
     ThreadState() {
         std::cerr << "EXTRA PROF: Auto creation of threads not allowed\n";
         std::raise(SIGTRAP);
     }
-    ThreadState(uint32_t depth_, CallTreeNode *node) : depth(depth_), current_node(node) {}
+    ThreadState(uint32_t depth_, CallTreeNode *node) : depth(depth_), current_node(node) {
+
+#ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
+        creation_depth = depth_;
+        creation_node = node;
+#endif
+    }
     ThreadState(const ThreadState &state) = delete;
     ThreadState(ThreadState &&state) = default;
 

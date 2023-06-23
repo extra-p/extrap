@@ -67,6 +67,10 @@ if [ "${EXTRA_PROF_DEBUG_SANITIZE}" = on ] || [ "${EXTRA_PROF_DEBUG_SANITIZE}" =
     extra_prof_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
 fi
 
+if [ "${EXTRA_PROF_DEBUG_INSTRUMENTATION}" = on ] || [ "${EXTRA_PROF_DEBUG_INSTRUMENTATION}" = ON ]; then
+    extra_prof_arguments+=("-DEXTRA_PROF_DEBUG_INSTRUMENTATION=1")
+fi
+
 if [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "off" ] && [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "OFF" ]; then
 #find path to headers that should be excluded
 combined=("$compiler_dir" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -H "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -E $extra_prof_root/extra_prof/compiler_information/find_libstd_include.cpp)

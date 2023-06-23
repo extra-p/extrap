@@ -3,5 +3,4 @@
 #include "gpu_instrumentation.cpp"
 #endif
 #include "function_instrumentation.cpp"
-
 // #include "globals.cpp"

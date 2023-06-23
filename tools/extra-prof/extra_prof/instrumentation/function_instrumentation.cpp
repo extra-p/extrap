@@ -49,6 +49,9 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void *this_fn, void *call_site
 
     if (GLOBALS.initialised.load(std::memory_order_relaxed)) {
         auto &thread_state = GLOBALS.my_thread_state();
+        if (thread_state.depth == 0) {
+            throw std::underflow_error("EXTRA PROF: ERROR: Stack depth is already zero.");
+        };
         thread_state.depth--;
         if (thread_state.depth < GLOBALS.MAX_DEPTH) {
             pop_time(this_fn);
@@ -57,6 +60,9 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void *this_fn, void *call_site
                     finalize();
                 }
             }
+        }
+        if (GLOBALS.name_register.is_main_function(this_fn) && thread_state.depth != 0) {
+            std::cerr << "EXTRA PROF: WARNING: Found end of main function, but call tree is not at root." << std::endl;
         }
     }
 }

@@ -22,7 +22,7 @@ class NameRegistry {
 
     static constexpr uintptr_t adress_offset = 0;
 
-    uintptr_t main_function_ptr;
+    uintptr_t main_function_ptr = 0;
 
 public:
     containers::string defaultExperimentDirName();

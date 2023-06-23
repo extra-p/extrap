@@ -100,5 +100,9 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
         /* close */
         pclose(fp);
     }
+    if (main_function_ptr == 0) {
+        std::cerr << "EXTRA PROF: ERROR: Failed to identify main function" << std::endl;
+        exit(1);
+    }
 }
 }

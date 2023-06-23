@@ -67,7 +67,6 @@ EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(char const *name, Cal
 template <typename T>
 EP_INLINE time_point pop_time(T *fn_ptr) {
     auto &name_register = GLOBALS.name_register;
-
     return pop_time(name_register.check_ptr(fn_ptr)->c_str());
 }
 template <>
@@ -77,10 +76,10 @@ EP_INLINE time_point pop_time(char const *name) {
     auto &current_node = thread_state.current_node;
     auto duration = time - thread_state.timer_stack.back();
     if (current_node->name() == nullptr) {
-        std::cerr << "EXTRA PROF: WARNING: accessing calltree root\n";
+        throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
     }
     if (current_node->name() != name) {
-        std::cerr << "EXTRA PROF: ERROR: popping wrong node\n";
+        throw std::runtime_error("EXTRA PROF: ERROR: popping different node than previously pushed");
     }
     auto &metrics = current_node->my_metrics();
     metrics.visits++;

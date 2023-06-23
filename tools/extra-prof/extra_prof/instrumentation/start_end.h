@@ -48,6 +48,9 @@ void initialize() {
 }
 
 void finalize() {
+    if (!extra_prof_globals_initialised) {
+        return;
+    }
     auto &name_register = GLOBALS.name_register;
     std::cerr << "EXTRA PROF: Postprocessing started" << std::endl;
 #ifdef EXTRA_PROF_GPU
@@ -100,4 +103,34 @@ void finalize() {
 #endif
                                   ));
 }
+
+void finalize_on_exit() {
+    auto time = get_timestamp();
+    std::cerr << "EXTRA PROF: Encountered early exit. Wrapping up measurements." << std::endl;
+    for (auto &&[tid, thread_state] : GLOBALS.threads) {
+        while (!thread_state.timer_stack.empty()) {
+            auto &current_node = thread_state.current_node;
+            auto duration = time - thread_state.timer_stack.back();
+            if (current_node->name() == nullptr) {
+                throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
+            }
+            auto &metrics = current_node->my_metrics();
+            metrics.visits++;
+            metrics.duration += duration;
+            thread_state.timer_stack.pop_back();
+            if (current_node->parent() == nullptr) {
+                throw std::runtime_error("EXTRA PROF: pop_time: Cannot go to parent of root");
+            }
+            current_node = current_node->parent();
+#ifdef EXTRA_PROF_EVENT_TRACE
+            GLOBALS.cpu_event_stream.emplace(time, EventType::END, EventEnd{thread_state.event_stack.back()});
+            thread_state.event_stack.pop_back();
+#endif
+            thread_state.depth--;
+        }
+    }
+
+    finalize();
+}
+
 } // namespace extra_prof
