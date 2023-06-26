@@ -14,7 +14,9 @@ EXTRA_PROF_SO_EXPORT __attribute__((noreturn)) void exit(int exit_code) {
         handle = dlopen("libc.so.6", RTLD_LAZY);
         old_exit = (void (*)(int))dlsym(handle, "exit");
     }
-    extra_prof::finalize_on_exit();
+    if (extra_prof::extra_prof_scope_counter == 0) {
+        extra_prof::finalize_on_exit();
+    }
     old_exit(exit_code);
 }
 }

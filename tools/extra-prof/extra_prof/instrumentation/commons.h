@@ -35,7 +35,7 @@ EP_INLINE time_point get_timestamp() {
     struct timespec time;
     int status = clock_gettime(CLOCK_REALTIME, &time);
     if (status == EINVAL || status == EFAULT || status == ENOTSUP) {
-        exit(-1);
+        throw std::system_error(status, std::generic_category());
     };
     time_point result = time.tv_nsec;
     result += 1000000000 * time.tv_sec;
