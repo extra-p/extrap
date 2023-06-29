@@ -44,6 +44,9 @@ class TreeModel(QAbstractItemModel):
         self.endRemoveRows()
 
     def _node_from_index(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
+
         if index.isValid():
             return index.internalPointer()
         else:
@@ -51,12 +54,19 @@ class TreeModel(QAbstractItemModel):
 
     # noinspection PyMethodMayBeStatic
     def getValue(self, index) -> Optional[calltree.Node]:
+        if not self.checkIndex(index):
+            raise IndexError()
+
         item = index.internalPointer()
         if item is None:
             return None
         return item.data()
 
     def data(self, index, role=None):
+
+        if not self.checkIndex(index, QAbstractItemModel.CheckIndexOption.IndexIsValid):
+            raise IndexError()
+
         if not index.isValid():
             return None
 
@@ -210,6 +220,8 @@ class TreeModel(QAbstractItemModel):
         #     self.valuesChanged()
 
     def flags(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
         if not index.isValid():
             return Qt.NoItemFlags
 
@@ -241,16 +253,17 @@ class TreeModel(QAbstractItemModel):
 
         return None
 
-    def index(self, row, column, parent=None):
-
-        # print("In tree model # of rows",self.rowCount(parent))
-        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
-            return QModelIndex()
-
+    def index(self, row, column, parent=QModelIndex()):
+        if not self.checkIndex(parent):
+            raise IndexError()
         if not parent.isValid():
             parentItem = self.root_item
         else:
             parentItem = parent.internalPointer()
+
+        # print("In tree model # of rows",self.rowCount(parent))
+        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
+            return QModelIndex()
 
         childItem = parentItem.child(row)
         if childItem:
@@ -259,14 +272,16 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def parent(self, index=...):
+        self.checkIndex(index, QAbstractItemModel.CheckIndexOption.DoNotUseParent)
+
         if not index.isValid():
             return QModelIndex()
 
         childItem: TreeItem = index.internalPointer()
-        if childItem is None:
+        if childItem == self.root_item:
             return QModelIndex()
-        parentItem = childItem.parent()
 
+        parentItem = childItem.parent()
         if parentItem == self.root_item:
             return QModelIndex()
         try:
@@ -275,8 +290,13 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def rowCount(self, parent=None):
-        if parent.column() > 0:
-            return 0
+        if parent is None:
+            parent = QModelIndex()
+
+        # if parent.column() > 0:
+        #     return 0
+        if not self.checkIndex(parent):
+            raise IndexError()
 
         if not parent.isValid():
             parentItem = self.root_item
@@ -288,9 +308,8 @@ class TreeModel(QAbstractItemModel):
     def valuesChanged(self):
         if not self.main_widget.getExperiment():
             return
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(len(self.main_widget.getExperiment().callpaths) - 1,
-                                               self.columnCount(None) - 1))
+
+        self.dataChanged.emit(QModelIndex(), QModelIndex())  # The whole tree changed its values
 
 
 class TreeItem(object):
