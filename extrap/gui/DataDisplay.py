@@ -13,7 +13,7 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.parameter import Parameter
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
-from extrap.gui.GraphWidget import GraphWidget
+from extrap.gui.GraphWidget import GraphWidget, GraphWrapperWidget
 from extrap.gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
 from extrap.gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
 from extrap.gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
@@ -22,6 +22,7 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
+
 #####################################################################
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = 2000000000
@@ -107,11 +108,8 @@ class AxisSelection(QWidget):
         """
         self.maxChanged()
         display = self.manager.display_widget.currentWidget()
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
-            display.update()
+        display.drawGraph()
+        display.update()
 
     def maxChanged(self):
         """ This function updates the max value without redrawing the graph.
@@ -224,11 +222,8 @@ class ValueSelection(QWidget):
             return
         self.default_values[self.parameter] = value
         display = self.manager.display_widget.currentWidget()
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
-            display.update()
+        display.drawGraph()
+        display.update()
 
     def setName(self, parameter):
         self.parameter = parameter.id
@@ -282,31 +277,14 @@ class DataDisplayManager(QWidget):
         self.display_widget.setMovable(True)
         self.display_widget.setTabsClosable(True)
         self.display_widget.tabCloseRequested.connect(self.closeTab)
-
-        self.context_menu_button = QPushButton("Graph options", self)
-        self.context_menu_button.setEnabled(False)
-        self.context_menu_button.clicked.connect(self._context_menu_button_clicked)
-        button_layout = QVBoxLayout()
-        button_layout.setContentsMargins(15, 15, 15, 15)
-        button_layout.addWidget(self.context_menu_button)
-
         grid.addWidget(self.display_widget, 0, 0)
-        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignLeft | Qt.AlignBottom)
+
         # loading this tab as default view (Line graph)
         self.reloadTabs([0])
 
         self.display_widget.tabsClosable()
         self.display_widget.currentChanged.connect(self.experimentChange)
         self.show()
-
-
-    def _context_menu_button_clicked(self):
-        graph_widget = self.display_widget.currentWidget()
-        if graph_widget:
-            button_pos = self.context_menu_button.pos()
-            button_pos -= QPoint(0, self.context_menu_button.height() + 350)
-            graph_widget.showContextMenu(button_pos)
-
 
     def closeTab(self, currentIndex):
         self.display_widget.removeTab(currentIndex)
@@ -334,7 +312,7 @@ class DataDisplayManager(QWidget):
             labelText = "Line graph"
             tabStatus = self.is_tab_already_opened(labelText)
             if tabStatus is False:
-                graph = GraphWidget(self.main_widget, self)
+                graph = GraphWrapperWidget(self.main_widget, self)
                 self.display_widget.addTab(graph, labelText)
 
         graph_widgets = {
@@ -412,16 +390,9 @@ class DataDisplayManager(QWidget):
         display = self.display_widget.currentWidget()
         if not display:
             return
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
+        display.drawGraph()
 
-        model_list, selected_call_nodes = self.main_widget.get_selected_models()
-        if model_list:
-            self.context_menu_button.setEnabled(True)
-        else:
-            self.context_menu_button.setEnabled(False)
+
 
 
 class GraphLimitsWidget(QWidget):

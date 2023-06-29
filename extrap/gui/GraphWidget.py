@@ -7,14 +7,17 @@
 
 from __future__ import annotations
 
+import importlib.resources
 import math
 import typing
 
 import numpy
+from PySide6 import QtGui
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
@@ -134,17 +137,12 @@ class GraphWidget(QWidget):
     def combine_all_callpath(self):
         return self.aggregate_callpath and len(self.main_widget.get_selected_call_tree_nodes()) > 1
 
-    @Slot(QPoint)
-    def showContextMenu(self, point):
-        """
-          This function takes care of different options and their visibility in the context menu.
-        """
-
+    def create_context_menu(self) -> typing.Optional[QMenu]:
         # selected_metric = self.main_widget.get_selected_metric()
         selected_callpaths = self.main_widget.get_selected_call_tree_nodes()
 
         if not selected_callpaths:
-            return
+            return None
 
         menu = QMenu(self)
         points_group = QActionGroup(self)
@@ -198,6 +196,18 @@ class GraphWidget(QWidget):
         exportDataAction.triggered.connect(self.exportData)
         screenshotAction = menu.addAction("Screenshot")
         screenshotAction.triggered.connect(self.screenshot)
+
+        return menu
+
+    @Slot(QPoint)
+    def showContextMenu(self, point):
+        """
+          This function takes care of different options and their visibility in the context menu.
+        """
+
+        menu = self.create_context_menu()
+        if not menu:
+            return
 
         menu.exec_(self.mapToGlobal(point))
 
@@ -261,14 +271,23 @@ class GraphWidget(QWidget):
                 ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)
             text += callpath_name + '\n' + data_points_text + '\n' + model_function_text + '\n\n'
 
-        msg = QMessageBox(self)
-        msg.setIcon(QMessageBox.Information)
-        msg.setText(
-            "Exported data (text can be copied to the clipboard using the context menu):")
-        msg.setInformativeText(text)
+        msg = QDialog()
         msg.setWindowTitle("Export Data")
-        # msg.setDetailedText("The details are as follows:")
-        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setFixedSize(600, 400)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("Exported data (text can be copied to the clipboard using the context menu):"))
+
+        info_text = QTextEdit()
+        info_text.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextSelectableByKeyboard)
+        info_text.setText(text)
+        layout.addWidget(info_text)
+
+        btn = QPushButton('OK', msg)
+        btn.setDefault(True)
+        btn.clicked.connect(msg.accept)
+        layout.addWidget(btn)
+        msg.setLayout(layout)
         msg.exec_()
 
     def drawGraph(self, paint):
@@ -846,3 +865,60 @@ class GraphWidget(QWidget):
     @staticmethod
     def getNumAxis():
         return 1
+
+
+class GraphWrapperWidget(AbstractPlotWidget):
+    _menu_icon_path = importlib.resources.path("extrap.gui.resources", "menu.svg").__enter__()
+
+    def setMax(self, axis, maxValue):
+        raise NotImplementedError("The assignment should happen in __init__")
+
+    def set_initial_value(self):
+        raise NotImplementedError("The assignment should happen in __init__")
+
+    @staticmethod
+    def getNumAxis():
+        return GraphWidget.getNumAxis()
+
+    def __init__(self, main_widget: MainWidget, parent):
+        super().__init__(parent)
+        grid = QGridLayout(self)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(0)
+
+        self._main_widget = main_widget
+        self._graph_widget = GraphWidget(main_widget, self)
+        grid.addWidget(self._graph_widget, 0, 0)
+
+        self.setMax = self._graph_widget.setMax
+        self.set_initial_value = self._graph_widget.set_initial_value
+
+        self.context_menu_button = QToolButton(self)
+
+        self.context_menu_button.setIcon(QIcon(str(GraphWrapperWidget._menu_icon_path)))
+        self.context_menu_button.setText("Graph options")
+        self.context_menu_button.setEnabled(False)
+        self.context_menu_button.clicked.connect(self._context_menu_button_clicked)
+        button_layout = QVBoxLayout()
+        button_layout.setContentsMargins(15, 15, 15, 15)
+        button_layout.addWidget(self.context_menu_button)
+
+        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignLeft | Qt.AlignBottom)
+
+    def _context_menu_button_clicked(self):
+        if self._graph_widget:
+            menu = self._graph_widget.create_context_menu()
+            self.context_menu_button.setMenu(menu)
+            self.context_menu_button.showMenu()
+            self.context_menu_button.setMenu(None)
+            # button_pos = self.context_menu_button.pos()
+            # button_pos -= QPoint(0, self.context_menu_button.height())
+            # graph_widget.showContextMenu(button_pos)
+
+    def drawGraph(self):
+        model_list, selected_call_nodes = self._main_widget.get_selected_models()
+        if model_list:
+            self.context_menu_button.setEnabled(True)
+        else:
+            self.context_menu_button.setEnabled(False)
+        self._graph_widget.update()

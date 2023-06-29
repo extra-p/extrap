@@ -8,11 +8,10 @@
 from PySide6.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 
-#####################################################################
 
-
-class AdvancedPlotWidget(QWidget):
+class AdvancedPlotWidget(AbstractPlotWidget):
     """This class represents a Widget that is used to show the graph on
        the extrap window.
     """
@@ -56,18 +55,13 @@ class AdvancedPlotWidget(QWidget):
 
     def getMaxX(self):
         """ 
-           This function returns the highest value of x that is being shown on x axis.
+           This function returns the highest value of x that is being shown on x-axis.
         """
         return self.max_x
 
-    def setMaxY(self, maxY):
-        """ This function sets the highest value of Y that is being shown on x axis.
-        """
-        self.max_y = maxY
-
     def getMaxY(self):
         """ 
-           This function returns the highest value of Y that is being shown on x axis.
+           This function returns the highest value of Y that is being shown on y-axis.
         """
         return self.max_y
 
