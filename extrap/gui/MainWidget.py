@@ -289,7 +289,7 @@ class MainWidget(QMainWindow):
                               QMessageBox.No | QMessageBox.Yes, self, Qt.Sheet)
         msg_box.setDefaultButton(QMessageBox.No)
 
-        if msg_box.exec_() == QMessageBox.Yes:
+        if msg_box.exec() == QMessageBox.Yes:
             event.accept()
         else:
             event.ignore()
@@ -408,7 +408,7 @@ class MainWidget(QMainWindow):
             dialog = CubeFileReader(self, dir_name)
             dialog.setWindowFlag(Qt.Sheet, True)
             dialog.setModal(True)
-            dialog.exec_()  # do not use open, wait for loading to finish
+            dialog.exec()  # do not use open, wait for loading to finish
             if dialog.valid:
                 self.model_experiment(dialog.experiment, dir_name)
 

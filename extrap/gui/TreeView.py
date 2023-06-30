@@ -107,7 +107,7 @@ class TreeView(QTreeView):
                 copyModel.triggered.connect(
                     lambda: self.copy_model_to_clipboard(selectedModel)
                 )
-                menu.exec_(self.mapToGlobal(event.pos()))
+                menu.exec(self.mapToGlobal(event.pos()))
 
     def _create_expand_collapse_menu(self, model):
         expand_collapse_submenu = QMenu("Expand / Collapse")
@@ -143,7 +143,7 @@ class TreeView(QTreeView):
         msg.setWindowTitle("Model Comments")
         # msg.setDetailedText("The details are as follows:")
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msg.exec()
 
     # print the data points used in compute cost
     @staticmethod
@@ -177,7 +177,7 @@ class TreeView(QTreeView):
         print(msg_txt)
         print("")
         msg.setText(msg_txt)
-        msgBox.exec_()
+        msgBox.exec()
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         self._handle_drop_event(event)

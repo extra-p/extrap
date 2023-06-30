@@ -209,7 +209,7 @@ class GraphWidget(QWidget):
         if not menu:
             return
 
-        menu.exec_(self.mapToGlobal(point))
+        menu.exec(self.mapToGlobal(point))
 
     @Slot()
     def selectDataPoints(self):
@@ -288,7 +288,7 @@ class GraphWidget(QWidget):
         btn.clicked.connect(msg.accept)
         layout.addWidget(btn)
         msg.setLayout(layout)
-        msg.exec_()
+        msg.exec()
 
     def drawGraph(self, paint):
         """
