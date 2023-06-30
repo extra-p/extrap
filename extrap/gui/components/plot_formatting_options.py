@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDi
 
 @dataclasses.dataclass
 class PlotFormattingOptions:
-    font_family: str = 'Helvetica'
+    font_family: str = 'Arial'
     font_size: int = 10
     legend_font_size: int = 6
 
@@ -37,10 +37,11 @@ class PlotFormattingDialog(QDialog):
         layout.addRow("Legend font size", self._legend_font_size_selector)
 
         _dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        layout.addWidget(_dialog_buttons)
-        self.setLayout(layout)
         _dialog_buttons.accepted.connect(self.accept)
         _dialog_buttons.rejected.connect(self.reject)
+        layout.addWidget(_dialog_buttons)
+
+        self.setLayout(layout)
 
     def accept(self) -> None:
         self._options.font_family = self._font_family_selector.currentFont().family()
