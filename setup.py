@@ -54,7 +54,7 @@ setup(
     install_requires=[
         "pyside6~=6.4",
         "numpy~=1.18",
-        "matplotlib~=3.4",
+        "matplotlib~=3.5",
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",

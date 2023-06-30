@@ -8,11 +8,10 @@
 from PySide6.QtWidgets import *  # @UnusedWildImport
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
+from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 
-#####################################################################
 
-
-class AdvancedPlotWidget(QWidget):
+class AdvancedPlotWidget(AbstractPlotWidget):
     """This class represents a Widget that is used to show the graph on
        the extrap window.
     """
@@ -56,31 +55,15 @@ class AdvancedPlotWidget(QWidget):
 
     def getMaxX(self):
         """ 
-           This function returns the highest value of x that is being shown on x axis.
+           This function returns the highest value of x that is being shown on x-axis.
         """
         return self.max_x
 
-    def setMaxY(self, maxY):
-        """ This function sets the highest value of Y that is being shown on x axis.
-        """
-        self.max_y = maxY
-
     def getMaxY(self):
         """ 
-           This function returns the highest value of Y that is being shown on x axis.
+           This function returns the highest value of Y that is being shown on y-axis.
         """
         return self.max_y
-
-    def setFontSize(self, font_size):
-        """ This function sets the font size of the legend.
-        """
-        self.font_size = font_size
-
-    def getFontSize(self):
-        """ 
-           This function returns the font size of the legend.
-        """
-        return self.font_size
 
     def set_initial_value(self):
         """ 
@@ -96,7 +79,7 @@ class AdvancedPlotWidget(QWidget):
             This function is being called by paintEvent to draw the graph 
         """
         # Get the font size as selected by the user and set it
-        self.font_size = int(self.main_widget.getFontSize())
+        self.font_size = int(self.main_widget.plot_formatting_options.font_size)
         # Call the 3D function display window
         if self.graphDisplayWindow is None:
             self.graphDisplayWindow = self.graphDisplayWindowClass(

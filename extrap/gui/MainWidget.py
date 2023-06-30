@@ -12,6 +12,7 @@ from functools import partial
 from pathlib import Path
 from typing import Optional, Sequence, Tuple
 
+from PySide6 import QtGui
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
@@ -33,7 +34,9 @@ from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.components import file_dialog
 from extrap.gui.components.model_color_map import ModelColorMap
+from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.deprecation import deprecated
 
 DEFAULT_MODEL_NAME = "Default Model"
 
@@ -57,7 +60,7 @@ class MainWidget(QMainWindow):
         self.old_x_pos = 0
         self._experiment = None
         self.model_color_map = ModelColorMap()
-        self.font_size = 6
+        self.plot_formatting_options = PlotFormattingOptions()
         self.experiment_change = True
         self.initUI()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -154,9 +157,9 @@ class MainWidget(QMainWindow):
         self.save_experiment_action = save_experiment_action
 
         # View menu
-        change_font_action = QAction('Legend &font size', self)
-        change_font_action.setStatusTip('Change the legend font size')
-        change_font_action.triggered.connect(self.open_font_dialog_box)
+        change_font_action = QAction('Plot &formatting options', self)
+        change_font_action.setStatusTip('Change the formatting of the plots')
+        change_font_action.triggered.connect(self.open_plot_format_dialog_box)
 
         select_view_action = QAction('Select plot &type', self)
         select_view_action.setStatusTip('Select the plots you want to view')
@@ -286,7 +289,7 @@ class MainWidget(QMainWindow):
                               QMessageBox.No | QMessageBox.Yes, self, Qt.Sheet)
         msg_box.setDefaultButton(QMessageBox.No)
 
-        if msg_box.exec_() == QMessageBox.Yes:
+        if msg_box.exec() == QMessageBox.Yes:
             event.accept()
         else:
             event.ignore()
@@ -306,15 +309,9 @@ class MainWidget(QMainWindow):
     def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Node]]]:
         return self.selector_widget.get_selected_models()
 
-    def open_font_dialog_box(self):
-        fontSizeItems = list()
-        for i in range(4, 9, +1):
-            fontSizeItems.append(str(i))
-
-        fontSize, ok = QInputDialog.getItem(
-            self, "Font Size", "Select the font size:", fontSizeItems, 0, False, Qt.Sheet)
-        if ok:
-            self.font_size = fontSize
+    def open_plot_format_dialog_box(self):
+        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.Sheet)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self.data_display.updateWidget()
             self.update()
 
@@ -330,8 +327,9 @@ class MainWidget(QMainWindow):
     #     answer,ok = QInputDialog.getItem(
     #         self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
 
+    @deprecated
     def getFontSize(self):
-        return self.font_size
+        return self.plot_formatting_options.font_size
 
     def screenshot(self, _checked=False, target=None, name_addition=""):
         """
@@ -410,7 +408,7 @@ class MainWidget(QMainWindow):
             dialog = CubeFileReader(self, dir_name)
             dialog.setWindowFlag(Qt.Sheet, True)
             dialog.setModal(True)
-            dialog.exec_()  # do not use open, wait for loading to finish
+            dialog.exec()  # do not use open, wait for loading to finish
             if dialog.valid:
                 self.model_experiment(dialog.experiment, dir_name)
 

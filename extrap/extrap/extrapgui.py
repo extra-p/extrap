@@ -171,7 +171,7 @@ def _init_warning_system(window, test=False):
             activate_box(msg_box)
         else:
             activate_box(msg_box)
-            msg_box.exec_()  # ensures waiting
+            msg_box.exec()  # ensures waiting
             exit(1)
 
     warnings.showwarning = _warnings_handler

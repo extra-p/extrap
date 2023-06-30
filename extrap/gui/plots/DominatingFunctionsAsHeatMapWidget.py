@@ -137,7 +137,7 @@ class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
         maxZ = max([max(row) for row in max_Z_List])
         levels = np.arange(0, maxZ, (1 / float(numOfCurves)) * maxZ)
         CS = ax1.contour(X, Y, max_Z_List, levels=levels)
-        ax1.clabel(CS, CS.levels[::1], inline=True, fontsize=8)
+        ax1.clabel(CS, CS.levels[::1], inline=True, fontsize=self.main_widget.plot_formatting_options.font_size * 0.8)
 
         # legend
 

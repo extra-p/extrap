@@ -13,7 +13,7 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.parameter import Parameter
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
-from extrap.gui.GraphWidget import GraphWidget
+from extrap.gui.GraphWidget import GraphWidget, GraphWrapperWidget
 from extrap.gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
 from extrap.gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
 from extrap.gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
@@ -22,6 +22,7 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
+
 #####################################################################
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = 2000000000
@@ -107,11 +108,8 @@ class AxisSelection(QWidget):
         """
         self.maxChanged()
         display = self.manager.display_widget.currentWidget()
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
-            display.update()
+        display.drawGraph()
+        display.update()
 
     def maxChanged(self):
         """ This function updates the max value without redrawing the graph.
@@ -224,11 +222,8 @@ class ValueSelection(QWidget):
             return
         self.default_values[self.parameter] = value
         display = self.manager.display_widget.currentWidget()
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
-            display.update()
+        display.drawGraph()
+        display.update()
 
     def setName(self, parameter):
         self.parameter = parameter.id
@@ -283,6 +278,7 @@ class DataDisplayManager(QWidget):
         self.display_widget.setTabsClosable(True)
         self.display_widget.tabCloseRequested.connect(self.closeTab)
         grid.addWidget(self.display_widget, 0, 0)
+
         # loading this tab as default view (Line graph)
         self.reloadTabs([0])
 
@@ -316,7 +312,7 @@ class DataDisplayManager(QWidget):
             labelText = "Line graph"
             tabStatus = self.is_tab_already_opened(labelText)
             if tabStatus is False:
-                graph = GraphWidget(self.main_widget, self)
+                graph = GraphWrapperWidget(self.main_widget, self)
                 self.display_widget.addTab(graph, labelText)
 
         graph_widgets = {
@@ -394,10 +390,9 @@ class DataDisplayManager(QWidget):
         display = self.display_widget.currentWidget()
         if not display:
             return
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
+        display.drawGraph()
+
+
 
 
 class GraphLimitsWidget(QWidget):

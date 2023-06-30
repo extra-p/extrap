@@ -21,7 +21,7 @@ from extrap.gui.MainWidget import MainWidget, QCoreApplication
 try:
     APP = QApplication()
     APP.setStyle('Fusion')
-    app_thread = Thread(target=APP.exec_)
+    app_thread = Thread(target=APP.exec)
 except:
     app_thread = None
     pass
@@ -34,7 +34,7 @@ class TestGuiCommon(unittest.TestCase):
         if not app_thread:
             raise unittest.SkipTest("GUI could not start.")
         if not app_thread.is_alive():
-            app_thread = Thread(target=APP.exec_)
+            app_thread = Thread(target=APP.exec)
             app_thread.start()
         self.window = MainWidget()
         self.window.hide()
