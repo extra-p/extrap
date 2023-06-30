@@ -81,7 +81,8 @@ class IsolinesDisplay(BaseContourGraph):
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore', 'No contour levels were found within the data range.')
                     cs = ax.contour(X, Y, Z_List[i], colors=dict_callpath_color[selected_callpaths[i]])
-                    ax.clabel(cs, cs.levels[::2], inline=True, fontsize=7)
+                    ax.clabel(cs, cs.levels[::2], inline=True,
+                              fontsize=self.main_widget.plot_formatting_options.font_size * 0.8)
             except ValueError:  # raised if function selected is constant
                 pass
             ax.set_xlabel('\n' + x_label)
@@ -94,13 +95,14 @@ class IsolinesDisplay(BaseContourGraph):
                     cs_all = ax_all.contour(
                         X, Y, Z_List[i], colors=dict_callpath_color[selected_callpaths[i]])
                     ax_all.clabel(
-                        cs_all, cs_all.levels[::2], inline=True, fontsize=7)
+                        cs_all, cs_all.levels[::2], inline=True,
+                        fontsize=self.main_widget.plot_formatting_options.font_size * 0.8)
                 except ValueError:  # raised if function selected is constant
                     pass
             self.fig.subplots_adjust(
                 left=left, bottom=bottom, right=right, top=top, wspace=wspace, hspace=hspace)
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
-                item.set_fontsize(10)
+            # for item in ([ax.title, ax.xaxis.label, ax.yaxis.label]):
+            #     item.set_fontsize(10)
             # self.fig.colorbar(CS, ax=ax)
             # cax = ax.imshow(Z_List[i], interpolation='nearest', cmap=cm.coolwarm)
             # self.fig.colorbar(cax)
