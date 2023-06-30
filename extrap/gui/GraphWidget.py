@@ -300,6 +300,9 @@ class GraphWidget(QWidget):
         if not model_list:
             return
 
+        plot_options = self.main_widget.plot_formatting_options
+        paint.setFont(QFont(plot_options.font_family, plot_options.font_size))
+
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
         self.graph_height = self.frameGeometry().height() - self.top_margin - self.bottom_margin
@@ -324,6 +327,7 @@ class GraphWidget(QWidget):
         self.drawDataPoints(paint, model_list)
 
         # Draw legend
+        paint.setFont(QFont(plot_options.font_family, plot_options.legend_font_size))
         self.drawLegend(paint)
 
     def drawDataPoints(self, paint, selected_models):
@@ -342,56 +346,62 @@ class GraphWidget(QWidget):
 
     def drawLegend(self, paint):
         # drawing the graph legend
-        px_between = 15
+
         widget = self.main_widget
         callpath_color_dict = widget.model_color_map
         dict_size = len(callpath_color_dict)
-        font_size = int(self.main_widget.getFontSize())
-        paint.setFont(QFont('Decorative', font_size))
         paint.setBrush(self.BACKGROUND_COLOR)
+        font_metrics = paint.fontMetrics()
         pen = QPen(self.TEXT_COLOR)
         pen.setWidth(1)
         paint.setPen(pen)
-        counter_increment = font_size + 3
+
+        px_between = 2
+        font_height = font_metrics.height()
+        counter_increment = font_height + px_between
+        line_offset = font_height / 2
+        left_margin_text = self.legend_x + 45
 
         if self.combine_all_callpath is False:
             text_len = 0
             for callpath, color in callpath_color_dict.items():
-                text_len = max(text_len, len(callpath.name))
-            self.legend_width = 55 + text_len * (font_size - 1)
-            self.legend_height = counter_increment * dict_size + px_between
+                text_len = max(text_len, font_metrics.horizontalAdvance(callpath.name))
+            self.legend_width = 55 + text_len
+            self.legend_height = counter_increment * dict_size + 3 * px_between
 
             paint.drawRect(self.legend_x,
                            self.legend_y,
                            self.legend_width,
                            self.legend_height)
-            counter = 0
+            counter = 2 * px_between
             for callpath, color in callpath_color_dict.items():
                 pen = QPen(QColor(color))
                 pen.setWidth(2)
                 paint.setPen(pen)
-                paint.drawLine(self.legend_x + 5,
-                               self.legend_y + px_between + counter,
-                               self.legend_x + 35,
-                               self.legend_y + px_between + counter)
+                paint.drawLine(QPoint(self.legend_x + 5,
+                                      self.legend_y + counter + line_offset),
+                               QPoint(self.legend_x + 35,
+                                      self.legend_y + counter + line_offset))
                 paint.setPen(self.TEXT_COLOR)
-                paint.drawText(self.legend_x + 45,
-                               self.legend_y + px_between + counter,
-                               callpath.name)
+                paint.drawText(QRect(left_margin_text, self.legend_y + counter,
+                                     text_len, font_height),
+                               Qt.TextFlag.TextDontClip, callpath.name)
+
                 counter = counter + counter_increment
 
         else:
-            text_len = 0
-            callpath_list = list()
 
-            for callpath, color in callpath_color_dict.items():
-                callpath_list.append(callpath.name)
-                text_len = max(text_len, text_len +
-                               len(callpath.name))
+            aggregated_callpath_name = ' + '.join(callpath.name for callpath, color in callpath_color_dict.items())
 
-            aggregated_callpath_name = str.join('+', callpath_list)
-            self.legend_width = 55 + text_len * (font_size - 1)
-            self.legend_height = counter_increment * 1 + px_between
+            bounding_rect_text = font_metrics.boundingRect(
+                QRect(left_margin_text, self.legend_y + 2 * px_between, self.graph_width - left_margin_text,
+                      self.graph_height - self.legend_y + 2 * px_between),
+                Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
+
+            text_len = bounding_rect_text.width()
+            self.legend_width = 55 + text_len
+
+            self.legend_height = bounding_rect_text.height() + 4 * px_between
 
             paint.drawRect(self.legend_x,
                            self.legend_y,
@@ -401,13 +411,12 @@ class GraphWidget(QWidget):
             pen.setWidth(2)
             paint.setPen(pen)
             paint.drawLine(self.legend_x + 5,
-                           self.legend_y + px_between,
+                           self.legend_y + 2 * px_between + line_offset,
                            self.legend_x + 35,
-                           self.legend_y + px_between)
+                           self.legend_y + 2 * px_between + line_offset)
             paint.setPen(self.TEXT_COLOR)
-            paint.drawText(self.legend_x + 45,
-                           self.legend_y + px_between,
-                           aggregated_callpath_name)
+            paint.drawText(bounding_rect_text,
+                           Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
 
     def drawModel(self, paint, model, color):
         function = model.hypothesis.function

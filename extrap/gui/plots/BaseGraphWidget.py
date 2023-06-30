@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import warnings
 from abc import abstractmethod
+from itertools import chain
 from typing import TYPE_CHECKING
 
+import matplotlib
 import numpy as np
 from PySide6.QtWidgets import QSizePolicy
 from matplotlib import patches as mpatches
@@ -26,25 +28,23 @@ class GraphDisplayWindow(FigureCanvas):
     def __init__(self, graphWidget, main_widget: MainWidget, width=5, height=4, dpi=100):
         self.graphWidget = graphWidget
         self.main_widget = main_widget
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        super().__init__(self.fig)
-        super().setSizePolicy(QSizePolicy.Expanding,
-                              QSizePolicy.Expanding)
-        super().updateGeometry()
-        self.draw_figure()
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.fig.tight_layout()
+        with matplotlib.rc_context({'font.family': self.main_widget.plot_formatting_options.font_family,
+                                    'font.size': self.main_widget.plot_formatting_options.font_size}):
+            self.fig = Figure(figsize=(width, height), dpi=dpi, layout='tight')
+            super().__init__(self.fig)
+            super().setSizePolicy(QSizePolicy.Expanding,
+                                  QSizePolicy.Expanding)
+            super().updateGeometry()
+            self.draw_figure()
 
     def redraw(self):
-        rotation = self._save_rotation()
-        self.fig.clear()
-        self.draw_figure()
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.fig.tight_layout()
-        self._restore_rotation(rotation)
-        self.fig.canvas.draw_idle()
+        with matplotlib.rc_context({'font.family': self.main_widget.plot_formatting_options.font_family,
+                                    'font.size': self.main_widget.plot_formatting_options.font_size}):
+            rotation = self._save_rotation()
+            self.fig.clear()
+            self.draw_figure()
+            self._restore_rotation(rotation)
+            self.fig.canvas.draw_idle()
 
     def _save_rotation(self):
         return [(ax.elev, ax.azim) if isinstance(ax, Axes3D) else (None, None) for ax in self.fig.axes]
@@ -120,7 +120,6 @@ class GraphDisplayWindow(FigureCanvas):
         return X, Y, Z_List, z_List
 
     def draw_legend(self, ax_all, dict_callpath_color):
-        fontSize = self.graphWidget.getFontSize()
         # draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
@@ -129,7 +128,7 @@ class GraphDisplayWindow(FigureCanvas):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
             patches.append(patch)
-        leg = ax_all.legend(handles=patches, fontsize=fontSize,
+        leg = ax_all.legend(handles=patches, fontsize=self.main_widget.plot_formatting_options.legend_font_size,
                             loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
             leg.set_draggable(True)

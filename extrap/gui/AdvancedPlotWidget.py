@@ -65,17 +65,6 @@ class AdvancedPlotWidget(AbstractPlotWidget):
         """
         return self.max_y
 
-    def setFontSize(self, font_size):
-        """ This function sets the font size of the legend.
-        """
-        self.font_size = font_size
-
-    def getFontSize(self):
-        """ 
-           This function returns the font size of the legend.
-        """
-        return self.font_size
-
     def set_initial_value(self):
         """ 
           This function sets the initial value for different parameters required for graph.
@@ -90,7 +79,7 @@ class AdvancedPlotWidget(AbstractPlotWidget):
             This function is being called by paintEvent to draw the graph 
         """
         # Get the font size as selected by the user and set it
-        self.font_size = int(self.main_widget.getFontSize())
+        self.font_size = int(self.main_widget.plot_formatting_options.font_size)
         # Call the 3D function display window
         if self.graphDisplayWindow is None:
             self.graphDisplayWindow = self.graphDisplayWindowClass(
