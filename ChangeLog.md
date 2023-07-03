@@ -2,6 +2,35 @@
 
 ***
 
+## Released version 4.1
+
+### Improved GUI
+* Different views for the call-tree
+* Function parameters can be shortened
+* Automatic update check
+
+### New formatting options
+* Format for text output can be specified by the user 
+  (see [docs/output-formatting.md](https://github.com/extra-p/extrap/blob/v4.1.0-alpha/docs/output-formatting.md))
+* Plots have formatting options for font family and font size
+
+### Extended features
+* New extendable File Reader API
+* Unified extension loader
+* Unified entities with names
+* Added support for tags on entities
+
+### Improved OS support
+* Added support for macOS Ventura
+
+### Upgraded dependencies
+* Upgrade from PySide2 to PySide6
+* Upgrade from Matplotlib 3.2 to Matplotlib 3.5
+* Upgrade from PyObjC 6.2 to PyObjC 9.0
+* Added support for pyCubexR 2.0 for faster reading of CUBEX files
+
+***
+
 ## Released version 4.0
 ### Sparse modeling support
 * Added support for sparse modeling for multi-parameter models. This allows the 
@@ -38,6 +67,7 @@ intensive operations
 ## Released version 3.0
 
 ### Command line tools
+
 * Added the command line tool extrap-modeler to create a Extra-P
   experiment file with input data and models on a shell.
 * Refactored extrap-print to produce a console output of an Extra-P
@@ -46,6 +76,7 @@ intensive operations
   definitions.
 
 ### Multi-parameter support
+
 * Added possibility to open set of CUBE files with multiple
   parameters. The number of parameters can be specified before loading
   the CUBE files. After a change to the number of parameters, it tries to
@@ -72,6 +103,7 @@ intensive operations
   for the remaining parameters.
 
 ### Minor improvements and fixes
+
 * Fixed Opening of experiment files which contain a model generated
   with the refining model generator.
 * Allow to pass an Extra-P experiment file to the GUI via command line
