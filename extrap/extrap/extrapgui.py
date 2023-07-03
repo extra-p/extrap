@@ -185,7 +185,7 @@ def apply_style(app):
     app.setStyle('Fusion')
 
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor(190, 190, 190))
+    palette.setColor(QPalette.Window, QColor(200, 200, 200))
     palette.setColor(QPalette.WindowText, Qt.black)
     palette.setColor(QPalette.Base, QColor(220, 220, 220))
     palette.setColor(QPalette.AlternateBase, QColor(10, 10, 10))
@@ -199,6 +199,7 @@ def apply_style(app):
     palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
+    palette.setColor(QPalette.ColorRole.Link, QColor(21, 83, 123))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
 

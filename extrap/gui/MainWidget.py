@@ -456,12 +456,85 @@ class MainWidget(QMainWindow):
             self.color_widget.update_min_max(*self.selector_widget.update_min_max_value())
 
     def show_about_dialog(self):
-        QMessageBox.about(self, "About " + extrap.__title__,
-                          f"""<h1>{extrap.__title__}</h1>
-<p>Version {extrap.__version__}</p>
-<p>{extrap.__description__}</p>
-<p>{extrap.__copyright__}</p>
-""")
+        about_dialog = QDialog(self)
+        about_dialog.setWindowTitle("About " + extrap.__title__)
+        layout = QGridLayout()
+        layout.setSpacing(4)
+        layout.setColumnStretch(0, 0)
+        layout.setColumnStretch(1, 0)
+        layout.setColumnStretch(2, 0)
+        layout.setColumnStretch(3, 1)
+
+        row = itertools.count(0)
+
+        columnSpan = 4
+        layout.addWidget(QLabel(f"<h1>{extrap.__title__}</h1>"), next(row), 0, 1, columnSpan)
+        layout.addWidget(QLabel(f"<b>{extrap.__description__}</b>"), next(row), 0, 1, columnSpan)
+        layout.addItem(QSpacerItem(0, 2), next(row), 0, 1, columnSpan)
+
+        icon_label = QLabel()
+        text_label = QLabel()
+        text_label.setOpenExternalLinks(True)
+        same_row = next(row)
+        layout.addWidget(icon_label, same_row, 0, 1, 1)
+        layout.addWidget(text_label, same_row, 1, 1, columnSpan - 1)
+        try:
+            update_available = self.update_available()
+            if not update_available:
+                icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton).pixmap(16))
+                text_label.setText(f"{extrap.__title__} is up to date")
+            else:
+                icon_label.setPixmap(
+                    self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(16))
+                text_label.setText(f'Version {update_available[0]} is available. '
+                                   f'Get it here: <a href="{update_available[1]}">{update_available[1]}</a>')
+        except HTTPError as e:
+            icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(16))
+            text_label.setText(f"Could not check for updates: " + str(e))
+        except URLError as e:
+            icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(16))
+            text_label.setText(f"Could not check for updates: " + str(e.reason))
+        except Exception as e:
+            icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(16))
+            text_label.setText(f"Could not check for updates: " + str(e))
+
+        same_row = next(row)
+        layout.addWidget(QLabel(f"Version {extrap.__version__}"), same_row, 1, 1, 1)
+        layout.addWidget(QLabel(' — '), same_row, 2, 1, 1)
+
+        check_for_updates = QCheckBox(self)
+        check_for_updates.setChecked(self.settings.value(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, True, bool))
+        check_for_updates.setText("Check for updates on start up")
+        check_for_updates.toggled.connect(
+            lambda status: self.settings.setValue(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, status))
+        layout.addWidget(check_for_updates, same_row, 3, 1, 1)
+
+        layout.addItem(QSpacerItem(0, 2), next(row), 0, 1, columnSpan)
+
+        creators = QLabel(extrap.__developed_by_html__)
+        creators.setOpenExternalLinks(True)
+        layout.addWidget(creators, next(row), 0, 1, columnSpan)
+        layout.addItem(QSpacerItem(0, 2), next(row), 0, 1, columnSpan)
+        support = QLabel(f'Do you have questions or suggestions?<br>'
+                         f'Write us: <a href="mailto:{extrap.__support_email__}">{extrap.__support_email__}</a>')
+        support.setOpenExternalLinks(True)
+        layout.addWidget(support, next(row), 0, 1, columnSpan)
+
+        layout.addItem(QSpacerItem(0, 10), next(row), 0, 1, columnSpan)
+
+        layout.addWidget(QLabel(extrap.__copyright__), next(row), 0, 1, columnSpan)
+
+        layout.addItem(QSpacerItem(0, 10), next(row), 0, 1, columnSpan)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        button_box.accepted.connect(about_dialog.accept)
+
+        # button_box.addButton(check_for_updates, QDialogButtonBox.ButtonRole.ResetRole)
+        # ResetRole is a hack to achieve left alignment
+        layout.addWidget(button_box, next(row), 0, 1, columnSpan)
+        about_dialog.setLayout(layout)
+
+        about_dialog.open()
 
     activate_event_handlers = []
 
