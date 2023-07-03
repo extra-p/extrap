@@ -12,7 +12,7 @@ import threading
 import traceback
 import warnings
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QCoreApplication
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
@@ -43,6 +43,8 @@ def main(*, args=None, test=False):
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level.upper()))
 
+    QCoreApplication.setApplicationName(extrap.__title__)
+    QCoreApplication.setApplicationVersion(extrap.__version__)
     app = QApplication(sys.argv) if not test else QApplication.instance()
     apply_style(app)
 

@@ -5,8 +5,11 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import itertools
+import logging
 import signal
 import sys
+from urllib.error import URLError, HTTPError
 from enum import Enum
 from functools import partial
 from pathlib import Path
@@ -38,6 +41,8 @@ from extrap.gui.components.plot_formatting_options import PlotFormattingOptions,
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.deprecation import deprecated
 
+_SETTING_CHECK_FOR_UPDATES_ON_STARTUP = 'check_for_updates_on_startup'
+
 DEFAULT_MODEL_NAME = "Default Model"
 
 
@@ -55,6 +60,11 @@ class MainWidget(QMainWindow):
         Initializes the extrap application widget.
         """
         super(MainWidget, self).__init__(*args, **kwargs)
+
+        self.settings = QSettings(QSettings.Scope.UserScope, "Extra-P", "Extra-P GUI")
+
+        status = self.settings.status()
+
         self.max_value = 0
         self.min_value = 0
         self.old_x_pos = 0
@@ -250,6 +260,33 @@ class MainWidget(QMainWindow):
         about_action = QAction('&About', self)
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
+
+        if self.settings.value(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, True, bool):
+            update_available = None
+            try:
+                update_available = self.update_available()
+            except Exception as e:
+                logging.error("Check for updates: " + str(e))
+
+            if update_available:
+                update_menu = menubar.addMenu("UPDATE AVAILABLE")
+                update_action = QAction(
+                    f'Version {update_available[0]} is available here: {update_available[1]}',
+                    self)
+                update_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(update_available[1])))
+                update_menu.addAction(update_action)
+
+                ignore_action = QAction("Ignore", self)
+                ignore_action.triggered.connect(lambda: update_menu.menuAction().setVisible(False))
+                update_menu.addAction(ignore_action)
+                update_menu.addSeparator()
+                auto_update_toggle = QAction(f'Check for updates on startup', self)
+                auto_update_toggle.setChecked(True)
+                auto_update_toggle.setCheckable(True)
+                update_menu.addAction(auto_update_toggle)
+                auto_update_toggle.toggled.connect(
+                    lambda toggled: self.settings.setValue(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP,
+                                                           toggled))
 
         # Main window
         self.resize(1200, 800)
@@ -450,3 +487,18 @@ class MainWidget(QMainWindow):
             ns_window.setBackgroundColor_(ns_window_color)
         except ImportError:
             pass
+
+    @staticmethod
+    def update_available():
+        import json
+        import urllib.request
+        from packaging.version import Version
+
+        with urllib.request.urlopen(extrap.__current_version_api__) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            info = data['info']
+
+            if Version(info['version']) > Version(extrap.__version__):
+                return info['version'], info['release_url']
+            else:
+                return False
