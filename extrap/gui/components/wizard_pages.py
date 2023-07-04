@@ -1,15 +1,15 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from functools import partial
 
-import PySide2
-from PySide2.QtCore import QEvent, QTimer
-from PySide2.QtWidgets import QWizardPage, QVBoxLayout, QScrollArea, QProgressBar, QLabel, QApplication
+import PySide6
+from PySide6.QtCore import QEvent, QTimer
+from PySide6.QtWidgets import QWizardPage, QVBoxLayout, QScrollArea, QProgressBar, QLabel, QApplication
 
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
@@ -55,7 +55,7 @@ class ProgressPage(QWizardPage):
         self.progress_bar.sp = None
         self.once = False
 
-    def event(self, event: PySide2.QtCore.QEvent) -> bool:
+    def event(self, event: PySide6.QtCore.QEvent) -> bool:
         value = super(ProgressPage, self).event(event)
         if not self.once and event.type() == QEvent.Paint:
             self.once = True

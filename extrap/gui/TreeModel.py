@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import copy
 from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING, List, Callable
+from typing import Optional, TYPE_CHECKING, List, Callable, Sequence
 
 import numpy
 from PySide6.QtCore import *  # @UnusedWildImport

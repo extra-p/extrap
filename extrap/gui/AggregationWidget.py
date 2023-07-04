@@ -1,14 +1,14 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from typing import TYPE_CHECKING
 
-from PySide2.QtCore import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.modelers.aggregation import all_aggregations

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2022-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,9 +12,9 @@ import warnings
 from typing import TYPE_CHECKING
 
 import sympy
-from PySide2.QtCore import QTimer
-from PySide2.QtGui import QShowEvent
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel, QLineEdit
+from PySide6.QtCore import QTimer
+from PySide6.QtGui import QShowEvent
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QGridLayout, QLabel, QLineEdit
 from sympy import Matrix
 from sympy.parsing import sympy_parser
 

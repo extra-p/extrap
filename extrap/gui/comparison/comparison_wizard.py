@@ -12,8 +12,8 @@ from itertools import chain
 from pathlib import Path
 from typing import Optional, Type
 
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
                                QLabel, QLineEdit, QSizePolicy, QSpacerItem,
                                QWizard, QWizardPage, QComboBox, QGridLayout)
 
@@ -272,7 +272,7 @@ class ParameterMappingPage(QWizardPage):
                 warnings.warn(f"Parameter {param_name} already exists, "
                               "you cannot have two parameters with the same name.")
                 return False
-            
+
         wizard.parameter_mapping = {
             name: [str(param1), cb_param2.currentText()] for name, param1, cb_param2 in
             zip(new_param_names, wizard.experiment1.parameters, self._param_lists)
