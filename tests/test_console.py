@@ -30,6 +30,11 @@ class TestConsole(unittest.TestCase):
         self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--text', 'data/text/does_not_exist.txt'])
         self.assertRaises(Exception, extrap.main, ['--text', 'data/talpas/talpas_1.txt'])
 
+    def test_cube(self):
+        extrap.main(['--cube', 'data/cubeset/single_parameter/'])
+        self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--cube', 'data/cubeset/does_not_exist'])
+        self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--cube', 'data/text/one_parameter_1.txt'])
+
     def test_modeler(self):
         extrap.main(['--modeler', 'Default', '--text', 'data/text/one_parameter_1.txt'])
         self.assertRaisesRegex(SystemExit, '[^0]', extrap.main,
@@ -80,11 +85,13 @@ class TestConsole(unittest.TestCase):
         output = temp_stdout.getvalue().strip()
         self.assertRegex(output, regex)
 
-    def test_save_experiment(self):
+    def test_experiment(self):
         temp_dir = tempfile.mkdtemp()
         try:
-            extrap.main(['--save-experiment', temp_dir + '/test1.extra-p', '--text', 'data/text/one_parameter_1.txt'])
-            read_experiment(temp_dir + '/test1.extra-p')
+            extrap.main(['--save-experiment', temp_dir + '/test1.extra-p', '--model-set-name', 'test', '--text',
+                         'data/text/one_parameter_1.txt'])
+            experiment = read_experiment(temp_dir + '/test1.extra-p')
+            self.assertEqual('test', experiment.modelers[0].name)
             extrap.main(['--save-experiment', temp_dir + '/test2', '--text', 'data/text/one_parameter_1.txt'])
             read_experiment(temp_dir + '/test2.extra-p')
             extrap.main(['--save-experiment', temp_dir + '/test3.other-ext', '--text', 'data/text/one_parameter_1.txt'])
@@ -92,6 +99,11 @@ class TestConsole(unittest.TestCase):
             self.assertRaisesRegex(SystemExit, '[^0]', extrap.main,
                                    ['--save-experiment', temp_dir + '/does_not_exist/test1.extra-p',
                                     '--text', 'data/text/one_parameter_1.txt'])
+            extrap.main(['--save-experiment', temp_dir + '/test4.extra-p', '--model-set-name', 'test2', '--experiment',
+                         temp_dir + '/test1.extra-p'])
+            experiment = read_experiment(temp_dir + '/test4.extra-p')
+            self.assertEqual('test', experiment.modelers[0].name)
+            self.assertEqual('test2', experiment.modelers[1].name)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 

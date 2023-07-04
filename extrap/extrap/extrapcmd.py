@@ -9,17 +9,16 @@ import argparse
 import logging
 import os
 import sys
+import warnings
 from itertools import chain
 
 import extrap
 from extrap.fileio import experiment_io
-from extrap.fileio.cube_file_reader2 import read_cube_file
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
-from extrap.fileio.io_helper import format_output
+from extrap.fileio.experiment_io import ExperimentReader
+from extrap.fileio.file_reader import all_readers
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.fileio.io_helper import save_output
-from extrap.fileio.json_file_reader import read_json_file
-from extrap.fileio.talpas_file_reader import read_talpas_file
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.output import format_output
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
@@ -34,7 +33,8 @@ def main(args=None, prog=None):
     # argparse
     modelers_list = list(set(k.lower() for k in
                              chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
-    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False)
+    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False,
+                                     formatter_class=WideHelpFormatter)
     positional_arguments = parser.add_argument_group("Positional arguments")
     basic_arguments = parser.add_argument_group("Optional arguments")
     basic_arguments.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -48,14 +48,11 @@ def main(args=None, prog=None):
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
-    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="Load data from CUBE files")
-    group.add_argument("--text", action="store_true", default=False, dest="text", help="Load data from text files")
-    group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
-                       help="Load data from Talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json",
-                       help="Load data from JSON or JSON Lines file")
-    group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
-                       help="Load data from Extra-P 3 experiment")
+    for reader in all_readers.values():
+        group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
+                           help=reader.DESCRIPTION)
+    group.add_argument(ExperimentReader.CMD_ARGUMENT, action="store_true", default=False, dest=ExperimentReader.NAME,
+                       help='Load Extra-P experiment and generate new models')
     input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
                                choices=["weak", "strong"],
                                help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
@@ -77,12 +74,18 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                choices=["all", "callpaths", "metrics", "parameters", "functions"],
-                                help="Set which information should be displayed after modeling "
-                                     "(default: all)")
+                                metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
+                                help="Set which information should be displayed after modeling. Use one of "
+                                     "{all, callpaths, metrics, parameters, functions} or specify a "
+                                     "formatting string using placeholders "
+                                     f"(see {extrap.__documentation_link__}/output-formatting.md).")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
                                 help="Saves the experiment including all models as Extra-P experiment "
                                      "(if no extension is specified, '.extra-p' is appended)")
+    output_options.add_argument("--model-set-name", action="store", metavar="NAME", default='New model',
+                                dest="model_name", type=str,
+                                help="Sets the name of the generated set of models when outputting an "
+                                     "experiment (default: 'New model')")
 
     positional_arguments.add_argument("path", metavar="FILEPATH", type=str, action="store",
                                       help="Specify a file path for Extra-P to work with")
@@ -91,7 +94,7 @@ def main(args=None, prog=None):
     # set log level
     loglevel = logging.getLevelName(arguments.log_level.upper())
     # set output print type
-    printtype = arguments.print_type.upper()
+    printtype = arguments.print_type
 
     # set log format location etc.
     if loglevel == logging.DEBUG:
@@ -126,38 +129,28 @@ def main(args=None, prog=None):
 
     if arguments.path is not None:
         with ProgressBar(desc='Loading file') as pbar:
-            if arguments.cube:
-                # load data from cube files
-                if os.path.isdir(arguments.path):
-                    experiment = read_cube_file(arguments.path, scaling_type)
-                else:
-                    logging.error("The given path is not valid. It must point to a directory.")
-                    sys.exit(1)
-            elif os.path.isfile(arguments.path):
-                if arguments.text:
-                    # load data from text files
-                    experiment = read_text_file(arguments.path, pbar)
-                elif arguments.talpas:
-                    # load data from talpas format
-                    experiment = read_talpas_file(arguments.path, pbar)
-                elif arguments.json:
-                    # load data from json file
-                    experiment = read_json_file(arguments.path, pbar)
-                elif arguments.extrap3:
-                    # load data from Extra-P 3 file
-                    experiment = read_extrap3_experiment(arguments.path, pbar)
-                else:
-                    logging.error("The file format specifier is missing.")
-                    sys.exit(1)
-            else:
-                logging.error("The given file path is not valid.")
-                sys.exit(1)
+            for reader in chain(all_readers.values(), [ExperimentReader]):
+                if getattr(arguments, reader.NAME):
+                    file_reader = reader()
+                    if reader.LOADS_FROM_DIRECTORY:
+                        if os.path.isdir(arguments.path):
+                            if reader is CubeFileReader2:
+                                file_reader.scaling_type = arguments.scaling_type
+                            experiment = file_reader.read_experiment(arguments.path, pbar)
+                        else:
+                            logging.error("The given path is not valid. It must point to a directory.")
+                            sys.exit(1)
+                    elif os.path.isfile(arguments.path):
+                        experiment = file_reader.read_experiment(arguments.path, pbar)
+                    else:
+                        logging.error("The given file path is not valid.")
+                        sys.exit(1)
 
         experiment.debug()
 
         # initialize model generator
         model_generator = ModelGenerator(
-            experiment, modeler=arguments.modeler, use_median=use_median)
+            experiment, modeler=arguments.modeler, name=arguments.model_name, use_median=use_median)
 
         # apply modeler options
         modeler = model_generator.modeler
@@ -203,6 +196,18 @@ def main(args=None, prog=None):
     else:
         logging.error("No file path given to load files.")
         sys.exit(1)
+
+
+class WideHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+
+    def __init__(self, *args, **kwargs):
+        try:
+            kwargs['width'] = 100
+            super().__init__(*args, **kwargs)
+        except TypeError:
+            warnings.warn("Wide argparse help formatter failed, falling back.")
+            del kwargs['width']
+            super().__init__(*args, **kwargs)
 
 
 if __name__ == "__main__":

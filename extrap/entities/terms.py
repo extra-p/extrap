@@ -17,6 +17,10 @@ from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
 from extrap.util.serialization_schema import Schema, NumberField
 
+DEFAULT_PARAM_NAMES = (
+    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o')
+
 
 class Term(ABC):
 
@@ -189,7 +193,7 @@ class MultiParameterTerm(Term):
 
     def to_string(self, *parameters: Union[Parameter, str, Mapping[int, Union[Parameter, str]]]):
         if len(parameters) == 0:
-            parameters = ('p', 'q', 'r', 's', 't')
+            parameters = DEFAULT_PARAM_NAMES
         elif len(parameters) == 1 and not isinstance(parameters[0], str):
             parameters = parameters[0]
         function_string = str(self.coefficient)

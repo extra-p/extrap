@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,35 +12,35 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.util.exceptions import FileFormatError, InvalidExperimentError
 
 
 # noinspection DuplicatedCode
 class TestOneParameterFiles(unittest.TestCase):
     def test_read_1(self):
-        experiment = read_text_file("data/text/one_parameter_1.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_1.txt")
         self.assertEqual(len(experiment.parameters), 1)
         self.assertListEqual(experiment.parameters, [Parameter('x')])
 
     def test_read_2(self):
-        experiment = read_text_file("data/text/one_parameter_2.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_2.txt")
         self.assertEqual(len(experiment.parameters), 1)
 
     def test_read_3(self):
-        experiment = read_text_file("data/text/one_parameter_3.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_3.txt")
         self.assertEqual(len(experiment.parameters), 1)
 
     def test_read_4(self):
-        experiment = read_text_file("data/text/one_parameter_4.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_4.txt")
         self.assertEqual(len(experiment.parameters), 1)
 
     def test_read_5(self):
-        experiment = read_text_file("data/text/one_parameter_5.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_5.txt")
         self.assertEqual(len(experiment.parameters), 1)
 
     def test_read_6(self):
-        experiment = read_text_file("data/text/one_parameter_6.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_6.txt")
         self.assertEqual(len(experiment.metrics), 1)
         self.assertEqual(len(experiment.parameters), 1)
         self.assertListEqual(experiment.callpaths, [
@@ -56,7 +56,7 @@ class TestOneParameterFiles(unittest.TestCase):
         ])
 
     def test_read_7(self):
-        experiment = read_text_file("data/text/one_parameter_7.txt")
+        experiment = TextFileReader().read_experiment("data/text/one_parameter_7.txt")
         self.assertEqual(len(experiment.metrics), 1)
         self.assertEqual(len(experiment.parameters), 1)
         self.assertListEqual(experiment.callpaths, [Callpath('met1')])
@@ -71,8 +71,8 @@ class TestOneParameterFiles(unittest.TestCase):
         ])
 
     def test_wrong_file(self):
-        self.assertRaises(FileFormatError, read_text_file, "data/json/input_1.JSON")
-        self.assertRaises(FileFormatError, read_text_file, "data/talpas/talpas_1.txt")
+        self.assertRaises(FileFormatError, TextFileReader().read_experiment, "data/json/input_1.JSON")
+        self.assertRaises(FileFormatError, TextFileReader().read_experiment, "data/talpas/talpas_1.txt")
 
     def testOpenTextIntegrity(self):
         # create experiment object to check against
@@ -96,7 +96,7 @@ class TestOneParameterFiles(unittest.TestCase):
             [725.3886983183301, 727.8628493044997, 727.0517005284136, 729.5284355624206, 721.0616186790007]
         ]
         # load experiment from openText()
-        experiment = read_text_file("data/input/input_data_1p.txt")
+        experiment = TextFileReader().read_experiment("data/input/input_data_1p.txt")
         self.assertListEqual(parameters, experiment.parameters)
         self.assertListEqual(coordinates, experiment.coordinates)
         self.assertListEqual([callpath], experiment.callpaths)
@@ -107,25 +107,25 @@ class TestOneParameterFiles(unittest.TestCase):
                              experiment.measurements[callpath, metric])
 
     def test_errors(self):
-        self.assertRaises(FileFormatError, read_text_file, "data/input/experiments_SP/experiment_neg.txt")
-        read_text_file("data/input/experiments_SP/experiment2.txt")
-        self.assertRaises(InvalidExperimentError, read_text_file, "data/input/experiments_SP/experiment3_neg.txt")
-        read_text_file("data/input/experiments_SP/experiment4.txt")
+        self.assertRaises(FileFormatError, TextFileReader().read_experiment, "data/input/experiments_SP/experiment_neg.txt")
+        TextFileReader().read_experiment("data/input/experiments_SP/experiment2.txt")
+        self.assertRaises(InvalidExperimentError, TextFileReader().read_experiment, "data/input/experiments_SP/experiment3_neg.txt")
+        TextFileReader().read_experiment("data/input/experiments_SP/experiment4.txt")
 
 
 # noinspection DuplicatedCode
 class TestTwoParameterFiles(unittest.TestCase):
 
     def test_read_1(self):
-        experiment = read_text_file("data/text/two_parameter_1.txt")
+        experiment = TextFileReader().read_experiment("data/text/two_parameter_1.txt")
         self.assertEqual(len(experiment.parameters), 2)
 
     def test_read_2(self):
-        experiment = read_text_file("data/text/two_parameter_2.txt")
+        experiment = TextFileReader().read_experiment("data/text/two_parameter_2.txt")
         self.assertEqual(len(experiment.parameters), 2)
 
     def test_read_3(self):
-        experiment = read_text_file("data/text/two_parameter_3.txt")
+        experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
         self.assertEqual(len(experiment.parameters), 2)
         self.assertListEqual(experiment.parameters, [
             Parameter('x'), Parameter('y')])
@@ -164,7 +164,7 @@ class TestTwoParameterFiles(unittest.TestCase):
             Callpath('merge'), Callpath('sort')])
 
     def test_read_4(self):
-        experiment = read_text_file("data/text/two_parameter_4.txt")
+        experiment = TextFileReader().read_experiment("data/text/two_parameter_4.txt")
         self.assertEqual(len(experiment.metrics), 1)
         self.assertEqual(len(experiment.parameters), 2)
         self.assertListEqual(experiment.callpaths, [Callpath(
@@ -179,9 +179,9 @@ class TestTwoParameterFiles(unittest.TestCase):
             Coordinate(16000, 160)])
 
     def test_errors(self):
-        read_text_file("data/input/experiments_MP/experiment_MP.txt")
-        self.assertRaises(InvalidExperimentError, read_text_file, "data/input/experiments_MP/experiment_MP_neg1.txt")
-        self.assertRaises(FileFormatError, read_text_file, "data/input/experiments_MP/experiment_MP_neg2.txt")
+        TextFileReader().read_experiment("data/input/experiments_MP/experiment_MP.txt")
+        self.assertRaises(InvalidExperimentError, TextFileReader().read_experiment, "data/input/experiments_MP/experiment_MP_neg1.txt")
+        self.assertRaises(FileFormatError, TextFileReader().read_experiment, "data/input/experiments_MP/experiment_MP_neg2.txt")
 
     def testOpenTextIntegrityMultiParam(self):
         callpath = Callpath("reg")
@@ -250,7 +250,7 @@ class TestTwoParameterFiles(unittest.TestCase):
             [1644.9469847409239, 1687.8899020378108, 1659.733621973487, 1646.4234125252788, 1641.8554614544396]
         ]
 
-        experiment = read_text_file("data/input/input_data_2p.txt")
+        experiment = TextFileReader().read_experiment("data/input/input_data_2p.txt")
         self.assertListEqual(parameters, experiment.parameters)
         self.assertListEqual(coordinates, experiment.coordinates)
         self.assertListEqual([callpath], experiment.callpaths)
@@ -264,18 +264,18 @@ class TestTwoParameterFiles(unittest.TestCase):
 class TestThreeParameterFiles(unittest.TestCase):
 
     def test_read_1(self):
-        experiment = read_text_file("data/text/three_parameter_1.txt")
+        experiment = TextFileReader().read_experiment("data/text/three_parameter_1.txt")
         self.assertEqual(len(experiment.parameters), 3)
 
     def test_read_2(self):
-        experiment = read_text_file("data/text/three_parameter_2.txt")
+        experiment = TextFileReader().read_experiment("data/text/three_parameter_2.txt")
         self.assertEqual(len(experiment.parameters), 3)
 
     def test_read_3(self):
-        experiment = read_text_file("data/text/three_parameter_3.txt")
+        experiment = TextFileReader().read_experiment("data/text/three_parameter_3.txt")
         self.assertEqual(len(experiment.parameters), 3)
         self.assertListEqual(experiment.parameters, [
             Parameter('x'), Parameter('y'), Parameter('z')])
 
     def testOpenTextMultiParameter2(self):
-        experiment = read_text_file("data/input/input_data_3p.txt")
+        experiment = TextFileReader().read_experiment("data/input/input_data_3p.txt")

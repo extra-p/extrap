@@ -1,15 +1,17 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 import copy
+import logging
+import warnings
 from abc import ABC, abstractmethod
 from typing import Sequence, Optional
 
-from marshmallow import fields
+from marshmallow import fields, post_load
 
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
@@ -20,7 +22,10 @@ from extrap.util.serialization_schema import BaseSchema
 
 class AbstractModeler(ABC):
     def __init__(self, use_median: bool):
-        # use mean or median measurement values to calculate models
+        """Creates a new modeler object, that uses either the median or the mean when modeling.
+
+           :param use_median: use mean or median measurement values to calculate models
+        """
         self._use_median = use_median
 
     @property
@@ -88,5 +93,35 @@ class MultiParameterModeler(AbstractModeler, ABC):
 class ModelerSchema(BaseSchema):
     use_median = fields.Bool()
 
+    def on_missing_sub_schema(self, type_, data, **kwargs):
+        warnings.warn(f"Loaded unknown modeler of type {type_}")
+        data['type_'] = type_
+        return super(BaseSchema, self).load(data, **kwargs)
+
     def create_object(self):
+        logging.debug(f"Created placeholder for unknown modeler")
+        return _EmptyModeler(False)
+
+
+class _EmptyModeler(AbstractModeler):
+    NAME = "<Empty>"
+
+    def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
         raise NotImplementedError()
+
+    def __eq__(self, o: object) -> bool:
+        return o is self or isinstance(o, _EmptyModeler)
+
+
+EMPTY_MODELER = _EmptyModeler(False)
+
+
+class _EmptyModelerSchema(ModelerSchema):
+    use_median = fields.Constant(False, load_only=True, dump_only=True)
+
+    @post_load
+    def unpack_to_object(self, data, **kwargs):
+        return EMPTY_MODELER
+
+    def create_object(self):
+        return EMPTY_MODELER

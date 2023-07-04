@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import warnings
 from abc import abstractmethod
+from itertools import chain
 from typing import TYPE_CHECKING
 
+import matplotlib
 import numpy as np
-from PySide2.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QSizePolicy
 from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -26,25 +28,23 @@ class GraphDisplayWindow(FigureCanvas):
     def __init__(self, graphWidget, main_widget: MainWidget, width=5, height=4, dpi=100):
         self.graphWidget = graphWidget
         self.main_widget = main_widget
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        super().__init__(self.fig)
-        super().setSizePolicy(QSizePolicy.Expanding,
-                              QSizePolicy.Expanding)
-        super().updateGeometry()
-        self.draw_figure()
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.fig.tight_layout()
+        with matplotlib.rc_context({'font.family': self.main_widget.plot_formatting_options.font_family,
+                                    'font.size': self.main_widget.plot_formatting_options.font_size}):
+            self.fig = Figure(figsize=(width, height), dpi=dpi, layout='tight')
+            super().__init__(self.fig)
+            super().setSizePolicy(QSizePolicy.Expanding,
+                                  QSizePolicy.Expanding)
+            super().updateGeometry()
+            self.draw_figure()
 
     def redraw(self):
-        rotation = self._save_rotation()
-        self.fig.clear()
-        self.draw_figure()
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.fig.tight_layout()
-        self._restore_rotation(rotation)
-        self.fig.canvas.draw_idle()
+        with matplotlib.rc_context({'font.family': self.main_widget.plot_formatting_options.font_family,
+                                    'font.size': self.main_widget.plot_formatting_options.font_size}):
+            rotation = self._save_rotation()
+            self.fig.clear()
+            self.draw_figure()
+            self._restore_rotation(rotation)
+            self.fig.canvas.draw_idle()
 
     def _save_rotation(self):
         return [(ax.elev, ax.azim) if isinstance(ax, Axes3D) else (None, None) for ax in self.fig.axes]
@@ -87,8 +87,10 @@ class GraphDisplayWindow(FigureCanvas):
             points[p] = v
         param1 = self.main_widget.data_display.getAxisParameter(0).id
         param2 = self.main_widget.data_display.getAxisParameter(1).id
-        points[param1] = xs
-        points[param2] = ys
+        if param1 >= 0:
+            points[param1] = xs
+        if param2 >= 0:
+            points[param2] = ys
 
         z_value = function.evaluate(points)
         return z_value
@@ -117,25 +119,7 @@ class GraphDisplayWindow(FigureCanvas):
             Z[np.isinf(Z)] = max_z
         return X, Y, Z_List, z_List
 
-    def get_selected_models(self):
-        selected_metric = self.main_widget.getSelectedMetric()
-        selected_callpaths = self.main_widget.getSelectedCallpath()
-        model_set = self.main_widget.getCurrentModel()
-        if not selected_callpaths or model_set is None:
-            return None, None
-        model_set_models = model_set.models
-        if not model_set_models:
-            return None, None
-        model_list = list()
-        for selected_callpath in selected_callpaths:
-            key = (selected_callpath.path, selected_metric)
-            if key in model_set_models:
-                model = model_set_models[key]
-                model_list.append(model)
-        return model_list, selected_callpaths
-
     def draw_legend(self, ax_all, dict_callpath_color):
-        fontSize = self.graphWidget.getFontSize()
         # draw legend
         patches = list()
         for key, value in dict_callpath_color.items():
@@ -144,7 +128,7 @@ class GraphDisplayWindow(FigureCanvas):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
             patches.append(patch)
-        leg = ax_all.legend(handles=patches, fontsize=fontSize,
+        leg = ax_all.legend(handles=patches, fontsize=self.main_widget.plot_formatting_options.legend_font_size,
                             loc="upper right", bbox_to_anchor=(1, 1))
         if leg:
             leg.set_draggable(True)

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,18 +12,15 @@ import threading
 import traceback
 import warnings
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPalette, QColor
-from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
+from PySide6.QtCore import Qt, QCoreApplication
+from PySide6.QtGui import QPalette, QColor
+from PySide6.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
-from extrap.fileio.cube_file_reader2 import read_cube_file
 from extrap.fileio.experiment_io import read_experiment
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
-from extrap.fileio.json_file_reader import read_json_file
-from extrap.fileio.talpas_file_reader import read_talpas_file
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader import all_readers
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -46,6 +43,8 @@ def main(*, args=None, test=False):
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level.upper()))
 
+    QCoreApplication.setApplicationName(extrap.__title__)
+    QCoreApplication.setApplicationVersion(extrap.__version__)
     app = QApplication(sys.argv) if not test else QApplication.instance()
     apply_style(app)
 
@@ -61,7 +60,7 @@ def main(*, args=None, test=False):
         pass
 
     if not test:
-        app.exec_()
+        app.exec()
         font_preloader.join()
     else:
         font_preloader.join()
@@ -78,14 +77,10 @@ def parse_arguments(args=None):
     parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__)
 
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument("--cube", action="store_true", default=False, dest="cube", help="load data from cube files")
-    group.add_argument("--text", action="store_true", default=False, dest="text", help="load data from text files")
-    group.add_argument("--talpas", action="store_true", default=False, dest="talpas",
-                       help="load data from talpas data format")
-    group.add_argument("--json", action="store_true", default=False, dest="json",
-                       help="load data from json or jsonlines file")
-    group.add_argument("--extra-p-3", action="store_true", default=False, dest="extrap3",
-                       help="load data from Extra-P 3 experiment")
+    for reader in all_readers.values():
+        group.add_argument(reader.CMD_ARGUMENT, action="store_true", default=False, dest=reader.NAME,
+                           help=reader.DESCRIPTION)
+
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
                         help="specify a file path for Extra-P to work with")
 
@@ -98,18 +93,15 @@ def parse_arguments(args=None):
 
 def load_from_command(arguments, window):
     if arguments.path:
-        if arguments.text:
-            window.import_file(read_text_file, file_name=arguments.path)
-        elif arguments.json:
-            window.import_file(read_json_file, file_name=arguments.path)
-        elif arguments.talpas:
-            window.import_file(read_talpas_file, file_name=arguments.path)
-        elif arguments.cube:
-            window.import_file(lambda x, y: read_cube_file(x, arguments.scaling_type, y), file_name=arguments.path)
-        elif arguments.extrap3:
-            window.import_file(read_extrap3_experiment, model=False, file_name=arguments.path)
-        else:
-            window.import_file(read_experiment, model=False, file_name=arguments.path)
+        for reader in all_readers.values():
+            if getattr(arguments, reader.NAME):
+                file_reader = reader()
+                if file_reader is CubeFileReader2:
+                    file_reader.scaling_type = arguments.scaling_type
+                window.import_file(file_reader.read_experiment, file_name=arguments.path,
+                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD)
+                return
+        window.import_file(read_experiment, file_name=arguments.path, model=False)
 
 
 def _init_warning_system(window, test=False):
@@ -181,7 +173,7 @@ def _init_warning_system(window, test=False):
             activate_box(msg_box)
         else:
             activate_box(msg_box)
-            msg_box.exec_()  # ensures waiting
+            msg_box.exec()  # ensures waiting
             exit(1)
 
     warnings.showwarning = _warnings_handler
@@ -193,7 +185,7 @@ def apply_style(app):
     app.setStyle('Fusion')
 
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor(190, 190, 190))
+    palette.setColor(QPalette.Window, QColor(200, 200, 200))
     palette.setColor(QPalette.WindowText, Qt.black)
     palette.setColor(QPalette.Base, QColor(220, 220, 220))
     palette.setColor(QPalette.AlternateBase, QColor(10, 10, 10))
@@ -207,6 +199,7 @@ def apply_style(app):
     palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
+    palette.setColor(QPalette.ColorRole.Link, QColor(21, 83, 123))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
 

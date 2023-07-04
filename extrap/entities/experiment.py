@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -10,7 +10,7 @@ import warnings
 from itertools import chain
 from typing import List, Dict, Tuple
 
-from marshmallow import fields, validate, pre_load
+from marshmallow import fields, validate, pre_load, post_dump
 from packaging.version import Version
 
 import extrap
@@ -24,7 +24,7 @@ from extrap.fileio import io_helper
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from extrap.util.deprecation import deprecated
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from extrap.util.serialization_schema import Schema, TupleKeyDict
+from extrap.util.serialization_schema import TupleKeyDict, BaseSchema, ListToMappingField
 from extrap.util.unique_list import UniqueList
 
 
@@ -106,11 +106,14 @@ class Experiment:
                 f"Measurement {i}: {metric}, {callpath}, {coordinate}: {value_mean} (mean), {value_median} (median)")
 
 
-class ExperimentSchema(Schema):
+class ExperimentSchema(BaseSchema):
     _version_ = fields.Constant(extrap.__version__, data_key=extrap.__title__)
     scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf(['strong', 'weak']))
-    parameters = fields.List(fields.Nested(ParameterSchema))
-    measurements = TupleKeyDict(keys=(fields.Nested(CallpathSchema), fields.Nested(MetricSchema)),
+    parameters = fields.List(fields.Pluck(ParameterSchema, 'name'))
+    callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
+    metrics = ListToMappingField(MetricSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
+
+    measurements = TupleKeyDict(keys=(fields.Pluck(CallpathSchema, 'name'), fields.Pluck(MetricSchema, 'name')),
                                 values=fields.List(fields.Nested(MeasurementSchema, exclude=('callpath', 'metric'))))
 
     modelers = fields.List(fields.Nested(ModelGeneratorSchema), missing=[], required=False)
@@ -148,6 +151,11 @@ class ExperimentSchema(Schema):
                 pbar.total += len(ms) * models
             pbar.update(0)
         return data
+
+    @post_dump
+    def remove_empty_fields(self, val, **kwargs):
+        val = {k: v for k, v in val.items() if v is not None and not (hasattr(v, '__len__') and len(v) == 0)}
+        return val
 
     def create_object(self):
         return Experiment()

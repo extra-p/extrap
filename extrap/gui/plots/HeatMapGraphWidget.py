@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -38,7 +38,7 @@ class HeatMapGraph(BaseContourGraph):
           This function draws the graph
         """
         # Get data
-        model_list, selected_callpaths = self.get_selected_models()
+        model_list, selected_callpaths = self.main_widget.get_selected_models()
         if model_list is None:
             return
 
@@ -48,7 +48,8 @@ class HeatMapGraph(BaseContourGraph):
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
         # Get the callpath color map
-        dict_callpath_color = self.main_widget.get_callpath_color_map()
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
         # for each x,y value , calculate max z for all function and
         # get the associated model functions for which z is highest.

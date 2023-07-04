@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -8,10 +8,10 @@
 from functools import partial
 from threading import Event
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.fileio.cube_file_reader2 import read_cube_file
+from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
@@ -233,7 +233,7 @@ class CubeFileReader(QDialog):
 
             # read the cube files
             try:
-                self.experiment = read_cube_file(self.dir_name, self.scaling_type, pbar)
+                self.experiment = CubeFileReader2().read_cube_file(self.dir_name, self.scaling_type, pbar)
             except Exception as err:
                 self.close()
                 raise err

@@ -18,8 +18,8 @@ from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm
-from extrap.fileio.jsonlines_file_reader import read_jsonlines_file
-from extrap.fileio.text_file_reader import read_text_file
+from extrap.fileio.file_reader.jsonlines_file_reader import read_jsonlines_file
+from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
@@ -28,7 +28,7 @@ from tests.modelling_testcase import TestCaseWithFunctionAssertions
 class TestFindFirstMeasurements(unittest.TestCase):
 
     def test_2parameters_basic(self):
-        experiment = read_text_file('data/text/two_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/two_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -52,7 +52,7 @@ class TestFindFirstMeasurements(unittest.TestCase):
         ])
 
     def test_2parameters_reversed(self):
-        experiment = read_text_file('data/text/two_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/two_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -77,7 +77,7 @@ class TestFindFirstMeasurements(unittest.TestCase):
         ])
 
     def test_2parameters_random(self):
-        experiment = read_text_file('data/text/two_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/two_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -93,7 +93,7 @@ class TestFindFirstMeasurements(unittest.TestCase):
                                 {Coordinate(1), Coordinate(2), Coordinate(3), Coordinate(4), Coordinate(5)})
 
     def test_3parameters_basic(self):
-        experiment = read_text_file('data/text/three_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -123,7 +123,7 @@ class TestFindFirstMeasurements(unittest.TestCase):
         ])
 
     def test_3parameters_reversed(self):
-        experiment = read_text_file('data/text/three_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -155,7 +155,7 @@ class TestFindFirstMeasurements(unittest.TestCase):
         ])
 
     def test_3parameters_random(self):
-        experiment = read_text_file('data/text/three_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -449,7 +449,7 @@ class TestSparseModeling(TestCaseWithFunctionAssertions):
 class TestFindBestMeasurements(unittest.TestCase):
 
     def test_2parameters_basic(self):
-        experiment = read_text_file('data/text/two_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/two_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -473,7 +473,7 @@ class TestFindBestMeasurements(unittest.TestCase):
         ])
 
     def test_2parameters_reversed(self):
-        experiment = read_text_file('data/text/two_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/two_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -498,7 +498,7 @@ class TestFindBestMeasurements(unittest.TestCase):
         ])
 
     def test_2parameters_random(self):
-        experiment = read_text_file('data/text/two_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/two_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -533,7 +533,7 @@ class TestFindBestMeasurements(unittest.TestCase):
         self.assertLessEqual(hypothesis.SMAPE, reference.SMAPE)
 
     def test_3parameters_basic(self):
-        experiment = read_text_file('data/text/three_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -563,7 +563,7 @@ class TestFindBestMeasurements(unittest.TestCase):
         ])
 
     def test_3parameters_reversed(self):
-        experiment = read_text_file('data/text/three_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]
@@ -595,7 +595,7 @@ class TestFindBestMeasurements(unittest.TestCase):
         ])
 
     def test_3parameters_random(self):
-        experiment = read_text_file('data/text/three_parameter_1.txt')
+        experiment = TextFileReader().read_experiment('data/text/three_parameter_1.txt')
 
         modeler = MultiParameterModeler()
         measurements = experiment.measurements[(Callpath('reg'), Metric('metr'))]

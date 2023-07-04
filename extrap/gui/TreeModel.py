@@ -1,18 +1,21 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, List
+import copy
+from enum import Enum, auto
+from typing import Optional, TYPE_CHECKING, List, Callable
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
+from extrap.entities.calltree import CallTree, Node
 from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
@@ -22,44 +25,55 @@ if TYPE_CHECKING:
 
 
 class TreeModel(QAbstractItemModel):
-    def __init__(self, selectorWidget: SelectorWidget, parent=None):
+    def __init__(self, selector_widget: SelectorWidget, parent=None):
         super(TreeModel, self).__init__(parent)
-        self.main_widget = selectorWidget.main_widget
-        self.selector_widget = selectorWidget
+        self.main_widget = selector_widget.main_widget
+        self.selector_widget = selector_widget
         self.root_item = TreeItem(None)
+        self.item_filter = TreeItemFilterProvider(self)
         experiment = self.main_widget.getExperiment()
         if experiment is not None:
             call_tree = experiment.call_tree
-            nodes = call_tree.get_nodes()
-            self.setupModelData(nodes, self.root_item)
-            self.root_item.call_tree_node = call_tree
+            self.on_metric_changed()
+            self.item_filter.setup(call_tree)
 
     def removeRows(self, position=0, count=1, parent=QModelIndex()):
-        node = self.nodeFromIndex(parent)
+        node = self._node_from_index(parent)
         self.beginRemoveRows(parent, position, position + count - 1)
         node.childItems.pop(position)
         self.endRemoveRows()
 
-    def nodeFromIndex(self, index):
+    def _node_from_index(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
+
         if index.isValid():
             return index.internalPointer()
         else:
             return self.root_item
 
     # noinspection PyMethodMayBeStatic
-    def getValue(self, index):
+    def getValue(self, index) -> Optional[calltree.Node]:
+        if not self.checkIndex(index):
+            raise IndexError()
+
         item = index.internalPointer()
         if item is None:
             return None
         return item.data()
 
-    def data(self, index, role):
+    def data(self, index, role=None):
+
+        if not self.checkIndex(index, QAbstractItemModel.CheckIndexOption.IndexIsValid):
+            raise IndexError()
+
         if not index.isValid():
             return None
 
         getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
+        get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not getDecorationBoxes:
+        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
         call_tree_node = index.internalPointer().data()
@@ -75,7 +89,7 @@ class TreeModel(QAbstractItemModel):
             return None
 
         if getDecorationBoxes:
-            delta = self.main_widget.max_value - self.main_widget.min_value
+            delta = self.selector_widget.max_value - self.selector_widget.min_value
             if delta == 0:
                 return None  # can't divide by zero
 
@@ -89,22 +103,34 @@ class TreeModel(QAbstractItemModel):
             '''
 
             # added for two-parameter models here
-            parameters = self.selector_widget.getParameterValues()
-            formula = model.hypothesis.function
-            previous = numpy.seterr(divide='ignore', invalid='ignore')
-            value = formula.evaluate(parameters)
-            numpy.seterr(**previous)
+            value = self.get_comparison_value(model)
 
             # convert value to relative value between 0 and 1
             relativeValue = max(0.0, (value - self.main_widget.min_value) / delta)
 
             return self.main_widget.color_widget.getColor(relativeValue)
 
+        if get_tooltip_annotations:
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return "\n".join(ann.title(parameters=parameters,
+                                           parameter_values=parameter_values)
+                                 for ann in model.annotations)
+            return None
+
         if index.column() == 0:
-            return call_tree_node.name
+            if self.selector_widget.show_parameters.isChecked():
+                return call_tree_node.name
+            else:
+                return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
-            # if len(model.getComments()) > 0:
-            #     return len(model.getComments())
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return [ann.icon(parameters=parameters,
+                                 parameter_values=parameter_values)
+                        for ann in model.annotations]
             return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
@@ -128,6 +154,40 @@ class TreeModel(QAbstractItemModel):
             return formatNumber(str(model.hypothesis.RE))
         return None
 
+    def get_comparison_value(self, model):
+        parameters = self.selector_widget.getParameterValues()
+        formula = model.hypothesis.function
+        previous = numpy.seterr(divide='ignore', invalid='ignore')
+        value = formula.evaluate(parameters)
+        numpy.seterr(**previous)
+        return value
+
+    def remove_method_parameters(self, name):
+        def _replace_braces(name, lb, rb):
+            depth = 0
+            start = -1
+            replacement = lb + '…' + rb
+            i = 0
+            while i < len(name):
+                elem = name[i]
+                if elem == lb:
+                    depth += 1
+                    if start == -1:
+                        start = i
+                elif elem == rb:
+                    depth -= 1
+                    if start != -1 and depth == 0:
+                        if start + 1 != i:
+                            name = name[0:start:] + replacement + name[i + 1:len(name):]
+                            i = start + len(replacement) - 1
+                        start = -1
+                i += 1
+            return name
+
+        name = _replace_braces(name, '<', '>')
+        name = _replace_braces(name, '(', ')')
+        return name
+
     def getSelectedModel(self, callpath) -> Optional[Model]:
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
@@ -146,18 +206,22 @@ class TreeModel(QAbstractItemModel):
         if model is None or metric is None:
             return None
 
-        def selection_function(tree_item: TreeItem):
-            key = (tree_item.call_tree_node.path, metric)
+        def selection_function(tree_item: Node):
+            key = (tree_item.path, metric)
             return key in model.models
 
-        if self.root_item.call_tree_node is not None:
-            if self.root_item.does_selection_change(selection_function):
-                self.beginResetModel()
-                self.root_item.calculate_selection(selection_function)
-                self.endResetModel()
-            self.valuesChanged()
+        self.item_filter.put_condition('metric', selection_function)
+
+        # if self.root_item.call_tree_node is not None:
+        #     if self.root_item.does_selection_change(selection_function):
+        #         self.beginResetModel()
+        #         self.root_item.calculate_selection(selection_function)
+        #         self.endResetModel()
+        #     self.valuesChanged()
 
     def flags(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
         if not index.isValid():
             return Qt.NoItemFlags
 
@@ -175,7 +239,7 @@ class TreeModel(QAbstractItemModel):
                 # Severity has logical column index 1, but is visually swapped by swapSections(0,1)
                 return "Severity"
             elif section == 2:
-                return "Comments"
+                return "Annotations"
             elif section == 3:
                 return "Value"
             elif section == 4:
@@ -189,16 +253,17 @@ class TreeModel(QAbstractItemModel):
 
         return None
 
-    def index(self, row, column, parent):
-
-        # print("In tree model # of rows",self.rowCount(parent))
-        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
-            return QModelIndex()
-
+    def index(self, row, column, parent=QModelIndex()):
+        if not self.checkIndex(parent):
+            raise IndexError()
         if not parent.isValid():
             parentItem = self.root_item
         else:
             parentItem = parent.internalPointer()
+
+        # print("In tree model # of rows",self.rowCount(parent))
+        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
+            return QModelIndex()
 
         childItem = parentItem.child(row)
         if childItem:
@@ -206,15 +271,17 @@ class TreeModel(QAbstractItemModel):
         else:
             return QModelIndex()
 
-    def parent(self, index):
+    def parent(self, index=...):
+        self.checkIndex(index, QAbstractItemModel.CheckIndexOption.DoNotUseParent)
+
         if not index.isValid():
             return QModelIndex()
 
-        childItem = index.internalPointer()
-        if childItem is None:
+        childItem: TreeItem = index.internalPointer()
+        if childItem == self.root_item:
             return QModelIndex()
-        parentItem = childItem.parent()
 
+        parentItem = childItem.parent()
         if parentItem == self.root_item:
             return QModelIndex()
         try:
@@ -222,9 +289,14 @@ class TreeModel(QAbstractItemModel):
         except ValueError:
             return QModelIndex()
 
-    def rowCount(self, parent):
-        if parent.column() > 0:
-            return 0
+    def rowCount(self, parent=None):
+        if parent is None:
+            parent = QModelIndex()
+
+        # if parent.column() > 0:
+        #     return 0
+        if not self.checkIndex(parent):
+            raise IndexError()
 
         if not parent.isValid():
             parentItem = self.root_item
@@ -233,21 +305,11 @@ class TreeModel(QAbstractItemModel):
 
         return len(parentItem.child_items)
 
-    def setupModelData(self, nodes, root):
-        for i in range(0, len(nodes)):
-            # region = callpaths[i].getRegion().name
-            children = nodes[i].get_childs()
-            new_tree_item = TreeItem(nodes[i], root)
-            root.appendChild(new_tree_item)
-            self.setupModelData(children, new_tree_item)
-
     def valuesChanged(self):
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(len(self.main_widget.getExperiment().callpaths) - 1,
-                                               self.columnCount(None) - 1))
+        if not self.main_widget.getExperiment():
+            return
 
-    def getRootItem(self):
-        return self.root_item
+        self.dataChanged.emit(QModelIndex(), QModelIndex())  # The whole tree changed its values
 
 
 class TreeItem(object):
@@ -255,8 +317,7 @@ class TreeItem(object):
         self.parent_item = parent
         self.call_tree_node: calltree.Node = call_tree_node
         self.child_items: List[TreeItem] = []
-        self._all_child_items: Optional[List[TreeItem]] = None
-        self.is_selected = True
+        self.is_skip_item = False
 
     def appendChild(self, item):
         self.child_items.append(item)
@@ -275,31 +336,163 @@ class TreeItem(object):
             return self.parent_item.child_items.index(self)
         return 0
 
-    def set_selection_recursive(self, value: bool):
-        if value:
-            self.child_items = self._all_child_items
-        else:
-            if self._all_child_items is None:
-                self._all_child_items = self.child_items
-            self.child_items = []
-        for c in self.child_items:
-            c.set_selection_recursive(value)
 
-    def calculate_selection(self, selection_function) -> bool:
-        if self.child_items or self._all_child_items:
-            if self._all_child_items is None:
-                self._all_child_items = self.child_items
-            self.child_items = [c for c in self._all_child_items if c.calculate_selection(selection_function)]
-        select = self.child_items or selection_function(self)
-        self.is_selected = select
-        return select
+class TreeItemFilterProvider:
+    """
+    Performs the translation from the actual calltree to the displayed calltree.
+    Allows filtering of the calltree by passing in filter conditions.
+    """
 
-    def does_selection_change(self, selection_function) -> bool:
-        if self.child_items or self._all_child_items:
-            if self._all_child_items is None:
-                self._all_child_items = self.child_items
-            return any(c.does_selection_change(selection_function) for c in self._all_child_items)
-        elif selection_function(self) != self.is_selected:
+    class DisplayType(Enum):
+        INCLUDE = auto()
+        EXCLUDE = auto()  # unused
+        FLAT = auto()
+        COMPACT = auto()
+        DEFAULT = INCLUDE
+
+    def __init__(self, model: TreeModel):
+        self._model = model
+        self._view_type = self.DisplayType.DEFAULT
+        self._call_tree: Optional[CallTree] = None
+        self.conditions = {}
+        self._type_builder = {
+            self.DisplayType.INCLUDE: self._construct_tree_include_child_if_mismatch,
+            self.DisplayType.COMPACT: self._construct_tree_skip_if_mismatch_and_at_most_one_child,
+            self.DisplayType.FLAT: self._construct_tree_flat
+        }
+        self._tree_builder = self._type_builder[self._view_type]
+
+    def put_condition(self, id, condition: Callable[[Node], bool]):
+        """
+        Adds a filter condition to the list of conditions and updates the tree.
+
+        :param id: The id under witch the condition is stored.
+        You can use it with remove_condition to remove the condition from the filter.
+        :param condition: A condition is a function which gets supplied a node and
+        returns whether this node should be visible or not.
+        The condition must return True, if the node should be visible.
+        If the condition returns False the node is not shown.
+        """
+        self.conditions[id] = condition
+        self.update_tree()
+
+    def remove_condition(self, id):
+        """
+        Removes a filter condition from the list of conditions and updates the tree.
+
+        :param id: The id of the condition te be removed.
+        """
+        if id in self.conditions:
+            del self.conditions[id]
+            self.update_tree()
+
+    @property
+    def display_type(self):
+        """Gets the DisplayType for the TreeView"""
+        return self._view_type
+
+    @display_type.setter
+    def display_type(self, val):
+        """Sets the DisplayType for the TreeView. Switches between NORMAL, COMPACT, FLAT etc."""
+        self._view_type = val
+        self._tree_builder = self._type_builder[val]
+        self.update_tree()
+
+    def setup(self, call_tree: CallTree):
+        """ Performs the setup for the passed call tree and creates the first display tree."""
+        self._call_tree = call_tree
+        self.update_tree()
+
+    def update_tree(self):
+        """ Updates the tree.
+        Performs dry run first, and updates only if changes occurred.
+        """
+        if not self._call_tree:
+            return
+        root = TreeItem(self._call_tree)
+        all_conditions = list(self.conditions.values())
+
+        def predicate(node: Node):
+            return all(cond(node) for cond in all_conditions)
+
+        for child in self._call_tree:
+            self._tree_builder(child, root, predicate)
+
+        if len(self._model.root_item.child_items) == 0 or self.is_tree_changed(self._model.root_item, root):
+            self._model.beginResetModel()
+            self._model.root_item = root
+            self._model.endResetModel()
+
+        self._model.valuesChanged()
+
+    @staticmethod
+    def is_tree_changed(old_tree: TreeItem, new_tree: TreeItem):
+        if len(old_tree.child_items) != len(new_tree.child_items):
             return True
+        diverge = False
+        for i in range(len(old_tree.child_items)):
+            old_node = old_tree.child_items[i]
+            new_node = new_tree.child_items[i]
+            if old_node.call_tree_node.name != new_node.call_tree_node.name:
+                diverge = True
+                break
+            else:
+                diverge = TreeItemFilterProvider.is_tree_changed(old_node, new_node)
+        return diverge
+
+    @staticmethod
+    def _construct_tree_exclude_child_if_mismatch(ct_node: Node, parent: TreeItem,
+                                                  predicate: Callable[[Node], bool]):
+        if predicate(ct_node):
+            node = TreeItem(ct_node, parent)
+            parent.appendChild(node)
+            for ct_child in ct_node:
+                TreeItemFilterProvider._construct_tree_exclude_child_if_mismatch(ct_child, node, predicate)
+
+    @staticmethod
+    def _construct_tree_include_child_if_mismatch(ct_node: Node, parent: TreeItem,
+                                                  predicate: Callable[[Node], bool]):
+        node = TreeItem(ct_node, parent)
+        for ct_child in ct_node:
+            TreeItemFilterProvider._construct_tree_include_child_if_mismatch(ct_child, node, predicate)
+        if node.child_items or predicate(ct_node):
+            parent.appendChild(node)
+
+    @staticmethod
+    def _construct_tree_flat(ct_node: Node, parent: TreeItem,
+                             predicate: Callable[[Node], bool]):
+        if predicate(ct_node):
+            parent.appendChild(TreeItem(ct_node, parent))
+        for ct_child in ct_node:
+            TreeItemFilterProvider._construct_tree_flat(ct_child, parent, predicate)
+
+    @staticmethod
+    def _construct_tree_skip_if_mismatch_and_at_most_one_child(ct_node: Node, parent: TreeItem,
+                                                               predicate: Callable[[Node], bool]):
+        node = TreeItem(ct_node, parent)
+        for ct_child in ct_node:
+            TreeItemFilterProvider._construct_tree_skip_if_mismatch_and_at_most_one_child(ct_child, node, predicate)
+        if predicate(ct_node) or len(node.child_items) > 1:
+            parent.appendChild(node)
+        elif len(node.child_items) == 1:
+            child = node.child_items[0]
+            if child.is_skip_item:
+                child.call_tree_node.name = ct_node.name + '->' + child.call_tree_node.name
+                child.parent_item = parent
+                parent.child_items.append(child)
+            else:
+                node.is_skip_item = True
+                node.call_tree_node = copy.copy(node.call_tree_node)
+                parent.appendChild(node)
+
+    @staticmethod
+    def _construct_tree_skip_if_mismatch(ct_node: Node, parent: TreeItem,
+                                         predicate: Callable[[Node], bool]):
+        if predicate(ct_node):
+            node = TreeItem(ct_node, parent)
+            parent.appendChild(node)
+            for ct_child in ct_node:
+                TreeItemFilterProvider._construct_tree_skip_if_mismatch(ct_child, node, predicate)
         else:
-            return False
+            for ct_child in ct_node:
+                TreeItemFilterProvider._construct_tree_skip_if_mismatch(ct_child, parent, predicate)

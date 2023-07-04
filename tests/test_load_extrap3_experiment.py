@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,15 +11,15 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.parameter import Parameter
-from extrap.fileio.extrap3_experiment_reader import read_extrap3_experiment
+from extrap.fileio.file_reader.extrap3_experiment_reader import Extrap3ExperimentFileReader
 
 
 class TestLoadExtraP3Experiment(unittest.TestCase):
     def test_extrap3_experiment(self):
-        experiment = read_extrap3_experiment('data/input/experiment_3')
+        experiment = Extrap3ExperimentFileReader().read_experiment('data/input/experiment_3')
 
     def test_extrap3_multiparameter_experiment(self):
-        experiment = read_extrap3_experiment('data/input/experiment_3_mp')
+        experiment = Extrap3ExperimentFileReader().read_experiment('data/input/experiment_3_mp')
         self.assertListEqual([Parameter('x'), Parameter('y'), Parameter('z')], experiment.parameters)
         self.assertSetEqual({Coordinate(1, 1, 1), Coordinate(1, 1, 10), Coordinate(1, 1, 25),
                              Coordinate(1, 10, 1), Coordinate(1, 10, 10), Coordinate(1, 10, 25),
@@ -47,7 +47,7 @@ class TestLoadExtraP3Experiment(unittest.TestCase):
         self.assertEqual(call_tree, experiment.call_tree)
 
     def test_sparse_experiment(self):
-        experiment = read_extrap3_experiment('data/input/experiment_3_sparse')
+        experiment = Extrap3ExperimentFileReader().read_experiment('data/input/experiment_3_sparse')
         self.assertListEqual([Parameter('x'), Parameter('y'), Parameter('z')], experiment.parameters)
         self.assertSetEqual({Coordinate(1, 1, 1), Coordinate(1, 1, 10), Coordinate(1, 1, 25),
                              Coordinate(1, 10, 1), Coordinate(1, 10, 10), Coordinate(1, 10, 25),
