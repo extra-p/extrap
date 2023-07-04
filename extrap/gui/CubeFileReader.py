@@ -8,8 +8,8 @@
 from functools import partial
 from threading import Event
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2

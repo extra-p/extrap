@@ -1,12 +1,12 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from PySide2.QtCore import Slot, Qt
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.components.ExpanderWidget import ExpanderWidget
 from extrap.gui.ModelerOptionsWidget import ModelerOptionsWidget

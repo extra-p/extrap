@@ -8,6 +8,7 @@
 import abc
 import logging
 import re
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import List, Tuple
@@ -65,6 +66,13 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             for n, v in zip(parameter_names, parameter_value):
                 parameter_dict[n].add(v)
             parameter_values.append(parameter_value)
+
+            if len(parameter_names)>=1 and parameter_names[0]=="scorep-":
+                warnings.warn(
+                    f"Could not detect any parameter names in the name of folder: {folder_name}. "
+                    f"Please follow the usage guide under "
+                    f"<a href=https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format>"
+                    f"https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format</a>.")
 
         # determine and remove non-constant parameters
 

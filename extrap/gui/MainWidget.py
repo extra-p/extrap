@@ -1,20 +1,25 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import itertools
+import logging
 import signal
+import sys
 from enum import Enum
 from functools import partial
 from numbers import Number
 from pathlib import Path
 from typing import Optional, Sequence, Tuple
+from urllib.error import URLError, HTTPError
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
+from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 
 import extrap
 from extrap.comparison.experiment_comparison import ComparisonExperiment
@@ -38,7 +43,10 @@ from extrap.gui.components import file_dialog
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.deprecation import deprecated
 from extrap.util.event import Event
+
+_SETTING_CHECK_FOR_UPDATES_ON_STARTUP = 'check_for_updates_on_startup'
 
 DEFAULT_MODEL_NAME = "Default Model"
 
@@ -57,13 +65,18 @@ class MainWidget(QMainWindow):
         Initializes the extrap application widget.
         """
         super(MainWidget, self).__init__(*args, **kwargs)
+
+        self.settings = QSettings(QSettings.Scope.UserScope, "Extra-P", "Extra-P GUI")
+
+        status = self.settings.status()
+
         self.max_value = 0
         self.min_value = 0
         self.old_x_pos = 0
         self.developer_mode = False
         self._experiment = None
         self.model_color_map = ModelColorMap()
-        self.font_size = 6
+        self.plot_formatting_options = PlotFormattingOptions()
         self.experiment_change = True
         self.min_max_value_updated_event = Event(Number, int)
         self.initUI()
@@ -74,11 +87,15 @@ class MainWidget(QMainWindow):
         # is used when loading the data from a file and then modeling directly
         self.median = False
 
+        if sys.platform.startswith('darwin'):
+            self._macos_update_title_bar()
+
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         """
         Initializes the User Interface of the extrap widget. E.g. the menus.
         """
+
         self.setWindowTitle(extrap.__title__)
         # Status bar
         # self.statusBar()
@@ -163,9 +180,9 @@ class MainWidget(QMainWindow):
         self.save_experiment_action = save_experiment_action
 
         # View menu
-        change_font_action = QAction('Legend &font size', self)
-        change_font_action.setStatusTip('Change the legend font size')
-        change_font_action.triggered.connect(self.open_font_dialog_box)
+        change_font_action = QAction('Plot &formatting options', self)
+        change_font_action.setStatusTip('Change the formatting of the plots')
+        change_font_action.triggered.connect(self.open_plot_format_dialog_box)
 
         toggle_developer_mode = QAction('Developer mode', self)
         toggle_developer_mode.setCheckable(True)
@@ -270,6 +287,33 @@ class MainWidget(QMainWindow):
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
 
+        if self.settings.value(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, True, bool):
+            update_available = None
+            try:
+                update_available = self.update_available()
+            except Exception as e:
+                logging.error("Check for updates: " + str(e))
+
+            if update_available:
+                update_menu = menubar.addMenu("UPDATE AVAILABLE")
+                update_action = QAction(
+                    f'Version {update_available[0]} is available here: {update_available[1]}',
+                    self)
+                update_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(update_available[1])))
+                update_menu.addAction(update_action)
+
+                ignore_action = QAction("Ignore", self)
+                ignore_action.triggered.connect(lambda: update_menu.menuAction().setVisible(False))
+                update_menu.addAction(ignore_action)
+                update_menu.addSeparator()
+                auto_update_toggle = QAction(f'Check for updates on startup', self)
+                auto_update_toggle.setChecked(True)
+                auto_update_toggle.setCheckable(True)
+                update_menu.addAction(auto_update_toggle)
+                auto_update_toggle.toggled.connect(
+                    lambda toggled: self.settings.setValue(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP,
+                                                           toggled))
+
         # Main window
         self.resize(1200, 800)
         self.setCentralWidget(central_widget)
@@ -309,7 +353,7 @@ class MainWidget(QMainWindow):
                               QMessageBox.No | QMessageBox.Yes, self, Qt.Sheet)
         msg_box.setDefaultButton(QMessageBox.No)
 
-        if msg_box.exec_() == QMessageBox.Yes:
+        if msg_box.exec() == QMessageBox.Yes:
             event.accept()
         else:
             event.ignore()
@@ -329,15 +373,9 @@ class MainWidget(QMainWindow):
     def get_selected_models(self) -> Tuple[Optional[Sequence[Model]], Optional[Sequence[Node]]]:
         return self.selector_widget.get_selected_models()
 
-    def open_font_dialog_box(self):
-        fontSizeItems = list()
-        for i in range(4, 9, +1):
-            fontSizeItems.append(str(i))
-
-        fontSize, ok = QInputDialog.getItem(
-            self, "Font Size", "Select the font size:", fontSizeItems, 0, False, Qt.Sheet)
-        if ok:
-            self.font_size = fontSize
+    def open_plot_format_dialog_box(self):
+        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.Sheet)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self.data_display.updateWidget()
             self.update()
 
@@ -368,8 +406,9 @@ class MainWidget(QMainWindow):
     #     answer,ok = QInputDialog.getItem(
     #         self, "Callpath Filter", "Select the call path to hide:", callpathList, 0, True)
 
+    @deprecated
     def getFontSize(self):
-        return self.font_size
+        return self.plot_formatting_options.font_size
 
     def screenshot(self, _checked=False, target=None, name_addition=""):
         """
@@ -448,7 +487,7 @@ class MainWidget(QMainWindow):
             dialog = CubeFileReader(self, dir_name)
             dialog.setWindowFlag(Qt.Sheet, True)
             dialog.setModal(True)
-            dialog.exec_()  # do not use open, wait for loading to finish
+            dialog.exec()  # do not use open, wait for loading to finish
             if dialog.valid:
                 self.model_experiment(dialog.experiment, dir_name)
 
@@ -459,20 +498,125 @@ class MainWidget(QMainWindow):
             self.min_max_value_updated_event(*self.selector_widget.update_min_max_value())
 
     def show_about_dialog(self):
-        QMessageBox.about(self, "About " + extrap.__title__,
-                          f"""<h1>{extrap.__title__}</h1>
-<p>Version {extrap.__version__}</p>
-<p>{extrap.__description__}</p>
-<p>{extrap.__copyright__}</p>
-""")
+        about_dialog = QDialog(self)
+        about_dialog.setWindowTitle("About " + extrap.__title__)
+        layout = QGridLayout()
+        layout.setSpacing(4)
+        layout.setColumnStretch(0, 0)
+        layout.setColumnStretch(1, 0)
+        layout.setColumnStretch(2, 0)
+        layout.setColumnStretch(3, 1)
+
+        row = itertools.count(0)
+
+        columnSpan = 4
+        layout.addWidget(QLabel(f"<h1>{extrap.__title__}</h1>"), next(row), 0, 1, columnSpan)
+        layout.addWidget(QLabel(f"<b>{extrap.__description__}</b>"), next(row), 0, 1, columnSpan)
+        layout.addItem(QSpacerItem(0, 2), next(row), 0, 1, columnSpan)
+
+        icon_label = QLabel()
+        text_label = QLabel()
+        text_label.setOpenExternalLinks(True)
+        same_row = next(row)
+        layout.addWidget(icon_label, same_row, 0, 1, 1)
+        layout.addWidget(text_label, same_row, 1, 1, columnSpan - 1)
+        try:
+            update_available = self.update_available()
+            if not update_available:
+                icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton).pixmap(16))
+                text_label.setText(f"{extrap.__title__} is up to date")
+            else:
+                icon_label.setPixmap(
+                    self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(16))
+                text_label.setText(f'Version {update_available[0]} is available. '
+                                   f'Get it here: <a href="{update_available[1]}">{update_available[1]}</a>')
+        except HTTPError as e:
+            icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(16))
+            text_label.setText(f"Could not check for updates: " + str(e))
+        except URLError as e:
+            icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(16))
+            text_label.setText(f"Could not check for updates: " + str(e.reason))
+        except Exception as e:
+            icon_label.setPixmap(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning).pixmap(16))
+            text_label.setText(f"Could not check for updates: " + str(e))
+
+        same_row = next(row)
+        layout.addWidget(QLabel(f"Version {extrap.__version__}"), same_row, 1, 1, 1)
+        layout.addWidget(QLabel(' — '), same_row, 2, 1, 1)
+
+        check_for_updates = QCheckBox(self)
+        check_for_updates.setChecked(self.settings.value(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, True, bool))
+        check_for_updates.setText("Check for updates on start up")
+        check_for_updates.toggled.connect(
+            lambda status: self.settings.setValue(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, status))
+        layout.addWidget(check_for_updates, same_row, 3, 1, 1)
+
+        layout.addItem(QSpacerItem(0, 2), next(row), 0, 1, columnSpan)
+
+        creators = QLabel(extrap.__developed_by_html__)
+        creators.setOpenExternalLinks(True)
+        layout.addWidget(creators, next(row), 0, 1, columnSpan)
+        layout.addItem(QSpacerItem(0, 2), next(row), 0, 1, columnSpan)
+        support = QLabel(f'Do you have questions or suggestions?<br>'
+                         f'Write us: <a href="mailto:{extrap.__support_email__}">{extrap.__support_email__}</a>')
+        support.setOpenExternalLinks(True)
+        layout.addWidget(support, next(row), 0, 1, columnSpan)
+
+        layout.addItem(QSpacerItem(0, 10), next(row), 0, 1, columnSpan)
+
+        layout.addWidget(QLabel(extrap.__copyright__), next(row), 0, 1, columnSpan)
+
+        layout.addItem(QSpacerItem(0, 10), next(row), 0, 1, columnSpan)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        button_box.accepted.connect(about_dialog.accept)
+
+        # button_box.addButton(check_for_updates, QDialogButtonBox.ButtonRole.ResetRole)
+        # ResetRole is a hack to achieve left alignment
+        layout.addWidget(button_box, next(row), 0, 1, columnSpan)
+        about_dialog.setLayout(layout)
+
+        about_dialog.open()
 
     activate_event_handlers = []
 
     def event(self, e: QEvent) -> bool:
-        if e.type() == QEvent.WindowActivate:
+        if e.type() == QEvent.Type.WindowActivate:
             for h in self.activate_event_handlers:
                 h(e)
+        elif e.type() == QEvent.Type.LayoutRequest or e.type() == QEvent.Type.WinIdChange:
+            if sys.platform.startswith('darwin'):
+                self._macos_update_title_bar()
         return super().event(e)
+
+    def _macos_update_title_bar(self):
+        try:
+            import objc
+            from AppKit import NSWindow, NSView, NSColor, NSColorSpace
+            ns_view = objc.objc_object(c_void_p=int(self.winId()))
+            ns_window = ns_view.window()
+            ns_window.setTitlebarAppearsTransparent_(True)
+            ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
+            c = self.palette().window().color()
+            ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
+            ns_window.setBackgroundColor_(ns_window_color)
+        except ImportError:
+            pass
+
+    @staticmethod
+    def update_available():
+        import json
+        import urllib.request
+        from packaging.version import Version
+
+        with urllib.request.urlopen(extrap.__current_version_api__) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            info = data['info']
+
+            if Version(info['version']) > Version(extrap.__version__):
+                return info['version'], info['release_url']
+            else:
+                return False
 
     @Slot(bool)
     def _toggle_developer_mode(self, enabled):

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -10,9 +10,9 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, Sequence
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
 from extrap.gui.TreeModel import TreeModel, TreeItem
@@ -155,7 +155,7 @@ class TreeView(QTreeView):
                 copyModel.triggered.connect(
                     lambda: self.copy_model_to_clipboard(selectedModel)
                 )
-                menu.exec_(self.mapToGlobal(event.pos()))
+                menu.exec(self.mapToGlobal(event.pos()))
 
     def _create_expand_collapse_menu(self, model):
         expand_collapse_submenu = QMenu("Expand / Collapse")
@@ -209,7 +209,7 @@ class TreeView(QTreeView):
         msg.setWindowTitle("Model Comments")
         # msg.setDetailedText("The details are as follows:")
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msg.exec()
 
     # print the data points used in compute cost
     @staticmethod
@@ -243,7 +243,7 @@ class TreeView(QTreeView):
         print(msg_txt)
         print("")
         msg.setText(msg_txt)
-        msgBox.exec_()
+        msgBox.exec()
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         self._handle_drop_event(event)

@@ -12,9 +12,9 @@ import threading
 import traceback
 import warnings
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPalette, QColor
-from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
+from PySide6.QtCore import Qt, QCoreApplication
+from PySide6.QtGui import QPalette, QColor
+from PySide6.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
@@ -44,6 +44,8 @@ def main(*, args=None, test=False):
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level.upper()))
 
+    QCoreApplication.setApplicationName(extrap.__title__)
+    QCoreApplication.setApplicationVersion(extrap.__version__)
     app = QApplication(sys.argv) if not test else QApplication.instance()
     apply_style(app)
 
@@ -59,7 +61,7 @@ def main(*, args=None, test=False):
         pass
 
     if not test:
-        app.exec_()
+        app.exec()
         font_preloader.join()
     else:
         font_preloader.join()
@@ -172,7 +174,7 @@ def _init_warning_system(window, test=False):
             activate_box(msg_box)
         else:
             activate_box(msg_box)
-            msg_box.exec_()  # ensures waiting
+            msg_box.exec()  # ensures waiting
             exit(1)
 
     warnings.showwarning = _warnings_handler
@@ -184,7 +186,7 @@ def apply_style(app):
     app.setStyle('Fusion')
 
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor(190, 190, 190))
+    palette.setColor(QPalette.Window, QColor(200, 200, 200))
     palette.setColor(QPalette.WindowText, Qt.black)
     palette.setColor(QPalette.Base, QColor(220, 220, 220))
     palette.setColor(QPalette.AlternateBase, QColor(10, 10, 10))
@@ -198,6 +200,7 @@ def apply_style(app):
     palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
+    palette.setColor(QPalette.ColorRole.Link, QColor(21, 83, 123))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
 
