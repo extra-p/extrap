@@ -11,7 +11,7 @@
 
 ### New formatting options
 * Format for text output can be specified by the user 
-  (see [docs/output-formatting.md](https://github.com/extra-p/extrap/blob/v4.1.0-alpha/docs/output-formatting.md))
+  (see [docs/output-formatting.md](docs/output-formatting.md))
 * Plots have formatting options for font family and font size
 
 ### Extended features
