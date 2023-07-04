@@ -65,9 +65,9 @@ class CubeFileReader(QDialog):
 
     def init_UI(self):
         self.setWindowTitle("Import Settings")
-        self.setWindowModality(Qt.WindowModal)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
-        self.setWindowFlag(Qt.WindowCloseButtonHint, False)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
         main_layout = QFormLayout(self)
         layout = QFormLayout()
         self.controls_layout = layout
@@ -144,7 +144,7 @@ class CubeFileReader(QDialog):
         # cancel_button.setText("Cancel")
         # cancel_button.pressed.connect(self.close)
         main_layout.addRow(layout)
-        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         main_layout.addRow(self.buttonBox)
@@ -249,8 +249,8 @@ class CubeFileReader(QDialog):
                 QMessageBox.critical(self,
                                      "Error",
                                      "Could not read Cube Files, may be corrupt!",
-                                     QMessageBox.Ok,
-                                     QMessageBox.Ok)
+                                     QMessageBox.StandardButton.Ok,
+                                     QMessageBox.StandardButton.Ok)
                 self.close()
                 return
             self.valid = True
@@ -259,7 +259,7 @@ class CubeFileReader(QDialog):
 
     def _show_progressbar(self):
         self.controls_layout.setEnabled(False)
-        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
         self.progress_indicator.show()
 
     def _display_progress(self, pbar: ProgressBar, msg=None, pos=None):

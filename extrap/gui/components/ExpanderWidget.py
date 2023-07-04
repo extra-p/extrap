@@ -26,7 +26,7 @@ class ExpanderWidget(QGroupBox):
         return self._title
 
     def setContent(self, widget: QWidget):
-        widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.MinimumExpanding)
         widget.setMinimumHeight(0)
         self.layout().replaceWidget(self._content, widget, Qt.FindChildOption.FindDirectChildrenOnly)
         self._content.deleteLater()
@@ -93,10 +93,9 @@ class ExpanderWidget(QGroupBox):
         self._toggle.setChecked(True)
         self._toggle.clicked.connect(self._toggle_closed)
 
-        self._content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Fixed)
         self._content.setMinimumHeight(0)
         self._content.setMaximumHeight(0)
-        self._content
 
         layout.addWidget(self._toggle)
         layout.addWidget(self._content)

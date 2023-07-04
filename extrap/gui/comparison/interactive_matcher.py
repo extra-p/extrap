@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from asyncio import Event
-from typing import Sequence, Mapping, Tuple, TYPE_CHECKING
+from typing import Sequence, Mapping, Tuple, TYPE_CHECKING, cast
 
 from PySide6.QtWidgets import QWizardPage
 
@@ -43,7 +43,7 @@ class MapMetricsPage(MappingPage):
         self.setTitle("Map metrics")
 
     def validatePage(self) -> bool:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.experiment.do_metrics_merge()
         return super().validatePage()
 
@@ -54,7 +54,7 @@ class MapCallTreePage(MappingPage):
         self.setTitle("Map call tree")
 
     def validatePage(self) -> bool:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.experiment.do_call_tree_merge()
         return super().validatePage()
 
@@ -65,7 +65,7 @@ class MapModelSetPage(MappingPage):
         self.setTitle("Map models")
 
     def validatePage(self) -> bool:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.experiment.do_model_set_merge()
         return super().validatePage()
 

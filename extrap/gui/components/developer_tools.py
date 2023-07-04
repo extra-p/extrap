@@ -40,7 +40,7 @@ def show_info(model, callpath):
         msg.setInformativeText(allComments)
     msg.setWindowTitle("Model Info")
     # msg.setDetailedText("The details are as follows:")
-    msg.setStandardButtons(QMessageBox.Ok)
+    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
     msg.exec_()
 
 

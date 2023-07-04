@@ -8,8 +8,8 @@
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gui.components.ExpanderWidget import ExpanderWidget
 from extrap.gui.ModelerOptionsWidget import ModelerOptionsWidget
+from extrap.gui.components.ExpanderWidget import ExpanderWidget
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
@@ -100,11 +100,11 @@ class ModelerWidget(QWidget):
         if len(experiment.parameters) == 1:
             for i, (name, modeler) in enumerate(single_parameter.all_modelers.items()):
                 self._model_selector.addItem(name, modeler)
-                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
+                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ItemDataRole.ToolTipRole)
         else:
             for i, (name, modeler) in enumerate(multi_parameter.all_modelers.items()):
                 self._model_selector.addItem(name, modeler)
-                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
+                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ItemDataRole.ToolTipRole)
         self._model_selector.setCurrentText('Default')
         self._model_selector.currentData()
 
@@ -113,6 +113,7 @@ class ModelerWidget(QWidget):
 
     @Slot()
     def remodel(self):
+        use_median = False
         # set the modeler options
         if self.model_mean_radio.isChecked():
             use_median = False

@@ -25,7 +25,7 @@ class ModelerOptionsWidget(QWidget):
         self.initUI(layout, has_parent_options)
 
     def initUI(self, layout, has_parent_options):
-        layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
+        layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.setLayout(layout)
         self.parent().setEnabled(has_parent_options)
 
@@ -61,7 +61,7 @@ class ModelerOptionsWidget(QWidget):
                 group = QGroupBox(name)
                 group.setToolTip(option.description)
                 g_layout = QFormLayout()
-                g_layout.setRowWrapPolicy(QFormLayout.WrapLongRows)
+                g_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
                 self._create_options(g_layout, option.items())
                 group.setLayout(g_layout)
                 layout.addRow(group)
@@ -84,7 +84,7 @@ class ModelerOptionsWidget(QWidget):
 
         for i, (name, modeler) in enumerate(single_parameter.all_modelers.items()):
             modeler_selection.addItem(name, modeler)
-            modeler_selection.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
+            modeler_selection.setItemData(i, modeler.DESCRIPTION, Qt.ItemDataRole.ToolTipRole)
             if isinstance(self._modeler.single_parameter_modeler, modeler):
                 modeler_selection.setCurrentText(name)
         modeler_selection.currentIndexChanged.connect(selection_changed)

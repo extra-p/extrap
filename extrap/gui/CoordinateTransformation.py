@@ -34,11 +34,11 @@ class CoordinateTransformationDialog(QDialog):
         self.setWindowTitle('Transform Coordinates')
         self._layout = QGridLayout()
         self.setLayout(self._layout)
-        self._button_box = QDialogButtonBox(QDialogButtonBox.Ok
-                                            | QDialogButtonBox.Cancel, self)
+        self._button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
+                                            | QDialogButtonBox.StandardButton.Cancel, self)
         self._button_box.rejected.connect(self.reject)
         self._button_box.accepted.connect(self.accept)
-        self._button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self._button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
         self._name_edits: list[QLineEdit] = []
         self._formula_edits: list[QLineEdit] = []
 
@@ -67,7 +67,7 @@ class CoordinateTransformationDialog(QDialog):
                 self._formula_edits.append(formula_edit)
                 self._layout.addWidget(formula_edit, r_ctr, 3)
                 r_ctr += 1
-            self._button_box.button(QDialogButtonBox.Ok).setEnabled(True)
+            self._button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(True)
         self._layout.addWidget(self._button_box, r_ctr, 0, 1, 4)
 
     def _clear_layout(self):

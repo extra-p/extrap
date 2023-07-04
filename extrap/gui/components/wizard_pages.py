@@ -57,7 +57,7 @@ class ProgressPage(QWizardPage):
 
     def event(self, event: PySide6.QtCore.QEvent) -> bool:
         value = super(ProgressPage, self).event(event)
-        if not self.once and event.type() == QEvent.Paint:
+        if not self.once and event.type() == QEvent.Type.Paint:
             self.once = True
             QTimer.singleShot(0, self.once_after_shown)
         return value

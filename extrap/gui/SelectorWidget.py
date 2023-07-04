@@ -86,7 +86,7 @@ class SelectorWidget(QWidget):
         self.tree_display_select.currentIndexChanged.connect(select_view_type)
         self.toolbar.addWidget(self.tree_display_select)
         spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.toolbar.addWidget(spacer)
 
         self.asymptoticCheckBox = QCheckBox('Show model', self.toolbar)
@@ -259,9 +259,9 @@ class SelectorWidget(QWidget):
         reply = QMessageBox.question(self,
                                      'Delete Current Model',
                                      "Are you sure to delete the current model?",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
             index = self.getModelIndex()
             experiment = self.main_widget.getExperiment()
             if index < 0:
@@ -274,9 +274,9 @@ class SelectorWidget(QWidget):
         reply = QMessageBox.question(self,
                                      'Delete Current Metric',
                                      "Are you sure to delete the current metric?",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
             index = self.metric_selector.currentIndex()
             metric = self.getSelectedMetric()
             if index < 0:

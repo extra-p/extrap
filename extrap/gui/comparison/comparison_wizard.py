@@ -10,7 +10,7 @@ from asyncio import Event
 from functools import partial
 from itertools import chain
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional, Type, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
@@ -34,9 +34,10 @@ class ComparisonWizard(QWizard):
 
     def __init__(self, experiment1, experiment2=None, name1='exp1', name2='exp2'):
         super().__init__()
+
         self.setWindowTitle("Compare With Other Experiment")
-        self.setWizardStyle(QWizard.ModernStyle)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         if not experiment2:
             self.addPage(FileSelectionPage(self))
             self.addPage(FileLoadingPage(self))
@@ -51,6 +52,7 @@ class ComparisonWizard(QWizard):
         self.experiment2 = experiment2
         self.experiment: Optional[ComparisonExperiment] = None
         self.model_mapping = {}
+        self.parameter_mapping = {}
         self.is_cancelled = Event()
         self.rejected.connect(self.on_reject)
 
@@ -73,15 +75,15 @@ class FileSelectionPage(ScrollAreaPage):
                 btn.clicked.connect(
                     lambda: file_dialog.show(self, partial(self.open_file, reader), reader.DESCRIPTION,
                                              filter=reader.FILTER,
-                                             file_mode=QFileDialog.Directory if reader.LOADS_FROM_DIRECTORY else None))
+                                             file_mode=QFileDialog.FileMode.Directory if reader.LOADS_FROM_DIRECTORY else None))
                 layout.addWidget(btn)
 
             _(reader)
-        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
-        self.scroll_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
+        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+        self.scroll_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
 
     def open_file(self, reader, name):
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.file_name = name
         wizard.exp_names[1] = Path(name).stem
         wizard.file_reader = reader
@@ -104,7 +106,7 @@ class MatcherSelectionPage(ScrollAreaPage):
                 layout.addWidget(btn)
 
             _(matcher)
-        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
+        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
 
     def select_matcher(self, matcher):
         self.wizard().matcher = matcher
@@ -120,7 +122,7 @@ class FileLoadingPage(ProgressPage):
         self.setTitle('Loading experiment')
 
     def do_process(self, pbar):
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.experiment2 = wizard.file_reader().read_experiment(wizard.file_name, pbar)
         if wizard.file_reader.GENERATE_MODELS_AFTER_LOAD:
             from extrap.gui.MainWidget import DEFAULT_MODEL_NAME
@@ -130,6 +132,7 @@ class FileLoadingPage(ProgressPage):
 class ComparingPage(ProgressPage):
     def __init__(self, parent):
         super().__init__(parent)
+        self._override_next_id = None
         self.setTitle('Comparing experiments')
 
     def cleanupPage(self) -> None:
@@ -137,7 +140,7 @@ class ComparingPage(ProgressPage):
         super().cleanupPage()
 
     def do_process(self, pbar):
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         if wizard.matcher == InteractiveMatcher:
             matcher = wizard.matcher(wizard)
         else:
@@ -166,12 +169,12 @@ class NamingPage(QWizardPage):
         layout.addRow("Name of experiment 2", self._tb_name2)
 
     def initializePage(self) -> None:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         self._tb_name1.setText(wizard.exp_names[0])
         self._tb_name2.setText(wizard.exp_names[1])
 
     def validatePage(self) -> bool:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.exp_names[0] = self._tb_name1.text()
         if not wizard.exp_names[0]:
             wizard.exp_names[0] = 'exp1'
@@ -193,7 +196,7 @@ class ModelSelectionPage(QWizardPage):
         self.model_lists = []
 
     def initializePage(self) -> None:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         for modeler in wizard.experiment1.modelers:
             if len(self.model_lists) < len(wizard.experiment1.modelers):
                 model_list = QComboBox()
@@ -205,7 +208,7 @@ class ModelSelectionPage(QWizardPage):
                 self.layout.addRow(f"Compare {modeler.name} with: ", model_list)
 
     def validatePage(self) -> bool:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         exp1_models = wizard.experiment1.modelers
         exp2_models = wizard.experiment2.modelers
         wizard.model_mapping = {
@@ -227,7 +230,7 @@ class ParameterMappingPage(QWizardPage):
     def initializePage(self) -> None:
         self._clear_layout()
         self._name_edits.clear()
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         r_ctr = 0
         self._layout.addWidget(QLabel('Parameter Experiment 1'), r_ctr, 0)
         self._layout.addWidget(QLabel('Parameter Experiment 2'), r_ctr, 1)
@@ -255,7 +258,7 @@ class ParameterMappingPage(QWizardPage):
             widget.setParent(None)
 
     def validatePage(self) -> bool:
-        wizard: ComparisonWizard = self.wizard()
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         old_param_names = [p.name for p in wizard.experiment1.parameters]
         new_param_names = [name_edit.text().strip() for name_edit in self._name_edits]
 

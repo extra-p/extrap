@@ -7,9 +7,7 @@
 
 from __future__ import annotations
 
-import warnings
 from abc import abstractmethod
-from itertools import chain
 from typing import TYPE_CHECKING
 
 import matplotlib
@@ -34,8 +32,8 @@ class GraphDisplayWindow(FigureCanvas):
                                     'font.size': self.main_widget.plot_formatting_options.font_size}):
             self.fig = Figure(figsize=(width, height), dpi=dpi, layout='tight')
             super().__init__(self.fig)
-            super().setSizePolicy(QSizePolicy.Expanding,
-                                  QSizePolicy.Expanding)
+            super().setSizePolicy(QSizePolicy.Policy.Expanding,
+                                  QSizePolicy.Policy.Expanding)
             super().updateGeometry()
             self.draw_figure()
 

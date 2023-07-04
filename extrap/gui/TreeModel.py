@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import copy
 from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING, List, Callable, Sequence
+from typing import Optional, TYPE_CHECKING, List, Callable, Sequence, cast
 
 import numpy
 from PySide6.QtCore import *  # @UnusedWildImport
@@ -74,13 +74,13 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
-        get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
+        getDecorationBoxes = (role == Qt.ItemDataRole.DecorationRole and index.column() == 1)
+        get_tooltip_annotations = (role == Qt.ItemDataRole.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
+        if role != Qt.ItemDataRole.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
-        call_tree_node = index.internalPointer().data()
+        call_tree_node = cast(TreeItem, index.internalPointer()).data()
         if call_tree_node is None:
             return "Invalid"
 

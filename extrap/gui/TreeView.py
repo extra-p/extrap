@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, cast
 
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
@@ -30,13 +30,13 @@ class TreeView(QTreeView):
     def __init__(self, parent, selector_widget: SelectorWidget):
         super(TreeView, self).__init__(parent)
         self._selector_widget = selector_widget
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setItemDelegateForColumn(2, AnnotationDelegate())
         self.setAnimated(True)
         self.setAcceptDrops(True)
         self._filter_1_percent_time_state = False
 
-    def collapseRecursively(self, index):
+    def collapseRecursively(self, index: QModelIndex):
         if not index.isValid():
             return
 
@@ -44,14 +44,14 @@ class TreeView(QTreeView):
 
         child_count = index.model().rowCount(parent=index)
         for i in range(0, child_count):
-            child = index.child(i, 0)
+            child = cast(TreeItem, index.internalPointer()).child(i)
             self.collapseRecursively(child)
 
     def expand_largest(self, model, index):
         root = index.internalPointer()
         root_parent_index = index.parent()
 
-        # find path to node with largest value and expand along path
+        # find path to node with the largest value and expand along path
         arr = self.max_path(model, root, root_parent_index)
         for a in arr:
             self.expand(model.index(a[1].row(), 0, a[2]))
@@ -98,7 +98,7 @@ class TreeView(QTreeView):
         if not index or not context:
             index = self.selectedIndexes()[0]
             context = type('', (object,), {"treat_comparison_name_as_comparison": None})()
-        node: TreeItem = index.internalPointer()
+        node = cast(TreeItem, index.internalPointer())
 
         for c in node.child_items:
             child_index = self.model().index(c.row(), 0, index)
@@ -109,7 +109,7 @@ class TreeView(QTreeView):
                     result = QMessageBox.question(self, "Comparison detection",
                                                   f'Treat nodes which are named "{COMPARISON_NODE_NAME}" as comparison '
                                                   'nodes?')
-                    if result == QMessageBox.Yes:
+                    if result == QMessageBox.StandardButton.Yes:
                         context.treat_comparison_name_as_comparison = True
                         continue
                     else:
@@ -123,7 +123,7 @@ class TreeView(QTreeView):
     def contextMenuEvent(self, event):
         menu = QMenu()
 
-        model: TreeModel = self.model()
+        model = cast(TreeModel, self.model())
         if model is not None:
             if self.selectedIndexes():
                 selectedCallpath = model.getValue(
@@ -193,14 +193,14 @@ class TreeView(QTreeView):
         return submenu
 
     def copy_model_to_clipboard(self, selectedModel):
-        parameters = self.model().main_widget.getExperiment().parameters
+        parameters = cast(TreeModel, self.model()).main_widget.getExperiment().parameters
         function_string = selectedModel.hypothesis.function.to_string(*parameters)
         QGuiApplication.clipboard().setText(function_string)
 
     @staticmethod
     def showComments(model):
         msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
+        msg.setIcon(QMessageBox.Icon.Information)
         msg.setText(
             "Model has the following comments attached (text can be copied to the clipboard using the context menu):")
         allComments = '\n'.join(("– " + c.getMessage())
@@ -208,7 +208,7 @@ class TreeView(QTreeView):
         msg.setInformativeText(allComments)
         msg.setWindowTitle("Model Comments")
         # msg.setDetailedText("The details are as follows:")
-        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
     # print the data points used in compute cost
@@ -219,7 +219,8 @@ class TreeView(QTreeView):
         msgBox.setFixedSize(600, 400)
         layout = QGridLayout()
         msg = QTextEdit()
-        msg.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        msg.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextSelectableByKeyboard)
         msg.setFont(QFont('Courier'))
         layout.addWidget(msg)
         btn = QPushButton('OK', msgBox)

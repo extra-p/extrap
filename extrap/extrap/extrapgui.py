@@ -117,7 +117,7 @@ def _init_warning_system(window, test=False):
         box.raise_()
         box.activateWindow()
 
-    def display_messages(event):
+    def display_messages(_event):
         for w in open_message_boxes:
             w.raise_()
             w.activateWindow()
@@ -129,9 +129,10 @@ def _init_warning_system(window, test=False):
         nonlocal current_warnings
         message_str = str(message)
         if message_str not in current_warnings:
-            warn_box = QMessageBox(QMessageBox.Warning, 'Warning', message_str, QMessageBox.Ok, window)
+            warn_box = QMessageBox(QMessageBox.Icon.Warning, 'Warning', message_str, QMessageBox.StandardButton.Ok,
+                                   window)
             warn_box.setModal(False)
-            warn_box.setAttribute(Qt.WA_DeleteOnClose)
+            warn_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
             warn_box.destroyed.connect(
                 lambda x: (current_warnings.remove(message_str), open_message_boxes.remove(warn_box)))
 
@@ -147,16 +148,16 @@ def _init_warning_system(window, test=False):
         logging.log(TRACEBACK, ''.join(traceback.format_stack()))
         QApplication.processEvents()
 
-    def _exception_handler(type, value, traceback_):
+    def _exception_handler(type_, value, traceback_):
         traceback_text = ''.join(traceback.extract_tb(traceback_).format())
 
-        if issubclass(type, CancelProcessError):
+        if issubclass(type_, CancelProcessError):
             logging.log(TRACEBACK, str(value))
             logging.log(TRACEBACK, traceback_text)
             return
 
         parent, modal = _parent(window)
-        msg_box = QMessageBox(QMessageBox.Critical, 'Error', str(value), QMessageBox.Ok, parent)
+        msg_box = QMessageBox(QMessageBox.Icon.Critical, 'Error', str(value), QMessageBox.StandardButton.Ok, parent)
         print()
         if hasattr(value, 'NAME'):
             msg_box.setWindowTitle(getattr(value, 'NAME'))
@@ -167,9 +168,9 @@ def _init_warning_system(window, test=False):
         logging.log(TRACEBACK, traceback_text)
 
         if test:
-            return _old_exception_handler(type, value, traceback_)
-        _old_exception_handler(type, value, traceback_)
-        if issubclass(type, RecoverableError):
+            return _old_exception_handler(type_, value, traceback_)
+        _old_exception_handler(type_, value, traceback_)
+        if issubclass(type_, RecoverableError):
             msg_box.open()
             activate_box(msg_box)
         else:
@@ -186,20 +187,20 @@ def apply_style(app):
     app.setStyle('Fusion')
 
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor(200, 200, 200))
-    palette.setColor(QPalette.WindowText, Qt.black)
-    palette.setColor(QPalette.Base, QColor(220, 220, 220))
-    palette.setColor(QPalette.AlternateBase, QColor(10, 10, 10))
-    palette.setColor(QPalette.Text, Qt.black)
-    palette.setColor(QPalette.Button, QColor(220, 220, 220))
-    palette.setColor(QPalette.ButtonText, Qt.black)
-    palette.setColor(QPalette.Highlight, QColor(31, 119, 180))
-    palette.setColor(QPalette.HighlightedText, Qt.white)
-    palette.setColor(QPalette.ToolTipBase, QColor(230, 230, 230))
-    palette.setColor(QPalette.ToolTipText, Qt.black)
-    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
-    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
-    palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
+    palette.setColor(QPalette.ColorRole.Window, QColor(200, 200, 200))
+    palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
+    palette.setColor(QPalette.ColorRole.Base, QColor(220, 220, 220))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(10, 10, 10))
+    palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.black)
+    palette.setColor(QPalette.ColorRole.Button, QColor(220, 220, 220))
+    palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(31, 119, 180))
+    palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(230, 230, 230))
+    palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.black)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(80, 80, 80))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(80, 80, 80))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Button, QColor(150, 150, 150))
     palette.setColor(QPalette.ColorRole.Link, QColor(21, 83, 123))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
@@ -243,6 +244,7 @@ def _update_mac_app_info():
                 app_info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
                 if app_info:
                     app_info['CFBundleName'] = extrap.__title__
+            # noinspection PyPackageRequirements
             from AppKit import NSWindow
             NSWindow.setAllowsAutomaticWindowTabbing_(False)
         except ImportError:

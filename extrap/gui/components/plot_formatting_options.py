@@ -7,7 +7,6 @@
 
 import dataclasses
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox
 
@@ -21,7 +20,7 @@ class PlotFormattingOptions:
 
 class PlotFormattingDialog(QDialog):
 
-    def __init__(self, options: PlotFormattingOptions, parent=None, f=Qt.WindowFlags()):
+    def __init__(self, options: PlotFormattingOptions, parent=None, f=...):
         super().__init__(parent, f)
 
         self._options = options
@@ -43,7 +42,7 @@ class PlotFormattingDialog(QDialog):
         self._legend_font_size_selector.setValue(self._options.legend_font_size)
         layout.addRow("Legend font size", self._legend_font_size_selector)
 
-        _dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        _dialog_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         _dialog_buttons.accepted.connect(self.accept)
         _dialog_buttons.rejected.connect(self.reject)
         layout.addWidget(_dialog_buttons)

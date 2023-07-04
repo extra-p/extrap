@@ -13,16 +13,15 @@ import typing
 from itertools import cycle
 
 import numpy
-from PySide6 import QtGui
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.entities.model import Model
-from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
+from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.util.exceptions import RecoverableError
 
 if typing.TYPE_CHECKING:
@@ -46,12 +45,13 @@ class GraphWidget(QWidget):
         self.initUI()
         self.set_initial_value()
         self.setMouseTracking(True)
-        self._line_styles = [Qt.SolidLine, Qt.DashLine, Qt.DotLine, Qt.DashDotLine, Qt.DashDotDotLine]
+        self._line_styles = [Qt.PenStyle.SolidLine, Qt.PenStyle.DashLine, Qt.PenStyle.DotLine, Qt.PenStyle.DashDotLine,
+                             Qt.PenStyle.DashDotDotLine]
 
     def initUI(self):
         self.setMinimumWidth(300)
         self.setMinimumHeight(300)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.show()
 
@@ -92,7 +92,7 @@ class GraphWidget(QWidget):
     def paintEvent(self, event):
         paint = QPainter()
         paint.begin(self)
-        paint.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+        paint.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.TextAntialiasing)
         self.drawGraph(paint)
         paint.end()
 
@@ -221,7 +221,7 @@ class GraphWidget(QWidget):
         """
           This function hides all the datapoints that is being shown on graph.
         """
-        self.datapoints_type = QObject.sender(self).data()
+        self.datapoints_type = typing.cast(QAction, QObject.sender(self)).data()
         self.update()
 
     @Slot()
@@ -450,7 +450,7 @@ class GraphWidget(QWidget):
             paint.drawText(bounding_rect_text,
                            Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
 
-    def drawModel(self, paint, model, color, style=Qt.SolidLine):
+    def drawModel(self, paint, model, color, style=Qt.PenStyle.SolidLine):
         function = model.hypothesis.function
 
         cord_list = self.calculate_function(function, self.graph_width)
@@ -868,7 +868,7 @@ class GraphWidget(QWidget):
         # paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.name)
 
     def mousePressEvent(self, event):
-        if event.buttons() & ~Qt.LeftButton:
+        if event.buttons() & ~Qt.MouseButton.LeftButton:
             return
         x = int(event.x())
         y = int(event.y())
@@ -879,7 +879,7 @@ class GraphWidget(QWidget):
             # print ("clicked_x_pos, clicked_y_pos", self.clicked_x_pos, self.clicked_y_pos)
 
     def mouseMoveEvent(self, event):
-        if (event.buttons() & ~Qt.LeftButton):
+        if (event.buttons() & ~Qt.MouseButton.LeftButton):
             return
         if self.clicked_x_pos is None or self.clicked_y_pos is None:
             return
@@ -950,7 +950,7 @@ class GraphWrapperWidget(AbstractPlotWidget):
         button_layout.setContentsMargins(15, 15, 15, 15)
         button_layout.addWidget(self.context_menu_button)
 
-        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignLeft | Qt.AlignBottom)
+        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
 
     def _context_menu_button_clicked(self):
         if self._graph_widget:

@@ -32,7 +32,7 @@ class ColorWidget(QWidget):
         grid.setContentsMargins(5, 0, 5, 0)
         self.setStyleSheet("QLabel {color : white; }")
         grid.addWidget(self.min_label, 0, 0)
-        grid.addWidget(self.max_label, 0, 1, Qt.AlignRight)
+        grid.addWidget(self.max_label, 0, 1, Qt.AlignmentFlag.AlignRight)
         self.setLayout(grid)
         # self.red_component=0
         # self.green_component=0

@@ -32,7 +32,8 @@ class PlotTypeSelector(QDialog):
             self.checkBoxes.append(check_box)
             layout.addWidget(check_box)
 
-        dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        dialog_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+                                          self)
         dialog_buttons.accepted.connect(self.accept)
         dialog_buttons.rejected.connect(self.reject)
         layout.addWidget(dialog_buttons)
