@@ -51,6 +51,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires='>=3.8',
+    include_package_data=True,
     install_requires=[
         "pyside6~=6.4",
         "numpy~=1.18",
