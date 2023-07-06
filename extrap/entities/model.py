@@ -1,15 +1,18 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 from typing import Optional, List
 
 import numpy
-from marshmallow import fields, post_load
+from marshmallow import fields, post_load, pre_dump
 
+from extrap.entities.annotations import Annotation, AnnotationSchema
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.hypotheses import Hypothesis, HypothesisSchema
 from extrap.entities.measurement import Measurement
@@ -25,6 +28,7 @@ class Model:
         self.callpath = callpath
         self.metric = metric
         self.measurements: Optional[List[Measurement]] = None
+        self.annotations: list[Annotation] = []
 
     @cached_property
     def predictions(self):
@@ -53,6 +57,13 @@ class ModelSchema(Schema):
             self.context['progress_bar'].update()
         return data
 
+    @pre_dump
+    def report_progress(self, data, **kwargs):
+        if 'progress_bar' in self.context:
+            self.context['progress_bar'].update()
+        return data
+
     hypothesis = fields.Nested(HypothesisSchema)
     callpath = fields.Nested(CallpathSchema)
     metric = fields.Nested(MetricSchema)
+    annotations = fields.List(fields.Nested(AnnotationSchema))

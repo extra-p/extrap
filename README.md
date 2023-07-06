@@ -8,7 +8,7 @@
 [![PyPI - License](https://img.shields.io/pypi/l/extrap?style=plastic)](https://badge.fury.io/py/extrap)
 ![GitHub issues](https://img.shields.io/github/issues/extra-p/extrap?style=plastic)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/extra-p/extrap?style=plastic)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/extra-p/extrap/Test%20extrap%20package?style=plastic)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/extra-p/extrap/python-package.yml?style=plastic)
 
 [<img alt="Screenshot of Extra-P" src="https://github.com/extra-p/extrap/raw/master/docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
 Extra-P is an automatic performance-modeling tool that supports the user in the identification of *scalability bugs*. 
@@ -47,13 +47,13 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 
 ### Requirements
 
-* Python 3.7 or higher
+* Python 3.8 or higher
 * numpy
 * pycubexr
 * marshmallow
 * packaging
 * tqdm
-* PySide2 (for GUI)
+* PySide6 (for GUI)
 * matplotlib (for GUI)
 * pyobjc-framework-Cocoa (only for GUI on macOS)
 
@@ -117,7 +117,7 @@ The Extra-P command line interface has the following options.
 | `--help-modeler` {`default`, `basic`, `refining`, `multi-parameter`} | Show help for modeler options and exit       
 | **Output options**                                                   |                                              
 | `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results  
-| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`, _FORMAT_STRING_} | Set which information should be displayed after modeling. Use one of {all (default), callpaths, metrics, parameters, functions} or specify a formatting string using placeholders (see [docs/output-formatting.md](docs/output-formatting.md)).
+| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`, _FORMAT_STRING_} | Set which information should be displayed after modeling. Use one of the predefined values or specify a formatting string using placeholders (see [docs/output-formatting.md](docs/output-formatting.md)) (default: `all`).
 | `--save-experiment` <i>EXPERIMENT_PATH</i>                           | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) 
 | `--model-set-name` _NAME_                                            | Set the name of the generated set of models when outputting an experiment (default: “New model”)
 

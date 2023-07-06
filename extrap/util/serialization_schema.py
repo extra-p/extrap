@@ -1,18 +1,20 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 import collections
 import math
+import typing
 from abc import abstractmethod, ABC
 from collections.abc import Mapping
-from typing import Union, Sequence
+from typing import Union, Sequence, Tuple, Type
 
 import marshmallow
 from marshmallow import post_load, fields, ValidationError, EXCLUDE
+from marshmallow.base import SchemaABC
 from marshmallow.fields import Field
 from marshmallow.schema import Schema as _Schema
 
@@ -29,10 +31,10 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
         unknown = EXCLUDE
 
     @abstractmethod
-    def create_object(self):
+    def create_object(self) -> Union[object, Tuple[type(NotImplemented), Type]]:
         raise NotImplementedError()
 
-    def postprocess_object(self, obj):
+    def postprocess_object(self, obj: object) -> object:
         return obj
 
     def preprocess_object_data(self, data):
@@ -55,11 +57,15 @@ class BaseSchema(Schema):
     type_field = '$type'
 
     def create_object(self):
-        raise NotImplementedError()
+        raise NotImplementedError(f"{type(self)} has no create object method.")
 
     def __init_subclass__(cls, **kwargs):
         if not cls.__is_direct_subclass(cls, BaseSchema):
-            cls._subclasses[type(cls().create_object()).__name__] = cls
+            obj = cls().create_object()
+            if isinstance(obj, tuple) and obj[0] == NotImplemented:
+                cls._subclasses[obj[1].__name__] = cls
+            else:
+                cls._subclasses[type(cls().create_object()).__name__] = cls
         else:
             cls._subclasses = {}
         super().__init_subclass__(**kwargs)
@@ -68,6 +74,10 @@ class BaseSchema(Schema):
     def __is_direct_subclass(subclass, classs_):
         return subclass.mro()[1] == classs_
 
+    def on_missing_sub_schema(self, type_, data, **kwargs):
+        """Handles missing subschema. May return a parsed object to fail gracefully."""
+        raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
+
     def load(self, data, **kwargs):
         if self.__is_direct_subclass(type(self), BaseSchema) and self.type_field in data:
             type_ = data[self.type_field]
@@ -75,7 +85,7 @@ class BaseSchema(Schema):
             try:
                 schema = self._subclasses[type_]()
             except KeyError:
-                raise ValidationError(f'No subschema found for {type_} in {type(self).__name__}')
+                return self.on_missing_sub_schema(type, data, **kwargs)
             return schema.load(data, **kwargs)
         else:
             return super(BaseSchema, self).load(data, **kwargs)
@@ -211,6 +221,49 @@ class NumberField(fields.Number):
         else:
             ret = super()._format_num(value)
         return self._to_string(ret) if self.as_string else ret
+
+
+class ListToMappingField(fields.List):
+    def __init__(self, nested: typing.Union[SchemaABC, type, str, typing.Callable[[], SchemaABC]], key_field: str, *,
+                 list_type=list, dump_condition=None, **kwargs):
+        super().__init__(fields.Nested(nested), **kwargs)
+        self.dump_condition = dump_condition
+        self.list_type = list_type
+        only_field = self.inner.schema.fields[key_field]
+        self.key_field_name = only_field.data_key or key_field
+        self.inner: fields.Nested
+
+    def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
+        if value is None:
+            return None
+        if self.dump_condition:
+            value = [v for v in value if self.dump_condition(v)]
+        value = super()._serialize(value, attr, obj, **kwargs)
+        result = {}
+        for each in value:
+            key = each[self.key_field_name]
+            del each[self.key_field_name]
+            result[key] = each
+        return result
+
+    def _deserialize(self, value: typing.Any, attr: str, data: typing.Optional[typing.Mapping[str, typing.Any]],
+                     **kwargs) -> typing.List[typing.Any]:
+        if not isinstance(value, Mapping):
+            raise self.make_error("invalid")
+
+        value_list = []
+        for k, v in value.items():
+            if not isinstance(v, typing.MutableMapping):
+                raise self.make_error("invalid")
+            v[self.key_field_name] = k
+            value_list.append(v)
+
+        result = super()._deserialize(value_list, attr, data, **kwargs)
+
+        if self.list_type != list:
+            return self.list_type(result)
+        else:
+            return result
 
 
 class EnumField(fields.Field):

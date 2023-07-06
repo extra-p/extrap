@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -487,11 +487,12 @@ def SAFE_RETURN_None(x):
 
 
 class _Mappings:
-    region_mapping = {}
-    region_set = {}
-    callpath_mapping = {}
-    parameter_mapping = {}
-    coordinate_mapping = {}
+    def __init__(self):
+        self.region_mapping = {}
+        self.region_set = {}
+        self.callpath_mapping = {}
+        self.parameter_mapping = {}
+        self.coordinate_mapping = {}
 
 
 class Extrap3ExperimentFileReader(FileReader):

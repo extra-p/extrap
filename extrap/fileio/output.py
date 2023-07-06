@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,6 +13,10 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
 from extrap.util.exceptions import RecoverableError
 
+"""
+This module provides the custom output formatting for the experiments. 
+You can find the explanation of the placeholders in docs/output-formatting.md
+"""
 
 class OutputFormatError(RecoverableError):
     NAME = 'Output Format Error'

@@ -15,6 +15,9 @@ from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import HypothesisSchema, ConstantHypothesis
 from extrap.entities.measurement import Measure, Measurement
 from extrap.fileio.experiment_io import read_experiment
+from extrap.entities.functions import ConstantFunction
+from extrap.entities.hypotheses import ConstantHypothesisSchema, ConstantHypothesis
+from extrap.entities.measurement import Measurement
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.abstract_modeler import ModelerSchema
 from extrap.modelers.model_generator import ModelGenerator
@@ -131,6 +134,15 @@ class TestSerialization(unittest.TestCase):
         exp_data['measurements']['compute']['time'][0]['TEST_ATTRIBUTE'] = 'TEST_ATTRIBUTE'
         reconstructed: Experiment = schema.load(exp_data)
         self.assertFalse(hasattr(reconstructed, 'TEST_ATTRIBUTE'))
+
+    def test_serialize_constant_hypothesis(self):
+        schema = ConstantHypothesisSchema()
+        hyp = ConstantHypothesis(ConstantFunction(12.0), False)
+        hyp.compute_cost(
+            [Measurement(Coordinate(1), None, None, [11.9]), Measurement(Coordinate(2), None, None, [11.9])])
+        hyp_data = schema.dump(hyp)
+        reconstructed: ConstantHypothesis = schema.load(hyp_data)
+        self.assertEqual(hyp, reconstructed)
 
 
 class TestCompatibilityWithMeanMedianOnlyVersions(unittest.TestCase):

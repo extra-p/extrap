@@ -1,10 +1,12 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import warnings
+
 from typing import Sequence
 
 import numpy
@@ -173,6 +175,7 @@ class ConstantHypothesis(Hypothesis):
         """
         Computes the cost of the constant hypothesis using all data points.
         """
+        self._AR2 = 1  # TODO: should this be calculated?
         smape = 0
         for actual in Measurement.select_measure(measurements, self._use_measure):
             predicted = self.function.constant_coefficient
@@ -388,10 +391,14 @@ class MultiParameterHypothesis(Hypothesis):
         A = numpy.array(a_list)
         B = numpy.fromiter(Measurement.select_measure(measurements, self._use_measure), float, len(measurements))
         try:
-            coeffs, _, _, _ = numpy.linalg.lstsq(A, B, None)
+            coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
+            if rank < A.shape[1]: # if rcond is to big the rank of A collapses and the coefficients are wrong
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1) # retry with rcond = machine precision
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
-            coeffs, _, _, _ = numpy.linalg.lstsq(A, B, None)
+            coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
+            if rank < A.shape[1]:
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)
 
         # print("Coefficients:"+str(coeffs))
         # logging.debug("Coefficients:"+str(coeffs[0]))

@@ -1,10 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import copy
 import json
 import tempfile
 import unittest
@@ -12,8 +13,11 @@ import warnings
 import zipfile
 
 import extrap
+from extrap.entities.callpath import Callpath
+from extrap.entities.metric import Metric
 from extrap.fileio.experiment_io import write_experiment, read_experiment, EXPERIMENT_DATA_FILE
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
+from extrap.fileio.io_helper import create_call_tree
 from extrap.modelers.model_generator import ModelGenerator
 
 
@@ -90,7 +94,10 @@ class TestVersionCheck(unittest.TestCase):
             write_experiment(self.experiment, tmp)
             with zipfile.ZipFile(tmp, 'r', allowZip64=True) as file:
                 data = json.loads(file.read(EXPERIMENT_DATA_FILE).decode("utf-8"))
-                data[extrap.__title__] = data[extrap.__title__] + '-alpha1'
+                if '-' in data[extrap.__title__]:
+                    data[extrap.__title__] = data[extrap.__title__] + '1'
+                else:
+                    data[extrap.__title__] = data[extrap.__title__] + '-alpha1'
             with zipfile.ZipFile(tmp, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as file:
                 file.writestr(EXPERIMENT_DATA_FILE, json.dumps(data))
             with warnings.catch_warnings(record=True) as record:
@@ -120,6 +127,57 @@ class TestVersionCheck(unittest.TestCase):
             with zipfile.ZipFile(tmp, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as file:
                 file.writestr(EXPERIMENT_DATA_FILE, json.dumps(data))
             self.assertWarnsRegex(UserWarning, 'newer version', read_experiment, tmp)
+
+
+class TestLoadSaveTaggedCallpaths(unittest.TestCase):
+    @classmethod
+    def setUp(cls) -> None:
+        cls.experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
+        ModelGenerator(cls.experiment).model_all()
+
+    def test_load_save_tagged_callpaths(self):
+        experiment = copy.deepcopy(self.experiment)
+        experiment.callpaths[0].tags['test_tag'] = 'test_value'
+        with tempfile.TemporaryFile() as tmp:
+            write_experiment(experiment, tmp)
+            loaded_exp = read_experiment(tmp)
+        self.assertIn('test_tag', loaded_exp.callpaths[0].tags)
+        self.assertEqual('test_value', loaded_exp.callpaths[0].tags['test_tag'])
+
+    def test_load_save_tagged_callpaths_no_measurement(self):
+        experiment = copy.deepcopy(self.experiment)
+        experiment.callpaths.append(Callpath('TEST', test_tag='test_value'))
+        with tempfile.TemporaryFile() as tmp:
+            write_experiment(experiment, tmp)
+            loaded_exp = read_experiment(tmp)
+        self.assertEqual(3, len(loaded_exp.callpaths))
+        self.assertIn(Callpath('TEST'), loaded_exp.callpaths)
+        idx = loaded_exp.callpaths.index(Callpath('TEST'))
+        self.assertEqual('TEST', loaded_exp.callpaths[idx].name)
+        self.assertIn('test_tag', loaded_exp.callpaths[idx].tags)
+        self.assertEqual('test_value', loaded_exp.callpaths[idx].tags['test_tag'])
+        self.assertNotIn((Callpath('TEST'), Metric('time')), loaded_exp.measurements)
+
+    def test_load_save_tagged_callpaths_no_measurement2(self):
+        experiment = copy.deepcopy(self.experiment)
+        experiment.callpaths[0].name = "TEST->merge"
+        experiment.callpaths[1].name = "TEST->sort"
+        experiment.callpaths.append(Callpath('TEST', test_tag='test_value'))
+        experiment.callpaths.append(Callpath('merge'))
+        experiment.callpaths.append(Callpath('sort'))
+        experiment.call_tree = create_call_tree(experiment.callpaths)
+        with tempfile.TemporaryFile() as tmp:
+            write_experiment(experiment, tmp)
+            loaded_exp = read_experiment(tmp)
+        self.assertEqual(5, len(loaded_exp.callpaths))
+        self.assertIn(Callpath('TEST'), loaded_exp.callpaths)
+        idx = loaded_exp.callpaths.index(Callpath('TEST'))
+        self.assertEqual('TEST', loaded_exp.callpaths[idx].name)
+        self.assertIn('test_tag', loaded_exp.callpaths[idx].tags)
+        self.assertEqual('test_value', loaded_exp.callpaths[idx].tags['test_tag'])
+        self.assertEqual(loaded_exp.callpaths[idx], loaded_exp.call_tree.find_child('TEST').path)
+        self.assertTrue(loaded_exp.callpaths[idx].exactly_equal(loaded_exp.call_tree.find_child('TEST').path))
+        self.assertNotIn((Callpath('TEST'), Metric('time')), loaded_exp.measurements)
 
 
 if __name__ == '__main__':

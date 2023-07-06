@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -52,8 +52,12 @@ class ExperimentReader(FileReader):
 
 
 def write_experiment(experiment, path, progress_bar=DUMMY_PROGRESS):
-    progress_bar.total += 3
+    progress_bar.update(0)
+    progress_bar.total += 4
     schema = ExperimentSchema()
+    progress_bar.total += sum((len(m.models) for m in experiment.modelers), 0)
+    schema.set_progress_bar(progress_bar)
+    progress_bar.update()
     try:
         with ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as file:
             progress_bar.update()

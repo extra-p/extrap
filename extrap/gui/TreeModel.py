@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,7 +12,7 @@ from enum import Enum, auto
 from typing import Optional, TYPE_CHECKING, List, Callable
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
@@ -44,6 +44,9 @@ class TreeModel(QAbstractItemModel):
         self.endRemoveRows()
 
     def _node_from_index(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
+
         if index.isValid():
             return index.internalPointer()
         else:
@@ -51,18 +54,26 @@ class TreeModel(QAbstractItemModel):
 
     # noinspection PyMethodMayBeStatic
     def getValue(self, index) -> Optional[calltree.Node]:
+        if not self.checkIndex(index):
+            raise IndexError()
+
         item = index.internalPointer()
         if item is None:
             return None
         return item.data()
 
     def data(self, index, role=None):
+
+        if not self.checkIndex(index, QAbstractItemModel.CheckIndexOption.IndexIsValid):
+            raise IndexError()
+
         if not index.isValid():
             return None
 
         getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
+        get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not getDecorationBoxes:
+        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
         call_tree_node = index.internalPointer().data()
@@ -92,16 +103,21 @@ class TreeModel(QAbstractItemModel):
             '''
 
             # added for two-parameter models here
-            parameters = self.selector_widget.getParameterValues()
-            formula = model.hypothesis.function
-            previous = numpy.seterr(divide='ignore', invalid='ignore')
-            value = formula.evaluate(parameters)
-            numpy.seterr(**previous)
+            value = self.get_comparison_value(model)
 
             # convert value to relative value between 0 and 1
             relativeValue = max(0.0, (value - self.main_widget.min_value) / delta)
 
             return self.main_widget.color_widget.getColor(relativeValue)
+
+        if get_tooltip_annotations:
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return "\n".join(ann.title(parameters=parameters,
+                                           parameter_values=parameter_values)
+                                 for ann in model.annotations)
+            return None
 
         if index.column() == 0:
             if self.selector_widget.show_parameters.isChecked():
@@ -109,8 +125,12 @@ class TreeModel(QAbstractItemModel):
             else:
                 return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
-            # if len(model.getComments()) > 0:
-            #     return len(model.getComments())
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return [ann.icon(parameters=parameters,
+                                 parameter_values=parameter_values)
+                        for ann in model.annotations]
             return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
@@ -133,6 +153,14 @@ class TreeModel(QAbstractItemModel):
         elif index.column() == 7:
             return formatNumber(str(model.hypothesis.RE))
         return None
+
+    def get_comparison_value(self, model):
+        parameters = self.selector_widget.getParameterValues()
+        formula = model.hypothesis.function
+        previous = numpy.seterr(divide='ignore', invalid='ignore')
+        value = formula.evaluate(parameters)
+        numpy.seterr(**previous)
+        return value
 
     def remove_method_parameters(self, name):
         def _replace_braces(name, lb, rb):
@@ -192,6 +220,8 @@ class TreeModel(QAbstractItemModel):
         #     self.valuesChanged()
 
     def flags(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
         if not index.isValid():
             return Qt.NoItemFlags
 
@@ -209,7 +239,7 @@ class TreeModel(QAbstractItemModel):
                 # Severity has logical column index 1, but is visually swapped by swapSections(0,1)
                 return "Severity"
             elif section == 2:
-                return "Comments"
+                return "Annotations"
             elif section == 3:
                 return "Value"
             elif section == 4:
@@ -223,16 +253,17 @@ class TreeModel(QAbstractItemModel):
 
         return None
 
-    def index(self, row, column, parent=None):
-
-        # print("In tree model # of rows",self.rowCount(parent))
-        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
-            return QModelIndex()
-
+    def index(self, row, column, parent=QModelIndex()):
+        if not self.checkIndex(parent):
+            raise IndexError()
         if not parent.isValid():
             parentItem = self.root_item
         else:
             parentItem = parent.internalPointer()
+
+        # print("In tree model # of rows",self.rowCount(parent))
+        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
+            return QModelIndex()
 
         childItem = parentItem.child(row)
         if childItem:
@@ -241,14 +272,16 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def parent(self, index=...):
+        self.checkIndex(index, QAbstractItemModel.CheckIndexOption.DoNotUseParent)
+
         if not index.isValid():
             return QModelIndex()
 
         childItem: TreeItem = index.internalPointer()
-        if childItem is None:
+        if childItem == self.root_item:
             return QModelIndex()
-        parentItem = childItem.parent()
 
+        parentItem = childItem.parent()
         if parentItem == self.root_item:
             return QModelIndex()
         try:
@@ -257,8 +290,13 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def rowCount(self, parent=None):
-        if parent.column() > 0:
-            return 0
+        if parent is None:
+            parent = QModelIndex()
+
+        # if parent.column() > 0:
+        #     return 0
+        if not self.checkIndex(parent):
+            raise IndexError()
 
         if not parent.isValid():
             parentItem = self.root_item
@@ -270,9 +308,8 @@ class TreeModel(QAbstractItemModel):
     def valuesChanged(self):
         if not self.main_widget.getExperiment():
             return
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(len(self.main_widget.getExperiment().callpaths) - 1,
-                                               self.columnCount(None) - 1))
+
+        self.dataChanged.emit(QModelIndex(), QModelIndex())  # The whole tree changed its values
 
 
 class TreeItem(object):
@@ -301,47 +338,75 @@ class TreeItem(object):
 
 
 class TreeItemFilterProvider:
-    class ConstructionType(Enum):
+    """
+    Performs the translation from the actual calltree to the displayed calltree.
+    Allows filtering of the calltree by passing in filter conditions.
+    """
+
+    class DisplayType(Enum):
         INCLUDE = auto()
-        EXCLUDE = auto()
+        EXCLUDE = auto()  # unused
         FLAT = auto()
         COMPACT = auto()
+        DEFAULT = INCLUDE
 
     def __init__(self, model: TreeModel):
         self._model = model
-        self._view_type = self.ConstructionType.INCLUDE
+        self._view_type = self.DisplayType.DEFAULT
         self._call_tree: Optional[CallTree] = None
         self.conditions = {}
         self._type_builder = {
-            self.ConstructionType.INCLUDE: self._construct_tree_include_child_if_mismatch,
-            self.ConstructionType.COMPACT: self._construct_tree_skip_if_mismatch_and_at_most_one_child,
-            self.ConstructionType.FLAT: self._construct_tree_flat
+            self.DisplayType.INCLUDE: self._construct_tree_include_child_if_mismatch,
+            self.DisplayType.COMPACT: self._construct_tree_skip_if_mismatch_and_at_most_one_child,
+            self.DisplayType.FLAT: self._construct_tree_flat
         }
         self._tree_builder = self._type_builder[self._view_type]
 
-    def put_condition(self, id, condition: Callable[[Node], bool], inherited_from_child=True):
-        self.conditions[id] = condition  # , inherited_from_child, {})
+    def put_condition(self, id, condition: Callable[[Node], bool]):
+        """
+        Adds a filter condition to the list of conditions and updates the tree.
+
+        :param id: The id under witch the condition is stored.
+        You can use it with remove_condition to remove the condition from the filter.
+        :param condition: A condition is a function which gets supplied a node and
+        returns whether this node should be visible or not.
+        The condition must return True, if the node should be visible.
+        If the condition returns False the node is not shown.
+        """
+        self.conditions[id] = condition
         self.update_tree()
 
     def remove_condition(self, id):
+        """
+        Removes a filter condition from the list of conditions and updates the tree.
+
+        :param id: The id of the condition te be removed.
+        """
         if id in self.conditions:
             del self.conditions[id]
+            self.update_tree()
 
     @property
-    def view_type(self):
+    def display_type(self):
+        """Gets the DisplayType for the TreeView"""
         return self._view_type
 
-    @view_type.setter
-    def view_type(self, val):
+    @display_type.setter
+    def display_type(self, val):
+        """Sets the DisplayType for the TreeView. Switches between NORMAL, COMPACT, FLAT etc."""
         self._view_type = val
         self._tree_builder = self._type_builder[val]
         self.update_tree()
 
     def setup(self, call_tree: CallTree):
+        """ Performs the setup for the passed call tree and creates the first display tree."""
         self._call_tree = call_tree
         self.update_tree()
 
     def update_tree(self):
+        """ Updates the tree.
+        Performs dry run first, and updates only if changes occurred.
+        """
         if not self._call_tree:
             return
         root = TreeItem(self._call_tree)

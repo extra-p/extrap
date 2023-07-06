@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -21,6 +21,7 @@ from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
 from extrap.modelers.modeler_options import modeler_options
 from extrap.util import deprecation
+from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import Schema, TupleKeyDict
 
@@ -68,7 +69,7 @@ class ModelGenerator:
                 raise ValueError(
                     f'Modeler with name "{modeler}" does not exist.')
         elif modeler is NotImplemented:
-            return NotImplemented
+            result_modeler = NotImplemented
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
                 # single-parameter model generator init here...
@@ -108,7 +109,7 @@ class ModelGenerator:
 class ModelGeneratorSchema(Schema):
     name = fields.Str()
     _modeler = fields.Nested(ModelerSchema, data_key='modeler')
-    models = TupleKeyDict(keys=(fields.Nested(CallpathSchema), fields.Nested(MetricSchema)),
+    models = TupleKeyDict(keys=(fields.Pluck(CallpathSchema, 'name'), fields.Pluck(MetricSchema, 'name')),
                           values=fields.Nested(ModelSchema, exclude=('callpath', 'metric')))
 
     def create_object(self):

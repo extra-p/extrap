@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -177,7 +177,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         return candidate_list
 
-    def create_model(self, measurements: Sequence[Measurement]):
+    def create_model(self, measurements: Sequence[Measurement]) -> Model:
         """
         Create a multi-parameter model using the given measurements.
         """
@@ -216,7 +216,6 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             terms = function.compound_terms
             if len(terms) > 0:
                 compound_term = terms[0]
-                compound_term.coefficient = 1
                 compound_term_pairs.append((i, compound_term))
 
         # see if the function is constant
@@ -227,19 +226,40 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             constant_hypothesis.compute_cost(measurements)
             return Model(constant_hypothesis)
 
-        # in case is only one parameter, make a single parameter function
+        # in case of only one parameter, make a multi parameter function with only one parameter
         elif len(compound_term_pairs) == 1:
             param, compound_term = compound_term_pairs[0]
-            multi_parameter_function = MultiParameterFunction()
+            # reset coefficient of compound term
+            coefficient = compound_term.coefficient
+            compound_term.reset_coefficients()
+
+            # multi parameter function with reused coefficients
             multi_parameter_term = MultiParameterTerm(compound_term_pairs[0])
-            multi_parameter_term.coefficient = compound_term.coefficient
-            multi_parameter_function.add_compound_term(multi_parameter_term)
-            # constant_coefficient = functions[param].get_constant_coefficient()
-            # multi_parameter_function.set_constant_coefficient(constant_coefficient)
+            multi_parameter_term.coefficient = coefficient
+            compound_term.reset_coefficients()
+            multi_parameter_function = MultiParameterFunction(multi_parameter_term)
+            multi_parameter_function.constant_coefficient = functions[param].constant_coefficient
             multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_measure)
-            multi_parameter_hypothesis.compute_coefficients(measurements)
             multi_parameter_hypothesis.compute_cost(measurements)
+
+            # multi parameter function with newly calculated coefficients using all values
+            recomputed_coeffficients_hypothesis = MultiParameterHypothesis(
+                MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_measure)
+            recomputed_coeffficients_hypothesis.compute_coefficients(measurements)
+            recomputed_coeffficients_hypothesis.compute_cost(measurements)
+
+            # select best
+            if self.compare_with_RSS and recomputed_coeffficients_hypothesis.RSS < multi_parameter_hypothesis.RSS:
+                multi_parameter_hypothesis = recomputed_coeffficients_hypothesis
+            elif recomputed_coeffficients_hypothesis.SMAPE < multi_parameter_hypothesis.SMAPE:
+                multi_parameter_hypothesis = recomputed_coeffficients_hypothesis
+
+            multi_parameter_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
             return Model(multi_parameter_hypothesis)
+
+        # reset coefficients of compound terms
+        for p, compound_term in compound_term_pairs:
+            compound_term.reset_coefficients()
 
         # create multiplicative multi parameter term
         mult = MultiParameterTerm(*compound_term_pairs)

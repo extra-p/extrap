@@ -1,13 +1,13 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from typing import Mapping, Dict
 
-from PySide2.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from extrap.entities.calltree import Node
 
@@ -23,7 +23,14 @@ class ModelColorMap(Mapping[Node, str]):
         self.dict_callpath_color: Dict[Node, str] = {}
 
     def __getitem__(self, k):
-        return self.dict_callpath_color[k]
+        if k not in self.dict_callpath_color:
+            next_index = len(self)
+            if next_index < len(self.color_list):
+                self.dict_callpath_color[k] = self.color_list[next_index]
+            else:
+                self.dict_callpath_color[k] = self._create_color(next_index, len(self.color_list))
+        else:
+            return self.dict_callpath_color[k]
 
     def __len__(self):
         return len(self.dict_callpath_color)
@@ -42,9 +49,13 @@ class ModelColorMap(Mapping[Node, str]):
             if current_index < size_of_color_list:
                 self.dict_callpath_color[callpath] = self.color_list[current_index]
             else:
-                offset = (current_index - size_of_color_list) % size_of_color_list
-                multiple = int(current_index / size_of_color_list)
-                color = self.color_list[offset]
-                newcolor = QColor(color).lighter(100 + 20 * multiple).name()
+                newcolor = self._create_color(current_index, size_of_color_list)
                 self.dict_callpath_color[callpath] = newcolor
             current_index = current_index + 1
+
+    def _create_color(self, current_index, size_of_color_list):
+        offset = (current_index - size_of_color_list) % size_of_color_list
+        multiple = int(current_index / size_of_color_list)
+        color = self.color_list[offset]
+        newcolor = QColor(color).lighter(100 + 20 * multiple).name()
+        return newcolor

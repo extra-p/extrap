@@ -1,11 +1,12 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 import contextlib
+import re
 import unittest
 from io import StringIO
 
@@ -25,26 +26,34 @@ class TestOutput(unittest.TestCase):
 
     def test_print(self):
         self.assertOutputRegex(
-            "time,\s+merge\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
-            "time,\s+sort\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
-            "flops,\s+merge\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s+"
-            "flops,\s+sort\:\s+Errors\:\s+312.47721968273464,\s+0.07834117602360756\s*",
+            r"time,\s+merge\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s+"
+            r"time,\s+sort\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s+"
+            r"flops,\s+merge\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s+"
+            r"flops,\s+sort\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s*",
             extrap.main,
             ['--print', '{metric}, {callpath}: Errors: {rss}, {re}', '--text', 'data/text/two_parameter_3.txt'])
 
         self.assertOutputRegex(
-            "\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
-            "\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
-            "\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
-            "\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
-            "\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02",
+            r"\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            r"\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            r"\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            r"\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            r"\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02",
             extrap.main, ['--print', '{measurements}', '--text', 'data/text/one_parameter_1.txt'])
 
         self.assertOutputRegex(
-            "time,\s+merge\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
-            "time,\s+sort\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
-            "flops,\s+merge\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
-            "flops,\s+sort\:\s+312.47721968273464\/6.644640850120412\s+1\.3742083125359215\s+\+\s+6\.698080399955742\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.04384165529030426\s+\*\s+x\^\(3\/2\)\s+\*\s+log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)",
+            r"time,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            r"time,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            r"flops,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            r"flops,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)",
             extrap.main,
             ['--print', '{metric}, {callpath}: {rss}/{smape} {model}', '--text', 'data/text/two_parameter_3.txt'])
 
@@ -129,7 +138,8 @@ class TestOutput(unittest.TestCase):
                                     "5.00E+01'2.00E+00 | 5.00E+01'3.00E+00 | 5.00E+01'4.00E+00 | 5.00E+01'5.00E+00 | "
                                     "6.00E+01'1.00E+00 | 6.00E+01'2.00E+00 | 6.00E+01'3.00E+00 | 6.00E+01'4.00E+00 | "
                                     "6.00E+01'5.00E+00\n")
-        self.assertEqual(truth, output.format_output(self.exp, r"{callpath},{metric}:{points:format:'{point:sep:'\''}'}"))
+        self.assertEqual(truth,
+                         output.format_output(self.exp, r"{callpath},{metric}:{points:format:'{point:sep:'\''}'}"))
 
     def test_point_formatting6(self):
         truth = self._make_expected(
@@ -139,17 +149,18 @@ class TestOutput(unittest.TestCase):
             "x50.000;y3.000 | x50.000;y4.000 | x50.000;y5.000 | x60.000;y1.000 | x60.000;y2.000 | x60.000;y3.000 | "
             "x60.000;y4.000 | x60.000;y5.000\n")
         self.assertEqual(truth, output.format_output(self.exp, "{callpath},{metric}:{points:format:'{point:sep:';';"
-                                                            "format:'{parameter}{coordinate:.3f}'}'}"))
+                                                               "format:'{parameter}{coordinate:.3f}'}'}"))
 
     def test_point_formatting7(self):
-        truth = "(2.00E+01, 1.00E+00) | (2.00E+01, 2.00E+00) | (2.00E+01, 3.00E+00) | (2.00E+01, 4.00E+00) | " \
-                "(2.00E+01, 5.00E+00) | (3.00E+01, 1.00E+00) | (3.00E+01, 2.00E+00) | (3.00E+01, 3.00E+00) | " \
-                "(3.00E+01, 4.00E+00) | (3.00E+01, 5.00E+00) | (4.00E+01, 1.00E+00) | (4.00E+01, 2.00E+00) | " \
-                "(4.00E+01, 3.00E+00) | (4.00E+01, 4.00E+00) | (4.00E+01, 5.00E+00) | (5.00E+01, 1.00E+00) | " \
-                "(5.00E+01, 2.00E+00) | (5.00E+01, 3.00E+00) | (5.00E+01, 4.00E+00) | (5.00E+01, 5.00E+00) | " \
-                "(6.00E+01, 1.00E+00) | (6.00E+01, 2.00E+00) | (6.00E+01, 3.00E+00) | (6.00E+01, 4.00E+00) | " \
-                "(6.00E+01, 5.00E+00)\n\t312.47721968273464:x y\n" * 4
-        self.assertEqual(truth, output.format_output(self.exp, "{points}\n\t{rss}:{parameters}"))
+        truth = (re.escape(
+            "(2.00E+01, 1.00E+00) | (2.00E+01, 2.00E+00) | (2.00E+01, 3.00E+00) | (2.00E+01, 4.00E+00) | "
+            "(2.00E+01, 5.00E+00) | (3.00E+01, 1.00E+00) | (3.00E+01, 2.00E+00) | (3.00E+01, 3.00E+00) | "
+            "(3.00E+01, 4.00E+00) | (3.00E+01, 5.00E+00) | (4.00E+01, 1.00E+00) | (4.00E+01, 2.00E+00) | "
+            "(4.00E+01, 3.00E+00) | (4.00E+01, 4.00E+00) | (4.00E+01, 5.00E+00) | (5.00E+01, 1.00E+00) | "
+            "(5.00E+01, 2.00E+00) | (5.00E+01, 3.00E+00) | (5.00E+01, 4.00E+00) | (5.00E+01, 5.00E+00) | "
+            "(6.00E+01, 1.00E+00) | (6.00E+01, 2.00E+00) | (6.00E+01, 3.00E+00) | (6.00E+01, 4.00E+00) | ") +
+                 r"\(6\.00E\+01,\ 5\.00E\+00\)\n\t312\.47721968\d{6}:x\ y\n") * 4
+        self.assertRegex(output.format_output(self.exp, "{points}\n\t{rss}:{parameters}"), truth)
 
     def test_measurement_formatting(self):
         truth = self._make_expected(
@@ -162,10 +173,10 @@ class TestOutput(unittest.TestCase):
             "x60.000;y5.000:1.66E+03\n")
 
         self.assertEqual(truth, output.format_output(self.exp,
-                                                  "{callpath},{metric}:"
-                                                  "{measurements: format: "
-                                                  "'{point:sep:';'; format:'{parameter}{coordinate:.3f}'}:{mean:.2E}';"
-                                                  "sep:'|'}"))
+                                                     "{callpath},{metric}:"
+                                                     "{measurements: format: "
+                                                     "'{point:sep:';'; format:'{parameter}{coordinate:.3f}'}:{mean:.2E}';"
+                                                     "sep:'|'}"))
 
     def test_brace_escape_parameter(self):
         self.assertEqual("{p}x {p}y\n{p}x {p}y\n{p}x {p}y\n{p}x {p}y\n",
@@ -174,12 +185,13 @@ class TestOutput(unittest.TestCase):
                          output.format_output(self.exp, "{parameters: format:'{{{parameter}}}'}"))
 
     def test_brace_escape_measurement(self):
-        self.assertEqual(
-            ("{9.99E-01}{q},{8.11E+01}{q},{1.28E+02}{q},{1.62E+02}{q},{1.87E+02}{q},{1.00E+00}{q},{1.82E+02}{q},"
-             "{2.84E+02}{q},{3.64E+02}{q},{4.21E+02}{q},{9.89E-01}{q},{3.18E+02}{q},{5.09E+02}{q},{6.43E+02}{q},"
-             "{7.44E+02}{q},{1.00E+00}{q},{5.02E+02}{q},{7.95E+02}{q},{1.00E+03}{q},{1.17E+03}{q},{1.00E+00}{q},"
-             "{7.26E+02}{q},{1.14E+03}{q},{1.44E+03}{q},{1.66E+03}{q} 312.47721968273464\n") * 4,
-            output.format_output(self.exp, "{measurements: sep:',' format:'{{{mean:.2E}}}{{q}}'} {rss}"))
+        self.assertRegex(
+            output.format_output(self.exp, "{measurements: sep:',' format:'{{{mean:.2E}}}{{q}}'} {rss}"),
+            (re.escape(
+                "{9.99E-01}{q},{8.11E+01}{q},{1.28E+02}{q},{1.62E+02}{q},{1.87E+02}{q},{1.00E+00}{q},{1.82E+02}{q},"
+                "{2.84E+02}{q},{3.64E+02}{q},{4.21E+02}{q},{9.89E-01}{q},{3.18E+02}{q},{5.09E+02}{q},{6.43E+02}{q},"
+                "{7.44E+02}{q},{1.00E+00}{q},{5.02E+02}{q},{7.95E+02}{q},{1.00E+03}{q},{1.17E+03}{q},{1.00E+00}{q},"
+                "{7.26E+02}{q},{1.14E+03}{q},{1.44E+03}{q},{1.66E+03}{q} ") + r"312\.47721968\d{6}\n") * 4)
         self.assertEqual(
             ("{9.99E-01},{8.11E+01},{1.28E+02},{1.62E+02},{1.87E+02},{1.00E+00},{1.82E+02},{2.84E+02},{3.64E+02},"
              "{4.21E+02},{9.89E-01},{3.18E+02},{5.09E+02},{6.43E+02},{7.44E+02},{1.00E+00},{5.02E+02},{7.95E+02},"
@@ -218,7 +230,7 @@ class TestOutput(unittest.TestCase):
             "{{x{50.0}},{y{2.0}}}p | {{x{50.0}},{y{3.0}}}p | {{x{50.0}},{y{4.0}}}p | {{x{50.0}},{y{5.0}}}p | "
             "{{x{60.0}},{y{1.0}}}p | {{x{60.0}},{y{2.0}}}p | {{x{60.0}},{y{3.0}}}p | {{x{60.0}},{y{4.0}}}p | "
             "{{x{60.0}},{y{5.0}}}p\n" * 4, output.format_output(self.exp,
-                                                             "{points: format: '{{{point:sep:',' ; format:'{{{parameter}{{{coordinate}}}}}'}}}p'}"))
+                                                                "{points: format: '{{{point:sep:',' ; format:'{{{parameter}{{{coordinate}}}}}'}}}p'}"))
 
     def test_error_message(self):
         self.assertRaises(OutputFormatError,

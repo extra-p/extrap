@@ -1,19 +1,19 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from collections import defaultdict
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.parameter import Parameter
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
-from extrap.gui.GraphWidget import GraphWidget
+from extrap.gui.GraphWidget import GraphWidget, GraphWrapperWidget
 from extrap.gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
 from extrap.gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
 from extrap.gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
@@ -66,6 +66,7 @@ class AxisSelection(QWidget):
         self.combo_box.setMinimumHeight(20)
         for i in range(0, len(parameters)):
             self.combo_box.addItem(parameters[i].name)
+        self.combo_box.setEnabled(self.index < len(parameters))
         self.combo_box.setCurrentIndex(self.index)
 
         self.combo_box.currentIndexChanged.connect(self.parameter_selected)
@@ -107,11 +108,8 @@ class AxisSelection(QWidget):
         """
         self.maxChanged()
         display = self.manager.display_widget.currentWidget()
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
-            display.update()
+        display.drawGraph()
+        display.update()
 
     def maxChanged(self):
         """ This function updates the max value without redrawing the graph.
@@ -199,7 +197,7 @@ class ValueSelection(QWidget):
         self.value_edit = QDoubleSpinBox()
         self.value_edit.setMinimum(MIN_PARAM_VALUE)
         self.value_edit.setMaximum(MAX_PARAM_VALUE)
-        self.value_edit.setValue(self.default_values[self.parameter])
+        self.value_edit.setValue(float(self.default_values[self.parameter]))
         self.value_edit.setMinimumHeight(25)
         self.value_edit.valueChanged.connect(self._value_changed)
 
@@ -224,11 +222,8 @@ class ValueSelection(QWidget):
             return
         self.default_values[self.parameter] = value
         display = self.manager.display_widget.currentWidget()
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
-            display.update()
+        display.drawGraph()
+        display.update()
 
     def setName(self, parameter):
         self.parameter = parameter.id
@@ -283,6 +278,7 @@ class DataDisplayManager(QWidget):
         self.display_widget.setTabsClosable(True)
         self.display_widget.tabCloseRequested.connect(self.closeTab)
         grid.addWidget(self.display_widget, 0, 0)
+
         # loading this tab as default view (Line graph)
         self.reloadTabs([0])
 
@@ -316,7 +312,7 @@ class DataDisplayManager(QWidget):
             labelText = "Line graph"
             tabStatus = self.is_tab_already_opened(labelText)
             if tabStatus is False:
-                graph = GraphWidget(self.main_widget, self)
+                graph = GraphWrapperWidget(self.main_widget, self)
                 self.display_widget.addTab(graph, labelText)
 
         graph_widgets = {
@@ -394,10 +390,9 @@ class DataDisplayManager(QWidget):
         display = self.display_widget.currentWidget()
         if not display:
             return
-        if isinstance(display, GraphWidget):
-            display.update()
-        else:
-            display.drawGraph()
+        display.drawGraph()
+
+
 
 
 class GraphLimitsWidget(QWidget):

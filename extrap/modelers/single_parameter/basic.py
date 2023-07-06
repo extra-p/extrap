@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -96,6 +96,11 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         if self.are_measurements_log_capable(measurements, self.allow_negative_exponents):
             return self.hypotheses_building_blocks
+
+        if any(t.term_type == "logarithm" for compound_term in self.hypotheses_building_blocks
+               for t in compound_term.simple_terms):
+            warnings.warn("Your measurements contained a point value below one, therefore, "
+                          "Extra-P does not use logarithmic terms for modeling.")
 
         return [compound_term
                 for compound_term in self.hypotheses_building_blocks
