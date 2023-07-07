@@ -30,6 +30,7 @@ from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
+from extrap.util.deprecation import deprecated
 
 
 @dataclass
@@ -60,6 +61,10 @@ class CubeFileReader2(AbstractDirectoryReader):
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
         # set scaling flag for experiment
+
+        if isinstance(self.scaling_type, str):
+            self.scaling_type = ScalingType.from_str(self.scaling_type)
+
         if self.scaling_type in ScalingType:
             experiment.scaling = self.scaling_type
 
