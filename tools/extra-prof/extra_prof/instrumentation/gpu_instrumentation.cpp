@@ -2,6 +2,7 @@
 
 #include "gpu_instrumentation.h"
 #include "commons.h"
+#include "start_end.h"
 
 #include "gpu_hwc_instrumentation.h"
 #include "gpu_runtime_instrumentation.h"
@@ -65,6 +66,11 @@ namespace cupti {
                         callpath_correlation.emplace(rtdata->correlationId,
                                                      CorrelationData{call_tree_node, this_thread});
                     }
+                } else if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020) {
+                    extra_prof::finalize_on_exit();
+                    throw std::runtime_error(
+                        "EXTRA PROF: Error: Device reset is not supported, because it destroys the profiling "
+                        "environment. Your measurements up to this point are saved in the profile.");
                 } else {
                     if (cbid_is_memset) {
                         // Cuda memset also launches a kernel, which needs to be registered for correctly assigning GPU

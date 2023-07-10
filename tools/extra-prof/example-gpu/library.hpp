@@ -3,5 +3,6 @@
 
 void dynamicHello();
 void runDynamicKernel();
+void custom_exit(int argc);
 
 #endif

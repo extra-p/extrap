@@ -4,6 +4,7 @@
 #include "calltree_node.h"
 #include "concurrent_array_list.h"
 #include "events.h"
+#include <cuda.h>
 #include <cupti.h>
 #include <deque>
 #include <thread>
@@ -43,6 +44,8 @@ namespace gpu {
 
         // Number of ranges recorded by HWC profiler per session
         uint32_t NUM_HWC_RANGES = 256;
+
+        CUcontext currentContext;
 
         containers::string chipName;
         std::vector<containers::string> metricNames;

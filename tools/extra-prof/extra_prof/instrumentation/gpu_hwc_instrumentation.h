@@ -20,12 +20,7 @@ CUpti_ProfilerReplayMode get_replay_mode() {
 }
 
 void start_profiling_phase() {
-    int currentDeviceIdx;
-    GPU_CALL(cudaGetDevice(&currentDeviceIdx));
-    CUdevice currentDevice;
-    GPU_LL_CALL(cuDeviceGet(&currentDevice, currentDeviceIdx));
-    CUcontext currentContext;
-    GPU_LL_CALL(cuDevicePrimaryCtxRetain(&currentContext, currentDevice));
+    CUcontext currentContext = GLOBALS.gpu.currentContext;
     // std::cout << "Res: " << result << " Context: " << currentContext << std::endl;
 
     size_t numRanges = GLOBALS.gpu.NUM_HWC_RANGES;
@@ -69,8 +64,19 @@ void start_profiling_phase() {
 }
 
 void end_profiling_phase() {
+    CUcontext currentContext = GLOBALS.gpu.currentContext;
+
+    cudaError_t _status = cudaGetLastError();
+    if (_status != cudaSuccess) {
+        const char *errstr = cudaGetErrorString(_status);
+        fprintf(stderr, "%s:%d: error: failed with error %s.\n", __FILE__, __LINE__, errstr);
+        exit(-1);
+    }
+    GPU_LL_CALL(cuCtxSynchronize());
     CUpti_Profiler_DisableProfiling_Params disableProfilingParams = {
-        CUpti_Profiler_DisableProfiling_Params_STRUCT_SIZE};
+        CUpti_Profiler_DisableProfiling_Params_STRUCT_SIZE,
+        .ctx = currentContext,
+    };
     CUPTI_CALL(cuptiProfilerDisableProfiling(&disableProfilingParams));
 
     if (get_replay_mode() != CUPTI_KernelReplay) {
@@ -262,6 +268,10 @@ void init() {
               << GLOBALS.gpu.counterDataImage.size() + GLOBALS.gpu.counterDataScratchBuffer.size() +
                      GLOBALS.gpu.counterDataImagePrefix.size() + GLOBALS.gpu.configImage.size()
               << std::endl;
+
+    CUdevice currentDevice;
+    GPU_LL_CALL(cuDeviceGet(&currentDevice, currentDeviceIdx));
+    GPU_LL_CALL(cuDevicePrimaryCtxRetain(&GLOBALS.gpu.currentContext, currentDevice));
 
     start_profiling_phase();
 }

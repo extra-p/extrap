@@ -57,5 +57,7 @@ int main(int argc, char *argv[]) {
     cout << "Took: "
          << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count()
          << endl;
+    custom_exit(argc);
+    cout << "Past custom exit" << endl;
     return 0;
 }
