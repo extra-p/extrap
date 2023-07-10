@@ -191,7 +191,14 @@ class SmartMatcher(AbstractMatcher):
 
     @staticmethod
     def _normalize_name(name):
-        result: str = replace_method_parameters(name, "").replace('()', '')
+        result = name
+
+        braces_idx = result.rfind(')')
+        if braces_idx >= 0:
+            result = result[:braces_idx + 1]
+
+        result: str = replace_method_parameters(result, "").replace('()', '')
+
         space_idx = result.find(' ')
         if space_idx >= 0:
             result = result[space_idx + 1:]

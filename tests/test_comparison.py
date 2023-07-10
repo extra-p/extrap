@@ -401,3 +401,7 @@ class TestComparison(TestCase):
         self.assertEqual("test", SmartMatcher._normalize_name("T<int> test(int, char*, void)"))
         self.assertEqual("test", SmartMatcher._normalize_name("T<int(int)> test(int, char*, void)"))
         self.assertEqual("test", SmartMatcher._normalize_name("int* test(T<int>, char*, void)"))
+        self.assertEqual("test", SmartMatcher._normalize_name(
+            "void test(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
+        self.assertEqual("FluxSpectrumAllVolumes::writeToFile", SmartMatcher._normalize_name(
+            " FluxSpectrumAllVolumes::writeToFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
