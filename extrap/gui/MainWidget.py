@@ -30,8 +30,8 @@ from extrap.fileio.file_reader import all_readers, FileReader
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CoordinateTransformation import CoordinateTransformationDialog
-from extrap.gui.CubeFileReader import ImportSettingsDialog
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
+from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
@@ -397,7 +397,7 @@ class MainWidget(QMainWindow):
             def _import_function():
                 def _process_with_settings(path):
                     reader: FileReader = reader_class()
-                    dialog = ImportSettingsDialog(self, reader, path)
+                    dialog = ImportOptionsDialog(self, reader, path)
                     dialog.setWindowFlag(Qt.WindowType.Sheet, True)
                     dialog.setModal(True)
                     # do not use open, wait for loading to finish

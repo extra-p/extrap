@@ -14,6 +14,16 @@ from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
 
+def format_progress_time_for_gui(pbar: ProgressBar):
+    format_dict = pbar.format_dict
+    elapsed_str = pbar.format_interval(format_dict['elapsed'])
+    rate = format_dict['rate']
+    remaining = (pbar.total - pbar.n) / rate if rate and pbar.total else 0
+    remaining_str = pbar.format_interval(remaining) if rate else '??:??'
+    time_str = f'Time remaining:\t{remaining_str}\nTime elapsed:\t{elapsed_str}'
+    return time_str
+
+
 class ProgressWindow(ProgressBar):
     def __init__(self, parent, title, **kwargs):
         super().__init__(total=0, desc=title, **kwargs, gui=True)
@@ -60,14 +70,7 @@ class ProgressWindow(ProgressBar):
         super(ProgressWindow, self).update(n)
 
     def display(self, msg=None, pos=None):
-        format_dict = self.format_dict
-        elapsed_str = self.format_interval(format_dict['elapsed'])
-
-        rate = format_dict['rate']
-        remaining = (self.total - self.n) / rate if rate and self.total else 0
-        remaining_str = self.format_interval(remaining) if rate else '??:??'
-
-        time_str = f'Time remaining:\t{remaining_str}\nTime elapsed:\t{elapsed_str}'
+        time_str = format_progress_time_for_gui(self)
 
         if not self._cancel_event.is_set():
             self.dialog.setMaximum(self.total)
