@@ -15,16 +15,17 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader import FileReader
+from extrap.gui.components.ProgressWindow import format_progress_time_for_gui
 from extrap.gui.components.dynamic_options import DynamicOptionsWidget
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import CancelProcessError
 from extrap.util.progress_bar import ProgressBar
 
 
-class ImportSettingsDialog(QDialog):
+class ImportOptionsDialog(QDialog):
 
     def __init__(self, parent, reader: FileReader | DynamicOptions, path):
-        super(ImportSettingsDialog, self).__init__(parent)
+        super(ImportOptionsDialog, self).__init__(parent)
 
         self.experiment = None
         self.scaling_choice = None
@@ -35,33 +36,23 @@ class ImportSettingsDialog(QDialog):
         self.init_UI()
 
     def init_UI(self):
-        self.setWindowTitle("Import Settings")
+        self.setWindowTitle("Import Options")
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
-        main_layout = QFormLayout(self)
         layout = QFormLayout(self)
-        self.controls_layout = layout
 
         self.options_widget = DynamicOptionsWidget(self, self.reader)
         self.options_widget.layout().setContentsMargins(0, 0, 0, 0)
         layout.addRow(self.options_widget)
 
-        # self.scaling_choice = QComboBox(self)
-        # for st in ScalingType:
-        #     self.scaling_choice.addItem(str(st), st)
-        #
-        # layout.addRow("Scaling type:", self.scaling_choice)
-        #
-        # self._demangle_cb = QCheckBox("Demangle function names", self)
-        # self._demangle_cb.setChecked(True)
-        # layout.addRow(self._demangle_cb)
+        self.progress_label = QLabel('\nTime remaining:\t??:??\nTime elapsed:\t00:00')
+        self.progress_label.hide()
+        layout.addRow(self.progress_label)
 
         self.progress_indicator = QProgressBar(self)
         self.progress_indicator.hide()
         layout.addRow(self.progress_indicator)
-
-        main_layout.addRow(layout)
 
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
                                           QDialogButtonBox.StandardButton.Cancel |
@@ -70,10 +61,10 @@ class ImportSettingsDialog(QDialog):
         self.buttonBox.rejected.connect(self.reject)
         self.buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(
             self.options_widget.reset_options)
-        main_layout.addRow(self.buttonBox)
+        layout.addRow(self.buttonBox)
 
         # self.change_param_num()
-        self.setLayout(main_layout)
+        self.setLayout(layout)
 
     @Slot()
     def reject(self):
@@ -113,14 +104,21 @@ class ImportSettingsDialog(QDialog):
             super().accept()
 
     def _show_progressbar(self):
-        self.controls_layout.setEnabled(False)
+        self.options_widget.setEnabled(False)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
         self.buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults).setEnabled(False)
+        self.progress_label.show()
         self.progress_indicator.show()
 
     def _display_progress(self, pbar: ProgressBar, msg=None, pos=None):
         if self._cancel_event.is_set():
             raise CancelProcessError()
+        time_str = format_progress_time_for_gui(pbar)
+
+        if pbar.postfix:
+            self.progress_label.setText('\n' + time_str + '\n' + pbar.postfix)
+        else:
+            self.progress_label.setText('\n' + time_str)
         self.progress_indicator.setMaximum(pbar.total)
         self.progress_indicator.setValue(pbar.n)
         QApplication.processEvents()
