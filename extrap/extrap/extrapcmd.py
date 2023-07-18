@@ -16,7 +16,7 @@ import extrap
 from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.fileio.io_helper import save_output
 from extrap.fileio.output import format_output
 from extrap.modelers import multi_parameter
@@ -132,10 +132,15 @@ def main(args=None, prog=None):
             for reader in chain(all_readers.values(), [ExperimentReader]):
                 if getattr(arguments, reader.NAME):
                     file_reader = reader()
+
+                    if issubclass(reader, AbstractScalingConversionReader):
+                        file_reader.scaling_type = arguments.scaling_type
+                    elif arguments.scaling_type != ScalingType.WEAK:
+                        warnings.warn(
+                            f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
+
                     if reader.LOADS_FROM_DIRECTORY:
                         if os.path.isdir(arguments.path):
-                            if reader is CubeFileReader2:
-                                file_reader.scaling_type = arguments.scaling_type
                             experiment = file_reader.read_experiment(arguments.path, pbar)
                         else:
                             logging.error("The given path is not valid. It must point to a directory.")
