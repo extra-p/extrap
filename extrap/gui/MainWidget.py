@@ -13,7 +13,7 @@ from enum import Enum
 from functools import partial
 from numbers import Number
 from pathlib import Path
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Type
 from urllib.error import URLError, HTTPError
 
 from PySide6.QtCore import *  # @UnusedWildImport
@@ -26,12 +26,12 @@ from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.model import Model
 from extrap.fileio.experiment_io import read_experiment, write_experiment
-from extrap.fileio.file_reader import all_readers
+from extrap.fileio.file_reader import all_readers, FileReader
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.AggregationWidget import AggregationWidget
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CoordinateTransformation import CoordinateTransformationDialog
-from extrap.gui.CubeFileReader import CubeFileReader
+from extrap.gui.CubeFileReader import ImportSettingsDialog
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
@@ -44,6 +44,7 @@ from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.deprecation import deprecated
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.event import Event
 
 _SETTING_CHECK_FOR_UPDATES_ON_STARTUP = 'check_for_updates_on_startup'
@@ -156,14 +157,7 @@ class MainWidget(QMainWindow):
 
         file_imports = []
         for reader in all_readers.values():
-            if reader is CubeFileReader2:
-                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
-            else:
-                file_mode = QFileDialog.FileMode.Directory if reader.LOADS_FROM_DIRECTORY else None
-                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION,
-                                     self._make_import_func(reader.DESCRIPTION, reader().read_experiment,
-                                                            filter=reader.FILTER, file_mode=file_mode,
-                                                            model=reader.GENERATE_MODELS_AFTER_LOAD)))
+            file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self._make_import_func(reader)))
 
         open_experiment_action = QAction('&Open experiment', self)
         open_experiment_action.setStatusTip('Opens experiment file')
@@ -438,8 +432,32 @@ class MainWidget(QMainWindow):
             model_generator.model_all(pbar)
         self.set_experiment(experiment, file_name)
 
-    def _make_import_func(self, title, reader_func, **kwargs):
-        return partial(self.import_file, reader_func, title, **kwargs)
+    def _make_import_func(self, reader_class: Type[FileReader]):
+        file_mode = QFileDialog.FileMode.Directory if reader_class.LOADS_FROM_DIRECTORY else None
+        title = reader_class.DESCRIPTION if reader_class.DESCRIPTION else 'Open File'
+
+        if issubclass(reader_class, DynamicOptions):
+            def _import_function():
+                def _process_with_settings(path):
+                    reader: FileReader = reader_class()
+                    dialog = ImportSettingsDialog(self, reader, path)
+                    dialog.setWindowFlag(Qt.WindowType.Sheet, True)
+                    dialog.setModal(True)
+                    # do not use open, wait for loading to finish
+                    if dialog.exec() == QDialog.DialogCode.Accepted:
+                        if reader_class.GENERATE_MODELS_AFTER_LOAD:
+                            self.model_experiment(dialog.experiment, path)
+                        else:
+                            self.set_experiment(dialog.experiment, path)
+
+                file_dialog.show(self, _process_with_settings, title, filter=reader_class.FILTER, file_mode=file_mode)
+
+            return _import_function
+
+        else:
+            reader: FileReader = reader_class()
+            return partial(self.import_file, reader.read_experiment, title, filter=reader_class.FILTER,
+                           model=reader_class.GENERATE_MODELS_AFTER_LOAD, file_mode=file_mode)
 
     def import_file(self, reader_func, title='Open File', filter='', model=True, progress_text="Loading File",
                     file_name=None, file_mode=None):
@@ -480,16 +498,9 @@ class MainWidget(QMainWindow):
 
         file_dialog.showSave(self, _save, 'Save Experiment', filter='Experiments (*.extra-p)')
 
+    @deprecated
     def open_cube_file(self):
-        def _process_cube(dir_name):
-            dialog = CubeFileReader(self, dir_name)
-            dialog.setWindowFlag(Qt.WindowType.Sheet, True)
-            dialog.setModal(True)
-            dialog.exec()  # do not use open, wait for loading to finish
-            if dialog.valid:
-                self.model_experiment(dialog.experiment, dir_name)
-
-        file_dialog.showOpenDirectory(self, _process_cube, 'Select a Directory with a Set of CUBE Files')
+        self._make_import_func(CubeFileReader2)()
 
     def updateMinMaxValue(self):
         if not self.experiment_change:

@@ -20,6 +20,9 @@ class TestExtraProfFileLoader(unittest.TestCase):
     def test_load_basic3(self):
         experiment = ExtraProf2Reader().read_experiment('data/extra_prof/test3/')
 
+    def test_load_basic4(self):
+        experiment = ExtraProf2Reader().read_experiment('data/extra_prof/test4/')
+
 
 if __name__ == '__main__':
     unittest.main()

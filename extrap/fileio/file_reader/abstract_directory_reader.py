@@ -13,7 +13,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List, Tuple
 
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader import FileReader
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -67,7 +69,7 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
                 parameter_dict[n].add(v)
             parameter_values.append(parameter_value)
 
-            if len(parameter_names)>=1 and parameter_names[0]=="scorep-":
+            if len(parameter_names) >= 1 and parameter_names[0] == "scorep-":
                 warnings.warn(
                     f"Could not detect any parameter names in the name of folder: {folder_name}. "
                     f"Please follow the usage guide under "
@@ -85,3 +87,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
         parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
 
         return parameter_names, parameter_values
+
+
+class AbstractScalingConversionReader(FileReader, DynamicOptions, abc.ABC):
+    scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK, ScalingType,
+                                                   range={i.name.lower(): i.value for i in ScalingType})

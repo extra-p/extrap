@@ -30,7 +30,9 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
-from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
+    AbstractScalingConversionReader
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 CUBE_CALLSITE_ID_KEY = 'callsite id'
@@ -43,16 +45,15 @@ class SmallKernelFilter:
     callpath: Optional[Callpath] = None
 
 
-class CubeFileReader2(AbstractDirectoryReader):
+class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
     NAME = "cube"
     GUI_ACTION = "Open set of &CUBE files"
     DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
     CMD_ARGUMENT = "--cube"
     LOADS_FROM_DIRECTORY = True
 
-    scaling_type: ScalingType = ScalingType.WEAK
     selected_metrics = None
-    demangle_names = True
+    demangle_names = DynamicOptions.add(True, bool)
     use_inclusive_measurements = False
     small_kernel_filter: SmallKernelFilter = None
 
@@ -78,13 +79,6 @@ class CubeFileReader2(AbstractDirectoryReader):
         # determine non-constant parameters and add them to experiment
         for p in parameter_names:
             experiment.add_parameter(Parameter(p))
-
-        # check number of parameters, if > 1 use weak scaling instead
-        # since sum values for strong scaling does not work for more than 1 parameter
-        if self.scaling_type == ScalingType.STRONG and len(experiment.parameters) > 1:
-            warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
-            scaling_type = ScalingType.WEAK
-            experiment.scaling = scaling_type
 
         progress_bar.step("Reading cube files")
 

@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
 
 import argparse
 import logging
@@ -21,7 +22,7 @@ import extrap
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader import all_readers
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -97,8 +98,11 @@ def load_from_command(arguments, window):
         for reader in all_readers.values():
             if getattr(arguments, reader.NAME):
                 file_reader = reader()
-                if file_reader is CubeFileReader2:
+                if issubclass(reader, AbstractScalingConversionReader):
                     file_reader.scaling_type = arguments.scaling_type
+                elif arguments.scaling_type != ScalingType.WEAK:
+                    warnings.warn(
+                        f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
                 window.import_file(file_reader.read_experiment, file_name=arguments.path,
                                    model=file_reader.GENERATE_MODELS_AFTER_LOAD)
                 return

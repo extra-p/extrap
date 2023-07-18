@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import numbers
+import warnings
 from collections import defaultdict
 from enum import Enum, Flag
 from itertools import groupby
@@ -26,8 +27,11 @@ from extrap.entities.experiment import Experiment
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
-from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
+    AbstractScalingConversionReader
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import ProgressBar, DUMMY_PROGRESS
 
@@ -66,12 +70,16 @@ class _ExtraProfInputNode(Node):
         self.gpu_metrics: dict[Metric, list[numbers.Number]] = defaultdict(list)
 
 
-class ExtraProf2Reader(AbstractDirectoryReader):
+class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader):
     NAME = "extra-prof"
     GUI_ACTION = "Open set of &Extra-Prof files"
     DESCRIPTION = "Load a set of ExtraProf files and generate a new experiment"
     CMD_ARGUMENT = "--extra-prof"
     LOADS_FROM_DIRECTORY = True
+
+    scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK_PARALLEL, ScalingType,
+                                                   range={'weak_parallel': ScalingType.WEAK_PARALLEL,
+                                                          'strong': ScalingType.STRONG})
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         if isinstance(path, list):
@@ -84,6 +92,10 @@ class ExtraProf2Reader(AbstractDirectoryReader):
         parameter_names, parameter_values = self._determine_parameters_from_paths(files, progress_bar)
         for p in parameter_names:
             experiment.add_parameter(Parameter(p))
+
+        if self.scaling_type not in [ScalingType.WEAK_PARALLEL, ScalingType.STRONG]:
+            warnings.warn(f"Unsupported scaling type: {self.scaling_type}. Using weak_parallel instead.")
+            self.scaling_type = ScalingType.WEAK_PARALLEL
 
         call_tree = None
 
@@ -186,15 +198,14 @@ class ExtraProf2Reader(AbstractDirectoryReader):
             pass
         return name.replace('->', '- >')
 
-    @classmethod
-    def _read_calltree(cls, call_tree, ep_root_node, num_values, gpu_metrics, i):
+    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, i):
         def _read_calltree_node(parent_node: _ExtraProfInputNode, ep_node):
             name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
             n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
             if n_type == CallTreeNodeType.KERNEL_LAUNCH:
-                name = "LAUNCH " + cls._demangle_name(name)
+                name = "LAUNCH " + self._demangle_name(name)
             elif n_type == CallTreeNodeType.KERNEL:
-                name = "GPU " + cls._demangle_name(name)
+                name = "GPU " + self._demangle_name(name)
             elif n_type == CallTreeNodeType.MEMSET or n_type == CallTreeNodeType.MEMCPY:
                 name = "GPU " + name
             node = parent_node.find_child(name)
@@ -210,15 +221,22 @@ class ExtraProf2Reader(AbstractDirectoryReader):
                     else:
                         node.disable_exclusive_conversion = True
                 else:
-                    cls._assign_tags(node, n_type, flags)
+                    self._assign_tags(node, n_type, flags)
                 parent_node.add_child_node(node)
             if gpu_metrics and len(ep_node) >= 8:
                 for metric, value in zip(gpu_metrics, ep_node[7]):
                     node.gpu_metrics[metric].append(value)
             elif isinstance(m_duration, list):
-                node.duration[i] = np.mean(m_duration)
-                node.bytes[i] = np.mean(m_bytes)
-                node.visits[i] = np.mean(m_visits)
+                if self.scaling_type == ScalingType.WEAK_PARALLEL:
+                    node.duration[i] = np.mean(m_duration)
+                    node.bytes[i] = np.mean(m_bytes)
+                    node.visits[i] = np.mean(m_visits)
+                elif self.scaling_type == ScalingType.STRONG:
+                    node.duration[i] = np.sum(m_duration)
+                    node.bytes[i] = np.sum(m_bytes)
+                    node.visits[i] = np.sum(m_visits)
+                else:
+                    raise ValueError(f"Unsupported scaling type: {self.scaling_type}")
             else:
                 node.duration[i] = m_duration
                 node.bytes[i] = m_bytes
