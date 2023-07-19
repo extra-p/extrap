@@ -6,19 +6,13 @@
 # See the LICENSE file in the base directory for details.
 from __future__ import annotations
 
-from functools import partial
-from threading import Event
-
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.fileio import io_helper
 from extrap.fileio.file_reader import FileReader
-from extrap.gui.components.ProgressWindow import format_progress_time_for_gui
+from extrap.gui.components.ProgressWindow import ProgressWidget
 from extrap.gui.components.dynamic_options import DynamicOptionsWidget
 from extrap.util.dynamic_options import DynamicOptions
-from extrap.util.exceptions import CancelProcessError
-from extrap.util.progress_bar import ProgressBar
 
 
 class ImportOptionsDialog(QDialog):
@@ -30,7 +24,6 @@ class ImportOptionsDialog(QDialog):
         self.scaling_choice = None
         self.reader = reader
         self.path = path
-        self._cancel_event = Event()
 
         self.init_UI()
 
@@ -39,19 +32,17 @@ class ImportOptionsDialog(QDialog):
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
+
         layout = QFormLayout(self)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
 
         self.options_widget = DynamicOptionsWidget(self, self.reader)
         self.options_widget.layout().setContentsMargins(0, 0, 0, 0)
         layout.addRow(self.options_widget)
 
-        self.progress_label = QLabel('\nTime remaining:\t??:??\nTime elapsed:\t00:00')
-        self.progress_label.hide()
-        layout.addRow(self.progress_label)
-
-        self.progress_indicator = QProgressBar(self)
-        self.progress_indicator.hide()
-        layout.addRow(self.progress_indicator)
+        self.progress_widget = ProgressWidget(self)
+        self.progress_widget.setContentsMargins(0, 10, 0, 0)
+        layout.addRow(self.progress_widget)
 
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
                                           QDialogButtonBox.StandardButton.Cancel |
@@ -67,16 +58,13 @@ class ImportOptionsDialog(QDialog):
 
     @Slot()
     def reject(self):
-        self._cancel_event.set()
+        self.progress_widget.cancel()
         super().reject()
 
     @Slot()
     def accept(self):
-
-        with ProgressBar(total=0, gui=True) as pbar:
-            self._show_progressbar()
-            pbar.display = partial(self._display_progress, pbar)
-            pbar.sp = None
+        with self.progress_widget.get_progress_bar() as pbar:
+            self._on_show_progressbar()
 
             # read the experiment from the files
             try:
@@ -97,22 +85,7 @@ class ImportOptionsDialog(QDialog):
                 return
             super().accept()
 
-    def _show_progressbar(self):
+    def _on_show_progressbar(self):
         self.options_widget.setEnabled(False)
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
         self.buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults).setEnabled(False)
-        self.progress_label.show()
-        self.progress_indicator.show()
-
-    def _display_progress(self, pbar: ProgressBar, msg=None, pos=None):
-        if self._cancel_event.is_set():
-            raise CancelProcessError()
-        time_str = format_progress_time_for_gui(pbar)
-
-        if pbar.postfix:
-            self.progress_label.setText('\n' + time_str + '\n' + pbar.postfix)
-        else:
-            self.progress_label.setText('\n' + time_str)
-        self.progress_indicator.setMaximum(pbar.total)
-        self.progress_indicator.setValue(pbar.n)
-        QApplication.processEvents()
