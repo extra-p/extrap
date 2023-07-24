@@ -61,10 +61,10 @@ class Measurement(CalculationElement):
             return True
         else:
             return self.coordinate == other.coordinate and \
-                   self.metric == other.metric and \
-                   self.callpath == other.callpath and \
-                   self.mean == other.mean and \
-                   self.median == other.median
+                self.metric == other.metric and \
+                self.callpath == other.callpath and \
+                self.mean == other.mean and \
+                self.median == other.median
 
     def __add__(self, other):
         if isinstance(other, Measurement):
@@ -89,26 +89,30 @@ class Measurement(CalculationElement):
         return (self * -1).__add__(other)
 
     def __mul__(self, other):
+        result = copy.copy(self)
+        result *= other
+        return result
+
+    def __imul__(self, other):
         if isinstance(other, Measurement):
             if self.coordinate != other.coordinate:
                 raise ValueError("Coordinate does not match while merging measurements.")
-            result = copy.copy(self)
-            result.median *= other.median
-            result.mean *= other.mean
-            result.minimum *= other.minimum
-            result.maximum *= other.maximum
+            self.median *= other.median
+            self.mean *= other.mean
+            self.minimum *= other.minimum
+            self.maximum *= other.maximum
             # Var(XY) = E(X²Y²) − (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
             self_var, other_var = self.std ** 2, other.std ** 2
             variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
-            result.std = np.sqrt(variance)
+            self.std = np.sqrt(variance)
         else:
-            result = copy.copy(self)
-            result.median *= other
-            result.mean *= other
-            result.minimum *= other
-            result.maximum *= other
-            result.std *= abs(other)
-        return result
+
+            self.median *= other
+            self.mean *= other
+            self.minimum *= other
+            self.maximum *= other
+            self.std *= abs(other)
+        return self
 
     def __rmul__(self, other):
         return self.__mul__(other)

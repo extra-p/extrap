@@ -7,13 +7,18 @@
 
 from __future__ import annotations
 
+import logging
 import warnings
-from typing import TYPE_CHECKING, List
+from dataclasses import dataclass, field
+from numbers import Number
+from typing import TYPE_CHECKING, List, Sequence, Tuple
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree
 from extrap.entities.calltree import Node
+from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
+from extrap.entities.metric import Metric
 from extrap.util.exceptions import InvalidExperimentError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -210,7 +215,7 @@ def create_call_tree(callpaths: List[Callpath], progress_bar=DUMMY_PROGRESS, pro
     """
     tree = CallTree()
     progress_bar.step('Creating calltree')
-    # create a two dimensional array of the callpath elements as strings
+    # create a two-dimensional array of the callpath elements as strings
     callpaths2 = []
     max_length = 0
 
@@ -268,8 +273,8 @@ def create_call_tree(callpaths: List[Callpath], progress_bar=DUMMY_PROGRESS, pro
 
 def find_root_node(callpath_elements, tree, loop_id):
     """
-    This method finds the root node of a element in the callpath tree.
-    Therefore, it searches iterativels through the tree.
+    This method finds the root node of an element in the callpath tree.
+    Therefore, it searches iteratively through the tree.
     """
     level = 0
     root_element_string = callpath_elements[level]
@@ -332,3 +337,108 @@ def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
         require(len(m) == length_coordinates or k[0].lookup_tag('validation__ignore__num_measurements', False),
                 f'The number of measurements ({len(m)}) for {k} does not match the number of coordinates '
                 f'({length_coordinates}).')
+
+
+@dataclass
+class _StrongScalingCheckData:
+    measurements: dict[Coordinate, Number] = field(default_factory=dict)
+    dimension_coordinates: list[list[Coordinate]] = field(default_factory=list)
+
+
+def check_for_strong_scaling(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
+    dimensions = len(experiment.parameters)
+
+    # sum per metric check direction after that
+
+    metric_list = experiment.metrics
+
+    if Metric('time') in metric_list:
+        logging.debug("Check for strong scaling: Found time metric - using only that.")
+        metric_list = [Metric('time')]
+
+    metric_measurement_agg: dict[Metric, _StrongScalingCheckData] = {m: _StrongScalingCheckData() for m in metric_list}
+
+    main_node = experiment.call_tree.childs[0]
+    for child in experiment.call_tree.childs:
+        if child.name.lower() == 'main':
+            main_node = child
+            break
+
+    # Group data for analysis
+    for metric in metric_measurement_agg:
+        if (main_node.path, metric) not in experiment.measurements:
+            continue
+
+        measurement_agg = metric_measurement_agg[metric]
+
+        if not measurement_agg.dimension_coordinates:
+            dimension_groups = [
+                {} for _ in range(dimensions)
+            ]
+            # group all measurements for each dimension, by their coordinates in the other dimensions
+            for m in experiment.measurements[main_node.path, metric]:
+                for p in range(dimensions):
+                    coordinate_p_ = m.coordinate.as_partial_tuple(p)
+                    groups_p_ = dimension_groups[p]
+                    if coordinate_p_ in groups_p_:
+                        groups_p_[coordinate_p_].append(m)
+                    else:
+                        groups_p_[coordinate_p_] = [m]
+
+            for d, dimension_group in enumerate(dimension_groups):
+                longest_group = max(dimension_group.values(), key=lambda x: (len(x), sum(e.mean for e in x)))
+                dimension_coordinates = []
+                for m in longest_group:
+                    dimension_coordinates.append(m.coordinate)
+                    measurement_agg.measurements[m.coordinate] = 0
+                dimension_coordinates.sort(key=lambda c: c[d])
+                assert len(measurement_agg.dimension_coordinates) == d
+                measurement_agg.dimension_coordinates.append(dimension_coordinates)
+
+    _aggregate_values_for_strong_scaling_check(metric_measurement_agg, experiment.call_tree, experiment.measurements,
+                                               progress_bar)
+
+    # Check for strong scaling in each selected metric
+    results = [0] * dimensions
+
+    for metric, check_data in metric_measurement_agg.items():
+        for d, coords in enumerate(check_data.dimension_coordinates):
+            if len(coords) <= 1:
+                continue
+            is_strong_scaling = True
+            prev_mean = check_data.measurements[coords[0]]
+            for c in coords[1:]:
+                if prev_mean <= check_data.measurements[c]:
+                    is_strong_scaling = False
+                    break
+                else:
+                    prev_mean = check_data.measurements[c]
+
+            if is_strong_scaling:
+                results[d] += 1
+
+    return results
+
+
+def _aggregate_values_for_strong_scaling_check(agg: dict[Metric, _StrongScalingCheckData], node: Node,
+                                               measurements: dict[Tuple[Callpath, Metric], Sequence[Measurement]],
+                                               progress_bar=DUMMY_PROGRESS):
+    callpath = node.path if node.path else Callpath.EMPTY
+
+    if callpath.lookup_tag('agg__usage_disabled', False):
+        return
+    if callpath.lookup_tag('agg__disabled', False):
+        return
+    if callpath.lookup_tag('agg__category') is not None:
+        return
+
+    for metric in agg:
+        if (callpath, metric) not in measurements:
+            continue
+        measurement_agg = agg[metric]
+        for m in measurements[callpath, metric]:
+            if m.coordinate in measurement_agg.measurements:
+                measurement_agg.measurements[m.coordinate] += m.mean
+
+    for child in node:
+        _aggregate_values_for_strong_scaling_check(agg, child, measurements, progress_bar)
