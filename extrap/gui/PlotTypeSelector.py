@@ -17,7 +17,6 @@ class PlotTypeSelector(QDialog):
 
     def init_UI(self):
         self.setWindowTitle("Select the Plots")
-        self.setFixedWidth(350)
 
         plotTypes = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots',
                      'Dominating models in a 3D Scatter plot', 'Max z as a single surface plot',
@@ -25,6 +24,7 @@ class PlotTypeSelector(QDialog):
                      'Selected models in interpolated contour plots', 'Measurement points']
 
         layout = QVBoxLayout()
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
 
         self.checkBoxes = []
         for plotType in plotTypes:

@@ -539,6 +539,7 @@ class MainWidget(QMainWindow):
         about_dialog = QDialog(self)
         about_dialog.setWindowTitle("About " + extrap.__title__)
         layout = QGridLayout()
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         layout.setSpacing(4)
         layout.setColumnStretch(0, 0)
         layout.setColumnStretch(1, 0)

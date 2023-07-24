@@ -8,7 +8,7 @@
 import dataclasses
 
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox
+from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout
 
 
 @dataclasses.dataclass
@@ -28,6 +28,7 @@ class PlotFormattingDialog(QDialog):
         # init UI
         self.setWindowTitle("Plot Formatting Options")
         layout = QFormLayout()
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         self._font_family_selector = QFontComboBox()
         self._font_family_selector.setCurrentFont(QFont(self._options.font_family))
         layout.addRow("Font family", self._font_family_selector)
