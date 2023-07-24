@@ -103,7 +103,7 @@ def load_from_command(arguments, window):
                     warnings.warn(
                         f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
                 window.import_file(file_reader.read_experiment, file_name=arguments.path,
-                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD)
+                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD, reader=file_reader)
                 return
         window.import_file(read_experiment, file_name=arguments.path, model=False)
 

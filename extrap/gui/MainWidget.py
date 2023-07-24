@@ -25,17 +25,20 @@ import extrap
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.model import Model
+from extrap.entities.scaling_type import ScalingType
+from extrap.fileio import io_helper
 from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.file_reader import all_readers, FileReader
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.ColorWidget import ColorWidget
-from extrap.gui.CoordinateTransformation import CoordinateTransformationDialog
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
 from extrap.gui.SelectorWidget import SelectorWidget
+from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
 from extrap.gui.components import file_dialog
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.model_color_map import ModelColorMap
@@ -403,7 +406,8 @@ class MainWidget(QMainWindow):
                     # do not use open, wait for loading to finish
                     if dialog.exec() == QDialog.DialogCode.Accepted:
                         if reader_class.GENERATE_MODELS_AFTER_LOAD:
-                            self.model_experiment(dialog.experiment, path)
+                            experiment = self._check_and_convert_scaling(dialog.experiment, path, reader)
+                            self.model_experiment(experiment, path)
                         else:
                             self.set_experiment(dialog.experiment, path)
 
@@ -414,15 +418,39 @@ class MainWidget(QMainWindow):
         else:
             reader: FileReader = reader_class()
             return partial(self.import_file, reader.read_experiment, title, filter=reader_class.FILTER,
-                           model=reader_class.GENERATE_MODELS_AFTER_LOAD, file_mode=file_mode)
+                           model=reader_class.GENERATE_MODELS_AFTER_LOAD, file_mode=file_mode, reader=reader)
+
+    def _check_and_convert_scaling(self, experiment, path, reader=None):
+        check_res = io_helper.check_for_strong_scaling(experiment)
+        if max(check_res) == 0:
+            return experiment
+        if isinstance(reader, AbstractScalingConversionReader):
+            if StrongScalingConversionDialog.pose_question_for_readers_with_scaling_conversion(
+                    self) == QMessageBox.StandardButton.Yes:
+                reader.scaling_type = ScalingType.STRONG
+                dialog = ImportOptionsDialog(self, reader, path)
+                dialog.setWindowFlag(Qt.WindowType.Sheet, True)
+                dialog.setModal(True)
+                dialog.open()
+                dialog.accept()
+
+                return dialog.experiment
+        else:
+            dialog = StrongScalingConversionDialog(experiment, check_res, self)
+            dialog.setWindowFlag(Qt.WindowType.Sheet, True)
+            dialog.setModal(True)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                return dialog.experiment
+        return experiment
 
     def import_file(self, reader_func, title='Open File', filter='', model=True, progress_text="Loading File",
-                    file_name=None, file_mode=None):
+                    file_name=None, file_mode=None, reader=None):
         def _import_file(file_name):
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
                 # call the modeler and create a function model
                 if model:
+                    experiment = self._check_and_convert_scaling(experiment, file_name, reader)
                     self.model_experiment(experiment, file_name)
                 else:
                     self.set_experiment(experiment, file_name)

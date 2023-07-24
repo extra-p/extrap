@@ -1,9 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
+import copy
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -62,6 +64,27 @@ class Measurement:
                    self.callpath == other.callpath and \
                    self.mean == other.mean and \
                    self.median == other.median
+
+    def __imul__(self, other):
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            self.median *= other.median
+            self.mean *= other.mean
+            self.minimum *= other.minimum
+            self.maximum *= other.maximum
+            # Var(XY) = E(X²Y²) − (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
+            self_var, other_var = self.std ** 2, other.std ** 2
+            variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
+            self.std = np.sqrt(variance)
+        else:
+
+            self.median *= other
+            self.mean *= other
+            self.minimum *= other
+            self.maximum *= other
+            self.std *= abs(other)
+        return self
 
 
 class MeasurementSchema(Schema):
