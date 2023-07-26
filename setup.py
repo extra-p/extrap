@@ -64,7 +64,7 @@ setup(
         "itanium_demangler~=1.0",
         "sympy~=1.8",
         "typing-extensions~=4.3.0",
-        "msgpack~=1.0.4",
+        "msgpack~=1.0.3",
         "scipy~=1.5",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'"
     ]
