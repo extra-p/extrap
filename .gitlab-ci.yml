@@ -79,8 +79,7 @@ create_tarball:
   tags: [ deep-sea, jacamar, shell ]
   cache: {}
   rules:
-    - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
-      when: never
+    - if: '$CI_SERVER_HOST == "gitlab.jsc.fz-juelich.de"'
   before_script:
     - echo "Project located at $CI_PROJECT_DIR" 
   script:
@@ -94,8 +93,7 @@ create_tarball:
 trigger-downstream:
   stage: staging
   rules:
-    - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
-      when: never
+    - if: '$CI_SERVER_HOST == "gitlab.jsc.fz-juelich.de"'
   variables:
     BUILD_INVERSE_DEPENDENCIES: 'TRUE'
     EB_FILE_CURRENT: "Extra-P-4.1.0-GCCcore-11.3.0-Python-3.10.4-current.eb"
