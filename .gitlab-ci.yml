@@ -99,8 +99,6 @@ trigger-downstream:
   variables:
     BUILD_INVERSE_DEPENDENCIES: 'TRUE'
     EB_FILE_CURRENT: "Extra-P-4.1.0-GCCcore-11.3.0-Python-3.10.4-current.eb"
-    GITLAB_PUSH_TOKEN: ''
-    GITLAB_PUSH_TOKEN_UPSTEAM: ''
   trigger: 
     project: deep-sea/wp3/software/easybuild-repository-deep-sea
     strategy: depend
