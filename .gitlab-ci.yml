@@ -5,6 +5,8 @@ default:
 stages:
   - test
   - run
+  - prep
+  - staging
   - release
 
 # Change pip's cache directory to be inside the project directory since we can
@@ -71,3 +73,25 @@ upload_release_job:
     - cd ..
     - mv "$CI_PROJECT_DIR" "$CI_PROJECT_NAME-$CI_COMMIT_TAG"
     - tar -czf "/p/project/deepsea/wp2/install_packages/extrap/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.gz" "$CI_PROJECT_NAME-$CI_COMMIT_TAG" 
+
+create_tarball:
+  stage: prep
+  script:
+    - echo  "Pipeline triggered by and commiting as ${GITLAB_USER_LOGIN}"
+    # fail the job if the commit message isn't somewhat fitting
+    - if [ "${CI_COMMIT_TITLE:0:2}" != "CI" ]; then exit 1 ; fi
+    - echo "Providing tarball on the DEEP system"
+    - mkdir -p -m 777 /p/project/deepsea/ci-stage-sources/e/Extra-P
+    - tar -cvz --exclude=.git* -f /p/project/deepsea/ci-stage-sources/e/Extra-P/extrap.tar.gz .
+
+trigger-downstream:
+  stage: staging
+  variables:
+    BUILD_INVERSE_DEPENDENCIES: 'FALSE'
+    EB_FILE_CURRENT: "Extra-P-4.1.0-GCCcore-11.3.0-Python-3.10.4-current.eb"
+    GITLAB_PUSH_TOKEN: ''
+    GITLAB_PUSH_TOKEN_UPSTEAM: ''
+  trigger: 
+    project: deep-sea/wp3/software/easybuild-repository-deep-sea
+    strategy: depend
+    branch: ci-2023-dev
