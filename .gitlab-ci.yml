@@ -79,13 +79,13 @@ create_tarball:
   tags: [ deep-sea, jacamar, shell ]
   cache: {}
   rules:
-    - if: '$CI_SERVER_HOST == "gitlab.jsc.fz-juelich.de"'
+    - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
+      when: never
+    - if: '"${CI_COMMIT_TITLE:0:2}" != "CI"'
   before_script:
     - echo "Project located at $CI_PROJECT_DIR" 
   script:
-    - echo  "Pipeline triggered by and commiting as ${GITLAB_USER_LOGIN}"
-    # fail the job if the commit message isn't somewhat fitting
-    - if [ "${CI_COMMIT_TITLE:0:2}" != "CI" ]; then exit 1 ; fi
+    - echo "Pipeline triggered by and commiting as ${GITLAB_USER_LOGIN}"
     - echo "Providing tarball on the DEEP system"
     - mkdir -p -m 777 /p/project/deepsea/ci-stage-sources/e/Extra-P
     - tar -cvz --exclude=.git* -f /p/project/deepsea/ci-stage-sources/e/Extra-P/extrap.tar.gz .
@@ -93,7 +93,9 @@ create_tarball:
 trigger-downstream:
   stage: staging
   rules:
-    - if: '$CI_SERVER_HOST == "gitlab.jsc.fz-juelich.de"'
+    - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
+      when: never
+    - if: '"${CI_COMMIT_TITLE:0:2}" != "CI"'
   variables:
     BUILD_INVERSE_DEPENDENCIES: 'TRUE'
     EB_FILE_CURRENT: "Extra-P-4.1.0-GCCcore-11.3.0-Python-3.10.4-current.eb"
