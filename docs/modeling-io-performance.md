@@ -52,7 +52,7 @@ Link to Extra-P Github: [https://github.com/extra-p/extrap](https://github.com/e
 **Tags** [ADMIRE](https://admire-eurohpc.eu/tag/admire/), [Application](https://admire-eurohpc.eu/tag/application/), [Extra-P](https://admire-eurohpc.eu/tag/extra-p/), [I/O](https://admire-eurohpc.eu/tag/i-o/), [Modeling](https://admire-eurohpc.eu/tag/modeling/)
 
 -----------
-<img src="images/modeling-io-performance/euroHPC_logo.jpeg"  style="max-height:200px"/>
+<img src="images/modeling-io-performance/euroHPC_logo.jpeg" height="200"/>
 
 This project has received funding from the European Union’s Horizon 2020 JTI-EuroHPC research and innovation programme, with grant Agreement number: 956748
 
