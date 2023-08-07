@@ -75,9 +75,10 @@ namespace cupti {
                     if (cbid_is_memset) {
                         // Cuda memset also launches a kernel, which needs to be registered for correctly assigning GPU
                         // HWC values.
-                        if (GLOBALS.gpu.onKernelLaunch != nullptr) {
-                            (*GLOBALS.gpu.onKernelLaunch)(rtdata);
-                        }
+                        // IMPORTANT: Apparently this is not true and created some issues with the correct mapping
+                        // between range and correlationId if (GLOBALS.gpu.onKernelLaunch != nullptr) {
+                        //     (*GLOBALS.gpu.onKernelLaunch)(rtdata);
+                        // }
                     }
                     auto [time, call_tree_node] = extra_prof::push_time(rtdata->functionName);
                     callpath_correlation.emplace(rtdata->correlationId, CorrelationData{call_tree_node, this_thread});

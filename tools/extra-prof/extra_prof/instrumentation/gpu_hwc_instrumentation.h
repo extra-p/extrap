@@ -133,6 +133,10 @@ void postprocess_counter_data() {
     NVPW_CALL(NVPW_CounterData_GetNumRanges(&getNumRangesParams));
 
     std::vector<const char *> metricNamePtrs;
+    if (getNumRangesParams.numRanges != GLOBALS.gpu.rangeCounter) {
+        throw std::runtime_error("Num ranges does not match the number of recorded correlation IDs!");
+    }
+
     for (size_t metricIndex = 0; metricIndex < metricNames.size(); ++metricIndex) {
         metricNamePtrs.push_back(metricNames[metricIndex].c_str());
     }
@@ -184,7 +188,10 @@ void postprocess_counter_data() {
             throw std::runtime_error(containers::string("Correlation data not found for id ") +
                                      containers::string::format("%u", correlationId));
         }
-        auto &gpu_metrics = correlationData->node->gpu_metrics;
+        auto *kernel_launch_node = correlationData->node;
+        auto *gpu_node = kernel_launch_node->findOrAddChild(kernel_launch_node->name(), CallTreeNodeType::KERNEL);
+
+        auto &gpu_metrics = gpu_node->gpu_metrics;
 
         gpu_metrics.resize(metricNamePtrs.size());
 
@@ -198,7 +205,8 @@ void onKernelLaunch(const CUpti_CallbackData *cbdata) {
     extra_prof_scope sc;
     std::lock_guard lg(GLOBALS.gpu.kernelLaunchMutex);
 
-    // TODO Save cbdata before calling synchronize, just in case.
+    // Save correlationId before calling synchronize, just in case.
+    auto correlationId = cbdata->correlationId;
     GPU_LL_CALL(cuCtxSynchronize());
     if (GLOBALS.gpu.rangeCounter >= GLOBALS.gpu.NUM_HWC_RANGES) {
         end_profiling_phase();
@@ -206,7 +214,7 @@ void onKernelLaunch(const CUpti_CallbackData *cbdata) {
         start_profiling_phase();
         GLOBALS.gpu.rangeCounter = 0;
     }
-    GLOBALS.gpu.rangeToCorrelationId[GLOBALS.gpu.rangeCounter] = cbdata->correlationId;
+    GLOBALS.gpu.rangeToCorrelationId[GLOBALS.gpu.rangeCounter] = correlationId;
     GLOBALS.gpu.rangeCounter++;
     GLOBALS.gpu.totalRangeCounter++;
 }
