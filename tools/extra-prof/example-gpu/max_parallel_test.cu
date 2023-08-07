@@ -1,6 +1,6 @@
 #include "tests.h"
 
-__global__ void test(double *a, size_t size, size_t repeat) {
+__global__ void test(double* a, size_t size, size_t repeat) {
     size_t start_idx = threadIdx.x + blockIdx.x * blockDim.x;
     /*/	return;
     } */
@@ -15,7 +15,7 @@ void test_max_parallel(int scaling) {
     PUSH_RANGE("main->test_max_par");
     std::vector<cudaStream_t> stream(5);
     std::vector<std::vector<double, pinned_allocator<double>>> data(stream.size());
-    std::vector<double *> gpu_data(stream.size());
+    std::vector<double*> gpu_data(stream.size());
     PUSH_RANGE("main->test_max_par->init_data");
     for (int i = 0; i < stream.size(); ++i) {
         cudaStreamCreate(&stream[i]);

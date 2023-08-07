@@ -10,24 +10,24 @@
 namespace extra_prof {
 template <typename T, size_t alignment_ = 0>
 class MemoryReusePool {
-    std::vector<T *> available_ressources;
+    std::vector<T*> available_ressources;
     size_t _size;
     size_t _num_buffers = 0;
 
-    T *alloc_aligned(size_t size) {
-        uint8_t *memory = reinterpret_cast<uint8_t *>(malloc(size * sizeof(T) + alignment_));
+    T* alloc_aligned(size_t size) {
+        uint8_t* memory = reinterpret_cast<uint8_t*>(malloc(size * sizeof(T) + alignment_));
 
         size_t offset = alignment_ - reinterpret_cast<size_t>(memory) % alignment_;
-        uint8_t *ret = memory + static_cast<uint8_t>(offset);
+        uint8_t* ret = memory + static_cast<uint8_t>(offset);
 
         // store the number of extra bytes in the byte before the returned pointer
         memory[offset - 1] = offset;
 
-        return reinterpret_cast<T *>(ret);
+        return reinterpret_cast<T*>(ret);
     }
 
-    void free_aligned(T *aligned_ptr) {
-        uint8_t *raw_ptr = static_cast<uint8_t *>(aligned_ptr);
+    void free_aligned(T* aligned_ptr) {
+        uint8_t* raw_ptr = static_cast<uint8_t*>(aligned_ptr);
         int offset = *(raw_ptr - 1);
         free(raw_ptr - offset);
     }
@@ -35,7 +35,7 @@ class MemoryReusePool {
 public:
     explicit MemoryReusePool(size_t size_) : _size(size_) {}
 
-    [[nodiscard]] T *get_mem() {
+    [[nodiscard]] T* get_mem() {
         if (available_ressources.empty()) {
             _num_buffers++;
             if (alignment_ == 0) {
@@ -50,20 +50,20 @@ public:
                 if (size == 0) {
                     size = 1;
                 }
-                T *ptr = alloc_aligned(size);
+                T* ptr = alloc_aligned(size);
                 for (size_t i = 0; i < size; i++) {
                     new (ptr + i) T;
                 }
                 return ptr;
             }
         } else {
-            T *memory = available_ressources.back();
+            T* memory = available_ressources.back();
             available_ressources.pop_back();
             return memory;
         }
     }
 
-    void return_mem(T *&mem) {
+    void return_mem(T*& mem) {
         available_ressources.push_back(mem);
         mem = nullptr;
     }
@@ -79,7 +79,7 @@ public:
     }
 
     ~MemoryReusePool() {
-        for (auto *mem : available_ressources) {
+        for (auto* mem : available_ressources) {
             if (alignment_ == 0) {
                 if (_size == 0) {
                     delete mem;
@@ -103,28 +103,28 @@ public:
 template <typename T, size_t block_size>
 class NonReusableBlockPool {
 
-    std::vector<T *> blocks;
+    std::vector<T*> blocks;
     size_t next_element = 0;
     std::mutex mutex;
 
 public:
     NonReusableBlockPool() {
         blocks.reserve(16);
-        blocks.push_back(reinterpret_cast<T *>(::operator new(block_size * sizeof(T))));
+        blocks.push_back(reinterpret_cast<T*>(::operator new(block_size * sizeof(T))));
     }
 
-    T *get_mem() {
+    T* get_mem() {
         std::lock_guard lg(mutex);
         if (block_size <= next_element) {
-            blocks.push_back(reinterpret_cast<T *>(::operator new(block_size * sizeof(T))));
+            blocks.push_back(reinterpret_cast<T*>(::operator new(block_size * sizeof(T))));
             next_element = 0;
         }
-        T *ptr = blocks.back() + next_element;
+        T* ptr = blocks.back() + next_element;
         next_element++;
         return ptr;
     }
     template <typename... _Args>
-    T *construct(_Args &&...__args) {
+    T* construct(_Args&&... __args) {
         return new (get_mem()) T(std::forward<_Args>(__args)...);
     }
 
@@ -147,4 +147,4 @@ public:
         ::operator delete(*last_block);
     }
 };
-}
+} // namespace extra_prof

@@ -9,14 +9,14 @@
 struct global {
     static int depth;
 };
-inline int PUSH_RANGE(const char *message) {
+inline int PUSH_RANGE(const char* message) {
     // std::cout << message << std::endl;
     return 0;
 }
 
 inline int POP_RANGE() { return 0; }
 
-void test(size_t i, int stream, std::vector<double> &a, size_t size, size_t repeat) {
+void test(size_t i, int stream, std::vector<double>& a, size_t size, size_t repeat) {
     for (size_t r = 0; r < repeat; ++r) {
         for (size_t i = 0; i < size; i++) {
             a[i] += 5;

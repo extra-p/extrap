@@ -14,7 +14,7 @@ extra_prof::containers::string extra_prof::NameRegistry::defaultExperimentDirNam
 namespace extra_prof {
 
 struct offset_pair {
-    const char *path;
+    const char* path;
     uintptr_t offset;
 };
 
@@ -26,8 +26,8 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
     std::vector<offset_pair> offsets;
 
     int result = dl_iterate_phdr(
-        [](struct dl_phdr_info *info, size_t size, void *data) -> int {
-            std::vector<offset_pair> *offsets_p = (std::vector<offset_pair> *)data;
+        [](struct dl_phdr_info* info, size_t size, void* data) -> int {
+            std::vector<offset_pair>* offsets_p = (std::vector<offset_pair>*)data;
             offsets_p->emplace_back(offset_pair{info->dlpi_name, info->dlpi_addr});
             return 0;
         },
@@ -35,7 +35,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
 
     // std::ofstream stream(output_dir + "/symbols.txt");
 
-    for (auto &[filename, offset] : offsets) {
+    for (auto& [filename, offset] : offsets) {
 
         if (*filename == '\0') {
             filename = app_filename;
@@ -43,11 +43,11 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
 
         containers::string result_str = nm_command + filename + " 2>&1";
 
-        const char *result = result_str.c_str();
+        const char* result = result_str.c_str();
 
         // printf("Command: %s", result);
 
-        FILE *fp;
+        FILE* fp;
         /* Open the command for reading. */
         fp = popen(result, "r");
         if (fp == nullptr) {
@@ -84,4 +84,4 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
         throw std::runtime_error("EXTRA PROF: ERROR: Failed to identify main function");
     }
 }
-}
+} // namespace extra_prof

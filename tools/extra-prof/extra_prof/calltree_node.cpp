@@ -1,7 +1,7 @@
 #include "globals.h"
 
 namespace extra_prof {
-CallTreeNode *CallTreeNode::findOrAddChild(char const *name, CallTreeNodeType type, CallTreeNodeFlags flags) {
+CallTreeNode* CallTreeNode::findOrAddChild(char const* name, CallTreeNodeType type, CallTreeNodeFlags flags) {
 
     {
         std::shared_lock lg(mutex);
@@ -24,4 +24,4 @@ CallTreeNode *CallTreeNode::findOrAddChild(char const *name, CallTreeNodeType ty
 
     return node;
 }
-}
+} // namespace extra_prof

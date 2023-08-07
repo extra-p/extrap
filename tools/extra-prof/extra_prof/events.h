@@ -41,7 +41,7 @@ inline CallTreeNodeType enum_cast(EventType lhs) {
 }
 
 template <typename S>
-inline S &operator<<(S &lhs, EventType rhs) {
+inline S& operator<<(S& lhs, EventType rhs) {
     switch (rhs & EventType::TYPE_MASK) {
     case EventType::NONE:
         lhs << "NONE";
@@ -73,13 +73,13 @@ inline S &operator<<(S &lhs, EventType rhs) {
 
 struct EventStart {
 public:
-    CallTreeNode *node = nullptr;
+    CallTreeNode* node = nullptr;
     pthread_t thread;
 };
 struct Event;
 struct EventEnd {
 public:
-    Event *start = nullptr;
+    Event* start = nullptr;
 };
 
 struct Event {
@@ -96,7 +96,7 @@ public:
     float resourceUsage = 0;
 
     Event(){};
-    Event(Event &&evt) = default;
+    Event(Event&& evt) = default;
     Event(time_point timestamp_, EventType type_, EventStart start, StreamIdType streamId_ = 0,
           uint8_t correlationId_ = 0, float resourceUsage_ = 0)
         : timestamp(timestamp_), type(type_), streamId(streamId_), correlationId(correlationId_),
@@ -111,25 +111,25 @@ public:
     }
     inline EventType get_type() const { return type & EventType::TYPE_MASK; }
 
-    inline bool operator<(const Event &other) const { return timestamp < other.timestamp; }
+    inline bool operator<(const Event& other) const { return timestamp < other.timestamp; }
 
-    Event &operator=(Event &&other) = default;
+    Event& operator=(Event&& other) = default;
 
     // MSGPACK_DEFINE(type, threads);
 };
 
-inline void addEventPair(ConcurrentArrayList<Event> &event_stream, EventType type, time_point start, time_point stop,
-                         CallTreeNode *node, pthread_t thread, float resourceUsage, uint32_t correlation_id,
+inline void addEventPair(ConcurrentArrayList<Event>& event_stream, EventType type, time_point start, time_point stop,
+                         CallTreeNode* node, pthread_t thread, float resourceUsage, uint32_t correlation_id,
                          uint32_t stream_id) {
 
-    auto &ref = event_stream.emplace(start, type | EventType::START, EventStart{node, thread},
+    auto& ref = event_stream.emplace(start, type | EventType::START, EventStart{node, thread},
                                      static_cast<Event::StreamIdType>(stream_id), static_cast<uint8_t>(correlation_id),
                                      resourceUsage);
     event_stream.emplace(stop, type | EventType::END, EventEnd{&ref}, static_cast<Event::StreamIdType>(stream_id),
                          static_cast<uint8_t>(correlation_id));
 }
 
-inline void write_event(std::ofstream &stream, const Event &event, const int pid = 0) {
+inline void write_event(std::ofstream& stream, const Event& event, const int pid = 0) {
     stream << "{\"name\": \"";
 
     if (event.is_start()) {
@@ -160,8 +160,8 @@ inline void write_event(std::ofstream &stream, const Event &event, const int pid
 
 inline void write_event_stream(
     containers::string filename,
-    const std::initializer_list<std::pair<const char *, std::reference_wrapper<ConcurrentArrayList<Event>>>>
-        &event_streams) {
+    const std::initializer_list<std::pair<const char*, std::reference_wrapper<ConcurrentArrayList<Event>>>>&
+        event_streams) {
 
     std::ofstream stream(filename.c_str());
     stream << '[';
@@ -173,9 +173,9 @@ inline void write_event_stream(
                << R"BLOCK(, "args": {"name" : ")BLOCK" << event_stream_name << R"BLOCK("}},)BLOCK"
                << "\n";
 
-        auto &event_stream_list = event_stream.get();
+        auto& event_stream_list = event_stream.get();
         for (auto event_it = event_stream_list.cbegin(); event_it != event_stream_list.cend(); ++event_it) {
-            const Event &event = *event_it;
+            const Event& event = *event_it;
             write_event(stream, event, pid_ctr);
             if (event.is_start() && event.happens_on_gpu()) {
                 gpu_streams.emplace(event.streamId);
@@ -192,6 +192,6 @@ inline void write_event_stream(
     }
     stream << ']';
 }
-}
+} // namespace extra_prof
 
 // MSGPACK_ADD_ENUM(extra_prof::cupti::EventType);

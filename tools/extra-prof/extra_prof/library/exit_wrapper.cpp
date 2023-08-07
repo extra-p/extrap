@@ -8,7 +8,7 @@ void finalize_on_exit();
 extern "C" {
 
 EXTRA_PROF_SO_EXPORT __attribute__((noreturn)) void exit(int exit_code) {
-    static void *handle = NULL;
+    static void* handle = NULL;
     static __attribute__((noreturn)) void (*old_exit)(int) = NULL;
     if (!handle) {
         handle = dlopen("libc.so.6", RTLD_LAZY);

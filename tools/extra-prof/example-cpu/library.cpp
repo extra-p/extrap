@@ -1,7 +1,4 @@
-#include <iostream>
 #include "library.hpp"
+#include <iostream>
 
-void dynamicHello()
-{
-    std::cout << "Hello World from dynamic library!\n";
-}
+void dynamicHello() { std::cout << "Hello World from dynamic library!\n"; }

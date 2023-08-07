@@ -10,7 +10,7 @@
 namespace extra_prof::gpu::hwc {
 
 CUpti_ProfilerReplayMode get_replay_mode() {
-    const char *EXTRA_PROF_GPU_HWC_REPLAY = getenv("EXTRA_PROF_GPU_HWC_REPLAY");
+    const char* EXTRA_PROF_GPU_HWC_REPLAY = getenv("EXTRA_PROF_GPU_HWC_REPLAY");
     if (EXTRA_PROF_GPU_HWC_REPLAY != nullptr) {
         if (strcmp(EXTRA_PROF_GPU_HWC_REPLAY, "none") == 0) {
             return CUPTI_ApplicationReplay;
@@ -68,7 +68,7 @@ void end_profiling_phase() {
 
     cudaError_t _status = cudaGetLastError();
     if (_status != cudaSuccess) {
-        const char *errstr = cudaGetErrorString(_status);
+        const char* errstr = cudaGetErrorString(_status);
         fprintf(stderr, "%s:%d: error: failed with error %s.\n", __FILE__, __LINE__, errstr);
         exit(-1);
     }
@@ -94,7 +94,7 @@ void end_profiling_phase() {
     CUPTI_CALL(cuptiProfilerEndSession(&endSessionParams));
 }
 
-containers::string GetHwUnit(const containers::string &metricName) {
+containers::string GetHwUnit(const containers::string& metricName) {
     return metricName.substr(0, metricName.find("__", 0));
 }
 
@@ -106,9 +106,9 @@ struct MetricNameValue {
 };
 
 void postprocess_counter_data() {
-    const char *chipName = GLOBALS.gpu.chipName.c_str();
-    const std::vector<uint8_t> &counterDataImage = GLOBALS.gpu.counterDataImage;
-    const std::vector<containers::string> &metricNames = GLOBALS.gpu.metricNames;
+    const char* chipName = GLOBALS.gpu.chipName.c_str();
+    const std::vector<uint8_t>& counterDataImage = GLOBALS.gpu.counterDataImage;
+    const std::vector<containers::string>& metricNames = GLOBALS.gpu.metricNames;
 
     if (!counterDataImage.size()) {
         throw std::runtime_error("Counter Data Image is empty!");
@@ -132,18 +132,18 @@ void postprocess_counter_data() {
     };
     NVPW_CALL(NVPW_CounterData_GetNumRanges(&getNumRangesParams));
 
-    std::vector<const char *> metricNamePtrs;
     if (getNumRangesParams.numRanges != GLOBALS.gpu.rangeCounter) {
         throw std::runtime_error("Num ranges does not match the number of recorded correlation IDs!");
     }
 
+    std::vector<const char*> metricNamePtrs;
     for (size_t metricIndex = 0; metricIndex < metricNames.size(); ++metricIndex) {
         metricNamePtrs.push_back(metricNames[metricIndex].c_str());
     }
     std::vector<double> gpuValues;
     gpuValues.resize(metricNames.size());
     for (size_t rangeIndex = 0; rangeIndex < getNumRangesParams.numRanges; ++rangeIndex) {
-        std::vector<const char *> descriptionPtrs;
+        std::vector<const char*> descriptionPtrs;
 
         NVPW_Profiler_CounterData_GetRangeDescriptions_Params getRangeDescParams = {
             NVPW_Profiler_CounterData_GetRangeDescriptions_Params_STRUCT_SIZE,
@@ -183,15 +183,15 @@ void postprocess_counter_data() {
         NVPW_MetricsContext_EvaluateToGpuValues(&evalToGpuParams);
 
         auto correlationId = GLOBALS.gpu.rangeToCorrelationId[rangeIndex];
-        auto *correlationData = GLOBALS.gpu.callpath_correlation.try_get(correlationId);
+        auto* correlationData = GLOBALS.gpu.callpath_correlation.try_get(correlationId);
         if (correlationData == nullptr) {
             throw std::runtime_error(containers::string("Correlation data not found for id ") +
                                      containers::string::format("%u", correlationId));
         }
-        auto *kernel_launch_node = correlationData->node;
-        auto *gpu_node = kernel_launch_node->findOrAddChild(kernel_launch_node->name(), CallTreeNodeType::KERNEL);
+        auto* kernel_launch_node = correlationData->node;
+        auto* gpu_node = kernel_launch_node->findOrAddChild(kernel_launch_node->name(), CallTreeNodeType::KERNEL);
 
-        auto &gpu_metrics = gpu_node->gpu_metrics;
+        auto& gpu_metrics = gpu_node->gpu_metrics;
 
         gpu_metrics.resize(metricNamePtrs.size());
 
@@ -201,7 +201,7 @@ void postprocess_counter_data() {
     }
 }
 
-void onKernelLaunch(const CUpti_CallbackData *cbdata) {
+void onKernelLaunch(const CUpti_CallbackData* cbdata) {
     extra_prof_scope sc;
     std::lock_guard lg(GLOBALS.gpu.kernelLaunchMutex);
 
@@ -222,9 +222,9 @@ void init() {
 
     GLOBALS.gpu.onKernelLaunch = onKernelLaunch;
 
-    const char *EXTRA_PROF_GPU_HWC_RANGES = getenv("EXTRA_PROF_GPU_HWC_RANGES");
+    const char* EXTRA_PROF_GPU_HWC_RANGES = getenv("EXTRA_PROF_GPU_HWC_RANGES");
     if (EXTRA_PROF_GPU_HWC_RANGES != nullptr) {
-        char *end;
+        char* end;
         GLOBALS.gpu.NUM_HWC_RANGES = std::strtoul(EXTRA_PROF_GPU_HWC_RANGES, &end, 10);
     }
     GLOBALS.gpu.rangeToCorrelationId.resize(GLOBALS.gpu.NUM_HWC_RANGES);
@@ -246,7 +246,7 @@ void init() {
     NVPW_InitializeHost_Params initializeHostParams = {NVPW_InitializeHost_Params_STRUCT_SIZE};
     NVPW_CALL(NVPW_InitializeHost(&initializeHostParams));
 
-    const char *EXTRA_PROF_GPU_METRICS = getenv("EXTRA_PROF_GPU_METRICS");
+    const char* EXTRA_PROF_GPU_METRICS = getenv("EXTRA_PROF_GPU_METRICS");
     if (EXTRA_PROF_GPU_METRICS != nullptr) {
         containers::string metrics_string(EXTRA_PROF_GPU_METRICS);
         metrics_string += ',';
@@ -290,4 +290,4 @@ void finalize() {
     CUpti_Profiler_DeInitialize_Params profilerDeInitializeParams = {CUpti_Profiler_DeInitialize_Params_STRUCT_SIZE};
     CUPTI_CALL(cuptiProfilerDeInitialize(&profilerDeInitializeParams));
 }
-}
+} // namespace extra_prof::gpu::hwc

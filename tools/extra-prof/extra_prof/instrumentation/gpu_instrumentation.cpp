@@ -13,7 +13,7 @@
 namespace extra_prof {
 namespace cupti {
 
-    void CUPTIAPI on_callback(void *userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void *cbdata) {
+    void CUPTIAPI on_callback(void* userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, const void* cbdata) {
         if (extra_prof_scope_counter > 0) {
             return; // Do not register activity if called from extra prof scope
         }
@@ -21,10 +21,10 @@ namespace cupti {
 
         pthread_t this_thread = pthread_self();
 
-        auto &callpath_correlation = GLOBALS.gpu.callpath_correlation;
-        auto &event_stream = GLOBALS.gpu.event_stream;
+        auto& callpath_correlation = GLOBALS.gpu.callpath_correlation;
+        auto& event_stream = GLOBALS.gpu.event_stream;
         if (domain == CUPTI_CB_DOMAIN_RUNTIME_API) {
-            const CUpti_CallbackData *rtdata = reinterpret_cast<const CUpti_CallbackData *>(cbdata);
+            const CUpti_CallbackData* rtdata = reinterpret_cast<const CUpti_CallbackData*>(cbdata);
             auto cbid_is_synchronization = cbid == CUPTI_RUNTIME_TRACE_CBID_cudaDeviceSynchronize_v3020 ||
                                            cbid == CUPTI_RUNTIME_TRACE_CBID_cudaThreadSynchronize_v3020 ||
                                            cbid == CUPTI_RUNTIME_TRACE_CBID_cudaEventSynchronize_v3020 ||
@@ -58,8 +58,8 @@ namespace cupti {
                         extra_prof::push_time(rtdata->symbolName, CallTreeNodeType::KERNEL_LAUNCH);
                     // std::cout << "Kernel " << rtdata->symbolName << " Id: " << rtdata->correlationId << '\n';
                     if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000) {
-                        const auto *params =
-                            reinterpret_cast<const cudaLaunchKernel_v7000_params *>(rtdata->functionParams);
+                        const auto* params =
+                            reinterpret_cast<const cudaLaunchKernel_v7000_params*>(rtdata->functionParams);
                         callpath_correlation.emplace(rtdata->correlationId,
                                                      CorrelationData{call_tree_node, this_thread, params->func});
                     } else {
@@ -92,7 +92,7 @@ namespace cupti {
                         stream_id = -2;
                     }
                     if (evt_type != EventType::NONE) {
-                        auto &ref = event_stream.emplace(time, evt_type | EventType::START,
+                        auto& ref = event_stream.emplace(time, evt_type | EventType::START,
                                                          EventStart{call_tree_node, this_thread},
                                                          static_cast<uint16_t>(stream_id));
                         *rtdata->correlationData = reinterpret_cast<uint64_t>(&ref);
@@ -121,7 +121,7 @@ namespace cupti {
                 }
                 if (evt_type != EventType::NONE) {
                     event_stream.emplace(time, evt_type | EventType::END,
-                                         EventEnd{reinterpret_cast<Event *>(*rtdata->correlationData)},
+                                         EventEnd{reinterpret_cast<Event*>(*rtdata->correlationData)},
                                          static_cast<uint16_t>(stream_id));
                 }
 
@@ -139,30 +139,30 @@ namespace cupti {
     }
 
     size_t cupti_mappings_size() {
-        return GLOBALS.gpu.callpath_correlation.size() * (sizeof(uint32_t) + sizeof(CallTreeNode *));
+        return GLOBALS.gpu.callpath_correlation.size() * (sizeof(uint32_t) + sizeof(CallTreeNode*));
     }
 
-    void make_overlap(std::vector<const Event *> &stack, const Event *current_event, CallTreeNode *overlap,
+    void make_overlap(std::vector<const Event*>& stack, const Event* current_event, CallTreeNode* overlap,
                       time_point duration) {
-        for (auto &ke : stack) {
+        for (auto& ke : stack) {
             if (ke == current_event) {
                 continue;
             }
             if (ke->get_type() == EventType::SYNCHRONIZE || ke->get_type() == EventType::MEMMGMT) {
                 continue;
             }
-            auto *kernel_overlap = overlap->findOrAddChild(
+            auto* kernel_overlap = overlap->findOrAddChild(
                 ke->start_event.node->name(), enum_cast<CallTreeNodeType>(ke->get_type()), CallTreeNodeFlags::OVERLAP);
             kernel_overlap->per_thread_metrics[ke->start_event.thread].duration += duration;
         }
     }
 
     void postprocess_event_stream() {
-        std::vector<const Event *> sorted_stream;
+        std::vector<const Event*> sorted_stream;
         sorted_stream.reserve(GLOBALS.gpu.event_stream.estimate_size());
         auto end = GLOBALS.gpu.event_stream.cend();
         for (auto iter = GLOBALS.gpu.event_stream.cbegin(); iter != end; ++iter) {
-            auto &event = *iter;
+            auto& event = *iter;
             sorted_stream.emplace_back(&event);
         }
 
@@ -170,22 +170,22 @@ namespace cupti {
         //     std::cout << event->start_event.node->name() << '\n';
         // }
         std::stable_sort(sorted_stream.begin(), sorted_stream.end(),
-                         [](const Event *a, const Event *b) { return (a->timestamp < b->timestamp); });
+                         [](const Event* a, const Event* b) { return (a->timestamp < b->timestamp); });
 
-        std::vector<const Event *> stack;
+        std::vector<const Event*> stack;
 
         // TODO maybe add malloc/free
 
         time_point previous_timestamp = 0;
 
-        for (auto &event_ptr : sorted_stream) {
-            auto &event = *event_ptr;
+        for (auto& event_ptr : sorted_stream) {
+            auto& event = *event_ptr;
             if (!stack.empty()) {
                 float total_MP_usage = 0;
                 uint32_t stack_contains_kernels = 0;
                 uint32_t stack_contains_memcpy = 0;
                 uint32_t stack_contains_memset = 0;
-                for (auto &se : stack) {
+                for (auto& se : stack) {
                     if (se->get_type() == EventType::KERNEL) {
                         stack_contains_kernels++;
                         total_MP_usage += se->resourceUsage;
@@ -195,11 +195,11 @@ namespace cupti {
                         stack_contains_memset++;
                     }
                 }
-                for (auto &se : stack) {
+                for (auto& se : stack) {
                     time_point duration = event.timestamp - previous_timestamp;
-                    CallTreeNode *overlap = se->start_event.node->findOrAddChild(
+                    CallTreeNode* overlap = se->start_event.node->findOrAddChild(
                         GLOBALS.gpu.OVERLAP, CallTreeNodeType::OVERLAP, CallTreeNodeFlags::OVERLAP);
-                    auto &overlap_metrics = overlap->per_thread_metrics[se->start_event.thread];
+                    auto& overlap_metrics = overlap->per_thread_metrics[se->start_event.thread];
                     if (se->get_type() == EventType::KERNEL) {
                         overlap_metrics.duration += (total_MP_usage - se->resourceUsage) * duration / total_MP_usage;
                         make_overlap(stack, se, overlap, duration);
@@ -239,7 +239,7 @@ namespace cupti {
 
     inline void init() {
 
-        const char *EXTRA_PROF_CUPTI_BUFFER_SIZE = getenv("EXTRA_PROF_CUPTI_BUFFER_SIZE");
+        const char* EXTRA_PROF_CUPTI_BUFFER_SIZE = getenv("EXTRA_PROF_CUPTI_BUFFER_SIZE");
         if (EXTRA_PROF_CUPTI_BUFFER_SIZE != nullptr) {
             size_t number = std::stoul(EXTRA_PROF_CUPTI_BUFFER_SIZE);
             if (number < 1024) {
@@ -256,7 +256,7 @@ namespace cupti {
         GPU_CALL(cudaGetDeviceProperties(&prop, 0));
         GLOBALS.gpu.multiProcessorCount = prop.multiProcessorCount;
 
-        const char *EXTRA_PROF_GPU_METRICS = getenv("EXTRA_PROF_GPU_METRICS");
+        const char* EXTRA_PROF_GPU_METRICS = getenv("EXTRA_PROF_GPU_METRICS");
         if (EXTRA_PROF_GPU_METRICS != nullptr) {
             extra_prof::gpu::hwc::init();
         } else {
@@ -278,5 +278,5 @@ namespace cupti {
         }
         postprocess_event_stream();
     }
-};
-};
+}; // namespace cupti
+}; // namespace extra_prof

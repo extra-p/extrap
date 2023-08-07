@@ -8,26 +8,26 @@
 namespace extra_prof::containers {
 
 class string {
-    friend string operator+(const char *&lhs, const string &rhs);
+    friend string operator+(const char*& lhs, const string& rhs);
 
 private:
-    char *_string = nullptr;
+    char* _string = nullptr;
     size_t _size = 0;
 
-    char *allocate(const size_t len) {
-        char *ptr = reinterpret_cast<char *>(malloc((len + 1) * sizeof(char)));
+    char* allocate(const size_t len) {
+        char* ptr = reinterpret_cast<char*>(malloc((len + 1) * sizeof(char)));
         ptr[len] = 0;
         return ptr;
     }
-    char *allocate_and_copy(const size_t len, const char *src) {
-        char *ptr = allocate(len);
+    char* allocate_and_copy(const size_t len, const char* src) {
+        char* ptr = allocate(len);
         if (src != nullptr) {
             strncpy(ptr, src, len);
         }
         return ptr;
     }
-    char *allocate_and_append(const size_t len, const char *src) {
-        char *ptr = allocate(_size + len);
+    char* allocate_and_append(const size_t len, const char* src) {
+        char* ptr = allocate(_size + len);
         if (_string != nullptr) {
             strcpy(ptr, _string);
         }
@@ -36,7 +36,7 @@ private:
         }
         return ptr;
     }
-    void destruct(char *ptr) {
+    void destruct(char* ptr) {
         if (ptr == nullptr) {
             return;
         }
@@ -44,26 +44,26 @@ private:
     }
 
 public:
-    string(const string &str) {
+    string(const string& str) {
         _size = str._size;
         _string = allocate_and_copy(_size, str._string);
     };
 
-    string(string &&str) {
+    string(string&& str) {
         _size = str._size;
         _string = str._string;
         str._string = nullptr;
         str._size = 0;
     };
 
-    string &operator=(const string &str) {
+    string& operator=(const string& str) {
         destruct(_string);
         _size = str._size;
         _string = allocate_and_copy(_size, str._string);
         return *this;
     }
 
-    string &operator=(string &&str) {
+    string& operator=(string&& str) {
         destruct(_string);
         _size = str._size;
         _string = str._string;
@@ -74,7 +74,7 @@ public:
 
     string(){};
 
-    string(const char *str) {
+    string(const char* str) {
         if (str != nullptr) {
             _size = strlen(str);
             _string = allocate_and_copy(_size, str);
@@ -84,7 +84,7 @@ public:
         _size = len;
         _string = allocate(_size);
     };
-    string(const char *str, const size_t len) {
+    string(const char* str, const size_t len) {
         _size = len;
         _string = allocate_and_copy(_size, str);
     };
@@ -97,22 +97,22 @@ public:
 
     static constexpr size_t npos = -1;
 
-    const char *c_str() const { return _string; }
-    char *data() { return _string; }
-    size_t &internal_size() { return _size; }
+    const char* c_str() const { return _string; }
+    char* data() { return _string; }
+    size_t& internal_size() { return _size; }
 
-    operator const char *() const { return _string; }
+    operator const char*() const { return _string; }
 
     size_t size() const { return _size; }
 
-    size_t find(const char *needle, size_t pos = 0) const {
+    size_t find(const char* needle, size_t pos = 0) const {
         if (needle == nullptr) {
             return 0;
         }
         if (pos >= _size) {
             return npos;
         }
-        char *result = strstr(_string + pos, needle);
+        char* result = strstr(_string + pos, needle);
         if (result == nullptr) {
             return npos;
         }
@@ -123,7 +123,7 @@ public:
         if (pos >= _size) {
             return npos;
         }
-        char *result = strchr(_string + pos, needle);
+        char* result = strchr(_string + pos, needle);
         if (result == nullptr) {
             return npos;
         }
@@ -140,28 +140,28 @@ public:
         return string(_string + pos, count);
     }
 
-    string &operator+=(const string &str) {
-        char *new_string = allocate_and_append(str._size, str._string);
+    string& operator+=(const string& str) {
+        char* new_string = allocate_and_append(str._size, str._string);
         destruct(_string);
         _string = new_string;
         _size += str._size;
         return *this;
     }
 
-    string &operator+=(const char *str) {
+    string& operator+=(const char* str) {
         if (str == nullptr) {
             return *this;
         }
         size_t str_size = strlen(str);
-        char *new_string = allocate_and_append(str_size, str);
+        char* new_string = allocate_and_append(str_size, str);
         destruct(_string);
         _string = new_string;
         _size += str_size;
         return *this;
     }
 
-    string &operator+=(const char chr) {
-        char *new_string = allocate_and_copy(_size + 1, _string);
+    string& operator+=(const char chr) {
+        char* new_string = allocate_and_copy(_size + 1, _string);
         new_string[_size] = chr;
         new_string[_size + 1] = 0;
         destruct(_string);
@@ -170,7 +170,7 @@ public:
         return *this;
     }
 
-    string operator+(const string &rhs) const {
+    string operator+(const string& rhs) const {
         string new_string(_size + rhs._size);
         if (_string != nullptr) {
             strcpy(new_string._string, _string);
@@ -180,7 +180,7 @@ public:
         }
         return new_string;
     }
-    string operator+(const char *&rhs) const {
+    string operator+(const char*& rhs) const {
         if (rhs == nullptr) {
             return string(*this);
         }
@@ -192,7 +192,7 @@ public:
         return new_string;
     }
 
-    bool operator==(const string &rhs) const {
+    bool operator==(const string& rhs) const {
         if (_size != rhs._size) {
             return false;
         } else if (_string == rhs._string) {
@@ -203,7 +203,7 @@ public:
         return strcmp(_string, rhs._string) == 0;
     }
 
-    static string format(const char *format, ...) {
+    static string format(const char* format, ...) {
         va_list arglist;
         va_start(arglist, format);
         int res = vsnprintf(nullptr, 0, format, arglist);
@@ -220,11 +220,11 @@ public:
     }
 
     template <typename Packer>
-    void msgpack_pack(Packer &msgpack_pk) const {
+    void msgpack_pack(Packer& msgpack_pk) const {
         msgpack_pk.pack_str(_size).pack_str_body(_string, _size);
     }
 };
-inline string operator+(const char *&lhs, const string &rhs) {
+inline string operator+(const char*& lhs, const string& rhs) {
     size_t lhs_len = strlen(lhs);
     string new_string(lhs_len + rhs._size);
     strcpy(new_string._string, lhs);
@@ -232,14 +232,14 @@ inline string operator+(const char *&lhs, const string &rhs) {
     return new_string;
 }
 
-}
+} // namespace extra_prof::containers
 
 template <>
 struct std::hash<extra_prof::containers::string> {
-    std::size_t operator()(extra_prof::containers::string const &s) const noexcept {
+    std::size_t operator()(extra_prof::containers::string const& s) const noexcept {
         size_t h = 5381;
         int c;
-        const char *cstr = s.c_str();
+        const char* cstr = s.c_str();
         while ((c = *cstr++))
             h = ((h << 5) + h) + c;
         return h;

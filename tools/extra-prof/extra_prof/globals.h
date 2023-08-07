@@ -17,17 +17,17 @@
 namespace ep {
 template <typename mutex>
 class lock_guard : public std::lock_guard<mutex> {
-    const char *m_name;
+    const char* m_name;
 
 public:
-    lock_guard(mutex &mu) : std::lock_guard<mutex>(mu) {}
-    lock_guard(mutex &mu, const char *name) : std::lock_guard<mutex>(mu), m_name(name) {
+    lock_guard(mutex& mu) : std::lock_guard<mutex>(mu) {}
+    lock_guard(mutex& mu, const char* name) : std::lock_guard<mutex>(mu), m_name(name) {
         std::cout << "LOCK " << m_name << std::endl;
     }
 
     ~lock_guard() { std::cout << "UNLOCK " << m_name << std::endl; }
 };
-}
+} // namespace ep
 // #define std::lock_guard ep::lockguard
 
 #ifdef EXTRA_PROF_EVENT_TRACE
@@ -64,8 +64,8 @@ struct GlobalState {
 
     ConcurrentMap<pthread_t, ThreadState> threads;
 
-    EP_INLINE ThreadState &my_thread_state() {
-        static thread_local ThreadState &state = threads[pthread_self()];
+    EP_INLINE ThreadState& my_thread_state() {
+        static thread_local ThreadState& state = threads[pthread_self()];
         return state;
     }
 
@@ -89,4 +89,4 @@ struct extra_prof_scope {
     extra_prof_scope() { extra_prof_scope_counter++; }
     ~extra_prof_scope() { extra_prof_scope_counter--; }
 };
-}
+} // namespace extra_prof

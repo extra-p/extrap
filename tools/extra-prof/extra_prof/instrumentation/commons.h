@@ -44,20 +44,20 @@ EP_INLINE time_point get_timestamp() {
 }
 
 template <typename T>
-EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(T *fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
-    auto &name_register = GLOBALS.name_register;
+EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(T* fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
+    auto& name_register = GLOBALS.name_register;
 
     return push_time(name_register.get_name_ptr(fn_ptr).c_str(), type);
 }
 
 template <>
-EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(char const *name, CallTreeNodeType type) {
+EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, CallTreeNodeType type) {
     time_point time = get_timestamp();
-    auto &current_node = GLOBALS.my_thread_state().current_node;
+    auto& current_node = GLOBALS.my_thread_state().current_node;
     current_node = current_node->findOrAddChild(name, type);
     GLOBALS.my_thread_state().timer_stack.push_back(time);
 #ifdef EXTRA_PROF_EVENT_TRACE
-    auto &ref = GLOBALS.cpu_event_stream.emplace(time, EventType::START, EventStart{current_node, pthread_self()},
+    auto& ref = GLOBALS.cpu_event_stream.emplace(time, EventType::START, EventStart{current_node, pthread_self()},
                                                  pthread_self());
     GLOBALS.my_thread_state().event_stack.push_back(&ref);
 #endif
@@ -65,15 +65,15 @@ EP_INLINE std::tuple<time_point, CallTreeNode *> push_time(char const *name, Cal
 }
 
 template <typename T>
-EP_INLINE time_point pop_time(T *fn_ptr) {
-    auto &name_register = GLOBALS.name_register;
+EP_INLINE time_point pop_time(T* fn_ptr) {
+    auto& name_register = GLOBALS.name_register;
     return pop_time(name_register.check_ptr(fn_ptr)->c_str());
 }
 template <>
-EP_INLINE time_point pop_time(char const *name) {
+EP_INLINE time_point pop_time(char const* name) {
     time_point time = get_timestamp();
-    auto &thread_state = GLOBALS.my_thread_state();
-    auto &current_node = thread_state.current_node;
+    auto& thread_state = GLOBALS.my_thread_state();
+    auto& current_node = thread_state.current_node;
     auto duration = time - thread_state.timer_stack.back();
     if (current_node->name() == nullptr) {
         throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
@@ -81,7 +81,7 @@ EP_INLINE time_point pop_time(char const *name) {
     if (current_node->name() != name) {
         throw std::runtime_error("EXTRA PROF: ERROR: popping different node than previously pushed");
     }
-    auto &metrics = current_node->my_metrics();
+    auto& metrics = current_node->my_metrics();
     metrics.visits++;
     metrics.duration += duration;
     thread_state.timer_stack.pop_back();

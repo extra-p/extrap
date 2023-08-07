@@ -20,7 +20,7 @@ void thread_func() {
 
 void parallel_test() { PUSH_RANGE("parallel_test"); }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     dynamicHello();

@@ -11,11 +11,11 @@ private:
         int chunk_size = 128;
 
         std::mutex data_mutex;
-        T *data = new T[chunk_size];
+        T* data = new T[chunk_size];
         size_t fill_size = 0;
 
         std::mutex next_mutex;
-        Chunk *_next_node = nullptr;
+        Chunk* _next_node = nullptr;
 
         ~Chunk() {
             delete[] data;
@@ -24,17 +24,17 @@ private:
             }
         }
 
-        Chunk *get_next_chunk() {
+        Chunk* get_next_chunk() {
             std::lock_guard lk(next_mutex);
             return _next_node;
         }
 
-        Chunk *get_or_create_next_chunk() {
-            Chunk *next_chunk = get_next_chunk();
+        Chunk* get_or_create_next_chunk() {
+            Chunk* next_chunk = get_next_chunk();
             if (next_chunk != nullptr) {
                 return next_chunk;
             } else {
-                Chunk *new_node = new Chunk();
+                Chunk* new_node = new Chunk();
                 std::lock_guard lk(next_mutex);
                 if (_next_node == nullptr) {
                     _next_node = new_node;
@@ -45,12 +45,12 @@ private:
             }
         }
 
-        std::pair<T *, bool> find_next_empty_spot() {
+        std::pair<T*, bool> find_next_empty_spot() {
             if (data_mutex.try_lock()) {
                 std::lock_guard lk(data_mutex, std::adopt_lock); //
 
                 if (fill_size < chunk_size) {
-                    auto *ptr = data + fill_size;
+                    auto* ptr = data + fill_size;
                     fill_size++;
                     return {ptr, fill_size < chunk_size};
                 } else {
@@ -62,8 +62,8 @@ private:
         }
     };
 
-    Chunk *first_chunk;
-    std::atomic<Chunk *> first_free_chunk;
+    Chunk* first_chunk;
+    std::atomic<Chunk*> first_free_chunk;
 
 public:
     ConcurrentArrayList() {
@@ -72,18 +72,18 @@ public:
     };
 
     template <class... Args>
-    T &emplace(Args &&...args) {
-        Chunk *free_chunk = first_free_chunk;
+    T& emplace(Args&&... args) {
+        Chunk* free_chunk = first_free_chunk;
         auto spot = free_chunk->find_next_empty_spot();
         int ctr = 0;
         if (spot.first != nullptr && !spot.second) {
-            Chunk *expected = free_chunk;
+            Chunk* expected = free_chunk;
             free_chunk = free_chunk->get_or_create_next_chunk();
             first_free_chunk.compare_exchange_strong(expected, free_chunk);
         }
         while (spot.first == nullptr) {
 
-            Chunk *expected = free_chunk;
+            Chunk* expected = free_chunk;
             free_chunk = free_chunk->get_or_create_next_chunk();
             if (!spot.second) {
                 first_free_chunk.compare_exchange_strong(expected, free_chunk);
@@ -100,7 +100,7 @@ public:
 
     size_t estimate_size() {
         size_t estimated_size = 0;
-        for (Chunk *current_chunk = first_chunk; current_chunk != nullptr;
+        for (Chunk* current_chunk = first_chunk; current_chunk != nullptr;
              current_chunk = current_chunk->get_next_chunk()) {
             std::lock_guard lk(current_chunk->data_mutex);
             estimated_size += current_chunk->fill_size;
@@ -109,13 +109,13 @@ public:
     }
 
     class const_iterator {
-        Chunk *chunk;
-        T *ptr;
+        Chunk* chunk;
+        T* ptr;
         std::unique_lock<std::mutex> chunk_lock;
 
     public:
         const_iterator() : chunk(nullptr), ptr(nullptr) {}
-        const_iterator(Chunk *chunk_) : chunk(chunk_), chunk_lock(chunk->data_mutex) {
+        const_iterator(Chunk* chunk_) : chunk(chunk_), chunk_lock(chunk->data_mutex) {
             if (chunk->fill_size == 0) {
                 ptr = nullptr;
             } else {
@@ -124,7 +124,7 @@ public:
         }
 
         void advance_to_next_chunk() {
-            Chunk *next_chunk = chunk->get_next_chunk();
+            Chunk* next_chunk = chunk->get_next_chunk();
             if (next_chunk == nullptr) {
                 chunk = nullptr;
                 ptr = nullptr;
@@ -140,7 +140,7 @@ public:
             }
         }
 
-        const_iterator &operator++() {
+        const_iterator& operator++() {
             if (chunk == nullptr) {
                 return *this;
             }
@@ -162,14 +162,14 @@ public:
             }
             return *this;
         }
-        bool operator==(const const_iterator &other) const { return chunk == other.chunk && ptr == other.ptr; }
-        bool operator!=(const const_iterator &other) const { return !(*this == other); }
-        const T &operator*() const { return *ptr; }
+        bool operator==(const const_iterator& other) const { return chunk == other.chunk && ptr == other.ptr; }
+        bool operator!=(const const_iterator& other) const { return !(*this == other); }
+        const T& operator*() const { return *ptr; }
     };
 
     const_iterator cbegin() { return const_iterator(first_chunk); }
     const_iterator cend() { return const_iterator(); }
-    const ConcurrentArrayList &crange() const noexcept { return *this; }
+    const ConcurrentArrayList& crange() const noexcept { return *this; }
 
     ~ConcurrentArrayList() {
         first_free_chunk = nullptr;

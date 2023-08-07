@@ -5,18 +5,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef int (*P_CREATE)(pthread_t *__restrict __newthread, const pthread_attr_t *__restrict __attr,
-                        void *(*__start_routine)(void *), void *__restrict __arg);
+typedef int (*P_CREATE)(pthread_t* __restrict __newthread, const pthread_attr_t* __restrict __attr,
+                        void* (*__start_routine)(void*), void* __restrict __arg);
 
 namespace extra_prof {
 struct WrappedThreadArgs {
     extra_prof::ThreadState thread_state;
-    void *(*start_routine)(void *);
-    void *argument;
+    void* (*start_routine)(void*);
+    void* argument;
 };
-void *wrap_start_thread(void *wrapped_args_ptr) {
+void* wrap_start_thread(void* wrapped_args_ptr) {
 
-    WrappedThreadArgs *wrapped_args = reinterpret_cast<WrappedThreadArgs *>(wrapped_args_ptr);
+    WrappedThreadArgs* wrapped_args = reinterpret_cast<WrappedThreadArgs*>(wrapped_args_ptr);
     pthread_t new_tid = pthread_self();
     {
         extra_prof_scope sc;
@@ -28,13 +28,13 @@ void *wrap_start_thread(void *wrapped_args_ptr) {
 
     return start_routine(args);
 }
-}
+} // namespace extra_prof
 #define BT_BUF_SIZE 100
 extern "C" {
 
-EXTRA_PROF_SO_EXPORT int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *),
-                                        void *arg) {
-    static void *handle = NULL;
+EXTRA_PROF_SO_EXPORT int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*),
+                                        void* arg) {
+    static void* handle = NULL;
     static P_CREATE old_create = NULL;
     if (!handle) {
         handle = dlopen("libpthread.so.0", RTLD_LAZY);
@@ -42,7 +42,7 @@ EXTRA_PROF_SO_EXPORT int pthread_create(pthread_t *thread, const pthread_attr_t 
     }
     pthread_t tid = pthread_self();
 
-    extra_prof::WrappedThreadArgs *wrapped_arg =
+    extra_prof::WrappedThreadArgs* wrapped_arg =
         new extra_prof::WrappedThreadArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), start_routine, arg};
     // int nptrs;
     // void *buffer[BT_BUF_SIZE];

@@ -16,17 +16,17 @@ public:
         typename std::unordered_map<K, V>::iterator iter;
 
     public:
-        iterator(std::shared_mutex &mutex, typename std::unordered_map<K, V>::iterator iter_)
+        iterator(std::shared_mutex& mutex, typename std::unordered_map<K, V>::iterator iter_)
             : lk(mutex), iter(iter_) {}
 
-        iterator &operator++() {
+        iterator& operator++() {
             ++iter;
             return *this;
         }
-        bool operator==(iterator &other) const { return iter == other.iter; }
-        bool operator!=(iterator &other) const { return iter != other.iter; }
+        bool operator==(iterator& other) const { return iter == other.iter; }
+        bool operator!=(iterator& other) const { return iter != other.iter; }
         typename std::unordered_map<K, V>::reference operator*() const { return *iter; }
-        typename std::unordered_map<K, V>::value_type *operator->() { return iter.operator->(); }
+        typename std::unordered_map<K, V>::value_type* operator->() { return iter.operator->(); }
     };
 
     class const_iterator {
@@ -34,20 +34,20 @@ public:
         typename std::unordered_map<K, V>::const_iterator iter;
 
     public:
-        const_iterator(std::shared_mutex &mutex, typename std::unordered_map<K, V>::const_iterator iter_)
+        const_iterator(std::shared_mutex& mutex, typename std::unordered_map<K, V>::const_iterator iter_)
             : lk(mutex), iter(iter_) {}
 
-        const_iterator &operator++() {
+        const_iterator& operator++() {
             ++iter;
             return *this;
         }
-        bool operator==(const_iterator &other) const { return iter == other.iter; }
-        bool operator!=(const_iterator &other) const { return iter != other.iter; }
+        bool operator==(const_iterator& other) const { return iter == other.iter; }
+        bool operator!=(const_iterator& other) const { return iter != other.iter; }
         const typename std::unordered_map<K, V>::reference operator*() const { return *iter; }
-        const typename std::unordered_map<K, V>::value_type *operator->() const { return iter.operator->(); }
+        const typename std::unordered_map<K, V>::value_type* operator->() const { return iter.operator->(); }
     };
 
-    EP_INLINE V *try_get(const K &key) {
+    EP_INLINE V* try_get(const K& key) {
         std::shared_lock lk(mutex);
         auto iterator = map.find(key);
         if (iterator != map.end()) {
@@ -74,7 +74,7 @@ public:
         return const_iterator(mutex, map.cend());
     }
 
-    EP_INLINE V &operator[](const K &key) {
+    EP_INLINE V& operator[](const K& key) {
         {
             std::shared_lock lk(mutex);
             auto iterator = map.find(key);
@@ -89,7 +89,7 @@ public:
     }
 
     template <typename... _Args>
-    EP_INLINE std::pair<std::reference_wrapper<V>, bool> try_emplace(const K &key, _Args &&...__args) {
+    EP_INLINE std::pair<std::reference_wrapper<V>, bool> try_emplace(const K& key, _Args&&... __args) {
         {
             std::shared_lock lk(mutex);
             auto iterator = map.find(key);
@@ -105,7 +105,7 @@ public:
     }
 
     template <typename... _Args>
-    EP_INLINE bool emplace(_Args &&...__args) {
+    EP_INLINE bool emplace(_Args&&... __args) {
         std::unique_lock lk(mutex);
         return map.emplace(std::forward<_Args>(__args)...).second;
     }

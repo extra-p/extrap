@@ -1,7 +1,7 @@
 #include "tests.h"
 
 #define DEF_TEST_KERNEL(K)                                                                                             \
-    __global__ void test##K(double *a, size_t size, size_t repeat) {                                                   \
+    __global__ void test##K(double* a, size_t size, size_t repeat) {                                                   \
         size_t start_idx = threadIdx.x + blockIdx.x * blockDim.x;                                                      \
         /*/	return;                                                                                                    \
         } */                                                                                                           \
@@ -37,7 +37,7 @@ DEF_TEST_KERNEL(4)
         break
 #endif // __INTELLISENSE__
 
-void test(size_t i, cudaStream_t stream, double *a, size_t size, size_t repeat) {
+void test(size_t i, cudaStream_t stream, double* a, size_t size, size_t repeat) {
     switch (i) {
         TEST_KERNEL(0);
         TEST_KERNEL(1);
@@ -57,7 +57,7 @@ void process(int scaling) {
     PUSH_RANGE("main->process->stream");
     std::vector<cudaEvent_t> sevent(stream.size());
     std::vector<std::vector<double, pinned_allocator<double>>> data(stream.size());
-    std::vector<double *> gpu_data(stream.size());
+    std::vector<double*> gpu_data(stream.size());
     PUSH_RANGE("main->process->init_data");
     for (int i = 0; i < stream.size(); ++i) {
         cudaStreamCreate(&stream[i]);

@@ -10,7 +10,7 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
 
         template <>
         struct convert<std::atomic<uint64_t>> {
-            msgpack::object const &operator()(msgpack::object const &o, std::atomic<uint64_t> &v) const {
+            msgpack::object const& operator()(msgpack::object const& o, std::atomic<uint64_t>& v) const {
                 if (o.type != msgpack::type::POSITIVE_INTEGER)
                     throw msgpack::type_error();
                 v = o.as<uint64_t>();
@@ -21,7 +21,7 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
         template <>
         struct pack<std::atomic<uint64_t>> {
             template <typename Stream>
-            packer<Stream> &operator()(msgpack::packer<Stream> &o, std::atomic<uint64_t> const &v) const {
+            packer<Stream>& operator()(msgpack::packer<Stream>& o, std::atomic<uint64_t> const& v) const {
                 // packing member variables as an array.
                 o.pack_uint64(v);
                 return o;

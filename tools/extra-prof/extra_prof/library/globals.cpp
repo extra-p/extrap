@@ -17,11 +17,11 @@ GlobalState::GlobalState() {
 #ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
 void validate_instrumentation() {
 
-    for (auto &&[tid, threadState] : GLOBALS.threads) {
+    for (auto&& [tid, threadState] : GLOBALS.threads) {
         if (threadState.depth != threadState.creation_depth) {
             std::stringstream msg;
             msg << "EXTRA PROF: DEBUG: Thread " << tid << " has not returned to its starting depth. Current position: ";
-            for (auto *node = threadState.current_node; node != &GLOBALS.call_tree; node = node->parent()) {
+            for (auto* node = threadState.current_node; node != &GLOBALS.call_tree; node = node->parent()) {
                 msg << node->name() << "<-";
             }
             std::cerr << msg.str() << std::endl;
@@ -30,7 +30,7 @@ void validate_instrumentation() {
             std::stringstream msg;
             msg << "EXTRA PROF: DEBUG: Thread " << tid
                 << " has not returned to its starting call tree node. Current position: ";
-            for (auto *node = threadState.current_node; node != &GLOBALS.call_tree; node = node->parent()) {
+            for (auto* node = threadState.current_node; node != &GLOBALS.call_tree; node = node->parent()) {
                 msg << node->name() << "<-";
             }
             std::cerr << msg.str() << std::endl;
@@ -48,4 +48,4 @@ GlobalState::~GlobalState() {
 thread_local int extra_prof_scope_counter;
 GlobalState GLOBALS;
 
-}
+} // namespace extra_prof

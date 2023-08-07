@@ -28,7 +28,7 @@ public:
     containers::string defaultExperimentDirName();
     void create_address_mapping(containers::string output_dir);
 
-    EP_INLINE containers::string *check_ptr(const void *fn_ptr) {
+    EP_INLINE containers::string* check_ptr(const void* fn_ptr) {
         auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
         auto iter = name_register.find(ptr - adress_offset);
         if (iter != name_register.end()) {
@@ -42,11 +42,11 @@ public:
         return name_ptr;
     }
 
-    EP_INLINE bool is_main_function(void *this_fn) {
+    EP_INLINE bool is_main_function(void* this_fn) {
         return reinterpret_cast<uintptr_t>(this_fn) - adress_offset == main_function_ptr;
     }
 
-    EP_INLINE containers::string &get_name_ptr(const void *fn_ptr) {
+    EP_INLINE containers::string& get_name_ptr(const void* fn_ptr) {
         auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
         auto iter = name_register.find(ptr - adress_offset);
         if (iter != name_register.end()) {
@@ -73,4 +73,4 @@ public:
         return dynamic_name_register[ptr - adress_offset];
     }
 };
-}
+} // namespace extra_prof

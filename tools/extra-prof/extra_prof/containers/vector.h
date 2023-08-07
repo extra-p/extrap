@@ -3,7 +3,7 @@ namespace extra_prof::containers {
 template <typename T>
 class vector {
 private:
-    T *_data = nullptr;
+    T* _data = nullptr;
     size_t _capacity = 0;
     size_t _size = 0;
 
@@ -26,7 +26,7 @@ public:
         if (new_size <= size()) {
             return;
         }
-        T *temp = malloc(new_size * sizeof(T));
+        T* temp = malloc(new_size * sizeof(T));
         if (_data != nullptr) {
             memcpy(temp, _data, _size * sizeof(T));
             free(_data);
@@ -39,7 +39,7 @@ public:
         if (new_size <= size()) {
             return;
         }
-        T *temp = malloc(new_size * sizeof(T));
+        T* temp = malloc(new_size * sizeof(T));
         if (_data != nullptr) {
             memcpy(temp, _data, _size * sizeof(T));
             free(_data);
@@ -52,4 +52,4 @@ public:
         _size = new_size;
     }
 };
-}
+} // namespace extra_prof::containers
