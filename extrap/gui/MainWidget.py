@@ -31,7 +31,6 @@ from extrap.fileio.experiment_io import read_experiment, write_experiment
 from extrap.fileio.file_reader import all_readers, FileReader
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
-from extrap.gui.AggregationWidget import AggregationWidget
 from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.CoordinateTransformation import CoordinateTransformationDialog
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
@@ -39,6 +38,7 @@ from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
+from extrap.gui.PostProcessingWidget import PostProcessingWidget
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
 from extrap.gui.comparison.comparison_wizard import ComparisonWizard
@@ -125,9 +125,9 @@ class MainWidget(QMainWindow):
         dock.setWidget(self.modeler_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
-        dock = QDockWidget("Aggregation", self)
-        self.aggregation_widget = AggregationWidget(self, dock)
-        dock.setWidget(self.aggregation_widget)
+        dock = QDockWidget("Aggregation and Analysis", self)
+        self.postprocessing_widget = PostProcessingWidget(self, dock)
+        dock.setWidget(self.postprocessing_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         # bottom widget
         dock = QDockWidget("Color Info", self)
@@ -321,12 +321,14 @@ class MainWidget(QMainWindow):
             raise ValueError("Experiment cannot be none.")
         self.experiment_change = True
         self._experiment = experiment
-        self._set_opened_file_name(file_name, compared=compared)
+        if file_name is not None:
+            self._set_opened_file_name(file_name, compared=compared)
         self.save_experiment_action.setEnabled(True)
         self.compare_action.setEnabled(not isinstance(experiment, ComparisonExperiment))
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
+        self.postprocessing_widget.on_experiment_changed(experiment)
         self.experiment_change = False
         self.updateMinMaxValue()
         self.update()

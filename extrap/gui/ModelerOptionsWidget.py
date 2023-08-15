@@ -5,6 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from typing import Union
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, \
     QComboBox, QVBoxLayout
@@ -12,26 +14,30 @@ from PySide6.QtWidgets import QGroupBox, \
 from extrap.gui.components.dynamic_options import DynamicOptionsWidget
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler
+from extrap.util.dynamic_options import DynamicOptions
 
 
 class ModelerOptionsWidget(DynamicOptionsWidget):
-    object_with_options: AbstractModeler
+    object_with_options: Union[AbstractModeler, DynamicOptions]
 
     def __init__(self, parent, modeler: AbstractModeler, has_parent_options=False):
         self._single_parameter_modeler_widget = None
         super().__init__(parent, modeler, has_parent_options, has_reset_button=True)
 
-    def init_ui(self, layout, has_parent_options):
-        super().init_ui(layout, has_parent_options)
+    def init_ui(self):
+        super().init_ui()
+        self.parent().setEnabled(self._has_parent_options)
 
+        if self.object_with_options and self.object_with_options.OPTIONS:
+            self.parent().setEnabled(True)
         if isinstance(self.object_with_options,
                       MultiParameterModeler) and self.object_with_options.single_parameter_modeler is not None:
             group = self._create_single_parameter_selection()
-            layout.addRow(group)
+            self._layout.addRow(group)
             self.parent().setEnabled(True)
 
     def _create_single_parameter_selection(self):
-        self._modeler: MultiParameterModeler
+        self.object_with_options: MultiParameterModeler
 
         group = QGroupBox('Single-parameter modeler')
         g_layout = QVBoxLayout()

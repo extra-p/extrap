@@ -1,11 +1,14 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 import copy
+import math
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -127,12 +130,96 @@ class Measurement(CalculationElement):
         result.std = np.sqrt(variance)
         return result
 
+    def __itruediv__(self, other):
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            self.median /= other.median
+            self.mean /= other.mean
+            minimum = self.minimum / other.minimum
+            maximum = self.maximum / other.maximum
+            self.minimum = min(minimum, maximum, self.median)
+            self.maximum = max(minimum, maximum, self.median)
+            # Var(Y/X)~= Var(Y)/E(X)^2 + (E(Y)^2*Var(X))/E(X)^4 - (2*E(Y)*Cov(X,Y))/E(X)^3
+            variance = self.std ** 2 / other.mean ** 2 + (self.mean ** 2 * other.std ** 2) / other.mean ** 4 \
+                       - (2 * self.mean * self.std * other.std) / other.mean ** 3
+            self.std = math.sqrt(variance)
+        else:
+            self.median /= other
+            self.mean /= other
+            self.minimum /= other
+            self.maximum /= other
+            variance = self.std ** 2 / other ** 2
+            self.std = math.sqrt(variance)
+        return self
+
     def __truediv__(self, other):
-        # TODO implement correct division
-        return self.__mul__(other ** -1)
+        result = copy.copy(self)
+        result /= other
+        return result
+
+    @staticmethod
+    def divide_no0(a: Measurement, b: Measurement) -> Measurement:
+        result = copy.copy(a)
+        if b.mean == 0:
+            result.mean = 1 if a.mean == 0 else math.inf
+        else:
+            result.mean /= b.mean
+        if b.median == 0:
+            result.median = 1 if a.median == 0 else math.inf
+        else:
+            result.median /= b.median
+
+        if b.minimum == 0:
+            minimum = 1 if a.minimum == 0 else math.inf
+        else:
+            minimum = a.minimum / b.minimum
+        if b.maximum == 0:
+            maximum = 1 if a.maximum == 0 else math.inf
+        else:
+            maximum = a.maximum / b.maximum
+        result.minimum = min(minimum, maximum, result.median)
+        result.maximum = max(minimum, maximum, result.median)
+        # Var(Y/X)~= Var(Y)/E(X)^2 + (E(Y)^2*Var(X))/E(X)^4 - (2*E(Y)*Cov(X,Y))/E(X)^3
+        if b.mean == 0:
+            result.std = math.nan
+        else:
+            variance = a.std ** 2 / b.mean ** 2 + (a.mean ** 2 * b.std ** 2) / b.mean ** 4 \
+                       - (2 * a.mean * a.std * b.std) / b.mean ** 3
+            result.std = math.sqrt(variance)
+        return result
 
     def __rtruediv__(self, other):
-        return (self ** -1).__mul__(other)
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            # TODO implement correct division
+            return (self ** -1).__mul__(other)
+        else:
+            result = copy.copy(self)
+            if self.median == 0:
+                result.median = math.inf
+            else:
+                result.median = other / self.median
+            if self.mean == 0:
+                result.mean = math.inf
+            else:
+                result.mean = other / self.mean
+            if self.maximum == 0:
+                result.minimum = math.inf
+            else:
+                result.minimum = other / self.maximum
+            if self.minimum == 0:
+                result.maximum = math.inf
+            else:
+                result.maximum = other / self.minimum
+            # Var(Y/X)~= Var(Y)/E(X)^2 + (E(Y)^2*Var(X))/E(X)^4 - (2*E(Y)*Cov(X,Y))/E(X)^3
+            if self.mean == 0:
+                result.std = math.nan
+            else:
+                variance = (other ** 2 * self.std ** 2) / self.mean ** 4
+                result.std = math.sqrt(variance)
+        return self
 
     def __neg__(self):
         return self * -1
@@ -145,6 +232,9 @@ class Measurement(CalculationElement):
         result.maximum = 1
         result.std = 0
         return result
+
+    def copy(self):
+        return copy.copy(self)
 
 
 class MeasurementSchema(Schema):

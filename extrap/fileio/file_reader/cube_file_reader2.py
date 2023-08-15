@@ -56,6 +56,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
     demangle_names = DynamicOptions.add(True, bool)
     use_inclusive_measurements = False
     small_kernel_filter: SmallKernelFilter = None
+    aggregate_unc_cas_counts = DynamicOptions.add(True, bool)
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
@@ -115,6 +116,9 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
         if self.small_kernel_filter:
             self._remove_small_kernels(experiment, total_values, progress_bar)
 
+        if self.aggregate_unc_cas_counts:
+            self._aggregate_unc_cas_counts(experiment, progress_bar)
+
         # determine calltree
         call_tree = io_helper.create_call_tree(experiment.callpaths, progress_bar, progress_scale=0.1)
         experiment.call_tree = call_tree
@@ -126,6 +130,28 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
         io_helper.validate_experiment(experiment, progress_bar)
         progress_bar.update()
         return experiment
+
+    @staticmethod
+    def _aggregate_unc_cas_counts(experiment, progress_bar):
+        cas_metrics = [m for m in experiment.metrics if "UNC_M_CAS_COUNT" in m.name]
+        if cas_metrics:
+            agg_cas_metric = Metric("UNC_M_CAS_COUNT:ALL")
+            experiment.add_metric(agg_cas_metric)
+            for callpath in progress_bar(experiment.callpaths, len(experiment.callpaths),
+                                         scale=0.1):
+                all_measurements = None
+                for cas_metric in cas_metrics:
+                    measurements = experiment.measurements.get((callpath, cas_metric))
+                    if measurements:
+                        if all_measurements is None:
+                            all_measurements = {m.coordinate: m.copy() for m in measurements}
+                        else:
+                            for m in measurements:
+                                all_measurements[m.coordinate].merge(m)
+
+                for m in all_measurements:
+                    m.metric = agg_cas_metric
+                experiment.measurements[callpath, agg_cas_metric] = list(all_measurements.values())
 
     def _aggregate_repetitions_legacy(self, point_group, progress_bar, show_warning_skipped_metrics):
         total_values = defaultdict(list)

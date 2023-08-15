@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -18,10 +18,10 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import SimpleTerm, MultiParameterTerm, CompoundTerm
 from extrap.fileio import io_helper
-from extrap.modelers import aggregation
-from extrap.modelers.aggregation.max_aggregation import MaxAggregation, MaxAggregationFunction
-from extrap.modelers.aggregation.sum_aggregation import SumAggregationFunction, SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.postprocessing import aggregation
+from extrap.modelers.postprocessing.aggregation.max_aggregation import MaxAggregation, MaxAggregationFunction
+from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregationFunction, SumAggregation
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
@@ -32,7 +32,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         ca, cb, evt_sync, main, overlap, start, sync, wait, work = callpaths
         mg = ModelGenerator(experiment1)
         mg.model_all()
-        mg.aggregate(SumAggregation())
+        mg.post_process(SumAggregation(experiment1))
 
         self.check_same(experiment1, metric, [cb.path, ca.path, evt_sync.path, sync.path, work.path, wait.path])
         self.check_changed(experiment1, metric, [overlap.path, main.path, start.path])
@@ -76,7 +76,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         experiment2, _ = self.prepare_experiment(metric, agg__disabled__sum=True, agg__usage_disabled__sum=True)
         mg = ModelGenerator(experiment2)
         mg.model_all()
-        mg.aggregate(SumAggregation())
+        mg.aggregate(SumAggregation(experiment2))
         self.assertSetEqual(set(experiment1.modelers[1].models.keys()), set(experiment2.modelers[1].models.keys()))
         for k in experiment1.modelers[1].models:
             self.assertEqual(experiment1.modelers[1].models[k], experiment2.modelers[1].models[k], msg=str(k))
@@ -85,7 +85,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         ca, cb, evt_sync, main, overlap, start, sync, wait, work = callpaths
         mg = ModelGenerator(experiment3)
         mg.model_all()
-        mg.aggregate(SumAggregation())
+        mg.aggregate(SumAggregation(experiment2))
 
         self.check_same(experiment3, metric, [cb.path, ca.path, work.path, wait.path])
         self.check_changed(experiment3, metric, [overlap.path, evt_sync.path, sync.path, main.path, start.path])

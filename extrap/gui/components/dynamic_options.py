@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from typing import Mapping, Collection, cast
+from typing import Mapping, Collection, cast, Optional
 
 from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
     QComboBox, QLabel, QPushButton
@@ -14,33 +14,38 @@ from extrap.util.dynamic_options import DynamicOptions, DynamicOptionsGroup, Dyn
 
 
 class DynamicOptionsWidget(QWidget):
-    def __init__(self, parent, object_with_options: DynamicOptions, has_parent_options=False, has_reset_button=False):
+    def __init__(self, parent, object_with_options: Optional[DynamicOptions], has_parent_options=False,
+                 has_reset_button=False):
         super().__init__(parent)
         self.object_with_options = object_with_options
         self._has_reset_button = has_reset_button
-        layout = QFormLayout()
-        self.init_ui(layout, has_parent_options)
+        self._layout = QFormLayout()
+        self._has_parent_options = has_parent_options
+        self.init_ui()
 
-    def init_ui(self, layout, has_parent_options):
-        layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
-        self.setLayout(layout)
-        self.parent().setEnabled(has_parent_options)
-
-        if self.object_with_options.OPTIONS:
-            self.parent().setEnabled(True)
-            if not has_parent_options and self._has_reset_button:
+    def init_ui(self):
+        self._layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        self.setLayout(self._layout)
+        if self.object_with_options and self.object_with_options.OPTIONS:
+            if not self._has_parent_options and self._has_reset_button:
                 reset_button = QPushButton('Reset options to defaults', self)
                 reset_button.clicked.connect(self.reset_options)
-                layout.addRow(reset_button)
-            self._create_options(layout, self.object_with_options.OPTIONS.items())
+                self._layout.addRow(reset_button)
+            self._create_options(self._layout, self.object_with_options.OPTIONS.items())
 
     def reset_options(self):
         for option in self.object_with_options.options_iter():
             setattr(self.object_with_options, option.field, option.value)
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            layout.itemAt(i).widget().setParent(cast(QWidget, None))
-        self.init_ui(cast(QFormLayout, layout), False)
+        for i in reversed(range(self._layout.count())):
+            self._layout.itemAt(i).widget().setParent(cast(QWidget, None))
+        self.init_ui()
+        self.update()
+
+    def update_object_with_options(self, object_with_options):
+        self.object_with_options = object_with_options
+        for i in reversed(range(self._layout.count())):
+            self._layout.itemAt(i).widget().setParent(cast(QWidget, None))
+        self.init_ui()
         self.update()
 
     def _create_options(self, layout, options):

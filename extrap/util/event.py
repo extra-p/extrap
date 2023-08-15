@@ -7,8 +7,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, Any, Type, Union
 from inspect import signature, Parameter
+from typing import Callable, Any, Type, Union
 
 from typing_extensions import TypeVarTuple, Unpack
 
@@ -27,7 +27,7 @@ class Event(Callable[[Unpack[_Ts]], None]):
             self.len_args = None
         self._event_listeners: set[Callable[[Unpack[_Ts]], Any]] = set()
 
-    def __add__(self, event_listener: Callable[[Unpack[_Ts]], Any]):
+    def __iadd__(self, event_listener: Callable[[Unpack[_Ts]], Any]):
         if self.len_args is not None:
             parameters = signature(event_listener).parameters
             len_el_args = len(parameters)
@@ -37,7 +37,7 @@ class Event(Callable[[Unpack[_Ts]], None]):
         self._event_listeners.add(event_listener)
         return self
 
-    def __sub__(self, other: Callable[[Unpack[_Ts]], Any]):
+    def __isub__(self, other: Callable[[Unpack[_Ts]], Any]):
         if other in self._event_listeners:
             self._event_listeners.remove(other)
         return self

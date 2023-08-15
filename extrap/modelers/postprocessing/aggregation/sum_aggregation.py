@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,8 +13,9 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
-from extrap.modelers.aggregation import AggregatedModel
-from extrap.modelers.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, BinaryAggregation, \
+from extrap.modelers.postprocessing.aggregation import AggregatedModel
+from extrap.modelers.postprocessing.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, \
+    BinaryAggregation, \
     BinaryAggregationFunctionSchema
 
 
@@ -30,7 +31,7 @@ class SumAggregationFunction(BinaryAggregationFunction):
         for function in self.raw_terms:
             _params, ftype = self._determine_params(function)
             if self._ftype != ftype:
-                raise ValueError("You cannot aggregate single and multi parameter functions to one function.")
+                raise ValueError("You cannot process single and multi parameter functions to one function.")
             self._ftype &= ftype
             if isinstance(function, ComputationFunction):
                 preprocessed_terms.append(function.sympy_function)

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.entities.metric import Metric
-from extrap.modelers.aggregation.sum_aggregation import SumAggregation
+from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget

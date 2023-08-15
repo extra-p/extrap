@@ -206,6 +206,10 @@ class ComputationFunction(TermlessFunction, CalculationElement):
 
         return self._PRINTER.doprint(result)
 
+    @staticmethod
+    def get_param(param_idx: int):
+        return sympy.Symbol(PARAM_TOKEN + str(param_idx))
+
     def evaluate(self, parameter_value: Union[Number, numpy.ndarray, Mapping[int, Union[Number, numpy.ndarray]],
     Sequence[Union[Number, numpy.ndarray]]]) -> Union[Number, numpy.ndarray]:
         if not self._evaluation_function:  # lazy init of evaluation function

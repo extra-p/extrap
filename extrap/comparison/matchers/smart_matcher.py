@@ -22,7 +22,7 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.modelers.aggregation.sum_aggregation import SumAggregation
+from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
 from extrap.util.formatting_helper import replace_method_parameters
 from extrap.util.progress_bar import DUMMY_PROGRESS

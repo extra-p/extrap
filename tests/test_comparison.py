@@ -26,8 +26,8 @@ from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
-from extrap.modelers.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 
 
 class TestComparison(TestCase):

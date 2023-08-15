@@ -1,54 +1,46 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from abc import abstractmethod, ABC
-from typing import Sequence, Dict, Tuple, Optional, Union
+from __future__ import annotations
 
-from marshmallow import fields, post_dump, pre_load
+import typing
+from abc import abstractmethod
+from typing import Sequence, Dict, Tuple, Optional, Union
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree
-from extrap.entities.measurement import MeasurementSchema
 from extrap.entities.metric import Metric
-from extrap.entities.model import Model, ModelSchema
+from extrap.entities.model import Model
+from extrap.modelers.postprocessing import PostProcessedModel, PostProcessedModelSchema, PostProcess
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
-
-class AggregatedModel(Model):
+if typing.TYPE_CHECKING:
     pass
 
 
-class AggregatedModelSchema(ModelSchema):
-    measurements = fields.List(fields.Nested(MeasurementSchema))
+class AggregatedModel(PostProcessedModel):
+    pass
 
+
+class AggregatedModelSchema(PostProcessedModelSchema):
     def create_object(self):
         return AggregatedModel(None)
 
-    def report_progress(self, data, **kwargs):
-        return data
 
-    @post_dump
-    def intercept(self, data, many, **kwargs):
-        return data
-
-    @pre_load
-    def intercept2(self, data, many, **kwargs):
-        return data
-
-
-class Aggregation(ABC):
+class Aggregation(PostProcess):
     TAG_DISABLED = 'agg__disabled'
     TAG_USAGE_DISABLED = 'agg__usage_disabled'
     TAG_USAGE_DISABLED_agg_model = 'only_agg_model'
     TAG_CATEGORY = 'agg__category'
 
-    def __init__(self):
+    def __init__(self, experiment):
+        super().__init__(experiment)
         self.tag_suffix: Optional[str] = None
         """
         A suffix appended to the tags controlling the aggregation.
@@ -68,6 +60,13 @@ class Aggregation(ABC):
         thus it should not create aggregations for elements marked with this tag.
         """
         raise NotImplementedError
+
+    def process(self, current_model_set: Dict[Tuple[Callpath, Metric], Model], progress_bar=DUMMY_PROGRESS) -> Dict[
+        Tuple[Callpath, Metric], Union[Model, PostProcessedModel]]:
+        return self.aggregate(current_model_set, self.experiment.call_tree, self.experiment.metrics, progress_bar)
+
+    def supports_processing(self, post_processing_history: list[PostProcess]) -> bool:
+        return not post_processing_history
 
     @classproperty
     @abstractmethod
