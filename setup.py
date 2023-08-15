@@ -58,13 +58,13 @@ setup(
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",
-        "packaging~=20.0",
+        "packaging>=20.0,<22",
         "kaitaistruct~=0.9",
         "protobuf~=3.14",
         "itanium_demangler~=1.0",
         "sympy~=1.8",
         "typing-extensions~=4.3.0",
-        "msgpack~=1.0.4",
+        "msgpack~=1.0.3",
         "scipy~=1.5",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'"
     ]
