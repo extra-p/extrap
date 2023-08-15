@@ -15,7 +15,7 @@ from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.modelers.postprocessing import PostProcessedModel, PostProcessedModelSchema, PostProcess
+from extrap.modelers.postprocessing import PostProcessedModel, PostProcessedModelSchema, PostProcess, PostProcessSchema
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -84,6 +84,10 @@ class Aggregation(PostProcess):
         It is shown as additional information in the GUI and CLI.
         You should override this by setting the class variable DESCRIPTION."""
         return None
+
+
+class AggregationSchema(PostProcessSchema):
+    pass
 
 
 all_aggregations = load_extensions(__path__, __name__, Aggregation)

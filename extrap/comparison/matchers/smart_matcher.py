@@ -22,8 +22,8 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 from extrap.modelers.model_generator import ModelGenerator, AggregateModelGenerator
+from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 from extrap.util.formatting_helper import replace_method_parameters
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -44,7 +44,7 @@ class SmartMatcher(AbstractMatcher):
 
     def __init__(self):
         self._enable_cpu_gpu_comparison = False
-        self._aggregation_strategy = SumAggregation()
+        self._aggregation_strategy = SumAggregation(None)
 
         self.enable_cpu_gpu_comparison = True
 
@@ -264,6 +264,8 @@ class SmartMatcher(AbstractMatcher):
         from extrap.comparison.entities.comparison_model import ComparisonModel
         mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)
         mg.models = {}
+        self._aggregation_strategy.experiment = experiment
+
         for metric, source_metrics in experiment.metrics_match.items():
             for node, source_nodes in experiment.call_tree_match.items():
                 models = []

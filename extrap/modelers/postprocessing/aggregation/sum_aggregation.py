@@ -16,7 +16,7 @@ from extrap.entities.metric import Metric
 from extrap.modelers.postprocessing.aggregation import AggregatedModel
 from extrap.modelers.postprocessing.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, \
     BinaryAggregation, \
-    BinaryAggregationFunctionSchema
+    BinaryAggregationFunctionSchema, BinaryAggregationSchema
 
 
 class SumAggregationFunction(BinaryAggregationFunction):
@@ -62,3 +62,8 @@ class SumAggregation(BinaryAggregation):
     TAG_DISABLED = 'agg__disabled__sum'
     TAG_USAGE_DISABLED = 'agg__usage_disabled__sum'
     _OPERATION_NAME = 'sum'
+
+
+class SumAggregationSchema(BinaryAggregationSchema):
+    def create_object(self):
+        return SumAggregation(None)

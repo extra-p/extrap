@@ -205,7 +205,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         mg = ModelGenerator(experiment1)
         mg.model_all()
-        mg.aggregate(SumAggregation())
+        mg.aggregate(SumAggregation(experiment1))
 
         self.check_same(experiment1, metric, [neB.path])
         self.check_changed(experiment1, metric,
@@ -257,7 +257,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         mg = ModelGenerator(experiment1)
         mg.model_all()
-        mg.aggregate(SumAggregation())
+        mg.aggregate(SumAggregation(experiment1))
 
         self.check_same(experiment1, metric, [neB.path, neC.path, categoryB.path, categoryC.path])
         self.check_changed(experiment1, metric, [main.path, emptyA.path, emptyB.path, neA.path])
@@ -322,7 +322,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
 
         mg = ModelGenerator(experiment1)
         mg.model_all()
-        mg.aggregate(SumAggregation())
+        mg.aggregate(SumAggregation(experiment1))
 
         self.check_same(experiment1, metric, [neB.path, neC.path])
         self.check_changed(experiment1, metric, [main.path, emptyA.path, emptyB.path, neA.path])
@@ -387,7 +387,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         ca, cb, evt_sync, main, overlap, start, sync, wait, work = callpaths
         mg = ModelGenerator(experiment1)
         mg.model_all()
-        mg.aggregate(MaxAggregation())
+        mg.aggregate(MaxAggregation(experiment1))
 
         self.check_same(experiment1, metric, [cb.path, ca.path, evt_sync.path, work.path, wait.path])
         self.check_changed(experiment1, metric, [overlap.path, sync.path, main.path, start.path])
@@ -478,7 +478,7 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         mg = ModelGenerator(experiment1)
         mg.model_all()
         for aggregation_cls in aggregation.all_aggregations.values():
-            mg.aggregate(aggregation_cls())
+            mg.aggregate(aggregation_cls(experiment1))
 
         schema = ExperimentSchema()
         ser_exp = schema.dump(experiment1)

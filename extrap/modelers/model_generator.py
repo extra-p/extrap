@@ -94,6 +94,7 @@ class ModelGenerator:
     def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS, auto_append=True):
         mg = AggregateModelGenerator(self.experiment, aggregation, self._modeler, aggregation.NAME + ' ' + self.name,
                                      self._modeler.use_median)
+        aggregation.experiment = self.experiment
         mg.models = aggregation.aggregate(self.models, self.experiment.call_tree, self.experiment.metrics, progress_bar)
         if auto_append:
             self.experiment.add_modeler(mg)
@@ -102,6 +103,7 @@ class ModelGenerator:
                      auto_append=True) -> PostProcessedModelSet:
         mg = PostProcessedModelSet(self.experiment, post_process, self._modeler,
                                    post_process.NAME + ' ' + self.name, self._modeler.use_median)
+        post_process.experiment = self.experiment
         mg.models = post_process.process(self.models, progress_bar)
         if auto_append:
             self.experiment.add_modeler(mg)

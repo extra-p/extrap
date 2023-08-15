@@ -21,7 +21,7 @@ from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.named_entity import TAG_SEPARATOR
-from extrap.modelers.postprocessing.aggregation import Aggregation, AggregatedModel
+from extrap.modelers.postprocessing.aggregation import Aggregation, AggregatedModel, AggregationSchema
 from extrap.util.classproperty import classproperty
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -199,3 +199,7 @@ class BinaryAggregation(Aggregation, ABC):
                 agg.minimum = self.binary_operator(agg.minimum, m.minimum)
                 agg.std = self.binary_operator(agg.std, m.std)
         return list(data.values())
+
+
+class BinaryAggregationSchema(AggregationSchema):
+    pass

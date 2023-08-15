@@ -18,7 +18,7 @@ from extrap.entities.metric import Metric
 from extrap.modelers.postprocessing.aggregation import AggregatedModel
 from extrap.modelers.postprocessing.aggregation.abstract_binary_aggregation import BinaryAggregationFunction, \
     BinaryAggregation, \
-    BinaryAggregationFunctionSchema
+    BinaryAggregationFunctionSchema, BinaryAggregationSchema
 
 
 class MaxAggregationFunction(BinaryAggregationFunction):
@@ -66,3 +66,8 @@ class MaxAggregation(BinaryAggregation):
     TAG_DISABLED = 'agg__disabled__max'
     TAG_USAGE_DISABLED = 'agg__usage_disabled__max'
     _OPERATION_NAME = 'max'
+
+
+class MaxAggregationSchema(BinaryAggregationSchema):
+    def create_object(self):
+        return MaxAggregation(None)

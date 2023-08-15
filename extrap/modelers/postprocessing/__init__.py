@@ -44,7 +44,13 @@ class PostProcessedModelSchema(ModelSchema):
 
 class PostProcess(DynamicOptions, ABC):
 
-    def __init__(self, experiment: Experiment):
+    def __init__(self, experiment: Optional[Experiment]):
+        """Initialize PostProcess, which represents any processing/analysis that is applied after modeling.
+
+        :param experiment: Where possible you should pass the experiment directly at initialization. You must set it
+                           the latest before calling process.
+        """
+
         self.experiment = experiment
 
     @abstractmethod
