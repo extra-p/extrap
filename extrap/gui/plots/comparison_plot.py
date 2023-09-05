@@ -61,20 +61,28 @@ class ComparisonPlot(BaseContourGraph):
         for ax in self.fig.axes:
             ax: Axes
 
-            if not hasattr(ax, 'extra_p_type') or getattr(ax, 'extra_p_type') != 'plot':
+            if not hasattr(ax, 'extra_p_crosshairs'):
                 continue
 
-            for i, line in reversed(list(enumerate(ax.lines))):
-                if not hasattr(ax, 'extra_p_type') or getattr(ax, 'extra_p_type') != 'plot':
-                    continue
-                del ax.lines[i]
-
             if display_x_value:
-                line = ax.plot([x_value, x_value], [1 - pixel_gap_y / 2, max_y], ':k')
-                line[0].extra_p_type = 'crosshair'
+                if not ax.extra_p_crosshairs[0]:
+                    ax.extra_p_crosshairs[0] = ax.plot([x_value, x_value], [1 - pixel_gap_y / 2, max_y], ':k')[0]
+                else:
+                    ax.extra_p_crosshairs[0].set_xdata([x_value, x_value])
+            else:
+                if ax.extra_p_crosshairs[0]:
+                    ax.extra_p_crosshairs[0].remove()
+                    ax.extra_p_crosshairs[0] = None
+
             if display_y_value:
-                line = ax.plot([1 - pixel_gap_x / 2, max_x], [y_value, y_value], ':k')
-                line[0].extra_p_type = 'crosshair'
+                if not ax.extra_p_crosshairs[1]:
+                    ax.extra_p_crosshairs[1] = ax.plot([1 - pixel_gap_x / 2, max_x], [y_value, y_value], ':k')[0]
+                else:
+                    ax.extra_p_crosshairs[1].set_ydata([y_value, y_value])
+            else:
+                if ax.extra_p_crosshairs[1]:
+                    ax.extra_p_crosshairs[1].remove()
+                    ax.extra_p_crosshairs[1] = None
 
     def draw_figure(self):
         """
@@ -154,7 +162,7 @@ class ComparisonPlot(BaseContourGraph):
 
         for i in range(len(Z_List)):
             ax = self.fig.add_subplot(1, len(Z_List), i + 1)
-            ax.extra_p_type = 'plot'
+            ax.extra_p_crosshairs = [None, None]
             ax.set_title(selected_call_nodes[i].name)
             ax.xaxis.major.formatter._useMathText = True
             ax.yaxis.major.formatter._useMathText = True
