@@ -17,7 +17,7 @@ from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from extrap.modelers.postprocessing import PostProcess
 from extrap.modelers.postprocessing.aggregation import Aggregation
 from extrap.util.exceptions import RecoverableError
-from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.util.progress_bar import DUMMY_PROGRESS, ScaledSubProgressBar
 
 if TYPE_CHECKING:
     from extrap.entities.experiment import Experiment
@@ -35,21 +35,42 @@ class ComparisonModelGenerator(ModelGenerator):
 
     def post_process(self, post_process: PostProcess, progress_bar=DUMMY_PROGRESS,
                      auto_append=True) -> ComparisonModelGenerator:
-        if post_process.supports_processing(self.post_processing_history):
+        if not post_process.supports_processing(self.post_processing_history):
+            raise RecoverableError(f"Processing this model with {post_process.NAME} is not supported.")
+
+        post_process.experiment = self.experiment
+
+        if hasattr(post_process, 'supports_comparison_models') and getattr(post_process, 'supports_comparison_models'):
+            post_processed_comparison_set = ComparisonModelGenerator(post_process.experiment,
+                                                                     post_process.NAME + ' ' + self.name)
+            post_processed_comparison_set.models = post_process.process(self.models, progress_bar)
+        else:
             number_models = len(next(iter(self.models.values())).models)
+            progress_bar.total = number_models * len(self.models) * 2
             post_processed_comparison_set = ComparisonModelGenerator(post_process.experiment,
                                                                      post_process.NAME + ' ' + self.name)
 
-            all_models = [post_process.process({key: value.models[c] for key, value in self.models.items()},
-                                               progress_bar) for c in range(number_models)]
+            all_models = []
+            for c in range(number_models):
+                with ScaledSubProgressBar(progress_bar, len(self.models)) as sub_progress_bar:
+                    all_models.append(post_process.process(
+                        {key: value.models[c] for key, value in self.models.items() if
+                         isinstance(value, ComparisonModel)},
+                        sub_progress_bar))
 
-            post_processed_comparison_set.models = {key: ComparisonModel(*key, [m[key] for m in all_models]) for key in
-                                                    self.models}
+            post_processed_comparison_set.models = {key: ComparisonModel(*key, [m[key] for m in all_models]) for
+                                                    key, value in progress_bar(self.models.items())
+                                                    if isinstance(value, ComparisonModel)}
 
-            post_processed_comparison_set.post_processing_history = self.post_processing_history + [post_process]
-            return post_processed_comparison_set
-        else:
-            raise RecoverableError(f"Processing this model with {post_process.NAME} is not supported.")
+            with ScaledSubProgressBar(progress_bar, number_models * len(self.models)) as sub_progress_bar:
+                post_processed_comparison_set.models.update(post_process.process(
+                    {key: value for key, value in self.models.items() if not isinstance(value, ComparisonModel)},
+                    sub_progress_bar))
+
+        post_processed_comparison_set.post_processing_history = self.post_processing_history + [post_process]
+        if auto_append:
+            self.experiment.add_modeler(post_processed_comparison_set)
+        return post_processed_comparison_set
 
     def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS, auto_append=True):
         raise RecoverableError("Aggregation is not supported using a comparison model set.")

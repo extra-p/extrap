@@ -10,12 +10,14 @@ from __future__ import annotations
 import copy
 from typing import Dict, Tuple, Union
 
+from marshmallow import fields
+
 from extrap.entities.callpath import Callpath
 from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
-from extrap.entities.parameter import Parameter
-from extrap.modelers.postprocessing import PostProcess, PostProcessedModel
+from extrap.entities.parameter import Parameter, ParameterSchema
+from extrap.modelers.postprocessing import PostProcess, PostProcessedModel, PostProcessSchema
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -24,7 +26,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 class ParallelEfficiencyAnalysis(PostProcess):
     NAME = "Parallel Efficiency"
 
-    resource_parameter = DynamicOptions.add(Parameter('gflops'), Parameter)
+    resource_parameter = DynamicOptions.add(Parameter('nodes'), Parameter)
 
     def process(self, current_model_set: Dict[Tuple[Callpath, Metric], Model], progress_bar=DUMMY_PROGRESS) -> Dict[
         Tuple[Callpath, Metric], Union[Model, PostProcessedModel]]:
@@ -56,3 +58,10 @@ class ParallelEfficiencyAnalysis(PostProcess):
 
     def supports_processing(self, post_processing_history: list[PostProcess]) -> bool:
         return not any(isinstance(p, ParallelEfficiencyAnalysis) for p in post_processing_history)
+
+
+class ParallelEfficiencyAnalysisSchema(PostProcessSchema):
+    resource_parameter = fields.Nested(ParameterSchema)
+
+    def create_object(self):
+        return ParallelEfficiencyAnalysis(None)

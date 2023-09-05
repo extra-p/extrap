@@ -8,15 +8,17 @@
 from __future__ import annotations
 
 import copy
-from typing import Tuple, Dict, Union, TYPE_CHECKING
+from typing import Tuple, Dict, Union, TYPE_CHECKING, Optional
+
+from marshmallow import fields
 
 from extrap.entities.calculation_element import divide_no0
 from extrap.entities.callpath import Callpath
 from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.hypotheses import Hypothesis
-from extrap.entities.metric import Metric
+from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model
-from extrap.modelers.postprocessing import PostProcess, PostProcessedModel
+from extrap.modelers.postprocessing import PostProcess, PostProcessedModel, PostProcessSchema
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
@@ -24,16 +26,17 @@ if TYPE_CHECKING:
     from extrap.entities.experiment import Experiment
 
 
-class ArithmeticIntensity(PostProcess):
+class ArithmeticIntensityCalculation(PostProcess):
     NAME = "Arithmetic Intensity"
 
-    flops_metric = DynamicOptions.add(Metric('PAPI_DP_OPS'), Metric)
-    unc_m_cas_count_metric = DynamicOptions.add(Metric("UNC_M_CAS_COUNT:ALL"), Metric)
-    bytes_per_cas = DynamicOptions.add(8, int)
+    flops_dp_metric = DynamicOptions.add(Metric('PAPI_DP_OPS'), Metric, name="FLOPs metric (double precision)")
+    num_mem_transfers_metric = DynamicOptions.add(Metric("UNC_M_CAS_COUNT:ALL"), Metric,
+                                                  name="Number of memory transfers metric")
+    bytes_per_mem_transfer = DynamicOptions.add(8, int)
 
     arithmetic_intensity_metric = Metric("Arithmetic Intensity")
 
-    def __init__(self, experiment: Experiment):
+    def __init__(self, experiment: Optional[Experiment]):
         super().__init__(experiment)
 
     def process(self, current_model_set: Dict[Tuple[Callpath, Metric], Model], progress_bar=DUMMY_PROGRESS) -> Dict[
@@ -46,14 +49,14 @@ class ArithmeticIntensity(PostProcess):
     def generate_arithmetic_intensity_models(self, current_model_set, progress_bar):
         model_set = {}
         for (callpath, metric), v in progress_bar(current_model_set.items(), length=len(current_model_set)):
-            if metric != self.flops_metric:
+            if metric != self.flops_dp_metric:
                 continue
-            cas_count_model = current_model_set.get((callpath, self.unc_m_cas_count_metric))
+            cas_count_model = current_model_set.get((callpath, self.num_mem_transfers_metric))
             if cas_count_model is None:
                 continue
 
             flops_function = ComputationFunction(v.hypothesis.function)
-            bytes_function = ComputationFunction(cas_count_model.hypothesis.function) * self.bytes_per_cas
+            bytes_function = ComputationFunction(cas_count_model.hypothesis.function) * self.bytes_per_mem_transfer
             ai_function = divide_no0(flops_function, bytes_function)
             hypothesis = copy.copy(v.hypothesis)
             hypothesis.function = ai_function
@@ -79,3 +82,14 @@ class ArithmeticIntensity(PostProcess):
     @property
     def modifies_experiment(self) -> bool:
         return True
+
+
+class ArithmeticIntensityCalculationSchema(PostProcessSchema):
+    flops_dp_metric = fields.Nested(MetricSchema)
+    num_mem_transfers_metric = fields.Nested(MetricSchema)
+    bytes_per_mem_transfer = fields.Integer()
+
+    arithmetic_intensity_metric = fields.Nested(MetricSchema)
+
+    def create_object(self):
+        return ArithmeticIntensityCalculation(None)
