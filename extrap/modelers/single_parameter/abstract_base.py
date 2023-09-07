@@ -33,7 +33,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
     compare_with_RSS = modeler_options.add(False, bool,
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
-    negative_coefficients = modeler_options.add(False, bool)
+    negative_coefficients = modeler_options.add(True, bool)
 
     def __init__(self, use_median: bool):
         super().__init__(use_median)
