@@ -17,13 +17,14 @@ from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter, ParameterSchema
-from extrap.modelers.postprocessing import PostProcess, PostProcessedModel, PostProcessSchema
+from extrap.modelers.postprocessing import PostProcessedModel
+from extrap.modelers.postprocessing.analysis import PostProcessAnalysis, PostProcessAnalysisSchema
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
-class ParallelEfficiencyAnalysis(PostProcess):
+class ParallelEfficiencyAnalysis(PostProcessAnalysis):
     NAME = "Parallel Efficiency"
 
     resource_parameter = DynamicOptions.add(Parameter('nodes'), Parameter)
@@ -56,11 +57,8 @@ class ParallelEfficiencyAnalysis(PostProcess):
 
         return model_set
 
-    def supports_processing(self, post_processing_history: list[PostProcess]) -> bool:
-        return not any(isinstance(p, ParallelEfficiencyAnalysis) for p in post_processing_history)
 
-
-class ParallelEfficiencyAnalysisSchema(PostProcessSchema):
+class ParallelEfficiencyAnalysisSchema(PostProcessAnalysisSchema):
     resource_parameter = fields.Nested(ParameterSchema)
 
     def create_object(self):
