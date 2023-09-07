@@ -12,20 +12,28 @@ from itertools import chain
 from pathlib import Path
 from typing import Optional, Type, cast
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
                                QLabel, QLineEdit, QSizePolicy, QSpacerItem,
                                QWizard, QWizardPage, QComboBox, QGridLayout)
 
 from extrap.comparison import matchers
+from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import ComparisonExperiment
+from extrap.comparison.matchers import AbstractMatcher
+from extrap.entities.function_computation import ComputationFunction
+from extrap.entities.metric import Metric
+from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import FileReader, all_readers
 from extrap.gui.comparison.interactive_matcher import InteractiveMatcher
 from extrap.gui.components import file_dialog
+from extrap.gui.components.dynamic_options import DynamicOptionsWidget
 from extrap.gui.components.wizard_pages import ProgressPage, ScrollAreaPage
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.dynamic_options import DynamicOptions
+from extrap.util.exceptions import FileFormatError
 
 
 class ComparisonWizard(QWizard):
@@ -40,13 +48,14 @@ class ComparisonWizard(QWizard):
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         if not experiment2:
             self.addPage(FileSelectionPage(self))
-            self.addPage(FileLoadingPage(self))
+            self.addPage(FileReaderOptionsPage(self))
+            self.file_loading_page_id = self.addPage(FileLoadingPage(self))
         self.addPage(NamingPage(self))
         self.addPage(ModelSelectionPage(self))
         self.addPage(ParameterMappingPage(self))
         self.addPage(MatcherSelectionPage(self))
         self.comparing_page_id = self.addPage(ComparingPage(self))
-        self.matcher = None
+        self.matcher: Optional[AbstractMatcher] = None
         self.exp_names = [name1, name2]
         self.experiment1 = experiment1
         self.experiment2 = experiment2
@@ -54,6 +63,7 @@ class ComparisonWizard(QWizard):
         self.model_mapping = {}
         self.parameter_mapping = {}
         self.is_cancelled = Event()
+        self.file_reader = None
         self.rejected.connect(self.on_reject)
 
     def on_reject(self):
@@ -86,11 +96,32 @@ class FileSelectionPage(ScrollAreaPage):
         wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         wizard.file_name = name
         wizard.exp_names[1] = Path(name).stem
-        wizard.file_reader = reader
+        wizard.file_reader = reader()
         wizard.next()
+
+    def nextId(self) -> int:
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+        if not isinstance(wizard.file_reader, DynamicOptions):
+            return wizard.file_loading_page_id
+        else:
+            return super().nextId()
 
     def isComplete(self) -> bool:
         return False
+
+
+class FileReaderOptionsPage(QWizardPage):
+    def __init__(self, parent: ComparisonWizard):
+        super().__init__(parent)
+        self.setTitle('File import options')
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+        self.dynamic_options_widget = DynamicOptionsWidget(self, None)
+        layout.addWidget(self.dynamic_options_widget)
+
+    def initializePage(self) -> None:
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+        self.dynamic_options_widget.update_object_with_options(wizard.file_reader)
 
 
 class MatcherSelectionPage(ScrollAreaPage):
@@ -123,7 +154,7 @@ class FileLoadingPage(ProgressPage):
 
     def do_process(self, pbar):
         wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
-        wizard.experiment2 = wizard.file_reader().read_experiment(wizard.file_name, pbar)
+        wizard.experiment2 = wizard.file_reader.read_experiment(wizard.file_name, pbar)
         if wizard.file_reader.GENERATE_MODELS_AFTER_LOAD:
             from extrap.gui.MainWidget import DEFAULT_MODEL_NAME
             ModelGenerator(wizard.experiment2, name=DEFAULT_MODEL_NAME).model_all(pbar)
