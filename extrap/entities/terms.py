@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -17,6 +17,7 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
 from extrap.util import sympy_functions
+from extrap.util.formatting_helper import format_number_html
 from extrap.util.serialization_schema import Schema, NumberField
 
 DEFAULT_PARAM_NAMES = (
@@ -32,6 +33,9 @@ class Term(ABC):
     @abstractmethod
     def to_string(self):
         raise NotImplementedError
+
+    def to_html(self):
+        return self.to_string()
 
     def reset_coefficients(self):
         self.coefficient = 1
@@ -59,6 +63,9 @@ class SingleParameterTerm(Term, ABC):
     @abstractmethod
     def to_string(self, parameter: Union[Parameter, str] = 'p'):
         raise NotImplementedError
+
+    def to_html(self, parameter: Union[Parameter, str] = 'p'):
+        return self.to_string(parameter)
 
 
 class SimpleTerm(SingleParameterTerm):
@@ -99,6 +106,23 @@ class SimpleTerm(SingleParameterTerm):
         elif self._term_type == "logarithm":
             return f"log2({parameter})^({self.exponent})"
 
+    def to_html(self, parameter='p'):
+        if self.exponent == 1:
+            if self._term_type == "polynomial":
+                return str(parameter)
+            elif self._term_type == "logarithm":
+                return f"log<sub>2</sub>({parameter})"
+            
+        if isinstance(self.exponent, Fraction):
+            exponent = self.exponent
+        else:
+            exponent = format_number_html(self.exponent)
+
+        if self._term_type == "polynomial":
+            return f"{parameter}<sup>{exponent}</sup>"
+        elif self._term_type == "logarithm":
+            return f"log<sub>2</sub>({parameter})<sup>{exponent}</sup>"
+
     def _evaluate_polynomial(self, parameter_value):
         if isinstance(parameter_value, sympy.Symbol):
             return parameter_value ** self._exponent
@@ -124,7 +148,7 @@ class SimpleTerm(SingleParameterTerm):
             return True
         else:
             return self.exponent == other.exponent and \
-                   self._term_type == other._term_type
+                self._term_type == other._term_type
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -146,6 +170,12 @@ class CompoundTerm(SingleParameterTerm):
         function_string = ' * '.join(t.to_string(parameter) for t in self.simple_terms)
         if self.coefficient != 1:
             function_string = str(self.coefficient) + ' * ' + function_string
+        return function_string
+
+    def to_html(self, parameter='p'):
+        function_string = ' * '.join(t.to_html(parameter) for t in self.simple_terms)
+        if self.coefficient != 1:
+            function_string = format_number_html(self.coefficient) + ' * ' + function_string
         return function_string
 
     def __imul__(self, term: SimpleTerm):
@@ -173,7 +203,7 @@ class CompoundTerm(SingleParameterTerm):
             return True
         else:
             return self.coefficient == other.coefficient and \
-                   self.simple_terms == other.simple_terms
+                self.simple_terms == other.simple_terms
 
 
 class MultiParameterTerm(Term):
@@ -210,6 +240,16 @@ class MultiParameterTerm(Term):
             function_string += term.to_string(parameters[param])
         return function_string
 
+    def to_html(self, *parameters: Union[Parameter, str, Mapping[int, Union[Parameter, str]]]):
+        if len(parameters) == 0:
+            parameters = DEFAULT_PARAM_NAMES
+        elif len(parameters) == 1 and not isinstance(parameters[0], str):
+            parameters = parameters[0]
+        function_string = ' * '.join(term.to_html(parameters[param]) for param, term in self.parameter_term_pairs)
+        if self.coefficient != 1:
+            function_string = format_number_html(self.coefficient) + ' * ' + function_string
+        return function_string
+
     def __imul__(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
         self.parameter_term_pairs.append(parameter_term_pair)
         return self
@@ -224,7 +264,7 @@ class MultiParameterTerm(Term):
             return True
         else:
             return self.parameter_term_pairs == other.parameter_term_pairs and \
-                   self.coefficient == other.coefficient
+                self.coefficient == other.coefficient
 
 
 class TermSchema(Schema):

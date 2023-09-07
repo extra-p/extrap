@@ -19,10 +19,9 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.entities.model import Model
-from extrap.gui.Utils import formatFormula
-from extrap.gui.Utils import formatNumber
 from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.util.exceptions import RecoverableError
+from extrap.util.formatting_helper import format_number_plain_text
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -268,9 +267,7 @@ class GraphWidget(QWidget):
             callpath_name = model.callpath.name
             data_points = [p for (_, p) in self.calculateDataPoints(model, True)]
             parameters = self.main_widget.getExperiment().parameters
-            model_function_text = 'Model: ' + \
-                                  formatFormula(
-                                      model.hypothesis.function.to_string(*parameters))
+            model_function_text = 'Model: ' + model.hypothesis.function.to_string(*parameters)
 
             data_points_text = '\n'.join(
                 ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)
@@ -689,7 +686,7 @@ class GraphWidget(QWidget):
                 precision = 1
             else:
                 precision = 2
-            value_str = formatNumber(str(value), precision)
+            value_str = format_number_plain_text(value, precision)
             new_mark_list.append(value_str)
         return new_mark_list
 

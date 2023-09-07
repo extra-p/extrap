@@ -19,6 +19,8 @@ from typing import Union, Optional, Sequence, Mapping, Tuple
 import numpy
 import sympy
 from marshmallow import fields
+from mpmath.libmp import fzero, finf, fninf, fnan, to_digits_exp
+from sympy import Float
 from sympy.printing.precedence import precedence
 from sympy.printing.str import StrPrinter
 
@@ -28,6 +30,7 @@ from extrap.entities.functions import TermlessFunction, Function, TermlessFuncti
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import DEFAULT_PARAM_NAMES
 from extrap.util import sympy_functions
+from extrap.util.formatting_helper import format_number_html
 
 PARAM_TOKEN = '\x1B'
 
@@ -111,13 +114,21 @@ def _make_rop(op):
     return _op
 
 
+_mul_without_spaces = re.compile(r'(\S)\*')
+
+
 class FunctionPrinter(StrPrinter):
     """Print derivative of a function of symbols in a shorter form.
     """
 
     def _print_Pow(self, expr, rational=False):
         PREC = precedence(expr)
-        result = f'{self.parenthesize(expr.base, PREC, strict=False)}^({expr.exp})'
+        if expr.exp != 1:
+            exponent = self._print(expr.exp)
+            result = f'{self.parenthesize(expr.base, PREC, strict=False)}^({exponent})'
+        else:
+            result = self.parenthesize(expr.base, PREC, strict=False)
+
         return result
 
     def _print_Add(self, expr, order=None):
@@ -126,13 +137,143 @@ class FunctionPrinter(StrPrinter):
         return super()._print_Add(expr, order)
 
     def _print_Mul(self, expr):
-        result = super(FunctionPrinter, self)._print_Mul(expr)
-        result = re.sub(r'(\S)\*', r'\1 * ', result)
+        result = super()._print_Mul(expr)
+        result = _mul_without_spaces.sub(r'\1 * ', result)
         return result
+
+
+class HTMLPrinter(StrPrinter):
+    _default_settings = {
+        "order": None,
+        "full_prec": False,
+        "sympy_integers": False,
+        "abbrev": False,
+        "perm_cyclic": True,
+        "min": 10 ** -3,
+        "max": 10 ** 5,
+    }
+
+    def _print_Pow(self, expr, rational=False):
+        PREC = precedence(expr)
+        if expr.exp != 1:
+            exponent = self._print(expr.exp)
+            result = f'{self.parenthesize(expr.base, PREC, strict=False)}<sup>{exponent}</sup>'
+        else:
+            result = self.parenthesize(expr.base, PREC, strict=False)
+        return result
+
+    def _print_Add(self, expr, order=None):
+        if self._print_level == 1:
+            return super()._print_Add(expr, order='ilex')
+        return super()._print_Add(expr, order)
+
+    def _print_Mul(self, expr):
+        result = super()._print_Mul(expr)
+        result = _mul_without_spaces.sub(r'\1 * ', result)
+        return result
+
+    def _print_Integer(self, expr):
+        return format_number_html(expr.p)
+
+    def _print_int(self, expr):
+        return format_number_html(expr)
+
+    def _print_mpz(self, expr):
+        return format_number_html(float(expr))
+
+    def _print_Rational(self, expr):
+        if expr.q == 1:
+            return format_number_html(expr.p)
+        else:
+            return "%s/%s" % (expr.p, expr.q)
+
+    def _print_PythonRational(self, expr):
+        if expr.q == 1:
+            return format_number_html(float(expr))
+        else:
+            return "%d/%d" % (expr.p, expr.q)
+
+    def _print_Fraction(self, expr):
+        if expr.denominator == 1:
+            return format_number_html(expr.numerator)
+        else:
+            return "%s/%s" % (expr.numerator, expr.denominator)
+
+    def _print_mpq(self, expr):
+        if expr.denominator == 1:
+            return format_number_html(expr.numerator)
+        else:
+            return "%s/%s" % (expr.numerator, expr.denominator)
+
+    def _print_Float(self, expr: Float):
+        s = expr._mpf_
+        if not s[1]:
+            if s == fzero:
+                t = '0'
+                return t
+            if s == finf: return '+inf'
+            if s == fninf: return '-inf'
+            if s == fnan: return 'nan'
+            raise ValueError
+
+        dps = 4
+
+        sign, digits, exponent = to_digits_exp(s, dps + 3)
+
+        # Rounding up kills some instances of "...99999"
+        if len(digits) > dps and digits[dps] in '56789':
+            digits = digits[:dps]
+            i = dps - 1
+            while i >= 0 and digits[i] == '9':
+                i -= 1
+            if i >= 0:
+                digits = digits[:i] + str(int(digits[i]) + 1) + '0' * (dps - i - 1)
+            else:
+                digits = '1' + '0' * (dps - 1)
+                exponent += 1
+        else:
+            digits = digits[:dps]
+
+        # Prettify numbers close to unit magnitude
+        if -4 < exponent < 5:
+            if exponent < 0:
+                digits = ("0" * int(-exponent)) + digits
+                split = 1
+            else:
+                split = exponent + 1
+                if split > dps:
+                    digits += "0" * (split - dps)
+            exponent = 0
+        else:
+            split = 1
+
+        digits = (digits[:split] + "." + digits[split:])
+
+        # Clean up trailing zeros
+        digits = digits.rstrip('0')
+        if digits[-1] == ".":
+            digits = digits[:-1]
+
+        rv = sign + digits
+        if exponent != 0:
+            rv += f"<small>&times;10</small><sup>{exponent}</sup>"
+
+        if rv.startswith('-.0'):
+            rv = '-0.' + rv[3:]
+        elif rv.startswith('.0'):
+            rv = '0.' + rv[2:]
+        if rv.startswith('+'):
+            # e.g., +inf -> inf
+            rv = rv[1:]
+        return rv
+
+    def _print_log2(self, expr):
+        return f"log<sub>2</sub>({self.stringify(expr.args, ', ')})"
 
 
 class ComputationFunction(TermlessFunction, CalculationElement):
     _PRINTER = FunctionPrinter()
+    _PRINTER_HTML = HTMLPrinter()
 
     def __init__(self, function: Optional[Function]):
         super().__init__()
@@ -205,6 +346,15 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             result = result.subs(param, str(new_param))
 
         return self._PRINTER.doprint(result)
+
+    def to_html(self, *parameters: Union[str, Parameter]):
+        if not parameters:
+            parameters = DEFAULT_PARAM_NAMES
+        result = self.sympy_function
+        for param, new_param in zip(self._params, parameters):
+            result = result.subs(param, str(new_param))
+
+        return self._PRINTER_HTML.doprint(result)
 
     @staticmethod
     def get_param(param_idx: int):

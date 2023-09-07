@@ -196,7 +196,7 @@ class TestComparison(TestCase):
             self.assertEqual(model.hypothesis.function.functions[1],
                              model2.hypothesis.function)
             self.assertEqual(model.hypothesis.function.to_string(),
-                             '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
+                             '[' + model1.hypothesis.function.to_string() + ' ¦ ' + model2.hypothesis.function.to_string() + ']')
         print(Callpath("main->sync->EVT_SYNC->OVERLAP"))
         model = experiment.modelers[0].models[(Callpath("main->sync->EVT_SYNC->OVERLAP"), metric)]
         model1 = experiment1.modelers[0].models[overlap.path, metric]
@@ -208,7 +208,7 @@ class TestComparison(TestCase):
         self.assertEqual(model.hypothesis.function.functions[1],
                          model2.hypothesis.function)
         self.assertNotEqual(model.hypothesis.function.to_string(),
-                            '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
+                            '[' + model1.hypothesis.function.to_string() + ' ¦ ' + model2.hypothesis.function.to_string() + ']')
 
     def test_smart_comparison_multi_level(self):
         metric = Metric('time')
@@ -266,7 +266,7 @@ class TestComparison(TestCase):
             self.assertEqual(model.hypothesis.function.functions[1],
                              model2.hypothesis.function)
             self.assertEqual(model.hypothesis.function.to_string(),
-                             '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
+                             '[' + model1.hypothesis.function.to_string() + ' ¦ ' + model2.hypothesis.function.to_string() + ']')
         print(Callpath("main->sync->EVT_SYNC->OVERLAP"))
         model = experiment.modelers[0].models[(Callpath("main->sync->EVT_SYNC->OVERLAP"), metric)]
         model1 = experiment1.modelers[0].models[overlap.path, metric]
@@ -278,7 +278,7 @@ class TestComparison(TestCase):
         self.assertEqual(model.hypothesis.function.functions[1],
                          model2.hypothesis.function)
         self.assertNotEqual(model.hypothesis.function.to_string(),
-                            '(' + model1.hypothesis.function.to_string() + ', ' + model2.hypothesis.function.to_string() + ')')
+                            '[' + model1.hypothesis.function.to_string() + ' ¦ ' + model2.hypothesis.function.to_string() + ']')
 
     def test_smart_comparison_measurements_format(self):
         metric = Metric('time')

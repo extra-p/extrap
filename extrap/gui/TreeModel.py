@@ -20,9 +20,7 @@ from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.model import Model
-from extrap.gui.Utils import formatFormula
-from extrap.gui.Utils import formatNumber
-from extrap.util.formatting_helper import replace_method_parameters
+from extrap.util.formatting_helper import replace_method_parameters, format_number_html, format_number_plain_text
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
@@ -155,34 +153,31 @@ class TreeModel(QAbstractItemModel):
             prefix = ""
             if self.selector_widget.show_difference.isChecked() \
                     and isinstance(formula, ComparisonFunction) and len(formula.functions) == 2:
-                prefix = "[DIFF] "
+                prefix = "<b>&Delta; = </b>"
                 formula = ComputationFunction(formula.functions[1]) - ComputationFunction(formula.functions[0])
             if self.selector_widget.asymptoticCheckBox.isChecked():
                 parameters = tuple(experiment.parameters)
-                return prefix + formatFormula(formula.to_string(*parameters))
+                return prefix + formula.to_html(*parameters)
             else:
                 parameters = self.selector_widget.getParameterValues()
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
                 value = formula.evaluate(parameters)
                 if isinstance(value, Sequence):
-                    res = '('
-                    for v in value:
-                        res += formatNumber(str(v))
-                        res += ', '
-                    res = res[:-2]
-                    res += ')'
+                    res = '<b>[</b>'
+                    res += ' <b>¦</b> '.join(format_number_html(v, no_integer=True) for v in value)
+                    res += '<b>]</b>'
                 else:
-                    res = formatNumber(str(value))
+                    res = format_number_html(value, no_integer=True)
                 numpy.seterr(**previous)
                 return res
         elif index.column() == 4:
-            return formatNumber(str(model.hypothesis.RSS))
+            return format_number_plain_text(model.hypothesis.RSS, no_integer=True)
         elif index.column() == 5:
-            return formatNumber(str(model.hypothesis.AR2))
+            return format_number_plain_text(model.hypothesis.AR2, no_integer=True)
         elif index.column() == 6:
-            return formatNumber(str(model.hypothesis.SMAPE))
+            return format_number_plain_text(model.hypothesis.SMAPE, no_integer=True)
         elif index.column() == 7:
-            return formatNumber(str(model.hypothesis.RE))
+            return format_number_plain_text(model.hypothesis.RE, no_integer=True)
         return None
 
     def get_comparison_value(self, model):

@@ -58,7 +58,13 @@ class ComparisonFunction(TermlessFunction):
         """
         Return a string representation of the function.
         """
-        return '(' + ', '.join(t.to_string(*parameters) for t in self.functions) + ')'
+        return '[' + ' ¦ '.join(t.to_string(*parameters) for t in self.functions) + ']'
+
+    def to_html(self, *parameters: Union[str, Parameter]):
+        """
+        Return a string representation of the function.
+        """
+        return '<b>[</b>' + ' <b>¦</b> '.join(t.to_html(*parameters) for t in self.functions) + '<b>]</b>'
 
 
 class ComparisonFunctionSchema(TermlessFunctionSchema):

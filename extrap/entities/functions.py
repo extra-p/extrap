@@ -17,6 +17,7 @@ from marshmallow import fields
 
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
+from extrap.util.formatting_helper import format_number_html
 from extrap.util.serialization_schema import BaseSchema, NumberField
 
 _TermType = Union[CompoundTerm, MultiParameterTerm]
@@ -78,6 +79,15 @@ class Function:
         for t in self.compound_terms:
             function_string += ' + '
             function_string += t.to_string(*parameters)
+        return function_string
+
+    def to_html(self, *parameters: Union[str, Parameter]):
+        """
+        Return a html representation of the function.
+        """
+        function_string = ' + '.join(t.to_html(*parameters) for t in self.compound_terms)
+        if self.constant_coefficient != 0:
+            function_string = format_number_html(self.constant_coefficient) + ' + ' + function_string
         return function_string
 
     def __repr__(self):
@@ -156,6 +166,12 @@ class ConstantFunction(TermlessFunction):
         Returns a string representation of the constant function.
         """
         return str(self.constant_coefficient)
+
+    def to_html(self, *_):
+        """
+        Returns a html representation of the constant function.
+        """
+        return format_number_html(self.constant_coefficient)
 
     def partial_compare(self, other):
         if isinstance(other, ConstantFunction):

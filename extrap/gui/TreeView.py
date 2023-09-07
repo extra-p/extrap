@@ -18,6 +18,7 @@ from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_CO
 from extrap.gui.TreeModel import TreeModel, TreeItem
 from extrap.gui.components import developer_tools
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
+from extrap.gui.components.richtext_delegate import RichTextDelegate
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
@@ -31,7 +32,10 @@ class TreeView(QTreeView):
         super(TreeView, self).__init__(parent)
         self._selector_widget = selector_widget
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.setItemDelegateForColumn(2, AnnotationDelegate())
+        self._annotation_delegate = AnnotationDelegate()
+        self.setItemDelegateForColumn(2, self._annotation_delegate)
+        self._rich_text_delegate = RichTextDelegate()
+        self.setItemDelegateForColumn(3, self._rich_text_delegate)
         self.setAnimated(True)
         self.setAcceptDrops(True)
         self._filter_1_percent_time_state = False

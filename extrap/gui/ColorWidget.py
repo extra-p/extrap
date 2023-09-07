@@ -9,7 +9,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gui.Utils import formatNumber
+from extrap.util.formatting_helper import format_number_plain_text
 
 
 class ColorWidget(QWidget):
@@ -83,5 +83,5 @@ class ColorWidget(QWidget):
             paint.drawRect(position, mtop, 1, rect_height - mbottom - mtop)
 
     def update_min_max(self, min_value, max_value):
-        self.min_label.setText(formatNumber(str(min_value)))
-        self.max_label.setText(formatNumber(str(max_value)))
+        self.min_label.setText(format_number_plain_text(min_value))
+        self.max_label.setText(format_number_plain_text(max_value))
