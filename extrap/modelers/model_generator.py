@@ -152,7 +152,7 @@ class PostProcessedModelSet(ModelGenerator):
             post_processed_model_set.post_processing_history = self.post_processing_history + [post_process]
             return post_processed_model_set
         else:
-            raise RecoverableError(f"Processing this model with {post_process.NAME} is not supported.")
+            raise RecoverableError(f"Processing {self.name} with {post_process.NAME} is not supported.")
 
     def restore_from_exp(self, experiment):
         self.experiment = experiment

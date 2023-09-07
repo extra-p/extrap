@@ -31,7 +31,7 @@ from extrap.gui.plots.comparison_plot import ComparisonPlot
 from extrap.gui.plots.stacked_area_plot import StackedAreaPlot
 
 MIN_PARAM_VALUE = 0.01
-MAX_PARAM_VALUE = 2000000000
+MAX_PARAM_VALUE = float("inf")
 
 
 class AxisSelection(QWidget):

@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import typing
 from abc import abstractmethod
 from typing import Sequence, Dict, Tuple, Optional, Union
 
@@ -19,9 +18,6 @@ from extrap.modelers.postprocessing import PostProcessedModel, PostProcessedMode
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
 from extrap.util.progress_bar import DUMMY_PROGRESS
-
-if typing.TYPE_CHECKING:
-    pass
 
 
 class AggregatedModel(PostProcessedModel):

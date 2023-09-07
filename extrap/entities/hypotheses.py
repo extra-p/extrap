@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import math
 from typing import Sequence
 
 import numpy
@@ -290,10 +291,12 @@ class SingleParameterHypothesis(Hypothesis):
         self._RSS = numpy.sum(difference * difference)
 
         relativeDifference = difference / actual
+        relativeDifference[difference == 0] = 0
         self._rRSS = numpy.sum(relativeDifference * relativeDifference)
 
         absolute_error = numpy.abs(difference)
         relative_error = absolute_error / actual
+        relative_error[absolute_error == 0] = 0
         self._RE = numpy.mean(relative_error)
 
         abssum = numpy.abs(actual) + numpy.abs(predicted)
@@ -388,14 +391,24 @@ class MultiParameterHypothesis(Hypothesis):
             abssum = abs(actual) + abs(predicted)
 
             # calculate relative error
-            absolute_error = abs(predicted - actual)
-            relative_error = absolute_error / actual
+            absolute_error = abs(difference)
+            if absolute_error == 0:
+                relative_error = 0
+            elif actual == 0:
+                relative_error = math.nan
+            else:
+                relative_error = absolute_error / actual
             re_sum = re_sum + relative_error
 
             self._RSS += difference * difference
 
-            relativeDifference = difference / actual
-            self._rRSS += relativeDifference * relativeDifference
+            if difference == 0:
+                relative_difference = 0
+            elif actual == 0:
+                relative_difference = math.nan
+            else:
+                relative_difference = difference / actual
+            self._rRSS += relative_difference * relative_difference
 
             if abssum != 0.0:
                 # This `if` condition prevents a division by zero, but it is correct: if sum is 0,

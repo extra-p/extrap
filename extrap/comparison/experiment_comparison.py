@@ -5,12 +5,15 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 from typing import List, Sequence
 
 from marshmallow import fields
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
+from extrap.comparison.entities.projection_info import ProjectionInfo
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter
@@ -18,6 +21,7 @@ from extrap.entities.callpath import CallpathSchema
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment, ExperimentSchema
 from extrap.entities.parameter import Parameter
+from extrap.entities.scaling_type import ScalingType
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -46,6 +50,7 @@ class ComparisonExperiment(Experiment):
         self.exp2 = exp2
         self.modelers_match = {}
         self.parameter_mapping = {}
+        self.projection_info: ProjectionInfo = ProjectionInfo(len(self.compared_experiments))
 
     def do_comparison(self, progress_bar=DUMMY_PROGRESS):
         progress_bar.total += 3
@@ -77,7 +82,8 @@ class ComparisonExperiment(Experiment):
             raise ComparisonError("Parameters do not match.")
         # if self.exp1.coordinates != self.exp2.coordinates:
         #     raise ComparisonError("Coordinates do not match.")
-        if self.exp1.scaling is not None and self.exp2.scaling is not None and self.exp1.scaling != self.exp2.scaling:
+        if self.exp1.scaling is not None and self.exp2.scaling is not None and ScalingType(
+                self.exp1.scaling) != ScalingType(self.exp2.scaling):
             raise ComparisonError("Scaling does not match.")
         self.parameters = self.exp1.parameters
         self.coordinates = UniqueList(self.exp1.coordinates)
