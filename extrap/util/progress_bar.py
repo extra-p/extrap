@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -78,3 +78,29 @@ class DummyProgressBar(ProgressBar):
 
 
 DUMMY_PROGRESS: ProgressBar = DummyProgressBar()
+
+
+class ScaledSubProgressBar(ProgressBar):
+
+    def __init__(self, progress_bar: ProgressBar, target: float, **kwargs):
+        if 'iterable' not in kwargs:
+            kwargs['total'] = 0
+        self.parent_pbar = progress_bar
+        self.parent_target = target
+        super().__init__(**kwargs)
+        self.sp = None
+
+    def update(self, n=1):
+        self.parent_pbar.update(n / self.total * self.parent_target)
+        return super().update(n)
+
+    def step(self, *args, **kwargs):
+        self.parent_pbar.step(*args, **kwargs)
+        super().step(*args, **kwargs)
+
+    def refresh(self, *args, **kwargs):
+        self.parent_pbar.refresh(*args, **kwargs)
+        super().refresh(*args, **kwargs)
+
+    def display(self, *args, **kwargs):
+        self.parent_pbar.display(*args, **kwargs)

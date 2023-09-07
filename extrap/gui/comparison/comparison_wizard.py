@@ -5,20 +5,28 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import copy
+import json
+import math
 import warnings
 from asyncio import Event
 from functools import partial
 from itertools import chain
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Optional, Type, cast
 
+import sympy
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
                                QLabel, QLineEdit, QSizePolicy, QSpacerItem,
-                               QWizard, QWizardPage, QComboBox, QGridLayout)
+                               QWizard, QWizardPage, QComboBox, QGridLayout, QButtonGroup, QHBoxLayout, QWidget,
+                               QRadioButton, QListWidget, QGroupBox, QDoubleSpinBox, QPushButton, QSpinBox,
+                               QListWidgetItem, QAbstractItemView, QVBoxLayout)
 
 from extrap.comparison import matchers
 from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.entities.projection_info import RooflineData
 from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.entities.function_computation import ComputationFunction
@@ -32,6 +40,7 @@ from extrap.gui.components import file_dialog
 from extrap.gui.components.dynamic_options import DynamicOptionsWidget
 from extrap.gui.components.wizard_pages import ProgressPage, ScrollAreaPage
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.postprocessing.arithmetic_intensity_calculation import ArithmeticIntensityCalculation
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 
@@ -163,11 +172,10 @@ class FileLoadingPage(ProgressPage):
 class ComparingPage(ProgressPage):
     def __init__(self, parent):
         super().__init__(parent)
-        self._override_next_id = None
         self.setTitle('Comparing experiments')
 
     def cleanupPage(self) -> None:
-        self._override_next_id = None
+        self.next_id = None
         super().cleanupPage()
 
     def do_process(self, pbar):
@@ -182,9 +190,21 @@ class ComparingPage(ProgressPage):
         wizard.experiment.modelers_match = wizard.model_mapping
         wizard.experiment.parameter_mapping = wizard.parameter_mapping
         if wizard.matcher == InteractiveMatcher:
-            self._override_next_id = matcher.determine_next_page_id()
+            self.next_id = matcher.determine_next_page_id()
         else:
             wizard.experiment.do_comparison(pbar)
+
+    def once_after_shown(self):
+        super().once_after_shown()
+        btn = QCommandLinkButton("Project estimate based on hardware capabilities")
+        btn.clicked.connect(self.switch_to_projection)
+        self.layout().addWidget(btn)
+
+    def switch_to_projection(self):
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+        self.next_id = wizard.addPage(ProjectionConfigurationPage(wizard))
+        wizard.addPage(ProjectionProgressPage(wizard))
+        wizard.next()
 
 
 class NamingPage(QWizardPage):
@@ -313,3 +333,255 @@ class ParameterMappingPage(QWizardPage):
         }
 
         return super().validatePage()
+
+
+class ProjectionConfigurationPage(QWizardPage):
+    def __init__(self, parent: ComparisonWizard):
+        super().__init__(parent)
+        self.setTitle('Projection')
+        self._layout = QFormLayout(self)
+        self.setLayout(self._layout)
+        self._init_UI()
+
+    def _init_UI(self):
+        experiment_selection_buttons = QWidget(self)
+        experiment_selection_buttons.setLayout(QHBoxLayout(self))
+        experiment_selection_buttons.layout().setContentsMargins(0, 0, 0, 0)
+
+        experiment_selection = QButtonGroup(self)
+        experiment_selection.idClicked.connect(self.update_arithmetic_intensity_metrics)
+        self._base_exp_rb_1 = QRadioButton("Exp1", experiment_selection_buttons)
+        experiment_selection_buttons.layout().addWidget(self._base_exp_rb_1)
+        experiment_selection.addButton(self._base_exp_rb_1, 0)
+
+        self._base_exp_rb_2 = QRadioButton("Exp2", experiment_selection_buttons)
+        experiment_selection_buttons.layout().addWidget(self._base_exp_rb_2)
+        experiment_selection.addButton(self._base_exp_rb_2, 1)
+
+        experiment_selection_buttons.layout().addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        self._base_exp_rb_1.setChecked(True)
+
+        self._layout.addRow("Base experiment", experiment_selection_buttons)
+
+        self._metrics_to_project_box = QListWidget(self)
+        self._metrics_to_project_box.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._layout.addRow("Metrics to project", self._metrics_to_project_box)
+
+        roofline_group = QGroupBox(self)
+        self._layout.addRow(roofline_group)
+
+        roofline_layout = QGridLayout(roofline_group)
+        roofline_group.setLayout(roofline_layout)
+        roofline_group.setTitle("Roofline model information")
+
+        roofline_layout.addWidget(QLabel("Memory bandwidth"), 0, 1)
+        roofline_layout.addWidget(QLabel("Peak performance"), 0, 2)
+
+        self._exp_label_1 = QLabel("Exp1", roofline_group)
+        roofline_layout.addWidget(self._exp_label_1, 1, 0)
+        self._bw_sb_1 = QDoubleSpinBox(roofline_group)
+        self._bw_sb_1.setSuffix(" GBytes/s")
+        self._bw_sb_1.setMaximum(math.inf)
+        roofline_layout.addWidget(self._bw_sb_1, 1, 1)
+        self._pp_sb_1 = QDoubleSpinBox(roofline_group)
+        self._pp_sb_1.setSuffix(" GFlops/s")
+        self._pp_sb_1.setMaximum(math.inf)
+        roofline_layout.addWidget(self._pp_sb_1, 1, 2)
+        self._rm_load_btn_1 = QPushButton("Load ERT JSON file...", roofline_group)
+        roofline_layout.addWidget(self._rm_load_btn_1, 1, 3)
+        self._rm_load_btn_1.clicked.connect(lambda: self._load_ert(self._bw_sb_1, self._pp_sb_1))
+
+        self._exp_label_2 = QLabel("Exp2", roofline_group)
+        roofline_layout.addWidget(self._exp_label_2, 2, 0)
+        self._bw_sb_2 = QDoubleSpinBox(roofline_group)
+        self._bw_sb_2.setSuffix(" GBytes/s")
+        self._bw_sb_2.setMaximum(math.inf)
+        roofline_layout.addWidget(self._bw_sb_2, 2, 1)
+        self._pp_sb_2 = QDoubleSpinBox(roofline_group)
+        self._pp_sb_2.setSuffix(" GFlops/s")
+        self._pp_sb_2.setMaximum(math.inf)
+        roofline_layout.addWidget(self._pp_sb_2, 2, 2)
+        self._rm_load_btn_2 = QPushButton("Load ERT JSON file...", roofline_group)
+        roofline_layout.addWidget(self._rm_load_btn_2, 2, 3)
+        self._rm_load_btn_2.clicked.connect(lambda: self._load_ert(self._bw_sb_2, self._pp_sb_2))
+
+        self._arithmetic_intensity_group = QGroupBox(self)
+        self._layout.addRow(self._arithmetic_intensity_group)
+        self._arithmetic_intensity_group.setTitle("Use arithmetic intensity (operation intensity) to improve accuracy")
+        self._arithmetic_intensity_group.setCheckable(True)
+        arithmetic_intensity_layout = QFormLayout(self._arithmetic_intensity_group)
+        self._arithmetic_intensity_group.setLayout(arithmetic_intensity_layout)
+
+        self._fp_dp_metric_cb = QComboBox(self._arithmetic_intensity_group)
+        arithmetic_intensity_layout.addRow("Floating point operations (double precision)", self._fp_dp_metric_cb)
+        # self._fp_sp_metric_cb = QComboBox(self._arithmetic_intensity_group)
+        # arithmetic_intensity_layout.addRow("Floating point operations (single precision)", self._fp_sp_metric_cb)
+        self._num_mem_transfers_metric_cb = QComboBox(self._arithmetic_intensity_group)
+        arithmetic_intensity_layout.addRow("Number of memory transfers", self._num_mem_transfers_metric_cb)
+        self._bytes_per_mem_transfer_sb = QSpinBox(self._arithmetic_intensity_group)
+        arithmetic_intensity_layout.addRow("Bytes per memory transfer", self._bytes_per_mem_transfer_sb)
+
+    def initializePage(self) -> None:
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+
+        self._base_exp_rb_1.setText(wizard.exp_names[0])
+        self._base_exp_rb_2.setText(wizard.exp_names[1])
+        self._exp_label_1.setText(wizard.exp_names[0])
+        self._exp_label_2.setText(wizard.exp_names[1])
+
+        self._base_exp_rb_1.setChecked(True)
+        self.update_arithmetic_intensity_metrics(0)
+
+        self._metrics_to_project_box.clear()
+
+        for m in wizard.experiment.metrics:
+            item = QListWidgetItem(m.name)
+            item.setData(Qt.UserRole, m)
+            self._metrics_to_project_box.addItem(item)
+            if m.name == "time":
+                self._metrics_to_project_box.setCurrentItem(item)
+
+    @Slot(int)
+    def update_arithmetic_intensity_metrics(self, id):
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+        self._fp_dp_metric_cb.clear()
+        # self._fp_sp_metric_cb.clear()
+        self._num_mem_transfers_metric_cb.clear()
+        self._bytes_per_mem_transfer_sb.setValue(8)
+
+        # self._fp_sp_metric_cb.addItem("Not selected", None)
+        self._fp_dp_metric_cb.addItem("Not selected", None)
+        self._num_mem_transfers_metric_cb.addItem("Not selected", None)
+
+        found_ai_flops, found_ai_mem = False, False
+        for m in wizard.experiment.compared_experiments[id].metrics:
+            # self._fp_sp_metric_cb.addItem(m.name, m)
+            self._fp_dp_metric_cb.addItem(m.name, m)
+            self._num_mem_transfers_metric_cb.addItem(m.name, m)
+            if m.name == "PAPI_DP_OPS":
+                found_ai_flops = True
+                self._fp_dp_metric_cb.setCurrentText(m.name)
+            # elif m.name == "PAPI_SP_OPS":
+            #     found_ai_flops = True
+            #     self._fp_sp_metric_cb.setCurrentText(m.name)
+            elif m.name == "UNC_M_CAS_COUNT:ALL":
+                found_ai_mem = True
+                self._num_mem_transfers_metric_cb.setCurrentText(m.name)
+
+        self._arithmetic_intensity_group.setChecked(found_ai_flops and found_ai_mem)
+
+    def validatePage(self) -> bool:
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+        if len(self._metrics_to_project_box.selectedIndexes()) < 1:
+            warnings.warn("At least one metric to project must be selected.")
+            return False
+        if self._pp_sb_1.value() <= 0 or self._pp_sb_2.value() <= 0 or \
+                self._bw_sb_1.value() <= 0 or self._bw_sb_2.value() <= 0:
+            warnings.warn("You have to provide the peak performance and peak memory bandwidth for all experiments.")
+            return False
+
+        if self._arithmetic_intensity_group.isChecked():
+            if self._bytes_per_mem_transfer_sb.value() < 1:
+                warnings.warn("Bytes per memory transfer must be at least one.")
+                return False
+            # self._fp_sp_metric_cb.currentIndex() <= 0 and
+            if self._fp_dp_metric_cb.currentIndex() <= 0:
+                warnings.warn(
+                    "At least one floating point metric must be selected to calculate the arithmetic intensity.")
+                return False
+
+        proj_info = wizard.experiment.projection_info
+        proj_info.peak_performance_in_gflops_per_s[0] = self._pp_sb_1.value()
+        proj_info.peak_mem_bandwidth_in_gbytes_per_s[0] = self._bw_sb_1.value()
+        proj_info.base_experiment_id = 0 if self._base_exp_rb_1.isChecked() else 1
+
+        proj_info.peak_performance_in_gflops_per_s[1] = self._pp_sb_2.value()
+        proj_info.peak_mem_bandwidth_in_gbytes_per_s[1] = self._bw_sb_2.value()
+
+        proj_info.metrics_to_project = [i.data(Qt.UserRole) for i in self._metrics_to_project_box.selectedItems()]
+
+        if self._arithmetic_intensity_group.isChecked():
+            proj_info.fp_dp_metric = self._fp_dp_metric_cb.currentData()
+            # proj_info.fp_sp_metric = self._fp_sp_metric_cb.currentData()
+            proj_info.num_mem_transfers = self._num_mem_transfers_metric_cb.currentData()
+            proj_info.bytes_per_mem = self._bytes_per_mem_transfer_sb.value()
+        else:
+            proj_info.fp_dp_metric = None
+            proj_info.fp_sp_metric = None
+            proj_info.num_mem_transfers = None
+            proj_info.bytes_per_mem = 0
+        return super().validatePage()
+
+    def _load_ert(self, _bw_sb_2, _pp_sb_2):
+        def _load_and_parse(filename):
+            try:
+                with open(filename, 'r') as file:
+                    ert_data: RooflineData = json.load(file)['empirical']
+                    _bw_sb_2.setValue(ert_data['gbytes']["data"][-1][1])
+                    _pp_sb_2.setValue(ert_data['gflops']["data"][0][1])
+            except JSONDecodeError as err:
+                raise FileFormatError(str(err)) from err
+            except KeyError as err:
+                raise FileFormatError(str(err)) from err
+            except IndexError as err:
+                raise FileFormatError(str(err)) from err
+
+        file_dialog.show(self, _load_and_parse, "Open ERT JSON file", filter="ERT JSON Files (*.json);;All Files (*)",
+                         file_mode=QFileDialog.FileMode.ExistingFile)
+
+
+class ProjectionProgressPage(ProgressPage):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setTitle('Projecting estimate')
+
+    def do_process(self, pbar):
+        wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
+        # wizard.projection_info
+        projection_info = wizard.experiment.projection_info
+        if projection_info.num_mem_transfers:
+            pre_process = ArithmeticIntensityCalculation(wizard.experiment)
+            pre_process.bytes_per_mem_transfer = projection_info.bytes_per_mem
+            pre_process.num_mem_transfers_metric = projection_info.num_mem_transfers
+            pre_process.flops_dp_metric = projection_info.fp_dp_metric
+            for model_set in wizard.experiment.compared_experiments[projection_info.base_experiment_id].modelers:
+                ar_int_models = pre_process.generate_arithmetic_intensity_models(model_set.models, pbar)
+                model_set.models.update(ar_int_models)
+
+        new_metrics = {metric: Metric("Expected " + metric.name) for metric in projection_info.metrics_to_project}
+        wizard.experiment.metrics.extend(new_metrics.values())
+        for modeler in wizard.experiment.modelers:
+            pbar.total += len(modeler.models)
+
+        for modeler in wizard.experiment.modelers:
+            new_models = {}
+            for (callpath, metric), c_model in modeler.models.items():
+                pbar.update()
+                if metric not in projection_info.metrics_to_project:
+                    continue
+                if not isinstance(c_model, ComparisonModel):
+                    continue
+                ar_int = sympy.oo
+                roofline_performance = [sympy.Min(bw * ar_int, pp) for bw, pp in
+                                        zip(projection_info.peak_mem_bandwidth_in_gbytes_per_s,
+                                            projection_info.peak_performance_in_gflops_per_s)]
+
+                other_experiment_id = 0 if projection_info.base_experiment_id == 1 else 1
+
+                scaling_factor = roofline_performance[projection_info.base_experiment_id] / roofline_performance[
+                    other_experiment_id]
+
+                models = []
+                for i, model in enumerate(c_model.models):
+                    if i == projection_info.base_experiment_id:
+                        hypothesis = copy.copy(model.hypothesis)
+                        hypothesis.function = (ComputationFunction(model.hypothesis.function) * scaling_factor)
+                        models.append(Model(hypothesis, model.callpath, new_metrics[model.metric]))
+                    else:
+                        models.append(model)
+
+                model = ComparisonModel(callpath, new_metrics[metric], models)
+                new_models[callpath, model.metric] = model
+
+            modeler.models.update(new_models)
