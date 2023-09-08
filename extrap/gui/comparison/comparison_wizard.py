@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import copy
 import json
 import math
 import warnings
@@ -16,7 +15,6 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Optional, Type, cast
 
-import sympy
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
                                QLabel, QLineEdit, QSizePolicy, QSpacerItem,
@@ -25,13 +23,9 @@ from PySide6.QtWidgets import (QCommandLinkButton, QFileDialog, QFormLayout,
                                QListWidgetItem, QAbstractItemView, QVBoxLayout)
 
 from extrap.comparison import matchers
-from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.entities.projection_info import RooflineData
 from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.comparison.matchers import AbstractMatcher
-from extrap.entities.function_computation import ComputationFunction
-from extrap.entities.metric import Metric
-from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import FileReader, all_readers
@@ -40,9 +34,9 @@ from extrap.gui.components import file_dialog
 from extrap.gui.components.dynamic_options import DynamicOptionsWidget
 from extrap.gui.components.wizard_pages import ProgressPage, ScrollAreaPage
 from extrap.modelers.model_generator import ModelGenerator
-from extrap.modelers.postprocessing.arithmetic_intensity_calculation import ArithmeticIntensityCalculation
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
+from extrap.util.unique_list import UniqueList
 
 
 class ComparisonWizard(QWizard):
@@ -348,19 +342,20 @@ class ProjectionConfigurationPage(QWizardPage):
         experiment_selection_buttons.setLayout(QHBoxLayout(self))
         experiment_selection_buttons.layout().setContentsMargins(0, 0, 0, 0)
 
-        experiment_selection = QButtonGroup(self)
+        self._target_experiment_selection = QButtonGroup(self)
+        experiment_selection = self._target_experiment_selection
         experiment_selection.idClicked.connect(self.update_arithmetic_intensity_metrics)
-        self._base_exp_rb_1 = QRadioButton("Exp1", experiment_selection_buttons)
-        experiment_selection_buttons.layout().addWidget(self._base_exp_rb_1)
-        experiment_selection.addButton(self._base_exp_rb_1, 0)
+        self._target_exp_rb_1 = QRadioButton("Exp1", experiment_selection_buttons)
+        experiment_selection_buttons.layout().addWidget(self._target_exp_rb_1)
+        experiment_selection.addButton(self._target_exp_rb_1, 0)
 
-        self._base_exp_rb_2 = QRadioButton("Exp2", experiment_selection_buttons)
-        experiment_selection_buttons.layout().addWidget(self._base_exp_rb_2)
-        experiment_selection.addButton(self._base_exp_rb_2, 1)
+        self._target_exp_rb_2 = QRadioButton("Exp2", experiment_selection_buttons)
+        experiment_selection_buttons.layout().addWidget(self._target_exp_rb_2)
+        experiment_selection.addButton(self._target_exp_rb_2, 1)
 
         experiment_selection_buttons.layout().addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        self._base_exp_rb_1.setChecked(True)
+        self._target_exp_rb_2.setChecked(True)
 
         self._layout.addRow("Base experiment", experiment_selection_buttons)
 
@@ -425,13 +420,13 @@ class ProjectionConfigurationPage(QWizardPage):
     def initializePage(self) -> None:
         wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
 
-        self._base_exp_rb_1.setText(wizard.exp_names[0])
-        self._base_exp_rb_2.setText(wizard.exp_names[1])
+        self._target_exp_rb_1.setText(wizard.exp_names[0])
+        self._target_exp_rb_2.setText(wizard.exp_names[1])
         self._exp_label_1.setText(wizard.exp_names[0])
         self._exp_label_2.setText(wizard.exp_names[1])
 
-        self._base_exp_rb_1.setChecked(True)
-        self.update_arithmetic_intensity_metrics(0)
+        self._target_exp_rb_2.setChecked(True)
+        self.update_arithmetic_intensity_metrics(1)
 
         self._metrics_to_project_box.clear()
 
@@ -443,7 +438,7 @@ class ProjectionConfigurationPage(QWizardPage):
                 self._metrics_to_project_box.setCurrentItem(item)
 
     @Slot(int)
-    def update_arithmetic_intensity_metrics(self, id):
+    def update_arithmetic_intensity_metrics(self, target_id):
         wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         self._fp_dp_metric_cb.clear()
         # self._fp_sp_metric_cb.clear()
@@ -454,8 +449,14 @@ class ProjectionConfigurationPage(QWizardPage):
         self._fp_dp_metric_cb.addItem("Not selected", None)
         self._num_mem_transfers_metric_cb.addItem("Not selected", None)
 
+        metrics = UniqueList()
+        for id, experiment in enumerate(wizard.experiment.compared_experiments):
+            if id == target_id:
+                continue
+            metrics.extend(experiment.metrics)
+
         found_ai_flops, found_ai_mem = False, False
-        for m in wizard.experiment.compared_experiments[id].metrics:
+        for m in metrics:
             # self._fp_sp_metric_cb.addItem(m.name, m)
             self._fp_dp_metric_cb.addItem(m.name, m)
             self._num_mem_transfers_metric_cb.addItem(m.name, m)
@@ -494,7 +495,7 @@ class ProjectionConfigurationPage(QWizardPage):
         proj_info = wizard.experiment.projection_info
         proj_info.peak_performance_in_gflops_per_s[0] = self._pp_sb_1.value()
         proj_info.peak_mem_bandwidth_in_gbytes_per_s[0] = self._bw_sb_1.value()
-        proj_info.base_experiment_id = 0 if self._base_exp_rb_1.isChecked() else 1
+        proj_info.target_experiment_id = self._target_experiment_selection.checkedId()
 
         proj_info.peak_performance_in_gflops_per_s[1] = self._pp_sb_2.value()
         proj_info.peak_mem_bandwidth_in_gbytes_per_s[1] = self._bw_sb_2.value()
@@ -504,12 +505,12 @@ class ProjectionConfigurationPage(QWizardPage):
         if self._arithmetic_intensity_group.isChecked():
             proj_info.fp_dp_metric = self._fp_dp_metric_cb.currentData()
             # proj_info.fp_sp_metric = self._fp_sp_metric_cb.currentData()
-            proj_info.num_mem_transfers = self._num_mem_transfers_metric_cb.currentData()
+            proj_info.num_mem_transfers_metric = self._num_mem_transfers_metric_cb.currentData()
             proj_info.bytes_per_mem = self._bytes_per_mem_transfer_sb.value()
         else:
             proj_info.fp_dp_metric = None
             proj_info.fp_sp_metric = None
-            proj_info.num_mem_transfers = None
+            proj_info.num_mem_transfers_metric = None
             proj_info.bytes_per_mem = 0
         return super().validatePage()
 
@@ -539,49 +540,6 @@ class ProjectionProgressPage(ProgressPage):
     def do_process(self, pbar):
         wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())
         # wizard.projection_info
-        projection_info = wizard.experiment.projection_info
-        if projection_info.num_mem_transfers:
-            pre_process = ArithmeticIntensityCalculation(wizard.experiment)
-            pre_process.bytes_per_mem_transfer = projection_info.bytes_per_mem
-            pre_process.num_mem_transfers_metric = projection_info.num_mem_transfers
-            pre_process.flops_dp_metric = projection_info.fp_dp_metric
-            for model_set in wizard.experiment.compared_experiments[projection_info.base_experiment_id].modelers:
-                ar_int_models = pre_process.generate_arithmetic_intensity_models(model_set.models, pbar)
-                model_set.models.update(ar_int_models)
-
-        new_metrics = {metric: Metric("Expected " + metric.name) for metric in projection_info.metrics_to_project}
-        wizard.experiment.metrics.extend(new_metrics.values())
-        for modeler in wizard.experiment.modelers:
-            pbar.total += len(modeler.models)
-
-        for modeler in wizard.experiment.modelers:
-            new_models = {}
-            for (callpath, metric), c_model in modeler.models.items():
-                pbar.update()
-                if metric not in projection_info.metrics_to_project:
-                    continue
-                if not isinstance(c_model, ComparisonModel):
-                    continue
-                ar_int = sympy.oo
-                roofline_performance = [sympy.Min(bw * ar_int, pp) for bw, pp in
-                                        zip(projection_info.peak_mem_bandwidth_in_gbytes_per_s,
-                                            projection_info.peak_performance_in_gflops_per_s)]
-
-                other_experiment_id = 0 if projection_info.base_experiment_id == 1 else 1
-
-                scaling_factor = roofline_performance[projection_info.base_experiment_id] / roofline_performance[
-                    other_experiment_id]
-
-                models = []
-                for i, model in enumerate(c_model.models):
-                    if i == projection_info.base_experiment_id:
-                        hypothesis = copy.copy(model.hypothesis)
-                        hypothesis.function = (ComputationFunction(model.hypothesis.function) * scaling_factor)
-                        models.append(Model(hypothesis, model.callpath, new_metrics[model.metric]))
-                    else:
-                        models.append(model)
-
-                model = ComparisonModel(callpath, new_metrics[metric], models)
-                new_models[callpath, model.metric] = model
-
-            modeler.models.update(new_models)
+        experiment = wizard.experiment
+        projection_info = experiment.projection_info
+        experiment.project_expected_performance(projection_info, pbar)

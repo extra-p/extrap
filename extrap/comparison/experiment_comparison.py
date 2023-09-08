@@ -7,22 +7,28 @@
 
 from __future__ import annotations
 
-from typing import List, Sequence
+import copy
+from typing import List, Sequence, Mapping
 
+import sympy
 from marshmallow import fields
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
-from extrap.comparison.entities.projection_info import ProjectionInfo
+from extrap.comparison.entities.projection_info import ProjectionInfo, ProjectionInfoSchema
 from extrap.comparison.matchers import AbstractMatcher
 from extrap.comparison.matches import IdentityMatches, MutableAbstractMatches
 from extrap.comparison.metric_conversion import AbstractMetricConverter
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment, ExperimentSchema
+from extrap.entities.function_computation import ComputationFunction
+from extrap.entities.metric import Metric
+from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.scaling_type import ScalingType
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.postprocessing.arithmetic_intensity_calculation import ArithmeticIntensityCalculation
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import ListToMappingField
@@ -48,8 +54,8 @@ class ComparisonExperiment(Experiment):
         self.matcher = matcher
         self.exp1 = exp1
         self.exp2 = exp2
-        self.modelers_match = {}
-        self.parameter_mapping = {}
+        self.modelers_match: Mapping[str, Sequence[ModelGenerator]] = {}
+        self.parameter_mapping: Mapping[str, Sequence[str]] = {}
         self.projection_info: ProjectionInfo = ProjectionInfo(len(self.compared_experiments))
 
     def do_comparison(self, progress_bar=DUMMY_PROGRESS):
@@ -211,10 +217,69 @@ class ComparisonExperiment(Experiment):
                 idx = experiment.parameters.index(Parameter(old_name))
                 experiment.parameters[idx] = Parameter(name)
 
+    def project_expected_performance(self, projection_info: ProjectionInfo, pbar):
+        ar_int_preprocess = None
+        target_id = projection_info.target_experiment_id
+        if projection_info.num_mem_transfers_metric:
+            ar_int_preprocess = ArithmeticIntensityCalculation(self)
+            ar_int_preprocess.bytes_per_mem_transfer = projection_info.bytes_per_mem
+            ar_int_preprocess.num_mem_transfers_metric = projection_info.num_mem_transfers_metric
+            ar_int_preprocess.flops_dp_metric = projection_info.fp_dp_metric
+            for eid, experiment in enumerate(self.compared_experiments):
+                if eid == target_id:
+                    continue
+                if projection_info.fp_dp_metric not in experiment.metrics or \
+                        projection_info.num_mem_transfers_metric not in experiment.metrics:
+                    continue
+                for model_set in experiment.modelers:
+                    ar_int_models = ar_int_preprocess.generate_arithmetic_intensity_models(model_set.models, pbar)
+                    model_set.models.update(ar_int_models)
+        new_metrics = {metric: Metric("Expected " + metric.name) for metric in projection_info.metrics_to_project}
+        self.metrics.extend(new_metrics.values())
+        for modeler in self.modelers:
+            pbar.total += len(modeler.models)
+        for modeler in self.modelers:
+            new_models = {}
+            for (callpath, metric), c_model in modeler.models.items():
+                pbar.update()
+                if metric not in projection_info.metrics_to_project:
+                    continue
+                if not isinstance(c_model, ComparisonModel):
+                    continue
+                models = []
+                for i, model in enumerate(c_model.models):
+                    if i == target_id:
+                        models.append(model)
+                    else:
+                        ar_int = sympy.oo
+                        if ar_int_preprocess:
+                            compared_modeler = self.modelers_match[modeler.name][i].models
+                            key = (callpath, ar_int_preprocess.arithmetic_intensity_metric)
+                            if key in compared_modeler:
+                                ar_int_func: ComputationFunction = compared_modeler[key].hypothesis.function
+                                ar_int = ar_int_func.sympy_function
+
+                        roofline_performance = sympy.Min(projection_info.peak_mem_bandwidth_in_gbytes_per_s[i] * ar_int,
+                                                         projection_info.peak_performance_in_gflops_per_s[i])
+                        target_roofline_performance = sympy.Min(projection_info.peak_mem_bandwidth_in_gbytes_per_s[
+                                                                    target_id] * ar_int,
+                                                                projection_info.peak_performance_in_gflops_per_s[
+                                                                    target_id])
+                        scaling_factor = roofline_performance / target_roofline_performance
+                        hypothesis = copy.copy(model.hypothesis)
+                        hypothesis.function = (ComputationFunction(model.hypothesis.function) * scaling_factor)
+                        models.append(Model(hypothesis, model.callpath, new_metrics[model.metric]))
+
+                model = ComparisonModel(callpath, new_metrics[metric], models)
+                new_models[callpath, model.metric] = model
+
+            modeler.models.update(new_models)
+
 
 class ComparisonExperimentSchema(ExperimentSchema):
     callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList)
     experiment_names = fields.List(fields.String())
+    projection_info = fields.Nested(ProjectionInfoSchema)
 
     def create_object(self):
         return ComparisonExperiment(None, None, None)
