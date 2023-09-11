@@ -5,9 +5,9 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from PySide6.QtCore import QModelIndex, QSize
-from PySide6.QtGui import QTextDocument, QTextOption, QTextCursor, QFontMetrics, QPalette, QAbstractTextDocumentLayout, \
-    QFont
+from PySide6.QtCore import QModelIndex, QSize, QRectF
+from PySide6.QtGui import QTextDocument, QTextOption, QPalette, QAbstractTextDocumentLayout, \
+    QFont, QFontMetrics
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QApplication, QStyle
 
 
@@ -18,6 +18,7 @@ class RichTextDelegate(QStyledItemDelegate):
         self.renderer = QTextDocument()
         self.margin = 0
         self.font_scale = 0
+        self.ellipsis = "..."
 
     def paint(self, painter, option: QStyleOptionViewItem, index: QModelIndex):
         self.initStyleOption(option, index)
@@ -44,24 +45,7 @@ class RichTextDelegate(QStyledItemDelegate):
         renderer.setDefaultFont(option.font)
         renderer.setDefaultTextOption(textOption)
         renderer.setDocumentMargin(self.margin)
-        renderer.setTextWidth(option.rect.width())
         renderer.adjustSize()
-
-        if renderer.size().width() > option.rect.width():
-            # add ellipsis
-            cursor = QTextCursor(renderer)
-            cursor.movePosition(QTextCursor.End)
-
-            ellipsis = "..."
-
-            metric = QFontMetrics(option.font)
-            ellipsis_width = metric.horizontalAdvance(ellipsis)
-
-            # endif
-            while renderer.size().width() > option.rect.width() - ellipsis_width:
-                cursor.deletePreviousChar()
-                renderer.adjustSize()
-            cursor.insertText(ellipsis)
 
         option.text = ''
 
@@ -80,8 +64,21 @@ class RichTextDelegate(QStyledItemDelegate):
         else:
             context.palette.setColor(QPalette.Text, option.palette.color(QPalette.Text))
 
+        if renderer.size().width() > option.rect.width():
+            # clip and draw ellipsis
+            ellipsis = self.ellipsis
+            metric = QFontMetrics(option.font)
+            ellipsis_width = metric.horizontalAdvance(ellipsis)
+            ellipsis_margin = 1
+
+            painter.save()
+            painter.drawText(QRectF(textRect.width() - ellipsis_width, 0, ellipsis_width, textRect.height()), ellipsis)
+            painter.restore()
+
+            context.clip = QRectF(0, 0, textRect.width() - ellipsis_width - ellipsis_margin, textRect.height())
+            painter.setClipRect(context.clip)
+
         renderer.documentLayout().draw(painter, context)
-        # renderer.drawContents(painter)
         painter.restore()
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:

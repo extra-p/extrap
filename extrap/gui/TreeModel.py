@@ -25,6 +25,8 @@ from extrap.util.formatting_helper import replace_method_parameters, format_numb
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
 
+DEBUG_INDICES = False
+
 
 class TreeModel(QAbstractItemModel):
     def __init__(self, selector_widget: SelectorWidget, parent=None):
@@ -46,7 +48,7 @@ class TreeModel(QAbstractItemModel):
         self.endRemoveRows()
 
     def _node_from_index(self, index):
-        if not self.checkIndex(index):
+        if DEBUG_INDICES and not self.checkIndex(index):
             raise IndexError()
 
         if index.isValid():
@@ -56,7 +58,7 @@ class TreeModel(QAbstractItemModel):
 
     # noinspection PyMethodMayBeStatic
     def getValue(self, index) -> Optional[calltree.Node]:
-        if not self.checkIndex(index):
+        if DEBUG_INDICES and not self.checkIndex(index):
             raise IndexError()
 
         item = index.internalPointer()
@@ -66,7 +68,7 @@ class TreeModel(QAbstractItemModel):
 
     def data(self, index, role=None):
 
-        if not self.checkIndex(index, QAbstractItemModel.CheckIndexOption.IndexIsValid):
+        if DEBUG_INDICES and not self.checkIndex(index, QAbstractItemModel.CheckIndexOption.IndexIsValid):
             raise IndexError()
 
         if not index.isValid():
@@ -220,7 +222,7 @@ class TreeModel(QAbstractItemModel):
         #     self.valuesChanged()
 
     def flags(self, index):
-        if not self.checkIndex(index):
+        if DEBUG_INDICES and not self.checkIndex(index):
             raise IndexError()
         if not index.isValid():
             return Qt.NoItemFlags
@@ -254,7 +256,7 @@ class TreeModel(QAbstractItemModel):
         return None
 
     def index(self, row, column, parent=QModelIndex()):
-        if not self.checkIndex(parent):
+        if DEBUG_INDICES and not self.checkIndex(parent):
             raise IndexError()
         if not parent.isValid():
             parentItem = self.root_item
@@ -272,7 +274,8 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def parent(self, index=...):
-        self.checkIndex(index, QAbstractItemModel.CheckIndexOption.DoNotUseParent)
+        # if DEBUG_INDICES:
+        #     self.checkIndex(index, QAbstractItemModel.CheckIndexOption.DoNotUseParent)
 
         if not index.isValid():
             return QModelIndex()
@@ -295,7 +298,7 @@ class TreeModel(QAbstractItemModel):
 
         # if parent.column() > 0:
         #     return 0
-        if not self.checkIndex(parent):
+        if DEBUG_INDICES and not self.checkIndex(parent):
             raise IndexError()
 
         if not parent.isValid():
