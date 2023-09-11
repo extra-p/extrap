@@ -23,7 +23,7 @@ from extrap.entities.callpath import CallpathSchema
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment, ExperimentSchema
 from extrap.entities.function_computation import ComputationFunction
-from extrap.entities.metric import Metric
+from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.scaling_type import ScalingType
@@ -234,7 +234,8 @@ class ComparisonExperiment(Experiment):
                 for model_set in experiment.modelers:
                     ar_int_models = ar_int_preprocess.generate_arithmetic_intensity_models(model_set.models, pbar)
                     model_set.models.update(ar_int_models)
-        new_metrics = {metric: Metric("Expected " + metric.name) for metric in projection_info.metrics_to_project}
+        new_metrics = {metric: Metric("Expected " + metric.name, projection__original_metric=metric.name) for metric in
+                       projection_info.metrics_to_project}
         self.metrics.extend(new_metrics.values())
         for modeler in self.modelers:
             pbar.total += len(modeler.models)
@@ -278,6 +279,7 @@ class ComparisonExperiment(Experiment):
 
 class ComparisonExperimentSchema(ExperimentSchema):
     callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList)
+    metrics = ListToMappingField(MetricSchema, 'name', list_type=UniqueList)
     experiment_names = fields.List(fields.String())
     projection_info = fields.Nested(ProjectionInfoSchema)
 
