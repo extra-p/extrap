@@ -33,6 +33,7 @@ from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
     AbstractScalingConversionReader
 from extrap.util.dynamic_options import DynamicOptions
+from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 CUBE_CALLSITE_ID_KEY = 'callsite id'
@@ -119,6 +120,13 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
         if self.aggregate_unc_cas_counts:
             self._aggregate_unc_cas_counts(experiment, progress_bar)
 
+        if not isinstance(path, list):
+            extra_data_path = Path(path) / "extra_data"
+            if extra_data_path.exists():
+                breakpoint()
+                self._load_extra_data(experiment, extra_data_path, progress_bar)
+                breakpoint()
+
         # determine calltree
         call_tree = io_helper.create_call_tree(experiment.callpaths, progress_bar, progress_scale=0.1)
         experiment.call_tree = call_tree
@@ -130,6 +138,21 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
         io_helper.validate_experiment(experiment, progress_bar)
         progress_bar.update()
         return experiment
+
+    def _load_extra_data(self, experiment, path, progress_bar):
+        extra_experiment = self.read_experiment(path, progress_bar)
+        breakpoint()
+        if extra_experiment.parameters != experiment.parameters:
+            raise FileFormatError("Cannot load extra data without matching parameters.")
+        if extra_experiment.coordinates != experiment.coordinates:
+            raise FileFormatError("Cannot load extra data without matching coordinates.")
+        new_metrics = set(e_metric for e_metric in extra_experiment.metrics if e_metric not in experiment.metrics)
+        experiment.metrics.extend(new_metrics)
+        for (callpath, metric), measurements in extra_experiment.measurements.items():
+            if metric not in new_metrics:
+                continue
+            experiment.callpaths.append(callpath)
+            experiment.measurements[(callpath, metric)] = measurements
 
     @staticmethod
     def _aggregate_unc_cas_counts(experiment, progress_bar):
