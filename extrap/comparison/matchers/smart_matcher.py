@@ -137,7 +137,8 @@ class SmartMatcher(AbstractMatcher):
                     # group measurements for merging
                     t_measurements: Dict[Coordinate, Measurement] = {
                         coordinate: Measurement(coordinate, agg_cp, metric, 0) for coordinate in
-                        experiment.coordinates}
+                        experiment.compared_experiments[i].coordinates}
+                    # loads coordinates from original experiment
                     # merge measurements
                     if source_key in s_measurements:
                         for m in s_measurements[source_key]:
@@ -251,7 +252,12 @@ class SmartMatcher(AbstractMatcher):
                     s_node.path.lookup_tag(self.TAG_GPU_OVERLAP, False)):
                 for m in c_measurements:
                     measurements_out[m.coordinate].merge(m)
-            measurements[cp, metric] = c_measurements
+            converted_measurements = []
+            for c_m in c_measurements:
+                measurement = c_m.copy()
+                measurement.callpath = cp
+                converted_measurements.append(measurement)
+            measurements[cp, metric] = converted_measurements
 
         for child in s_node:
             self._add_subtree_and_merge_measurements(node, child, s_measurements, i, total, metric, measurements_out,

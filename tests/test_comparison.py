@@ -376,9 +376,85 @@ class TestComparison(TestCase):
 
         self.assertListEqual(experiment.parameters, reconstructed.parameters)
         self.assertEqual(len(experiment.measurements), len(reconstructed.measurements))
-        # for key in experiment.measurements:
-        #     print(key)
-        #     self.assertEqual(experiment.measurements[key], reconstructed.measurements[key])
+        for key in experiment.measurements:
+            if experiment.measurements[key] == reconstructed.measurements[key]:
+                continue
+            print(key)
+            self.assertEqual(experiment.measurements[key], reconstructed.measurements[key])
+        self.assertDictEqual(experiment.measurements, reconstructed.measurements)
+        self.assertListEqual(experiment.coordinates, reconstructed.coordinates)
+        self.assertListEqual(experiment.callpaths, reconstructed.callpaths)
+        self.assertListEqual(experiment.metrics, reconstructed.metrics)
+        self.assertEqual(experiment.call_tree, reconstructed.call_tree)
+        self.assertListEqual(experiment.modelers, reconstructed.modelers)
+        self.assertEqual(experiment.scaling, reconstructed.scaling)
+
+    def test_smart_comparison_multi_level_serialization(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        cB = Node("cB", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cB"), [])
+        cA = Node("cA", Callpath("_start->main->sync->EVT_SYNC->OVERLAP->cA"), [])
+        overlap = Node("OVERLAP", Callpath("_start->main->sync->EVT_SYNC->OVERLAP"), [cA, cB])
+        wait = Node("WAIT", Callpath("_start->main->sync->EVT_SYNC->WAIT"), [])
+        evt_sync = Node("EVT_SYNC", Callpath("_start->main->sync->EVT_SYNC"), [wait, overlap])
+        sync = Node("sync", Callpath("_start->main->sync"), [evt_sync])
+        wA = Node("wA", Callpath("_start->main->work->wA"), [])
+        wBB = Node("wBB", Callpath("_start->main->work->wB->wBB"), [])
+        wB = Node("wA", Callpath("_start->main->work->wB"), [wBB])
+        work = Node("work", Callpath("_start->main->work"), [wA, wB])
+        main = Node("main", Callpath("_start->main"), [sync, work])
+        start = Node("_start", Callpath("_start"), [main])
+        root = CallTree()
+        root.add_child_node(start)
+        experiment1.callpaths = [evt_sync.path, wait.path, overlap.path, cB.path, work.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (evt_sync.path, metric): [Measurement(Coordinate(c), evt_sync.path, metric, 10 * c ** 2) for c in
+                                      range(1, 6)],
+            (wait.path, metric): [Measurement(Coordinate(c), wait.path, metric, 10 * c) for c in range(1, 6)],
+            (overlap.path, metric): [Measurement(Coordinate(c), overlap.path, metric, 5 * c) for c in range(1, 6)],
+            (cB.path, metric): [Measurement(Coordinate(c), cB.path, metric, 100 * np.log2(c)) for c in range(1, 6)]
+        }
+        experiment2 = copy.deepcopy(experiment1)
+        experiment2.coordinates = [Coordinate(c) for c in range(8, 14)]
+        experiment2.measurements = {
+            (evt_sync.path, metric): [Measurement(Coordinate(c), evt_sync.path, metric, 10 * c ** 3) for c in
+                                      range(8, 14)],
+            (wait.path, metric): [Measurement(Coordinate(c), wait.path, metric, 10 * c ** 2) for c in range(8, 14)],
+            (overlap.path, metric): [Measurement(Coordinate(c), overlap.path, metric, 5 * c ** 2) for c in
+                                     range(8, 14)],
+            (wBB.path, metric): [Measurement(Coordinate(c), wBB.path, metric, 5 * c ** 2) for c in range(8, 14)]
+        }
+        experiment2.callpaths = [evt_sync.path, wait.path, overlap.path, wBB.path]
+        experiment2.call_tree = io_helper.create_call_tree(experiment2.callpaths)
+        ModelGenerator(experiment1).model_all()
+        ModelGenerator(experiment2).model_all()
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
+        experiment.do_comparison()
+        self.check_comparison_against_source(experiment, experiment1, same_coords=False)
+        self.check_comparison_against_source(experiment, experiment2, same_coords=False)
+
+        schema = ExperimentSchema()
+        data = schema.dump(experiment)
+        reconstructed = schema.load(data)
+
+        self.assertListEqual(experiment.parameters, reconstructed.parameters)
+        self.assertEqual(len(experiment.measurements), len(reconstructed.measurements))
+        for key in experiment.measurements:
+            if experiment.measurements[key] == reconstructed.measurements[key]:
+                continue
+            for exp_m, recon_m in zip(experiment.measurements[key], reconstructed.measurements[key]):
+                self.assertEqual(exp_m.coordinate, recon_m.coordinate)
+                self.assertEqual(exp_m.metric, recon_m.metric)
+                self.assertEqual(exp_m.callpath, recon_m.callpath)
+                self.assertEqual(exp_m.mean, recon_m.mean)
+                self.assertEqual(exp_m.median, recon_m.median)
+                self.assertEqual(exp_m.minimum, recon_m.minimum)
+                self.assertEqual(exp_m.maximum, recon_m.maximum)
+                self.assertEqual(exp_m.std, recon_m.std)
         # self.assertDictEqual(experiment.measurements, reconstructed.measurements)
         self.assertListEqual(experiment.coordinates, reconstructed.coordinates)
         self.assertListEqual(experiment.callpaths, reconstructed.callpaths)
@@ -387,8 +463,13 @@ class TestComparison(TestCase):
         self.assertListEqual(experiment.modelers, reconstructed.modelers)
         self.assertEqual(experiment.scaling, reconstructed.scaling)
 
-    def check_comparison_against_source(self, experiment, experiment1):
-        self.assertSetEqual(set(experiment.coordinates), set(experiment1.coordinates))
+    def check_comparison_against_source(self, experiment, experiment1, same_coords=True):
+        if same_coords:
+            self.assertSetEqual(set(experiment.coordinates), set(experiment1.coordinates))
+        else:
+            for coord in experiment1.coordinates:
+                self.assertIn(coord, experiment.coordinates)
+
         self.assertListEqual(experiment.parameters, experiment1.parameters)
         self.assertTrue(set(experiment.metrics) <= set(experiment1.metrics))
 
