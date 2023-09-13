@@ -28,7 +28,7 @@ class Measurement:
         self.metric: Metric = metric
         if values is None:
             return
-        values = np.array(values)
+        self.values = np.array(values)
         self.median: float = np.median(values)
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
