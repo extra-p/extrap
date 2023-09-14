@@ -46,26 +46,20 @@ class ComparisonModelGenerator(ModelGenerator):
             post_processed_comparison_set.models = post_process.process(self.models, progress_bar)
         else:
             number_models = len(next(iter(self.models.values())).models)
-            progress_bar.total = number_models * len(self.models) * 2
+            progress_bar.total = number_models * len(self.models)
             post_processed_comparison_set = ComparisonModelGenerator(post_process.experiment,
                                                                      post_process.NAME + ' ' + self.name)
 
             all_models = []
             for c in range(number_models):
                 with ScaledSubProgressBar(progress_bar, len(self.models)) as sub_progress_bar:
-                    all_models.append(post_process.process(
-                        {key: value.models[c] for key, value in self.models.items() if
-                         isinstance(value, ComparisonModel)},
-                        sub_progress_bar))
+                    partial_models = {key: value.models[c] for key, value in self.models.items() if
+                                      isinstance(value, ComparisonModel)}
+                    all_models.append(post_process.process(partial_models, sub_progress_bar))
 
             post_processed_comparison_set.models = {key: ComparisonModel(*key, [m[key] for m in all_models]) for
                                                     key, value in progress_bar(self.models.items())
                                                     if isinstance(value, ComparisonModel)}
-
-            with ScaledSubProgressBar(progress_bar, number_models * len(self.models)) as sub_progress_bar:
-                post_processed_comparison_set.models.update(post_process.process(
-                    {key: value for key, value in self.models.items() if not isinstance(value, ComparisonModel)},
-                    sub_progress_bar))
 
         post_processed_comparison_set.post_processing_history = self.post_processing_history + [post_process]
         if auto_append:

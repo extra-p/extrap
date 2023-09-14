@@ -96,6 +96,14 @@ class Hypothesis:
     def compute_cost(self, measurements: Sequence[Measurement]):
         raise NotImplementedError()
 
+    def define_costs_as_unknown(self):
+        self._RSS = math.nan
+        self._rRSS = math.nan
+        self._SMAPE = math.nan
+        self.__AR2 = math.nan
+        self._RE = math.nan
+        self._costs_are_calculated = True
+
     def is_valid(self):
         """
         Checks if there is a numeric imprecision. If this is the case the hypothesis will be ignored.

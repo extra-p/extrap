@@ -180,6 +180,8 @@ class BinaryAggregation(Aggregation, ABC):
         rest = iter(agg_models)
         first = next(rest)
         data = {}
+        if not first.measurements:
+            return []
         for m in first.measurements:
             agg = Measurement(m.coordinate, m.callpath, m.metric, None)
             agg.mean = m.mean

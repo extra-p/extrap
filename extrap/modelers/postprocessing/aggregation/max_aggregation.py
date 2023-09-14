@@ -59,7 +59,10 @@ class MaxAggregation(BinaryAggregation):
         function = MaxAggregationFunction([m.hypothesis.function for m in agg_models])
         hypothesis_type = type(agg_models[0].hypothesis)
         hypothesis = hypothesis_type(function, agg_models[0].hypothesis._use_median)
-        hypothesis.compute_cost(measurements)
+        if measurements:
+            hypothesis.compute_cost(measurements)
+        else:
+            hypothesis.define_costs_as_unknown()
         model = AggregatedModel(hypothesis, callpath, metric)
         return model
 

@@ -234,7 +234,9 @@ class ComparisonExperiment(Experiment):
                 for model_set in experiment.modelers:
                     ar_int_models = ar_int_preprocess.generate_arithmetic_intensity_models(model_set.models, pbar)
                     model_set.models.update(ar_int_models)
-        new_metrics = {metric: Metric("Expected " + metric.name, projection__original_metric=metric.name) for metric in
+        new_metrics = {metric: Metric("Expected " + metric.name,
+                                      projection__original_metric=metric.name,
+                                      projection__target_id=target_id) for metric in
                        projection_info.metrics_to_project}
         self.metrics.extend(new_metrics.values())
         for modeler in self.modelers:
