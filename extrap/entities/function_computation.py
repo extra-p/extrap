@@ -343,7 +343,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             parameters = DEFAULT_PARAM_NAMES
         result = self.sympy_function
         for param, new_param in zip(self._params, parameters):
-            result = result.subs(param, str(new_param))
+            result = result.subs(param, sympy.Symbol(str(new_param)))
 
         return self._PRINTER.doprint(result)
 
@@ -352,7 +352,7 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             parameters = DEFAULT_PARAM_NAMES
         result = self.sympy_function
         for param, new_param in zip(self._params, parameters):
-            result = result.subs(param, str(new_param))
+            result = result.subs(param, sympy.Symbol(str(new_param)))
 
         return self._PRINTER_HTML.doprint(result)
 
