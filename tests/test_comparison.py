@@ -114,13 +114,13 @@ class TestComparison(TestCase):
 
         new_matches = {}
         measurements = {}
-        s_measurements = {(evt_sync.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+        s_measurements = {(evt_sync.path, metric): [Measurement(Coordinate(c), evt_sync.path, metric, v) for c, v in
                                                     zip([64, 512, 4096, 32768, 262144], range(20, 101, 20))],
-                          (wait.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+                          (wait.path, metric): [Measurement(Coordinate(c), wait.path, metric, v) for c, v in
                                                 zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))],
-                          (overlap.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+                          (overlap.path, metric): [Measurement(Coordinate(c), overlap.path, metric, v) for c, v in
                                                    zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))],
-                          (cB.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+                          (cB.path, metric): [Measurement(Coordinate(c), cB.path, metric, v) for c, v in
                                               zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))]
                           }
         expected_s_measurements = copy.deepcopy(s_measurements)
@@ -131,14 +131,15 @@ class TestComparison(TestCase):
 
         self.assertTrue(expected_parent.exactly_equal(ct_parent))
         self.assertDictEqual(expected_measurement_out, measurement_out)
-        self.assertDictEqual({
-            (r_evt_sync.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+        # TODO Add callpaths and metrics to measurements
+        self.assertMeasurmentsEqual({
+            (r_evt_sync.path, metric): [Measurement(Coordinate(c), r_evt_sync.path, metric, v) for c, v in
                                         zip([64, 512, 4096, 32768, 262144], range(20, 101, 20))],
-            (r_wait.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+            (r_wait.path, metric): [Measurement(Coordinate(c), r_wait.path, metric, v) for c, v in
                                     zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))],
-            (r_overlap.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+            (r_overlap.path, metric): [Measurement(Coordinate(c), r_overlap.path, metric, v) for c, v in
                                        zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))],
-            (r_cB.path, metric): [Measurement(Coordinate(c), None, None, v) for c, v in
+            (r_cB.path, metric): [Measurement(Coordinate(c), r_cB.path, metric, v) for c, v in
                                   zip([64, 512, 4096, 32768, 262144], range(10, 51, 10))]
         }, measurements)
         self.assertDictEqual(expected_s_measurements, s_measurements)
@@ -442,11 +443,21 @@ class TestComparison(TestCase):
         reconstructed = schema.load(data)
 
         self.assertListEqual(experiment.parameters, reconstructed.parameters)
-        self.assertEqual(len(experiment.measurements), len(reconstructed.measurements))
-        for key in experiment.measurements:
-            if experiment.measurements[key] == reconstructed.measurements[key]:
+        self.assertMeasurmentsEqual(experiment.measurements, reconstructed.measurements)
+        # self.assertDictEqual(experiment.measurements, reconstructed.measurements)
+        self.assertListEqual(experiment.coordinates, reconstructed.coordinates)
+        self.assertListEqual(experiment.callpaths, reconstructed.callpaths)
+        self.assertListEqual(experiment.metrics, reconstructed.metrics)
+        self.assertEqual(experiment.call_tree, reconstructed.call_tree)
+        self.assertListEqual(experiment.modelers, reconstructed.modelers)
+        self.assertEqual(experiment.scaling, reconstructed.scaling)
+
+    def assertMeasurmentsEqual(self, measurements, check):
+        self.assertEqual(len(measurements), len(check))
+        for key in measurements:
+            if measurements[key] == check[key]:
                 continue
-            for exp_m, recon_m in zip(experiment.measurements[key], reconstructed.measurements[key]):
+            for exp_m, recon_m in zip(measurements[key], check[key]):
                 self.assertEqual(exp_m.coordinate, recon_m.coordinate)
                 self.assertEqual(exp_m.metric, recon_m.metric)
                 self.assertEqual(exp_m.callpath, recon_m.callpath)
@@ -455,13 +466,6 @@ class TestComparison(TestCase):
                 self.assertEqual(exp_m.minimum, recon_m.minimum)
                 self.assertEqual(exp_m.maximum, recon_m.maximum)
                 self.assertEqual(exp_m.std, recon_m.std)
-        # self.assertDictEqual(experiment.measurements, reconstructed.measurements)
-        self.assertListEqual(experiment.coordinates, reconstructed.coordinates)
-        self.assertListEqual(experiment.callpaths, reconstructed.callpaths)
-        self.assertListEqual(experiment.metrics, reconstructed.metrics)
-        self.assertEqual(experiment.call_tree, reconstructed.call_tree)
-        self.assertListEqual(experiment.modelers, reconstructed.modelers)
-        self.assertEqual(experiment.scaling, reconstructed.scaling)
 
     def check_comparison_against_source(self, experiment, experiment1, same_coords=True):
         if same_coords:
