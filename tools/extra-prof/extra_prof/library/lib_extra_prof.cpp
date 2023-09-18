@@ -1,4 +1,5 @@
 #include "address_mapping.cpp"
 #include "exit_wrapper.cpp"
 #include "globals.cpp"
+#include "gomp_wrapper.cpp"
 #include "pthread_wrapper.cpp"
