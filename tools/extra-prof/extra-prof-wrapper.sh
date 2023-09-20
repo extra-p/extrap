@@ -13,7 +13,7 @@ arguments=("$@")
 compile_only=false
 shared_library=false
 while [ $# -gt 0 ]; do
-    #echo "$#: $1"
+    #echo "DEBUG: $#: $1"
     case "$1" in
     -c)
         compile_only=true
@@ -26,6 +26,9 @@ while [ $# -gt 0 ]; do
         ;;   
     -ccbin)
         compiler_dir="$1 $2"
+        ;;
+    -ccbin=*)
+        compiler_dir=$1
         ;;
     --compiler-bindir=*)
         compiler_dir=$1
@@ -138,7 +141,7 @@ else
     $EXTRA_PROF_COMPILER ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
-    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
+    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fopenmp" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
 
     echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
     $EXTRA_PROF_COMPILER ${combined[*]}

@@ -85,6 +85,12 @@ EP_INLINE time_point pop_time(char const* name) {
     metrics.visits++;
     metrics.duration += duration;
     thread_state.timer_stack.pop_back();
+#ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
+    if (!current_node->validateChildren()) {
+        std::cerr << "EXTRA PROF: ERROR: Children to big!!!" << std::endl;
+    }
+#endif
+
     if (current_node->parent() == nullptr) {
         throw std::runtime_error("EXTRA PROF: pop_time: Cannot go to parent of root");
     }

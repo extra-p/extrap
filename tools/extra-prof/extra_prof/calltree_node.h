@@ -49,12 +49,7 @@ class CallTreeNode;
 class CallTreeNodeList : public std::vector<containers::pair<char const*, CallTreeNode*>> {
 public:
     template <typename Packer>
-    void msgpack_pack(Packer& msgpack_pk) const {
-        msgpack_pk.pack_array(this->size());
-        for (auto&& [name, node] : *this) {
-            node->msgpack_pack(msgpack_pk);
-        }
-    }
+    void msgpack_pack(Packer& msgpack_pk) const;
 };
 
 struct Metrics {
@@ -139,6 +134,17 @@ public:
 
     inline Metrics& my_metrics() { return per_thread_metrics[pthread_self()]; }
 
+    bool validateChildren() {
+        std::shared_lock lg(mutex);
+        for (auto [node_name, node] : _children) {
+            auto& metrics = node->my_metrics();
+            if (this->my_metrics().duration < metrics.duration) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // time_point temp_start_point() { return _temp_start_point; }
     // void temp_start_point(time_point point) { _temp_start_point = point; }
 
@@ -176,6 +182,15 @@ public:
             .msgpack_pack(msgpack_pk);
     }
 };
+
+template <typename Packer>
+void CallTreeNodeList::msgpack_pack(Packer& msgpack_pk) const {
+    msgpack_pk.pack_array(this->size());
+    for (auto&& [name, node] : *this) {
+        node->msgpack_pack(msgpack_pk);
+    }
+}
+
 } // namespace extra_prof
 MSGPACK_ADD_ENUM(extra_prof::CallTreeNodeFlags);
 MSGPACK_ADD_ENUM(extra_prof::CallTreeNodeType);

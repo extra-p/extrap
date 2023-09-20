@@ -1,19 +1,28 @@
+#include "../globals.h"
+#include <atomic>
+#include <dlfcn.h>
+#include <execinfo.h>
 #include <omp.h>
 
 struct gomp_team;
 struct gomp_taskgroup;
 
 typedef void (*gomp_parallel_fn)(void (*fn)(void*), void* data, unsigned num_threads, unsigned int flags);
+typedef void (*gomp_parallel_start_fn)(void (*fn)(void*), void* data, unsigned num_threads);
+typedef void (*gomp_parallel_loop_fn)(void (*fn)(void*), void* data, unsigned num_threads, long start, long end,
+                                      long incr, long chunk_size, unsigned flags);
+typedef void (*gomp_parallel_loop_start_fn)(void (*fn)(void*), void* data, unsigned num_threads, long start, long end,
+                                            long incr, long chunk_size);
 
-namespace extra_prof {
-struct WrappedOMPArgs {
+namespace extra_prof::wrappers {
+struct WrappedGOMPArgs {
     extra_prof::ThreadState thread_state;
     void (*start_routine)(void*);
     void* argument;
     std::atomic<int> references;
 };
-void wrap_start_omp(void* wrapped_args_ptr) {
-    WrappedOMPArgs* wrapped_args = reinterpret_cast<WrappedOMPArgs*>(wrapped_args_ptr);
+void wrap_start_gomp(void* wrapped_args_ptr) {
+    WrappedGOMPArgs* wrapped_args = reinterpret_cast<WrappedGOMPArgs*>(wrapped_args_ptr);
     pthread_t new_tid = pthread_self();
     {
         extra_prof_scope sc;
@@ -34,7 +43,36 @@ void wrap_start_omp(void* wrapped_args_ptr) {
 
     start_routine(args);
 }
-} // namespace extra_prof
+} // namespace extra_prof::wrappers
+
+#define EXTRA_PROF_GOMP_PARALLEL_LOOP(type)                                                                            \
+    void GOMP_parallel_loop_##type(void (*fn)(void*), void* data, unsigned num_threads, long start, long end,          \
+                                   long incr, long chunk_size, unsigned flags) {                                       \
+        static void* handle = NULL;                                                                                    \
+        static gomp_parallel_loop_fn old_start = NULL;                                                                 \
+        if (!handle) {                                                                                                 \
+            handle = dlopen("libgomp.so.1", RTLD_LAZY);                                                                \
+            old_start = (gomp_parallel_loop_fn)dlsym(handle, "GOMP_parallel_loop" #type);                              \
+        }                                                                                                              \
+        extra_prof::wrappers::WrappedGOMPArgs* wrapped_arg =                                                           \
+            new extra_prof::wrappers::WrappedGOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0}; \
+        old_start(extra_prof::wrappers::wrap_start_gomp, wrapped_arg, num_threads, start, end, incr, chunk_size,       \
+                  flags);                                                                                              \
+    }
+
+#define EXTRA_PROF_GOMP_PARALLEL_LOOP_START(type)                                                                      \
+    void GOMP_parallel_loop_##type##_start(void (*fn)(void*), void* data, unsigned num_threads, long start, long end,  \
+                                           long incr, long chunk_size) {                                               \
+        static void* handle = NULL;                                                                                    \
+        static gomp_parallel_loop_start_fn old_start = NULL;                                                           \
+        if (!handle) {                                                                                                 \
+            handle = dlopen("libgomp.so.1", RTLD_LAZY);                                                                \
+            old_start = (gomp_parallel_loop_start_fn)dlsym(handle, "GOMP_parallel_loop" #type "_start");               \
+        }                                                                                                              \
+        extra_prof::wrappers::WrappedGOMPArgs* wrapped_arg =                                                           \
+            new extra_prof::wrappers::WrappedGOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0}; \
+        old_start(extra_prof::wrappers::wrap_start_gomp, wrapped_arg, num_threads, start, end, incr, chunk_size);      \
+    }
 
 extern "C" {
 
@@ -47,9 +85,53 @@ EXTRA_PROF_SO_EXPORT void GOMP_parallel(void (*fn)(void*), void* data, unsigned 
         old_start = (gomp_parallel_fn)dlsym(handle, "GOMP_parallel");
     }
 
-    extra_prof::WrappedOMPArgs* wrapped_arg =
-        new extra_prof::WrappedOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0};
+    extra_prof::wrappers::WrappedGOMPArgs* wrapped_arg =
+        new extra_prof::wrappers::WrappedGOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0};
 
-    old_start(extra_prof::wrap_start_omp, wrapped_arg, num_threads, flags);
+    old_start(extra_prof::wrappers::wrap_start_gomp, wrapped_arg, num_threads, flags);
 }
+
+EXTRA_PROF_SO_EXPORT void GOMP_parallel_start(void (*fn)(void*), void* data, unsigned num_threads) {
+
+    static void* handle = NULL;
+    static gomp_parallel_start_fn old_start = NULL;
+    if (!handle) {
+        handle = dlopen("libgomp.so.1", RTLD_LAZY);
+        old_start = (gomp_parallel_start_fn)dlsym(handle, "GOMP_parallel_start");
+    }
+
+    extra_prof::wrappers::WrappedGOMPArgs* wrapped_arg =
+        new extra_prof::wrappers::WrappedGOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0};
+
+    old_start(extra_prof::wrappers::wrap_start_gomp, wrapped_arg, num_threads);
+}
+
+EXTRA_PROF_SO_EXPORT void GOMP_parallel_reductions(void (*fn)(void*), void* data, unsigned num_threads,
+                                                   unsigned int flags) {
+
+    static void* handle = NULL;
+    static gomp_parallel_fn old_start = NULL;
+    if (!handle) {
+        handle = dlopen("libgomp.so.1", RTLD_LAZY);
+        old_start = (gomp_parallel_fn)dlsym(handle, "GOMP_parallel_reductions");
+    }
+
+    extra_prof::wrappers::WrappedGOMPArgs* wrapped_arg =
+        new extra_prof::wrappers::WrappedGOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0};
+
+    old_start(extra_prof::wrappers::wrap_start_gomp, wrapped_arg, num_threads, flags);
+}
+
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(static);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(dynamic);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(guided);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(runtime);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(nonmonotonic_dynamic);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(nonmonotonic_guided);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(nonmonotonic_runtime);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP(maybe_nonmonotonic_runtime);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP_START(static);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP_START(dynamic);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP_START(guided);
+EXTRA_PROF_SO_EXPORT EXTRA_PROF_GOMP_PARALLEL_LOOP_START(runtime);
 }

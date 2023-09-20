@@ -25,7 +25,7 @@ void start_profiling_phase() {
 
     size_t numRanges = GLOBALS.gpu.NUM_HWC_RANGES;
     CUpti_Profiler_BeginSession_Params beginSessionParams = {
-        CUpti_Profiler_BeginSession_Params_STRUCT_SIZE,
+        .structSize = CUpti_Profiler_BeginSession_Params_STRUCT_SIZE,
         .ctx = currentContext,
         .counterDataImageSize = GLOBALS.gpu.counterDataImage.size(),
         .pCounterDataImage = GLOBALS.gpu.counterDataImage.data(),
@@ -39,7 +39,7 @@ void start_profiling_phase() {
     CUPTI_CALL(cuptiProfilerBeginSession(&beginSessionParams));
 
     CUpti_Profiler_SetConfig_Params setConfigParams = {
-        CUpti_Profiler_SetConfig_Params_STRUCT_SIZE,
+        .structSize = CUpti_Profiler_SetConfig_Params_STRUCT_SIZE,
 
         .ctx = currentContext,
         .pConfig = GLOBALS.gpu.configImage.data(),
@@ -50,14 +50,14 @@ void start_profiling_phase() {
 
     if (beginSessionParams.replayMode != CUPTI_KernelReplay) {
         CUpti_Profiler_BeginPass_Params beginPassParams = {
-            CUpti_Profiler_BeginPass_Params_STRUCT_SIZE,
+            .structSize = CUpti_Profiler_BeginPass_Params_STRUCT_SIZE,
             .ctx = currentContext,
         };
         CUPTI_CALL(cuptiProfilerBeginPass(&beginPassParams));
     }
 
     CUpti_Profiler_EnableProfiling_Params enableProfilingParams = {
-        CUpti_Profiler_EnableProfiling_Params_STRUCT_SIZE,
+        .structSize = CUpti_Profiler_EnableProfiling_Params_STRUCT_SIZE,
         .ctx = currentContext,
     };
     CUPTI_CALL(cuptiProfilerEnableProfiling(&enableProfilingParams));
@@ -74,7 +74,7 @@ void end_profiling_phase() {
     }
     GPU_LL_CALL(cuCtxSynchronize());
     CUpti_Profiler_DisableProfiling_Params disableProfilingParams = {
-        CUpti_Profiler_DisableProfiling_Params_STRUCT_SIZE,
+        .structSize = CUpti_Profiler_DisableProfiling_Params_STRUCT_SIZE,
         .ctx = currentContext,
     };
     CUPTI_CALL(cuptiProfilerDisableProfiling(&disableProfilingParams));
@@ -115,19 +115,19 @@ void postprocess_counter_data() {
     }
 
     NVPW_CUDA_MetricsContext_Create_Params metricsContextCreateParams = {
-        NVPW_CUDA_MetricsContext_Create_Params_STRUCT_SIZE,
+        .structSize = NVPW_CUDA_MetricsContext_Create_Params_STRUCT_SIZE,
         .pChipName = chipName,
     };
     NVPW_CALL(NVPW_CUDA_MetricsContext_Create(&metricsContextCreateParams));
 
     NVPW_MetricsContext_Destroy_Params metricsContextDestroyParams = {
-        NVPW_MetricsContext_Destroy_Params_STRUCT_SIZE,
+        .structSize = NVPW_MetricsContext_Destroy_Params_STRUCT_SIZE,
         .pMetricsContext = metricsContextCreateParams.pMetricsContext,
     };
     OnExit exit0([&]() { NVPW_MetricsContext_Destroy(&metricsContextDestroyParams); });
 
     NVPW_CounterData_GetNumRanges_Params getNumRangesParams = {
-        NVPW_CounterData_GetNumRanges_Params_STRUCT_SIZE,
+        .structSize = NVPW_CounterData_GetNumRanges_Params_STRUCT_SIZE,
         .pCounterDataImage = counterDataImage.data(),
     };
     NVPW_CALL(NVPW_CounterData_GetNumRanges(&getNumRangesParams));
@@ -146,7 +146,7 @@ void postprocess_counter_data() {
         std::vector<const char*> descriptionPtrs;
 
         NVPW_Profiler_CounterData_GetRangeDescriptions_Params getRangeDescParams = {
-            NVPW_Profiler_CounterData_GetRangeDescriptions_Params_STRUCT_SIZE,
+            .structSize = NVPW_Profiler_CounterData_GetRangeDescriptions_Params_STRUCT_SIZE,
             .pCounterDataImage = counterDataImage.data(),
             .rangeIndex = rangeIndex,
         };
@@ -165,7 +165,7 @@ void postprocess_counter_data() {
         }
 
         NVPW_MetricsContext_SetCounterData_Params setCounterDataParams = {
-            NVPW_MetricsContext_SetCounterData_Params_STRUCT_SIZE,
+            .structSize = NVPW_MetricsContext_SetCounterData_Params_STRUCT_SIZE,
             .pMetricsContext = metricsContextCreateParams.pMetricsContext,
             .pCounterDataImage = counterDataImage.data(),
             .rangeIndex = rangeIndex,
@@ -174,7 +174,7 @@ void postprocess_counter_data() {
         NVPW_MetricsContext_SetCounterData(&setCounterDataParams);
 
         NVPW_MetricsContext_EvaluateToGpuValues_Params evalToGpuParams = {
-            NVPW_MetricsContext_EvaluateToGpuValues_Params_STRUCT_SIZE,
+            .structSize = NVPW_MetricsContext_EvaluateToGpuValues_Params_STRUCT_SIZE,
             .pMetricsContext = metricsContextCreateParams.pMetricsContext,
             .numMetrics = metricNamePtrs.size(),
             .ppMetricNames = metricNamePtrs.data(),
@@ -237,7 +237,7 @@ void init() {
 
     /* Get chip name for the cuda  device */
     CUpti_Device_GetChipName_Params getChipNameParams = {
-        CUpti_Device_GetChipName_Params_STRUCT_SIZE,
+        .structSize = CUpti_Device_GetChipName_Params_STRUCT_SIZE,
         .deviceIndex = (size_t)currentDeviceIdx,
     };
     CUPTI_CALL(cuptiDeviceGetChipName(&getChipNameParams));
