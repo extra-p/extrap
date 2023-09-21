@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import math
 import shutil
 import sys
 from enum import Enum, Flag
@@ -30,8 +30,47 @@ class CallTreeNodeFlags(Flag):
     OVERLAP = 1 << 1
 
 
+remove_to_big_children = None
+
+
+def _children_are_too_big(parent_duration, childs, name):
+    global remove_to_big_children
+
+    c_duration = 0
+
+    for child in childs:
+        name, _, raw_type, raw_flags, m_duration, m_visits, m_bytes = child[0:7]
+        n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
+        if n_type == CallTreeNodeType.OVERLAP \
+                or n_type == CallTreeNodeType.KERNEL \
+                or CallTreeNodeFlags.OVERLAP in flags \
+                or (n_type == CallTreeNodeType.MEMCPY and CallTreeNodeFlags.ASYNC in flags) \
+                or (n_type == CallTreeNodeType.MEMSET and CallTreeNodeFlags.ASYNC in flags):
+            continue
+        c_duration += max(m_duration)
+
+    if c_duration <= max(parent_duration):
+        return False
+
+    print(f"WARNING: Children's duration {c_duration} is bigger than "
+          f"their parent's ({name}) duration {parent_duration}\n")
+
+    if remove_to_big_children is None:
+        selection = input("Do you want to remove children that are bigger than their parent "
+                          "and save the modified profile in a new file? (y/N): ")
+        if selection.lower() == 'y':
+            remove_to_big_children = True
+        else:
+            remove_to_big_children = False
+    if remove_to_big_children is True:
+        return True
+
+    return False
+
+
 def _read_calltree(ep_root_node, table, len_row):
-    def _read_calltree_node(call_path, ep_node, table):
+    def _read_calltree_node(call_path, ep_node, table, parent_duration):
+        global remove_to_big_children
         name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
         n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
         if n_type == CallTreeNodeType.KERNEL_LAUNCH:
@@ -44,9 +83,15 @@ def _read_calltree(ep_root_node, table, len_row):
         output_data = [call_path, m_duration, m_visits, m_bytes]
         if len(ep_node) >= 8 and ep_node[7]:
             output_data += ep_node[7]
+
         table.append(output_data + [None] * (len_row - len(output_data)))
-        for child in childs:
-            _read_calltree_node(call_path, child, table)
+        if _children_are_too_big(m_duration, childs, name):
+            childs.clear()
+        else:
+            for i, child in enumerate(childs):
+                _read_calltree_node(call_path, child, table, m_duration)
+
+        return output_data
 
     r_name, r_childs, r_type, r_flags, rm_duration, rm_visits, rm_bytes = ep_root_node[0:7]
     assert r_name == ""
@@ -54,7 +99,7 @@ def _read_calltree(ep_root_node, table, len_row):
     assert rm_visits == 0 or isinstance(rm_duration, list)
     assert rm_bytes == 0 or isinstance(rm_duration, list)
     for r_child in r_childs:
-        _read_calltree_node("", r_child, table)
+        _read_calltree_node("", r_child, table, [math.inf])
 
 
 def main():
@@ -83,12 +128,16 @@ def main():
                 table = []
                 _read_calltree(ep_call_tree, table, len_row=len(header))
                 term_size = shutil.get_terminal_size((80, 20))
-                callpath_column_size=max(16,term_size.columns-(len(header)-1)*16)
+                callpath_column_size = max(16, term_size.columns - (len(header) - 1) * 16)
                 print(
                     tabulate(table, headers=header, tablefmt="grid",
                              maxcolwidths=[callpath_column_size] + [12] * (len(header) - 1),
                              maxheadercolwidths=[callpath_column_size] + [12] * (len(header) - 1),
                              floatfmt=".4g"))
+                if remove_to_big_children is True:
+                    with open(path.replace('.extra-prof.msgpack', '') + '.fixed.extra-prof.msgpack',
+                              'wb') as output_file:
+                        output_file.write(msgpack.Packer().pack(profile_data))
 
 
 def load_tabulate():
@@ -119,7 +168,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     import warnings
     from collections import namedtuple
     from collections.abc import Iterable, Sized
-    from html import escape as htmlescape
     from itertools import chain, zip_longest as izip_longest
     from functools import reduce, partial
     import io
