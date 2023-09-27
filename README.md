@@ -27,6 +27,12 @@ Extra-P generates not only a list of potential scalability bugs but also human-r
 performance metrics available such as floating-point operations or bytes sent by MPI calls that can be further 
 analyzed and compared to identify the root causes of scalability issues.
 
+The following video on the Laboratory for Parallel Programming @ TUDa [YouTube](
+https://www.youtube.com/@parallel_tuda) channel provides a quick introduction to Extra-P.
+
+<a href="https://www.youtube.com/watch?v=Cv2YRCMWqBM"><img src="https://img.youtube.com/vi/Cv2YRCMWqBM/0.jpg" 
+alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
+
 Extra-P is developed by [TU Darmstadt](https://www.parallel.informatik.tu-darmstadt.de/) – 
 in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 
