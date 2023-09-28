@@ -26,6 +26,7 @@ from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
+from extrap.util.warnings import DetailedWarning
 
 TRACEBACK = logging.DEBUG - 1
 logging.addLevelName(TRACEBACK, 'TRACEBACK')
@@ -147,6 +148,9 @@ def _init_warning_system(window, test=False):
             warn_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
             warn_box.destroyed.connect(
                 lambda x: (current_warnings.remove(message_str), open_message_boxes.remove(warn_box)))
+
+            if isinstance(message, DetailedWarning) and message.details:
+                warn_box.setDetailedText(message.details)
 
             if not test:
                 warn_box.show()

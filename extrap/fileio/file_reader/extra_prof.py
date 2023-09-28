@@ -34,6 +34,7 @@ from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirector
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import ProgressBar, DUMMY_PROGRESS
+from extrap.util.warnings import DetailedWarning
 
 METRIC_TIME = Metric('time')
 METRIC_VISITS = Metric('visits')
@@ -155,7 +156,10 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
         experiment.metrics = [METRIC_VISITS, METRIC_TIME, METRIC_BYTES] + list(all_gpu_metrics)
         experiment.callpaths = [node.path for node in call_tree.iterate_nodes()]
         experiment.call_tree = call_tree
-        io_helper.validate_experiment(experiment, progress_bar)
+        errors = io_helper.validate_experiment(experiment, progress_bar, collect_and_return=True)
+        if errors:
+            warnings.warn(
+                DetailedWarning("Detected issues while validating the experiment.", details="\n".join(errors)))
         return experiment
 
     @staticmethod
@@ -228,19 +232,19 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
                     node.gpu_metrics[metric].append(value)
             elif isinstance(m_duration, list):
                 if self.scaling_type == ScalingType.WEAK_PARALLEL:
-                    node.duration[i] = np.mean(m_duration)
-                    node.bytes[i] = np.mean(m_bytes)
-                    node.visits[i] = np.mean(m_visits)
+                    node.duration[i] += np.mean(m_duration)
+                    node.bytes[i] += np.mean(m_bytes)
+                    node.visits[i] += np.mean(m_visits)
                 elif self.scaling_type == ScalingType.STRONG:
-                    node.duration[i] = np.sum(m_duration)
-                    node.bytes[i] = np.sum(m_bytes)
-                    node.visits[i] = np.sum(m_visits)
+                    node.duration[i] += np.sum(m_duration)
+                    node.bytes[i] += np.sum(m_bytes)
+                    node.visits[i] += np.sum(m_visits)
                 else:
                     raise ValueError(f"Unsupported scaling type: {self.scaling_type}")
             else:
-                node.duration[i] = m_duration
-                node.bytes[i] = m_bytes
-                node.visits[i] = m_visits
+                node.duration[i] += m_duration
+                node.bytes[i] += m_bytes
+                node.visits[i] += m_visits
             for child in childs:
                 _read_calltree_node(node, child)
 

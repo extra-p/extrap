@@ -314,10 +314,15 @@ def find_child_node(root_node, level, callpath_elements, loop_id):
                 return find_child_node(new_root_node, level, callpath_elements, loop_id)
 
 
-def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
+def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS, collect_and_return=False):
+    errors = []
+
     def require(cond, message):
         if not cond:
-            raise InvalidExperimentError(message)
+            if collect_and_return:
+                errors.append(message)
+            else:
+                raise InvalidExperimentError(message)
 
     progress_bar.step('Validating experiment')
 
@@ -337,6 +342,8 @@ def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
         require(len(m) == length_coordinates or k[0].lookup_tag('validation__ignore__num_measurements', False),
                 f'The number of measurements ({len(m)}) for {k} does not match the number of coordinates '
                 f'({length_coordinates}).')
+
+    return errors
 
 
 @dataclass
