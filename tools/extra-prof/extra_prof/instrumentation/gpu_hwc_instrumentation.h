@@ -186,7 +186,7 @@ void postprocess_counter_data() {
         auto* correlationData = GLOBALS.gpu.callpath_correlation.try_get(correlationId);
         if (correlationData == nullptr) {
             throw std::runtime_error(containers::string("Correlation data not found for id ") +
-                                     containers::string::format("%u", correlationId));
+                                     std::to_string(correlationId));
         }
         auto* kernel_launch_node = correlationData->node;
         auto* gpu_node = kernel_launch_node->findOrAddChild(kernel_launch_node->name(), CallTreeNodeType::KERNEL);

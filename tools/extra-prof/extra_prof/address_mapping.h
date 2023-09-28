@@ -68,7 +68,7 @@ public:
 
         } else {
             std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-            dynamic_name_register[ptr - adress_offset] = containers::string::format("%x", ptr);
+            dynamic_name_register[ptr - adress_offset] = std::to_string(ptr);
         }
         return dynamic_name_register[ptr - adress_offset];
     }

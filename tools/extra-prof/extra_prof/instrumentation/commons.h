@@ -46,8 +46,8 @@ EP_INLINE time_point get_timestamp() {
 template <typename T>
 EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(T* fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
     auto& name_register = GLOBALS.name_register;
-
-    return push_time(name_register.get_name_ptr(fn_ptr).c_str(), type);
+    auto* name_ptr = name_register.get_name_ptr(fn_ptr).c_str();
+    return push_time(name_ptr, type);
 }
 
 template <>

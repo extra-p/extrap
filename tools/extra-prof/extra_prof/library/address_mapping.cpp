@@ -14,8 +14,11 @@ extra_prof::containers::string extra_prof::NameRegistry::defaultExperimentDirNam
 namespace extra_prof {
 
 struct offset_pair {
-    const char* path;
+    std::string path;
     uintptr_t offset;
+
+    offset_pair() = default;
+    offset_pair(std::string path_, uintptr_t offset_) : path(path_), offset(offset_) {}
 };
 
 void NameRegistry::create_address_mapping(containers::string output_dir) {
@@ -28,16 +31,16 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
     int result = dl_iterate_phdr(
         [](struct dl_phdr_info* info, size_t size, void* data) -> int {
             std::vector<offset_pair>* offsets_p = (std::vector<offset_pair>*)data;
-            offsets_p->emplace_back(offset_pair{info->dlpi_name, info->dlpi_addr});
+            offsets_p->emplace_back(info->dlpi_name, info->dlpi_addr);
             return 0;
         },
         &offsets);
 
     // std::ofstream stream(output_dir + "/symbols.txt");
 
-    for (auto& [filename, offset] : offsets) {
-
-        if (*filename == '\0') {
+    for (auto&& [filepath, offset] : offsets) {
+        std::string filename = filepath;
+        if (filename == "") {
             filename = app_filename;
         }
 
