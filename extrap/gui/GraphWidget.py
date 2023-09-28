@@ -64,6 +64,13 @@ class GraphWidget(QWidget):
         else:
             print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
 
+    def getMax(self, axis):
+        if axis == 0:
+            return self.max_x
+
+        else:
+            print("[EXTRAP:] Error: Get maximum for axis other than X-axis.")
+
     def logicalXtoPixel(self, lValue):
         """
             This function converts an X-value from logical into pixel coordinates.
@@ -651,7 +658,10 @@ class GraphWidget(QWidget):
         for _ in range(1, number_of_points + 1):
             value = value + axis_range
             if value < 1:
-                digits_after_point = int(math.log10(1 / value)) + 2
+                try:
+                    digits_after_point = int(math.log10(1 / value)) + 2
+                except ValueError:
+                    print(value, 1 / value)
                 value_to_append = float(
                     "{0:.{1}f}".format(value, digits_after_point))
             else:
@@ -924,6 +934,9 @@ class GraphWrapperWidget(AbstractPlotWidget):
     def getNumAxis():
         return GraphWidget.getNumAxis()
 
+    def getMax(self, axis):
+        raise NotImplementedError("The assignment should happen in __init__")
+
     def __init__(self, main_widget: MainWidget, parent):
         super().__init__(parent)
         grid = QGridLayout(self)
@@ -936,6 +949,7 @@ class GraphWrapperWidget(AbstractPlotWidget):
 
         self.setMax = self._graph_widget.setMax
         self.set_initial_value = self._graph_widget.set_initial_value
+        self.getMax = self._graph_widget.getMax
 
         self.context_menu_button = QToolButton(self)
 

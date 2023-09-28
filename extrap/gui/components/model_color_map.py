@@ -34,6 +34,10 @@ class ModelColorMap(Mapping[Node, str]):
         else:
             return self.dict_callpath_color[k]
 
+    def get_rgb(self, k):
+        c = QColor(self.__getitem__(k))
+        return c.red(), c.green(), c.blue()
+
     def __len__(self):
         return len(self.dict_callpath_color)
 

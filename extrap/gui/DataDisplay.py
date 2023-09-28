@@ -28,6 +28,7 @@ from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
 from extrap.gui.plots.comparison_plot import ComparisonPlot
+from extrap.gui.plots.expectation_plot import ExpectationPlot3D
 from extrap.gui.plots.stacked_area_plot import StackedAreaPlot
 
 MIN_PARAM_VALUE = 0.01
@@ -330,8 +331,14 @@ class DataDisplayManager(QWidget):
             10: ("Comparison plot", ComparisonPlot)
         }
 
+        if 11 in selectedCheckBoxesIndex:
+            labelText = "Estimatation plot"
+            tabStatus = self.is_tab_already_opened(labelText)
+            if tabStatus is False:
+                self.display_widget.addTab(ExpectationPlot3D(self.main_widget, self), labelText)
+
         for i in selectedCheckBoxesIndex:
-            if i == 0:
+            if i == 0 or i == 11:
                 continue
             labelText, plot = graph_widgets[i]
             if not self.is_tab_already_opened(labelText):

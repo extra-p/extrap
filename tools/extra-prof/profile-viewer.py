@@ -4,7 +4,6 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-import math
 import shutil
 import sys
 from enum import Enum, Flag
@@ -69,7 +68,7 @@ def _children_are_too_big(parent_duration, childs, name):
 
 
 def _read_calltree(ep_root_node, table, len_row):
-    def _read_calltree_node(call_path, ep_node, table, parent_duration):
+    def _read_calltree_node(call_path, ep_node, table):
         global remove_to_big_children
         name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
         n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
@@ -83,13 +82,16 @@ def _read_calltree(ep_root_node, table, len_row):
         output_data = [call_path, m_duration, m_visits, m_bytes]
         if len(ep_node) >= 8 and ep_node[7]:
             output_data += ep_node[7]
+        if len(ep_node) >= 10:
+            output_data.append(ep_node[8])
+            output_data.append(ep_node[9])
 
         table.append(output_data + [None] * (len_row - len(output_data)))
         if _children_are_too_big(m_duration, childs, name):
             childs.clear()
         else:
             for i, child in enumerate(childs):
-                _read_calltree_node(call_path, child, table, m_duration)
+                _read_calltree_node(call_path, child, table)
 
         return output_data
 
@@ -99,7 +101,7 @@ def _read_calltree(ep_root_node, table, len_row):
     assert rm_visits == 0 or isinstance(rm_duration, list)
     assert rm_bytes == 0 or isinstance(rm_duration, list)
     for r_child in r_childs:
-        _read_calltree_node("", r_child, table, [math.inf])
+        _read_calltree_node("", r_child, table)
 
 
 def main():
@@ -125,6 +127,9 @@ def main():
                 if magic_string != "EXTRA PROF":
                     raise RuntimeError(f"File {path} is no valid Extra-Prof file.")
                 header = ["Callpath", "Duration", "Visits", "Bytes"] + gpu_metrics
+                if len(ep_call_tree) >= 10:
+                    header += ['Energy (CPU)', 'Energy (GPU)']
+
                 table = []
                 _read_calltree(ep_call_tree, table, len_row=len(header))
                 term_size = shutil.get_terminal_size((80, 20))

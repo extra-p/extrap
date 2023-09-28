@@ -39,7 +39,7 @@ def replace_method_parameters(name, replacement="{lb}…{rb}"):
 def format_number_plain_text(number, precision=3, scientific_notation=4, no_integer=False):
     if not math.isfinite(number):
         return str(number)
-    elif 10 ** -precision < abs(number) < 10 ** scientific_notation:
+    elif number == 0 or 10 ** -precision < abs(number) < 10 ** scientific_notation:
         if not no_integer:
             if isinstance(number, int):
                 return str(number)
@@ -57,6 +57,21 @@ def format_number_plain_text(number, precision=3, scientific_notation=4, no_inte
             if exponent_sign != '+':
                 exponent = exponent_sign + exponent
             return mantissa + "×10" + make_exponent(exponent)
+
+
+def format_number_ascii(number, precision=3, scientific_notation=4, no_integer=False):
+    if not math.isfinite(number):
+        return str(number)
+    elif number == 0 or 10 ** -precision < abs(number) < 10 ** scientific_notation:
+        if not no_integer:
+            if isinstance(number, int):
+                return str(number)
+            number = float(number)
+            if number.is_integer():
+                return str(int(number))
+        return '{:.{}f}'.format(number, precision)
+    else:
+        return '{:.{}e}'.format(number, precision)
 
 
 def make_exponent(exponent):
