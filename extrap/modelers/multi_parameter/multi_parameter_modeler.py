@@ -69,10 +69,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, None)
 
-            if self.use_median:
-                value = np.mean([m.median for m in ms])
-            else:
-                value = np.mean([m.mean for m in ms])
+            value = np.mean([m.value(self.use_median) for m in ms])
 
             measurement.mean = value
             measurement.median = value

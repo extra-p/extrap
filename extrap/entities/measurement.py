@@ -40,11 +40,11 @@ class Measurement:
     
     def add_value(self, value):
         self.values = np.append(self.values, value)
-        self.median = np.median(values)
-        self.mean = np.mean(values)
-        self.minimum = np.min(values)
-        self.maximum = np.max(values)
-        self.std = np.std(values)
+        self.median = np.median(self.values)
+        self.mean = np.mean(self.values)
+        self.minimum = np.min(self.values)
+        self.maximum = np.max(self.values)
+        self.std = np.std(self.values)
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""

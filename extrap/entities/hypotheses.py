@@ -94,10 +94,7 @@ class Hypothesis:
         We take into account the minimum data value to make sure that we don't "nullify"
         actually relevant numbers.
         """
-        if self._use_median:
-            minimum = min(m.median for m in training_measurements)
-        else:
-            minimum = min(m.mean for m in training_measurements)
+        minimum = min(m.value(self._use_median) for m in training_measurements)
         if minimum == 0:
             if abs(self.function.constant_coefficient - minimum) < phi:
                 self.function.constant_coefficient = 0
@@ -109,10 +106,7 @@ class Hypothesis:
         """
         Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
         """
-        if self._use_median:
-            actual = numpy.array([m.median for m in measurements])
-        else:
-            actual = numpy.array([m.mean for m in measurements])
+        actual = numpy.array([m.value(self._use_median) for m in measurements])
 
         if measurements[0].coordinate.dimensions > 1:
             points = numpy.array([m.coordinate.as_tuple() for m in measurements]).T
@@ -166,11 +160,8 @@ class ConstantHypothesis(Hypothesis):
         """
         Computes the constant_coefficients of the function using the mean.
         """
-        if self._use_median:
-            self.function.constant_coefficient = numpy.mean([m.median for m in measurements])
-        else:
-            self.function.constant_coefficient = numpy.mean([m.mean for m in measurements])
-
+        self.function.constant_coefficient = numpy.mean([m.value(self._use_median) for m in measurements])
+        
     def compute_cost(self, measurements: Sequence[Measurement]):
         """
         Computes the cost of the constant hypothesis using all data points.
@@ -179,11 +170,8 @@ class ConstantHypothesis(Hypothesis):
         smape = 0
         for measurement in measurements:
             predicted = self.function.constant_coefficient
-            if self._use_median:
-                actual = measurement.median
-            else:
-                actual = measurement.mean
-
+            actual = measurement.value(self._use_median)
+        
             difference = predicted - actual
             self._RSS += difference * difference
             if actual != 0:
@@ -240,11 +228,8 @@ class SingleParameterHypothesis(Hypothesis):
         points = numpy.array([m.coordinate[0] for m in measurements])
         predicted = self.function.evaluate(points)
 
-        if self._use_median:
-            actual = numpy.array([m.median for m in measurements])
-        else:
-            actual = numpy.array([m.mean for m in measurements])
-
+        actual = numpy.array([m.value(self._use_median) for m in measurements])
+        
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
 
@@ -276,10 +261,7 @@ class SingleParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
-        if self._use_median:
-            b_list = numpy.array([m.median for m in measurements])
-        else:
-            b_list = numpy.array([m.mean for m in measurements])
+        b_list = numpy.array([m.value(self._use_median) for m in measurements])
         points = numpy.array([m.coordinate[0] for m in measurements])
 
         a_list = [numpy.ones((1, len(points)))]
