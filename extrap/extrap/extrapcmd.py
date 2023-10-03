@@ -74,9 +74,9 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
+                                metavar='{all,callpaths,metrics,parameters,functions,latex-functions,FORMAT_STRING}',
                                 help="Set which information should be displayed after modeling. Use one of "
-                                     "{all, callpaths, metrics, parameters, functions} or specify a "
+                                     "{all, callpaths, metrics, parameters, functions, latex-functions} or specify a "
                                      "formatting string using placeholders "
                                      f"(see {extrap.__documentation_link__}/output-formatting.md).")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
@@ -184,7 +184,7 @@ def main(args=None, prog=None):
             except RecoverableError as err:
                 logging.error('Saving experiment: ' + str(err))
                 sys.exit(1)
-
+                
         # format modeler output into text
         text = format_output(experiment, printtype)
 
