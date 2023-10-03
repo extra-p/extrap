@@ -18,7 +18,7 @@ class Measurement:
     """
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
-
+    
     def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values):
         """
         Initialize the Measurement object.
@@ -37,6 +37,14 @@ class Measurement:
 
     def value(self, use_median):
         return self.median if use_median else self.mean
+    
+    def add_value(self, value):
+        self.values = np.append(self.values, value)
+        self.median = np.median(values)
+        self.mean = np.mean(values)
+        self.minimum = np.min(values)
+        self.maximum = np.max(values)
+        self.std = np.std(values)
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
