@@ -250,6 +250,8 @@ def format_output(experiment: Experiment, printtype: str):
                 temp = m.hypothesis.function.to_string(*experiment.parameters)
             elif o == "model:python":
                 temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.PYTHON)
+            elif o == "model:latex":
+                temp = m.hypothesis.function.to_latex_string(*experiment.parameters)
             elif _re_points.fullmatch(o):
                 data = _re_points.fullmatch(o)
                 coordinate_text = format_points(data.group(2), experiment)
