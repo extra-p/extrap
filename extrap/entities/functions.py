@@ -9,9 +9,10 @@ from typing import List, Mapping, Union
 
 import numpy
 from marshmallow import fields
+import matplotlib.ticker as mticker
 
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
+from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema, DEFAULT_PARAM_NAMES
 from extrap.util.serialization_schema import BaseSchema, NumberField
 
 
@@ -60,10 +61,73 @@ class Function:
         """
         function_string = str(self.constant_coefficient)
         for t in self.compound_terms:
-            function_string += ' + '
+            if t.to_string(*parameters)[0] != "-":
+                function_string += '+'
             function_string += t.to_string(*parameters)
         return function_string
-
+    
+    def to_scientific_coefficient(self, coefficient):
+        """
+        This method takes a coefficient and formats it into a string using scientific notation.
+        """
+        formater = mticker.ScalarFormatter(useMathText=True)
+        formater.set_powerlimits((-3, 3))
+        formatted_coefficients = "{}".format(formater.format_data(float(coefficient)))
+        coreff_terms = formatted_coefficients.split(" ")
+        new_coeff = ""
+        if not coreff_terms[0][:1].isnumeric():
+            coeff = coreff_terms[0][1:]
+            try:
+                coeff = "{:.3f}".format(float(coeff))
+            except ValueError:
+                pass
+            new_coeff += "-"
+            new_coeff += coeff
+            for i in range(len(coreff_terms)):
+                if i != 0:
+                    new_coeff += coreff_terms[i]
+            return new_coeff
+        else:
+            coeff = coreff_terms[0]
+            try:
+                coeff = "{:.3f}".format(float(coeff))
+            except ValueError:
+                pass
+            new_coeff += coeff
+            for i in range(len(coreff_terms)):
+                if i != 0:
+                    new_coeff += coreff_terms[i]
+            return new_coeff
+    
+    def to_math_string(self, *parameters: Union[str, Parameter]):
+        """
+        Return a math string (using latex encoding) representation of the function.
+        """
+        new_coefficients = []
+        new_coefficients.append(self.to_scientific_coefficient(self.constant_coefficient))
+        for t in self.compound_terms:
+            new_coefficients.append(self.to_scientific_coefficient(t.coefficient))
+        function_string = new_coefficients[0]
+        coeff_counter = 1
+        for t in self.compound_terms:
+            if isinstance(t, MultiParameterTerm) is True:
+                sub_terms = t.parameter_term_pairs
+            elif isinstance(t, CompoundTerm) is True:
+                sub_terms = t.simple_terms
+            new_term = new_coefficients[coeff_counter]
+            for sub_term in sub_terms:
+                new_term = new_term + "*" + sub_term[1].to_string(parameter=DEFAULT_PARAM_NAMES[sub_term[0]])
+            new_term = new_term.replace("**", "^")
+            new_term = new_term.replace("*", "\\cdot")
+            new_term = new_term.replace("(", "{")
+            new_term = new_term.replace(")", "}")
+            new_term = new_term.replace("log2{"+str(DEFAULT_PARAM_NAMES[sub_term[0]])+"}", "\\log_2("+str(DEFAULT_PARAM_NAMES[sub_term[0]])+")")
+            if new_term[0] != "-":
+                function_string += "+"
+            function_string += new_term
+            coeff_counter += 1
+        return "$" + function_string + "$"
+    
     def __repr__(self):
         return f"Function({self.to_string('p')})"
 
