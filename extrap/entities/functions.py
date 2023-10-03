@@ -99,7 +99,7 @@ class Function:
                     new_coeff += coreff_terms[i]
             return new_coeff
     
-    def to_math_string(self, *parameters: Union[str, Parameter]):
+    def to_latex_string(self, *parameters: Union[str, Parameter]):
         """
         Return a math string (using latex encoding) representation of the function.
         """
@@ -116,12 +116,16 @@ class Function:
                 sub_terms = t.simple_terms
             new_term = new_coefficients[coeff_counter]
             for sub_term in sub_terms:
-                new_term = new_term + "*" + sub_term[1].to_string(parameter=DEFAULT_PARAM_NAMES[sub_term[0]])
+                if type(sub_term) is tuple:
+                    new_term = new_term + "*" + sub_term[1].to_string(parameter=parameters[sub_term[0]])
+                    new_term = new_term.replace("log2{"+str(parameters[sub_term[0]])+"}", "\\log_2("+str(parameters[sub_term[0]])+")")
+                else:
+                    new_term = new_term + "*" + sub_term.to_string(parameter=parameters[0])
+                    new_term = new_term.replace("log2{"+str(parameters[0])+"}", "\\log_2("+str(parameters[0])+")")
             new_term = new_term.replace("**", "^")
             new_term = new_term.replace("*", "\\cdot")
             new_term = new_term.replace("(", "{")
             new_term = new_term.replace(")", "}")
-            new_term = new_term.replace("log2{"+str(DEFAULT_PARAM_NAMES[sub_term[0]])+"}", "\\log_2("+str(DEFAULT_PARAM_NAMES[sub_term[0]])+")")
             if new_term[0] != "-":
                 function_string += "+"
             function_string += new_term
