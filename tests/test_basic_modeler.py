@@ -131,6 +131,28 @@ class TestBasicModeler(TestCaseWithFunctionAssertions):
                 self.assertEqual(1, len(models))
                 self.assertApproxFunction(function, models[0].hypothesis.function)
 
+    def test_modeling_negative_exponents(self):
+        for exponents in [(0, 1, -1), (0, 1, -2), (-1, 4, 0), (-1, 2, 0), (-1, 2, -1), (-1, 2, -2), (-2, 3, 0),
+                          (-1, 1, 0),
+                          (-1, 1, -1), (-1, 1, -2), (-5, 4, 0), (-4, 3, 0), (-3, 2, 0), (-5, 3, 0), (-7, 4, 0),
+                          (-2, 1, 0),
+                          (-9, 4, 0), (-7, 3, 0), (-5, 2, 0), (-5, 2, -2), (-8, 3, 0), (-11, 4, 0), (-3, 1, 0),
+                          (-3, 1, -1)]:
+            for coeff in [2, 30, 400, 5000]:
+                term = CompoundTerm.create(*exponents)
+                term.coefficient = 1000
+                function = SingleParameterFunction(term)
+                function.constant_coefficient = coeff
+                points = [2, 4, 8, 16, 32]
+
+                values = function.evaluate(np.array(points))
+                measurements = [Measurement(Coordinate(p), None, None, v) for p, v in zip(points, values)]
+                modeler = SingleParameterModeler()
+                modeler.allow_negative_exponents = True
+                models = modeler.model([measurements])
+                self.assertEqual(1, len(models))
+                self.assertApproxFunction(function, models[0].hypothesis.function)
+
     def test_compare(self):
         points = [4, 8, 16, 32, 64, 128]
         data = [((None, (12.279235119728051 + 112.3997486813747, 0)),

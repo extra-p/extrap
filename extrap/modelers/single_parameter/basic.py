@@ -204,27 +204,27 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                          (8, 3, 0),
                          (11, 4, 0),
                          (3, 1, 0)]
-            # These were used for relearn
-            if allow_negative_exponents:
-                exponents += [(-1, 4, 0),
-                              (-1, 3, 0),
-                              (-1, 2, 0),
-                              (-2, 3, 0),
-                              (-3, 4, 0),
-                              (-4, 5, 0),
-                              (-1, 1, 0),
-                              (-5, 4, 0),
-                              (-4, 3, 0),
-                              (-3, 2, 0),
-                              (-5, 3, 0),
-                              (-7, 4, 0),
-                              (-2, 1, 0),
-                              (-9, 4, 0),
-                              (-7, 3, 0),
-                              (-5, 2, 0),
-                              (-8, 3, 0),
-                              (-11, 4, 0),
-                              (-3, 1, 0)]
+        # These were used for relearn
+        if allow_negative_exponents:
+            exponents += [(-1, 4, 0),
+                          (-1, 3, 0),
+                          (-1, 2, 0),
+                          (-2, 3, 0),
+                          (-3, 4, 0),
+                          (-4, 5, 0),
+                          (-1, 1, 0),
+                          (-5, 4, 0),
+                          (-4, 3, 0),
+                          (-3, 2, 0),
+                          (-5, 3, 0),
+                          (-7, 4, 0),
+                          (-2, 1, 0),
+                          (-9, 4, 0),
+                          (-7, 3, 0),
+                          (-5, 2, 0),
+                          (-8, 3, 0),
+                          (-11, 4, 0),
+                          (-3, 1, 0)]
 
         hypotheses_building_blocks = [CompoundTerm.create(*e) for e in exponents]
         # print the hypothesis building blocks, compound terms in debug mode
