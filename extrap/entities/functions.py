@@ -48,7 +48,8 @@ class Function:
             shape = parameter_value.shape
             if len(shape) == 2:
                 shape = (shape[1],)
-            function_value = numpy.full(shape, self.constant_coefficient, dtype=float)
+            function_value = numpy.full(
+                shape, self.constant_coefficient, dtype=float)
         else:
             function_value = self.constant_coefficient
         for t in self.compound_terms:
@@ -65,14 +66,15 @@ class Function:
                 function_string += '+'
             function_string += t.to_string(*parameters)
         return function_string
-    
+
     def to_scientific_coefficient(self, coefficient):
         """
         This method takes a coefficient and formats it into a string using scientific notation.
         """
         formater = mticker.ScalarFormatter(useMathText=True)
         formater.set_powerlimits((-3, 3))
-        formatted_coefficients = "{}".format(formater.format_data(float(coefficient)))
+        formatted_coefficients = "{}".format(
+            formater.format_data(float(coefficient)))
         coreff_terms = formatted_coefficients.split(" ")
         new_coeff = ""
         if not coreff_terms[0][:1].isnumeric():
@@ -98,15 +100,17 @@ class Function:
                 if i != 0:
                     new_coeff += coreff_terms[i]
             return new_coeff
-    
+
     def to_latex_string(self, *parameters: Union[str, Parameter]):
         """
         Return a math string (using latex encoding) representation of the function.
         """
         new_coefficients = []
-        new_coefficients.append(self.to_scientific_coefficient(self.constant_coefficient))
+        new_coefficients.append(
+            self.to_scientific_coefficient(self.constant_coefficient))
         for t in self.compound_terms:
-            new_coefficients.append(self.to_scientific_coefficient(t.coefficient))
+            new_coefficients.append(
+                self.to_scientific_coefficient(t.coefficient))
         function_string = new_coefficients[0]
         coeff_counter = 1
         for t in self.compound_terms:
@@ -117,13 +121,18 @@ class Function:
             new_term = new_coefficients[coeff_counter]
             for sub_term in sub_terms:
                 if type(sub_term) is tuple:
-                    new_term = new_term + "*" + sub_term[1].to_string(parameter=parameters[sub_term[0]])
-                    new_term = new_term.replace("log2{"+str(parameters[sub_term[0]])+"}", "\\log_2("+str(parameters[sub_term[0]])+")")
+                    new_term = new_term + "*" + \
+                        sub_term[1].to_string(
+                            parameter=parameters[sub_term[0]])
+                    new_term = new_term.replace(
+                        "log2("+str(parameters[sub_term[0]])+")", "\\log_2{"+str(parameters[sub_term[0]])+"}")
                 else:
-                    new_term = new_term + "*" + sub_term.to_string(parameter=parameters[0])
-                    new_term = new_term.replace("log2{"+str(parameters[0])+"}", "\\log_2("+str(parameters[0])+")")
+                    new_term = new_term + "*" + \
+                        sub_term.to_string(parameter=parameters[0])
+                    new_term = new_term.replace(
+                        "log2("+str(parameters[0])+")", "\\log_2{"+str(parameters[0])+"}")
             new_term = new_term.replace("**", "^")
-            new_term = new_term.replace("*", "\\cdot")
+            new_term = new_term.replace("*", "\\cdot ")
             new_term = new_term.replace("(", "{")
             new_term = new_term.replace(")", "}")
             if new_term[0] != "-":
@@ -131,7 +140,7 @@ class Function:
             function_string += new_term
             coeff_counter += 1
         return "$" + function_string + "$"
-    
+
     def __repr__(self):
         return f"Function({self.to_string('p')})"
 
@@ -187,7 +196,7 @@ class SingleParameterFunction(Function):
 
 class MultiParameterFunction(Function):
     compound_terms: List[MultiParameterTerm]
-    
+
     def __init__(self, *compound_terms: MultiParameterTerm):
         super().__init__(*compound_terms)
 
@@ -197,7 +206,8 @@ class MultiParameterFunction(Function):
 
 class FunctionSchema(BaseSchema):
     constant_coefficient = NumberField()
-    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(CompoundTermSchema))
+    compound_terms: List[CompoundTerm] = fields.List(
+        fields.Nested(CompoundTermSchema))
 
 
 class ConstantFunctionSchema(FunctionSchema):
@@ -213,7 +223,8 @@ class SingleParameterFunctionSchema(FunctionSchema):
 
 
 class MultiParameterFunctionSchema(FunctionSchema):
-    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(MultiParameterTermSchema))
+    compound_terms: List[CompoundTerm] = fields.List(
+        fields.Nested(MultiParameterTermSchema))
 
     def create_object(self):
         return MultiParameterFunction()
