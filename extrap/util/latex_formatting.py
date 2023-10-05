@@ -5,9 +5,10 @@ def frmt_scientific_coefficient(coefficient):
     """
     This method takes a coefficient and formats it into a string using scientific notation.
     """
-    formater = mticker.ScalarFormatter(useMathText=True)
-    formater.set_powerlimits((-3, 3))
-    formatted_coefficients = "{}".format(formater.format_data(float(coefficient)))
+    formatter = mticker.ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((-3, 3))
+    formatted_coefficients = "{}".format(
+        formatter.format_data(float(coefficient)))
     coreff_terms = formatted_coefficients.split(" ")
     new_coeff = ""
     if not coreff_terms[0][:1].isnumeric():

@@ -8,13 +8,12 @@
 from itertools import chain
 from typing import List, Mapping, Union
 
-import matplotlib.ticker as mticker
 import numpy
-from extrap.util.math_formatting import frmt_scientific_coefficient
 from marshmallow import fields
 
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
+from extrap.util.latex_formatting import frmt_scientific_coefficient
 from extrap.util.serialization_schema import BaseSchema, NumberField
 from extrap.util.string_formats import FunctionFormats
 
@@ -75,39 +74,6 @@ class Function:
             function_string = function_string.replace('+-', '-')
         return function_string
 
-    def to_scientific_coefficient(self, coefficient):
-        """
-        This method takes a coefficient and formats it into a string using scientific notation.
-        """
-        formater = mticker.ScalarFormatter(useMathText=True)
-        formater.set_powerlimits((-3, 3))
-        formatted_coefficients = "{}".format(formater.format_data(float(coefficient)))
-        coreff_terms = formatted_coefficients.split(" ")
-        new_coeff = ""
-        if not coreff_terms[0][:1].isnumeric():
-            coeff = coreff_terms[0][1:]
-            try:
-                coeff = "{:.3f}".format(float(coeff))
-            except ValueError:
-                pass
-            new_coeff += "-"
-            new_coeff += coeff
-            for i in range(len(coreff_terms)):
-                if i != 0:
-                    new_coeff += coreff_terms[i]
-            return new_coeff
-        else:
-            coeff = coreff_terms[0]
-            try:
-                coeff = "{:.3f}".format(float(coeff))
-            except ValueError:
-                pass
-            new_coeff += coeff
-            for i in range(len(coreff_terms)):
-                if i != 0:
-                    new_coeff += coreff_terms[i]
-            return new_coeff
-
     def to_latex_string(self, *parameters: Union[str, Parameter]):
         """
         Return a math string (using latex encoding) representation of the function.
@@ -128,15 +94,15 @@ class Function:
                 if type(sub_term) is tuple:
                     new_term = new_term + "*" + sub_term[1].to_string(parameter=parameters[sub_term[0]],
                                                                       format=FunctionFormats.PYTHON)
-                    new_term = new_term.replace("log2{" + str(parameters[sub_term[0]]) + "}",
-                                                "\\log_2(" + str(parameters[sub_term[0]]) + ")")
+                    new_term = new_term.replace("log2(" + str(parameters[sub_term[0]]) + ")",
+                                                "\\log_2{" + str(parameters[sub_term[0]]) + "}")
                 else:
                     new_term = new_term + "*" + sub_term.to_string(parameter=parameters[0],
                                                                    format=FunctionFormats.PYTHON)
-                    new_term = new_term.replace("log2{" + str(parameters[0]) + "}",
-                                                "\\log_2(" + str(parameters[0]) + ")")
+                    new_term = new_term.replace("log2(" + str(parameters[0]) + ")",
+                                                "\\log_2{" + str(parameters[0]) + "}")
             new_term = new_term.replace("**", "^")
-            new_term = new_term.replace("*", "\\cdot")
+            new_term = new_term.replace("*", "\\cdot ")
             new_term = new_term.replace("(", "{")
             new_term = new_term.replace(")", "}")
             if new_term[0] != "-":
@@ -210,7 +176,8 @@ class MultiParameterFunction(Function):
 
 class FunctionSchema(BaseSchema):
     constant_coefficient = NumberField()
-    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(CompoundTermSchema))
+    compound_terms: List[CompoundTerm] = fields.List(
+        fields.Nested(CompoundTermSchema))
 
 
 class ConstantFunctionSchema(FunctionSchema):
@@ -226,7 +193,8 @@ class SingleParameterFunctionSchema(FunctionSchema):
 
 
 class MultiParameterFunctionSchema(FunctionSchema):
-    compound_terms: List[CompoundTerm] = fields.List(fields.Nested(MultiParameterTermSchema))
+    compound_terms: List[CompoundTerm] = fields.List(
+        fields.Nested(MultiParameterTermSchema))
 
     def create_object(self):
         return MultiParameterFunction()
