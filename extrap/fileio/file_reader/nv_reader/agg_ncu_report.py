@@ -65,12 +65,12 @@ class AggNcuReport:
             elif state == 'Aggregated Measurements Kernel':
                 kernel_id, metric_id, value = line.split(self._SEP, 2)
                 key = int(kernel_id), int(metric_id)
-                self.unmapped_measurements[key] = np.fromstring(value, dtype=np.float, sep=self._USEP)
+                self.unmapped_measurements[key] = np.fromstring(value, dtype=float, sep=self._USEP)
             elif state == 'Aggregated Measurements Callpath':
                 callpath, metricId, value = line.split(self._SEP, 2)
                 metricId = int(metricId)
                 key = callpath, metricId
-                self.mapped_measurements[key] = np.fromstring(value, dtype=np.float, sep=self._USEP)
+                self.mapped_measurements[key] = np.fromstring(value, dtype=float, sep=self._USEP)
 
     def get_measurements(self, *, ignore_metrics=None):
         ignore_metric_ids = self._calc_ignored_metric_ids(ignore_metrics)

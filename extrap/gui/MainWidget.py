@@ -468,7 +468,7 @@ class MainWidget(QMainWindow):
 
     def _check_and_convert_scaling(self, experiment, path, reader=None):
         check_res = io_helper.check_for_strong_scaling(experiment)
-        if max(check_res) == 0:
+        if not check_res or max(check_res) == 0:
             return experiment
         if isinstance(reader, AbstractScalingConversionReader):
             if StrongScalingConversionDialog.pose_question_for_readers_with_scaling_conversion(

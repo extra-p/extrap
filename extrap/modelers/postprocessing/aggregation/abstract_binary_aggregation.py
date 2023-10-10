@@ -194,12 +194,16 @@ class BinaryAggregation(Aggregation, ABC):
             if not model.measurements:
                 continue
             for m in model.measurements:
-                agg = data[m.coordinate]
-                agg.mean = self.binary_operator(agg.mean, m.mean)
-                agg.median = self.binary_operator(agg.median, m.median)
-                agg.maximum = self.binary_operator(agg.maximum, m.maximum)
-                agg.minimum = self.binary_operator(agg.minimum, m.minimum)
-                agg.std = self.binary_operator(agg.std, m.std)
+                if m.coordinate not in data:
+                    data[m.coordinate] = m.copy()
+                    data[m.coordinate].callpath = first.callpath
+                else:
+                    agg = data[m.coordinate]
+                    agg.mean = self.binary_operator(agg.mean, m.mean)
+                    agg.median = self.binary_operator(agg.median, m.median)
+                    agg.maximum = self.binary_operator(agg.maximum, m.maximum)
+                    agg.minimum = self.binary_operator(agg.minimum, m.minimum)
+                    agg.std = self.binary_operator(agg.std, m.std)
         return list(data.values())
 
 

@@ -357,7 +357,7 @@ class ProjectionConfigurationPage(QWizardPage):
 
         self._target_exp_rb_2.setChecked(True)
 
-        self._layout.addRow("Base experiment", experiment_selection_buttons)
+        self._layout.addRow("Target experiment", experiment_selection_buttons)
 
         self._metrics_to_project_box = QListWidget(self)
         self._metrics_to_project_box.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)

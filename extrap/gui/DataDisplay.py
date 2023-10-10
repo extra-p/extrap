@@ -332,7 +332,7 @@ class DataDisplayManager(QWidget):
         }
 
         if 11 in selectedCheckBoxesIndex:
-            labelText = "Estimatation plot"
+            labelText = "Expectation plot"
             tabStatus = self.is_tab_already_opened(labelText)
             if tabStatus is False:
                 self.display_widget.addTab(ExpectationPlot3D(self.main_widget, self), labelText)
