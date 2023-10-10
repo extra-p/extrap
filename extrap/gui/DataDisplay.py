@@ -5,15 +5,20 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 from collections import defaultdict
+from typing import cast
 
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.coordinate import Coordinate
 from extrap.entities.parameter import Parameter
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
-from extrap.gui.GraphWidget import GraphWidget, GraphWrapperWidget
+from extrap.gui.GraphWidget import GraphWrapperWidget
+from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.gui.plots.AllFunctionsAsDifferentSurfacePlotWidget import AllFunctionsAsDifferentSurfacePlot
 from extrap.gui.plots.AllFunctionsAsOneSurfacePlotWidget import AllFunctionsAsOneSurfacePlot
 from extrap.gui.plots.DominatingFunctionsAsSingleScatterPlotWidget import DominatingFunctionsAsSingleScatterPlot
@@ -23,9 +28,8 @@ from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
 
-#####################################################################
 MIN_PARAM_VALUE = 0.01
-MAX_PARAM_VALUE = 2000000000
+MAX_PARAM_VALUE = float("inf")
 
 
 class AxisSelection(QWidget):
@@ -36,7 +40,7 @@ class AxisSelection(QWidget):
     """
     #####################################################################
 
-    max_values = [10, 10, 10]
+    max_values: list[float] = [10, 10, 10]
 
     def __init__(self, manager, parent, index: int, parameters):
         super(AxisSelection, self).__init__(parent)
@@ -73,7 +77,7 @@ class AxisSelection(QWidget):
 
         label2 = QLabel("max.")
         label2.setMinimumWidth(40)
-        label2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        label2.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.max_edit = QDoubleSpinBox()
         self.max_edit.setMinimum(MIN_PARAM_VALUE)
         self.max_edit.setMinimumHeight(25)
@@ -87,7 +91,7 @@ class AxisSelection(QWidget):
 
         self.grid.addWidget(label1, 0, 0)
         self.grid.addWidget(self.combo_box, 0, 1)
-        self.grid.addWidget(label2, 0, 2, Qt.AlignRight)
+        self.grid.addWidget(label2, 0, 2, Qt.AlignmentFlag.AlignRight)
         self.grid.addWidget(self.max_edit, 0, 3)
         self.grid.setContentsMargins(QMargins(0, 0, 0, 0))
 
@@ -157,7 +161,7 @@ class AxisSelection(QWidget):
         return self.max_edit.value()
 
     def switchParameter(self, newParam):
-        i = self.combo_box.findText(newParam, Qt.MatchExactly)
+        i = self.combo_box.findText(newParam, Qt.MatchFlag.MatchExactly)
         self.combo_box.setCurrentIndex(i)
 
 
@@ -192,7 +196,7 @@ class ValueSelection(QWidget):
         self.parameter_label.setMinimumWidth(100)
         label2 = QLabel("Value:")
         label2.setMinimumWidth(40)
-        label2.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        label2.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         self.value_edit = QDoubleSpinBox()
         self.value_edit.setMinimum(MIN_PARAM_VALUE)
@@ -203,7 +207,7 @@ class ValueSelection(QWidget):
 
         self.grid.addWidget(label0, 0, 0)
         self.grid.addWidget(self.parameter_label, 0, 1)
-        self.grid.addWidget(label2, 0, 2, Qt.AlignRight)
+        self.grid.addWidget(label2, 0, 2, Qt.AlignmentFlag.AlignRight)
         self.grid.addWidget(self.value_edit, 0, 3)
         self.grid.setContentsMargins(QMargins(0, 0, 0, 0))
         self.setLayout(self.grid)
@@ -262,7 +266,7 @@ class DataDisplayManager(QWidget):
     def __init__(self, main_widget, parent):
         super(DataDisplayManager, self).__init__(parent)
         self.main_widget = main_widget
-        self.axis_selections = list()
+        self.axis_selections: list[AxisSelection] = list()
         self.value_selections = list()
         self._experiment = None
         self.parameters = []
@@ -342,7 +346,7 @@ class DataDisplayManager(QWidget):
             return
         if self._experiment is None or self._experiment != experiment:
             self._experiment = experiment
-            max_coordinate = max(experiment.coordinates)
+            max_coordinate: Coordinate = max(experiment.coordinates)
             for i, pos in enumerate(max_coordinate):
                 if i < 3:
                     AxisSelection.max_values[i] = pos * 1.2
@@ -387,12 +391,10 @@ class DataDisplayManager(QWidget):
                 return
 
     def updateWidget(self):
-        display = self.display_widget.currentWidget()
+        display = cast(AbstractPlotWidget, self.display_widget.currentWidget())
         if not display:
             return
         display.drawGraph()
-
-
 
 
 class GraphLimitsWidget(QWidget):
@@ -423,7 +425,7 @@ class GraphLimitsWidget(QWidget):
             self._placeholder.deleteLater()
             self._placeholder = None
 
-        num_axis = self.display_widget.currentWidget().getNumAxis()
+        num_axis = cast(AbstractPlotWidget, self.display_widget.currentWidget()).getNumAxis()
         for axis in self.axis_selections:
             axis.clearAxisLayout()
         del self.axis_selections[:]
