@@ -80,7 +80,7 @@ information about the usage of Extra-P with both interfaces can be found in the 
 
 > **Note**  
 > Extra-P is designed for weak-scaling, therefore, directly modeling of strong-scaling behaviour is not supported.
-> Instead of modeling the runtime of your strong-scaling experiment, you can model the resource utilization, i.e.,
+> Instead of modeling the runtime of your strong-scaling experiment, you can model the resource consumption, i.e.,
 > the runtime *times* the number of processors.
 
 
