@@ -79,7 +79,7 @@ Extra-P can be used in two ways, either using the command-line interface or the 
 information about the usage of Extra-P with both interfaces can be found in the [quick start guide](docs/quick-start.md).
 
 > **Note**  
-> Extra-P is designed for weak-scaling. Therfore directly modeling of strong-scaling behaviour is not supported.
+> Extra-P is designed for weak-scaling, therefore, directly modeling of strong-scaling behaviour is not supported.
 > Instead of modeling the runtime of your strong-scaling experiment, you can model the resource utilization, i.e.,
 > the runtime *times* the number of processors.
 
