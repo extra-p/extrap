@@ -28,7 +28,7 @@ class Measurement:
         self.metric: Metric = metric
         if values is None:
             return
-        self.values = np.array(values)
+        self.values: np.typing.NDArray = np.array(values)
         self.median: float = np.median(values)
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
@@ -81,6 +81,7 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
+    values = fields.List(fields.Float())
 
     @post_load
     def report_progress(self, data, **kwargs):

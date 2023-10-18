@@ -69,7 +69,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, None)
 
-            value = np.mean([m.value(self.use_median) for m in ms])
+            if self.use_median:
+                value = np.mean([m.median for m in ms])
+            else:
+                value = np.mean([m.mean for m in ms])
 
             measurement.mean = value
             measurement.median = value
@@ -210,9 +213,17 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         meanModel = 0
 
         for m in measurements:
-            meanModel += m.value(self.use_median) / float(len(measurements))
+            if self.use_median:
+                value = m.median
+            else:
+                value = m.mean
+            meanModel += value / float(len(measurements))
         for m in measurements:
-            constantCost += (m.value(self.use_median) - meanModel) * (m.value(self.use_median) - meanModel)
+            if self.use_median:
+                value = m.median
+            else:
+                value = m.mean
+            constantCost += (value - meanModel) * (value - meanModel)
 
         # find out which parameters should be kept
         compound_term_pairs = []

@@ -94,7 +94,11 @@ class Hypothesis:
         We take into account the minimum data value to make sure that we don't "nullify"
         actually relevant numbers.
         """
-        minimum = min(m.value(self._use_median) for m in training_measurements)
+        if self._use_median:
+            minimum = min(m.median for m in training_measurements)
+        else:
+            minimum = min(m.mean for m in training_measurements)
+        
         if minimum == 0:
             if abs(self.function.constant_coefficient - minimum) < phi:
                 self.function.constant_coefficient = 0
@@ -106,8 +110,11 @@ class Hypothesis:
         """
         Calculates the term contribution of the term with the given term id to see if it is smaller than epsilon.
         """
-        actual = numpy.array([m.value(self._use_median) for m in measurements])
-
+        if self._use_median:
+            actual = numpy.array([m.median for m in measurements])
+        else:
+            actual = numpy.array([m.mean for m in measurements])
+        
         if measurements[0].coordinate.dimensions > 1:
             points = numpy.array([m.coordinate.as_tuple() for m in measurements]).T
         else:
@@ -160,7 +167,10 @@ class ConstantHypothesis(Hypothesis):
         """
         Computes the constant_coefficients of the function using the mean.
         """
-        self.function.constant_coefficient = numpy.mean([m.value(self._use_median) for m in measurements])
+        if self._use_median:
+            self.function.constant_coefficient = numpy.mean([m.median for m in measurements])
+        else:
+            self.function.constant_coefficient = numpy.mean([m.mean for m in measurements])
         
     def compute_cost(self, measurements: Sequence[Measurement]):
         """
@@ -170,8 +180,11 @@ class ConstantHypothesis(Hypothesis):
         smape = 0
         for measurement in measurements:
             predicted = self.function.constant_coefficient
-            actual = measurement.value(self._use_median)
-        
+            if self._use_median:
+                actual = measurement.median
+            else:
+                actual = measurement.mean
+            
             difference = predicted - actual
             self._RSS += difference * difference
             if actual != 0:
@@ -210,8 +223,11 @@ class SingleParameterHypothesis(Hypothesis):
         """
         value = validation_measurement.coordinate[0]
         predicted = self.function.evaluate(value)
-        actual = validation_measurement.value(self._use_median)
-
+        if self._use_median:
+            actual = numpy.array([m.median for m in measurements])
+        else:
+            actual = numpy.array([m.mean for m in measurements])
+        
         difference = predicted - actual
         self._RSS += difference * difference
         if actual != 0:
@@ -261,7 +277,11 @@ class SingleParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
-        b_list = numpy.array([m.value(self._use_median) for m in measurements])
+        if self._use_median:
+            b_list = numpy.array([m.median for m in measurements])
+        else:
+            b_list = numpy.array([m.mean for m in measurements])
+        
         points = numpy.array([m.coordinate[0] for m in measurements])
 
         a_list = [numpy.ones((1, len(points)))]
@@ -317,7 +337,10 @@ class MultiParameterHypothesis(Hypothesis):
             predicted = self.function.evaluate(parameter_value_pairs)
             # print(predicted)
 
-            actual = measurement.value(self._use_median)
+            if self._use_median:
+                actual = measurement.median
+            else:
+                actual = measurement.mean
 
             # print(actual)
 
@@ -371,7 +394,11 @@ class MultiParameterHypothesis(Hypothesis):
         self.function.reset_coefficients()
 
         for measurement in measurements:
-            value = measurement.value(self._use_median)
+            if self._use_median:
+                value = measurement.median
+            else:
+                value = measurement.mean
+
             list_element = [1]  # 1 for constant coefficient
             for multi_parameter_term in self.function:
                 coordinate = measurement.coordinate
