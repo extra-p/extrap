@@ -224,9 +224,9 @@ class SingleParameterHypothesis(Hypothesis):
         value = validation_measurement.coordinate[0]
         predicted = self.function.evaluate(value)
         if self._use_median:
-            actual = numpy.array([m.median for m in measurements])
+            actual = validation_measurement.median
         else:
-            actual = numpy.array([m.mean for m in measurements])
+            actual = validation_measurement.mean
         
         difference = predicted - actual
         self._RSS += difference * difference
