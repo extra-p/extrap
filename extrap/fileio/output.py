@@ -183,7 +183,7 @@ _re_points = re.compile(r"(\?)?points(\s*:\s*(.*?))?")
 _re_point = re.compile(r"(\?)?point(\s*:\s*(.*?))?")
 _re_measurements = re.compile(r"measurements(\s*:\s*(.*?))?")
 _re_parameters = re.compile(r"(\?)?parameters(\s*:\s*(.*?))?")
-_re_legacy_options = re.compile(r"all|callpaths|metrics|parameters|functions")
+_re_legacy_options = re.compile(r"all|callpaths|metrics|parameters|functions|latex-functions")
 
 
 def _parse_options(options, format_remove_str=False):
@@ -248,7 +248,8 @@ def format_output(experiment: Experiment, printtype: str):
                 metric_list.append(m.metric.name)
             elif o == "model":
                 temp = m.hypothesis.function.to_string(*experiment.parameters)
-
+            elif o == "latex-functions":
+                temp = m.hypothesis.function.to_latex_string(*experiment.parameters)
             elif _re_points.fullmatch(o):
                 data = _re_points.fullmatch(o)
                 coordinate_text = format_points(data.group(2), experiment)

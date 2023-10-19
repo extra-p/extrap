@@ -93,9 +93,9 @@ class SimpleTerm(SingleParameterTerm):
 
     def to_string(self, parameter='p'):
         if self._term_type == "polynomial":
-            return f"{parameter}^({self.exponent})"
+            return f"{parameter}**({self.exponent})"
         elif self._term_type == "logarithm":
-            return f"log2({parameter})^({self.exponent})"
+            return f"log2({parameter})**({self.exponent})"
 
     def _evaluate_polynomial(self, parameter_value):
         return parameter_value ** self._float_exponent
@@ -135,9 +135,9 @@ class CompoundTerm(SingleParameterTerm):
         return function_value
 
     def to_string(self, parameter='p'):
-        function_string = ' * '.join(t.to_string(parameter) for t in self.simple_terms)
+        function_string = '*'.join(t.to_string(parameter) for t in self.simple_terms)
         if self.coefficient != 1:
-            function_string = str(self.coefficient) + ' * ' + function_string
+            function_string = str(self.coefficient) + '*' + function_string
         return function_string
 
     def __imul__(self, term: SimpleTerm):
@@ -198,7 +198,7 @@ class MultiParameterTerm(Term):
             parameters = parameters[0]
         function_string = str(self.coefficient)
         for param, term in self.parameter_term_pairs:
-            function_string += ' * '
+            function_string += '*'
             function_string += term.to_string(parameters[param])
         return function_string
 

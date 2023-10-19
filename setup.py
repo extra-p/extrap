@@ -59,7 +59,7 @@ setup(
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",
-        "packaging~=20.0",
+        "packaging>=20.0",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'"
     ]
 )
