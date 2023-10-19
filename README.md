@@ -81,7 +81,9 @@ information about the usage of Extra-P with both interfaces can be found in the 
 > **Note**  
 > Extra-P is designed for weak-scaling, therefore, directly modeling of strong-scaling behaviour is not supported.
 > Instead of modeling the runtime of your strong-scaling experiment, you can model the resource consumption, i.e.,
-> the runtime *times* the number of processors. *If Extra-P detects strong-scaling it will offer this conversion.*
+> the runtime *times* the number of processors. Extra-P automatically offers this conversion, if it detects that
+> strong-scaling data was loaded. If you are loading files that contain per-thread/per-rank data you should select 
+> the scaling-type upfront to run the conversion already during the import.
 
 
 #### Graphical user interface
