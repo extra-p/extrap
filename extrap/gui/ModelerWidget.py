@@ -49,27 +49,28 @@ class ModelerWidget(QWidget):
 
         _measure_select_layout = QGridLayout()
         _measure_select_layout.setColumnStretch(3, 1)
+        _measure_select_layout.setHorizontalSpacing(0)
         grid.addLayout(_measure_select_layout, 1, 0, 1, 2)
 
         self.model_mean_radio = QRadioButton("Model mean")
         self.model_mean_radio.setChecked(True)
         _measure_select_layout.addWidget(self.model_mean_radio, 1, 0)
 
-        self.model_median_radio = QRadioButton("Model median")
-        _measure_select_layout.addWidget(self.model_median_radio, 1, 1)
+        # self.model_median_radio = QRadioButton("Model median")
+        # _measure_select_layout.addWidget(self.model_median_radio, 1, 1)
 
-        self._model_other_radio = QRadioButton()
+        self._model_other_radio = QRadioButton("Model")
         _measure_select_layout.addWidget(self._model_other_radio, 1, 2)
 
         self._model_other_select = QComboBox()
         self._model_other_select.addItems(
-            [m.name.title() for m in Measure.choices() if m != Measure.MEDIAN and m != Measure.MEAN])
+            [m.name.title() for m in Measure.choices() if m != Measure.MEAN])
         self._model_other_select.activated.connect(lambda _: self._model_other_radio.setChecked(True))
         _measure_select_layout.addWidget(self._model_other_select, 1, 3)
 
         self._model_measure_radio_group = QButtonGroup(grid)
         self._model_measure_radio_group.addButton(self.model_mean_radio)
-        self._model_measure_radio_group.addButton(self.model_median_radio)
+        # self._model_measure_radio_group.addButton(self.model_median_radio)
         self._model_measure_radio_group.addButton(self._model_other_radio)
 
         self._model_selector.currentIndexChanged.connect(self._modeler_selected)

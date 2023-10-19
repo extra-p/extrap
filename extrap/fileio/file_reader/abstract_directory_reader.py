@@ -65,7 +65,7 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
                 parameter_dict[n].add(v)
             parameter_values.append(parameter_value)
 
-            if len(parameter_names)>=1 and parameter_names[0]=="scorep-":
+            if len(parameter_names) >= 1 and parameter_names[0] == "scorep-":
                 warnings.warn(
                     f"Could not detect any parameter names in the name of folder: {folder_name}. "
                     f"Please follow the usage guide under "
