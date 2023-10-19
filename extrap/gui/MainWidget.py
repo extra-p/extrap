@@ -24,6 +24,7 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 import extrap
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
+from extrap.entities.measurement import Measure
 from extrap.entities.model import Model
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
@@ -79,9 +80,9 @@ class MainWidget(QMainWindow):
         self._init_ui()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-        # switch for using mean or median measurement values for modeling
+        # switch for selecting measure of measurement values for modeling
         # is used when loading the data from a file and then modeling directly
-        self.median = False
+        self.measure = Measure.MEAN
 
         if sys.platform.startswith('darwin'):
             self._macos_update_title_bar()
@@ -386,7 +387,7 @@ class MainWidget(QMainWindow):
 
     def model_experiment(self, experiment, file_name=""):
         # initialize model generator
-        model_generator = ModelGenerator(experiment, use_median=self.median, name=DEFAULT_MODEL_NAME)
+        model_generator = ModelGenerator(experiment, use_measure=self.measure, name=DEFAULT_MODEL_NAME)
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)

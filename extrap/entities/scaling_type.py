@@ -15,3 +15,7 @@ class ScalingType(Enum):
 
     def __str__(self):
         return self.value
+
+    @classmethod
+    def from_str(cls, name: str):
+        return cls[name.upper()]

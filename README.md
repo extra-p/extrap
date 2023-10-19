@@ -121,7 +121,8 @@ The Extra-P command line interface has the following options.
 | `--experiment`                                                       | Load Extra-P experiment and generate new models
 | `--scaling` {`weak`, `weak_parallel`, `strong`}                      | Set scaling type when loading data from per-thread/per-rank files (CUBE files) (default: weak) 
 | **Modeling options**                                                 |                                              
-| `--median`                                                           | Use median values for computation instead of mean values  
+| `--median`                                                           | Use median values for computation instead of mean values (deprecated: use `--measure`)
+| `--measure` {`mean`, `median`, `minimum`, `maximum`}                 | Select measure of values used for computation (default: `mean`)
 | `--modeler` {`default`, `basic`, `refining`, `multi-parameter`}      | Selects the modeler for generating the performance models 
 | `--options` _KEY_=_VALUE_ [_KEY_=_VALUE_ ...]                        | Options for the selected modeler             
 | `--help-modeler` {`default`, `basic`, `refining`, `multi-parameter`} | Show help for modeler options and exit       

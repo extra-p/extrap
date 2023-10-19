@@ -13,7 +13,7 @@ from typing import List, Sequence
 
 from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm
@@ -58,7 +58,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         """
         Initialize SingleParameterModeler object.
         """
-        super().__init__(use_median=False)
+        super().__init__(use_measure=Measure.MEAN)
 
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
@@ -261,7 +261,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             next_function = SingleParameterFunction(copy.copy(compound_term))
 
             # create single parameter hypothesis from function
-            yield SingleParameterHypothesis(next_function, self.use_median)
+            yield SingleParameterHypothesis(next_function, self.use_measure)
 
     def create_model(self, measurements: Sequence[Measurement]):
         """
