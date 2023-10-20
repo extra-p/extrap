@@ -55,6 +55,10 @@ if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_GPU=1")
 fi
 
+if [ "${EXTRA_PROF_ENERGY}" = on ] || [ "${EXTRA_PROF_ENERGY}" = ON ]; then
+    extra_prof_arguments+=("-DEXTRA_PROF_ENERGY=1")
+fi
+
 if [ "${EXTRA_PROF_EVENT_TRACE}" = on ] || [ "${EXTRA_PROF_EVENT_TRACE}" = ON ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=1")
 fi
@@ -108,10 +112,23 @@ remove_entries() {
 
 remove_entries unique_include_paths
 
-
 for unique_include_path in "${unique_include_paths[@]}"; do
     instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$unique_include_path")
 done
+
+fi #end EXTRA_PROF_ADVANCED_INSTRUMENTATION
+
+
+if [ -z ${EXTRA_PROF_EXCLUDE_FILES+y} ]; then
+    :
+else
+    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$EXTRA_PROF_EXCLUDE_FILES")
+fi
+
+if [ -z ${EXTRA_PROF_EXCLUDE_FUNCTIONS+y} ]; then
+    :
+else
+    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-function-list=$EXTRA_PROF_EXCLUDE_FUNCTIONS")
 fi
 
 if $compile_only; then
@@ -141,7 +158,9 @@ else
     $EXTRA_PROF_COMPILER ${combined[*]}
     [ $? -eq 0 ] || exit $?
 
-    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fopenmp" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
+
+    # compile library
+    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fopenmp"  "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
 
     echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
     $EXTRA_PROF_COMPILER ${combined[*]}
@@ -152,6 +171,9 @@ else
 
     if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
         combined+=("-lcupti -lcuda -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
+        if [ "${EXTRA_PROF_ENERGY}" = on ] || [ "${EXTRA_PROF_ENERGY}" = ON ]; then
+            combined+=("-lnvidia-ml")
+        fi
     fi
 
     echo "EXTRA PROF CALL: " $EXTRA_PROF_COMPILER ${combined[*]}

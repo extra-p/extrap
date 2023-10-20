@@ -4,6 +4,7 @@
 #include "calltree_node.h"
 #include "concurrent_array_list.h"
 #include "events.h"
+#include "instrumentation/gpu_energy.h"
 #include <cuda.h>
 #include <cupti.h>
 #include <deque>
@@ -58,6 +59,9 @@ namespace gpu {
         uint32_t totalRangeCounter = 0;
         uint32_t rangeCounter = 0;
         std::vector<uint32_t> rangeToCorrelationId;
+#ifdef EXTRA_PROF_ENERGY
+        EnergySampler energySampler;
+#endif
     };
 } // namespace gpu
 } // namespace extra_prof

@@ -7,6 +7,7 @@
 #include "../events.h"
 #include "../globals.h"
 #include "../profile.h"
+#include "energy.h"
 
 #ifdef EXTRA_PROF_GPU
 #include "gpu_instrumentation.h"
@@ -56,6 +57,13 @@ EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, Call
     auto& current_node = GLOBALS.my_thread_state().current_node;
     current_node = current_node->findOrAddChild(name, type);
     GLOBALS.my_thread_state().timer_stack.push_back(time);
+
+#ifdef EXTRA_PROF_ENERGY
+    if (GLOBALS.main_thread == pthread_self()) {
+        GLOBALS.energy_stack_cpu.push_back(cpu::energy::getEnergy());
+    }
+#endif
+
 #ifdef EXTRA_PROF_EVENT_TRACE
     auto& ref = GLOBALS.cpu_event_stream.emplace(time, EventType::START, EventStart{current_node, pthread_self()},
                                                  pthread_self());
@@ -73,8 +81,9 @@ template <>
 EP_INLINE time_point pop_time(char const* name) {
     time_point time = get_timestamp();
     auto& thread_state = GLOBALS.my_thread_state();
-    auto& current_node = thread_state.current_node;
-    auto duration = time - thread_state.timer_stack.back();
+    auto& current_node = thread_state.current_node; // Must be a reference, so that we can change it below
+    auto start = thread_state.timer_stack.back();
+    auto duration = time - start;
     if (current_node->name() == nullptr) {
         throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
     }
@@ -88,6 +97,16 @@ EP_INLINE time_point pop_time(char const* name) {
 #ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
     if (!current_node->validateChildren()) {
         std::cerr << "EXTRA PROF: ERROR: Children to big!!!" << std::endl;
+    }
+#endif
+
+#ifdef EXTRA_PROF_ENERGY
+    if (GLOBALS.main_thread == pthread_self()) {
+        current_node->energy_cpu += cpu::energy::getEnergy() - GLOBALS.energy_stack_cpu.back();
+        GLOBALS.energy_stack_cpu.pop_back();
+#ifdef EXTRA_PROF_GPU
+        GLOBALS.gpu.energySampler.addEntryTask(current_node, start, time);
+#endif
     }
 #endif
 

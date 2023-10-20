@@ -102,6 +102,8 @@ class CallTreeNode {
 public:
     ConcurrentMap<pthread_t, Metrics> per_thread_metrics;
     std::vector<double> gpu_metrics;
+    std::atomic<uint64_t> energy_cpu = 0;
+    std::atomic<uint64_t> energy_gpu = 0;
     CallTreeNodeFlags flags = CallTreeNodeFlags::NONE;
     CallTreeNodeType type = CallTreeNodeType::NONE;
 
@@ -178,7 +180,8 @@ public:
         MetricAdapter visits(per_thread_metrics, [](const auto& metrics) { return metrics.visits.load(); });
         MetricAdapter bytes(per_thread_metrics, [](const auto& metrics) { return metrics.bytes.load(); });
 
-        msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes, gpu_metrics)
+        msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes, gpu_metrics, energy_cpu,
+                                         energy_gpu)
             .msgpack_pack(msgpack_pk);
     }
 };

@@ -28,6 +28,18 @@ void* wrap_start_thread(void* wrapped_args_ptr) {
 
     return start_routine(args);
 }
+
+EXTRA_PROF_SO_EXPORT int create_pthread_without_instrumentation(pthread_t* thread, const pthread_attr_t* attr,
+                                                                void* (*start_routine)(void*), void* arg) {
+    static void* handle = NULL;
+    static P_CREATE old_create = NULL;
+    if (!handle) {
+        handle = dlopen("libpthread.so.0", RTLD_LAZY);
+        old_create = (P_CREATE)dlsym(handle, "pthread_create");
+    }
+    return old_create(thread, attr, start_routine, arg);
+}
+
 } // namespace extra_prof
 #define BT_BUF_SIZE 100
 extern "C" {

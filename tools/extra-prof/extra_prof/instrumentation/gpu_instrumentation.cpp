@@ -4,6 +4,7 @@
 #include "commons.h"
 #include "start_end.h"
 
+#include "gpu_energy.h"
 #include "gpu_hwc_instrumentation.h"
 #include "gpu_runtime_instrumentation.h"
 
@@ -72,14 +73,14 @@ namespace cupti {
                         "EXTRA PROF: Error: Device reset is not supported, because it destroys the profiling "
                         "environment. Your measurements up to this point are saved in the profile.");
                 } else {
-                    if (cbid_is_memset) {
-                        // Cuda memset also launches a kernel, which needs to be registered for correctly assigning GPU
-                        // HWC values.
-                        // IMPORTANT: Apparently this is not true and created some issues with the correct mapping
-                        // between range and correlationId if (GLOBALS.gpu.onKernelLaunch != nullptr) {
-                        //     (*GLOBALS.gpu.onKernelLaunch)(rtdata);
-                        // }
-                    }
+                    // if (cbid_is_memset) {
+                    //  Cuda memset also launches a kernel, which needs to be registered for correctly assigning GPU
+                    //  HWC values.
+                    //  IMPORTANT: Apparently this is not true and created some issues with the correct mapping
+                    //  between range and correlationId if (GLOBALS.gpu.onKernelLaunch != nullptr) {
+                    //      (*GLOBALS.gpu.onKernelLaunch)(rtdata);
+                    //  }
+                    //}
                     auto [time, call_tree_node] = extra_prof::push_time(rtdata->functionName);
                     callpath_correlation.emplace(rtdata->correlationId, CorrelationData{call_tree_node, this_thread});
                     auto evt_type = EventType::NONE;
@@ -166,15 +167,10 @@ namespace cupti {
             sorted_stream.emplace_back(&event);
         }
 
-        // for (auto event : sorted_stream) {
-        //     std::cout << event->start_event.node->name() << '\n';
-        // }
         std::stable_sort(sorted_stream.begin(), sorted_stream.end(),
                          [](const Event* a, const Event* b) { return (a->timestamp < b->timestamp); });
 
         std::vector<const Event*> stack;
-
-        // TODO maybe add malloc/free
 
         time_point previous_timestamp = 0;
 
@@ -232,6 +228,13 @@ namespace cupti {
                 stack.push_back(&event);
             } else {
                 stack.erase(std::remove(stack.begin(), stack.end(), event.end_event.start), stack.end());
+                auto& start_event = event.end_event.start;
+#ifdef EXTRA_PROF_ENERGY
+                if (start_event->start_event.thread == GLOBALS.main_thread) {
+                    start_event->start_event.node->energy_gpu +=
+                        GLOBALS.gpu.energySampler.getEnergy(start_event->timestamp, event.timestamp);
+                }
+#endif
             }
             previous_timestamp = event.timestamp;
         }
@@ -260,6 +263,9 @@ namespace cupti {
         if (EXTRA_PROF_GPU_METRICS != nullptr) {
             extra_prof::gpu::hwc::init();
         } else {
+#ifdef EXTRA_PROF_ENERGY
+            GLOBALS.gpu.energySampler.start();
+#endif
             extra_prof::gpu::runtime::init();
         }
 
@@ -273,6 +279,10 @@ namespace cupti {
             cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED);
         }
         cuptiFinalize();
+#ifdef EXTRA_PROF_ENERGY
+        GLOBALS.gpu.energySampler.stop();
+#endif
+
         if (!GLOBALS.gpu.metricNames.empty()) {
             extra_prof::gpu::hwc::postprocess_counter_data();
         }

@@ -43,7 +43,7 @@ public:
         }
         bool operator==(const_iterator& other) const { return iter == other.iter; }
         bool operator!=(const_iterator& other) const { return iter != other.iter; }
-        const typename std::unordered_map<K, V>::reference operator*() const { return *iter; }
+        const typename std::unordered_map<K, V>::const_reference operator*() const { return *iter; }
         const typename std::unordered_map<K, V>::value_type* operator->() const { return iter.operator->(); }
     };
 

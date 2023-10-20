@@ -24,7 +24,7 @@ struct WrappedGOMPArgs {
 void wrap_start_gomp(void* wrapped_args_ptr) {
     WrappedGOMPArgs* wrapped_args = reinterpret_cast<WrappedGOMPArgs*>(wrapped_args_ptr);
     pthread_t new_tid = pthread_self();
-    {
+    if (new_tid != GLOBALS.main_thread) {
         extra_prof_scope sc;
         auto& my_thread_state = extra_prof::GLOBALS.my_thread_state();
         auto& caller_thread_state = wrapped_args->thread_state;
@@ -85,8 +85,10 @@ EXTRA_PROF_SO_EXPORT void GOMP_parallel(void (*fn)(void*), void* data, unsigned 
         old_start = (gomp_parallel_fn)dlsym(handle, "GOMP_parallel");
     }
 
+    auto duplicate = extra_prof::GLOBALS.my_thread_state().duplicate();
+
     extra_prof::wrappers::WrappedGOMPArgs* wrapped_arg =
-        new extra_prof::wrappers::WrappedGOMPArgs{extra_prof::GLOBALS.my_thread_state().duplicate(), fn, data, 0};
+        new extra_prof::wrappers::WrappedGOMPArgs{std::move(duplicate), fn, data, 0};
 
     old_start(extra_prof::wrappers::wrap_start_gomp, wrapped_arg, num_threads, flags);
 }

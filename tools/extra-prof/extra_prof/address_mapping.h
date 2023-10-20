@@ -13,6 +13,7 @@
 #include <map>
 #include <msgpack.hpp>
 #include <mutex>
+#include <numeric>
 #include <vector>
 namespace extra_prof {
 
@@ -71,6 +72,15 @@ public:
             dynamic_name_register[ptr - adress_offset] = std::to_string(ptr);
         }
         return dynamic_name_register[ptr - adress_offset];
+    }
+
+    size_t getByteSize() {
+        return name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
+               std::accumulate(name_register.cbegin(), name_register.cend(), 0,
+                               [](size_t size, auto& kv) { return size + kv.second.size(); }) +
+               dynamic_name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
+               std::accumulate(dynamic_name_register.cbegin(), dynamic_name_register.cend(), 0,
+                               [](size_t size, auto& kv) { return size + kv.second.size(); });
     }
 };
 } // namespace extra_prof

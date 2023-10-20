@@ -33,13 +33,14 @@ includes any flags (e.g., CMake). You can temporarily disable the wrapper by set
 
 You can set the following options as environment variables during compilation.
 
-| Option                                       | Description                                             | 
-|----------------------------------------------|---------------------------------------------------------|
-| `EXTRA_PROF_WRAPPER`=`on`(default),`off` `   | Enables the compiler wrapper                            |
-| `EXTRA_PROF_GPU`=`on`(default),`off`         | Enables GPU measurements                                |
-| `EXTRA_PROF_EVENT_TRACE`=`on`,`off`(default) | Enables recording of event traces in Trace Event Format |
-| `EXTRA_PROF_ENERGY`=`on`,`off`(default)      | Enables energy measurements **Under development**       |
-|
+| Option                                                    | Description                                                                                                                                                              | 
+|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `EXTRA_PROF_WRAPPER`=`on`(default),`off` `                | Enables the compiler wrapper                                                                                                                                             |
+| `EXTRA_PROF_GPU`=`on`(default),`off`                      | Enables GPU measurements                                                                                                                                                 |
+| `EXTRA_PROF_EVENT_TRACE`=`on`,`off`(default)              | Enables recording of event traces in Trace Event Format                                                                                                                  |
+| `EXTRA_PROF_ENERGY`=`on`,`off`(default)                   | Enables energy measurements **Under development**                                                                                                                        |
+| `EXTRA_PROF_ADVANCED_INSTRUMENTATION`=`on`(default),`off` | Improves instrumentation by not instrumenting standard library functions. *Only works with compilers that support the `-finstrument-functions-exclude-file-list` option* |
+| `EXTRA_PROF_DEBUG_*` =`on`,`off`(default)                 | Debugging and development options. *These might cause issues when profiling.*                                                                                            |
 
 Measurement
 -----------

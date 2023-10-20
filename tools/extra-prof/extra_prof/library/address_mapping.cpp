@@ -14,11 +14,11 @@ extra_prof::containers::string extra_prof::NameRegistry::defaultExperimentDirNam
 namespace extra_prof {
 
 struct offset_pair {
-    std::string path;
+    containers::string path;
     uintptr_t offset;
 
     offset_pair() = default;
-    offset_pair(std::string path_, uintptr_t offset_) : path(path_), offset(offset_) {}
+    offset_pair(containers::string path_, uintptr_t offset_) : path(path_), offset(offset_) {}
 };
 
 void NameRegistry::create_address_mapping(containers::string output_dir) {
@@ -39,7 +39,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
     // std::ofstream stream(output_dir + "/symbols.txt");
 
     for (auto&& [filepath, offset] : offsets) {
-        std::string filename = filepath;
+        containers::string filename = filepath;
         if (filename == "") {
             filename = app_filename;
         }

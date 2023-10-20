@@ -14,7 +14,7 @@ void init() {
     CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY2));
 }
 
-void process_activity_kernel(CUpti_ActivityKernel5 *record) {
+void process_activity_kernel(CUpti_ActivityKernel5* record) {
 #ifdef EXTRA_PROF_DEBUG
     if (record->kind == CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL) {
         std::cout << "Concurrent";
@@ -27,10 +27,10 @@ void process_activity_kernel(CUpti_ActivityKernel5 *record) {
         std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " " << record->name << "\n";
         return;
     }
-    auto &correlation_data = *correlation_data_ptr;
-    auto *node = correlation_data.node->findOrAddChild(record->name, CallTreeNodeType::KERNEL);
+    auto& correlation_data = *correlation_data_ptr;
+    auto* node = correlation_data.node->findOrAddChild(record->name, CallTreeNodeType::KERNEL);
     node->setAsync(true);
-    auto &metrics = node->per_thread_metrics[correlation_data.thread];
+    auto& metrics = node->per_thread_metrics[correlation_data.thread];
     metrics.duration += record->end - record->start;
     metrics.visits++;
     int maxActiveBlocksPerMP = 0;
@@ -44,8 +44,8 @@ void process_activity_kernel(CUpti_ActivityKernel5 *record) {
                  resourceUsage, record->correlationId, record->streamId);
 }
 
-void process_activity_overhead(CUpti_ActivityOverhead *record) {
-    const char *overheadKind;
+void process_activity_overhead(CUpti_ActivityOverhead* record) {
+    const char* overheadKind;
     switch (record->overheadKind) {
     case CUPTI_ACTIVITY_OVERHEAD_DRIVER_COMPILER:
         overheadKind = "OVERHEAD_DRIVER_COMPILER";
@@ -69,15 +69,15 @@ void process_activity_overhead(CUpti_ActivityOverhead *record) {
 #ifdef EXTRA_PROF_DEBUG
     std::cout << "OVERHEAD " << overheadKind << " from " << record->start << " to " << record->end << '\n';
 #endif
-    auto *node = GLOBALS.call_tree.findOrAddChild(overheadKind, CallTreeNodeType::OVERHEAD);
-    auto &metrics = node->my_metrics();
+    auto* node = GLOBALS.call_tree.findOrAddChild(overheadKind, CallTreeNodeType::OVERHEAD);
+    auto& metrics = node->my_metrics();
     metrics.duration += record->end - record->start;
     metrics.visits++;
     addEventPair(GLOBALS.gpu.event_stream, EventType::OVERHEAD, record->start, record->end, node, pthread_self(), 0, 0,
                  -3);
 }
 
-static const char *getMemcpyKindString(CUpti_ActivityMemcpyKind kind, CUpti_ActivityFlag flags) {
+static const char* getMemcpyKindString(CUpti_ActivityMemcpyKind kind, CUpti_ActivityFlag flags) {
     if ((CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC & flags) == CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC) {
         switch (kind) {
         case CUPTI_ACTIVITY_MEMCPY_KIND_HTOD:
@@ -134,8 +134,8 @@ static const char *getMemcpyKindString(CUpti_ActivityMemcpyKind kind, CUpti_Acti
     return "Memcpy Unknown";
 }
 
-void process_activity_memcpy(CUpti_ActivityMemcpy3 *record) {
-    auto *memcopy_kind = getMemcpyKindString(static_cast<CUpti_ActivityMemcpyKind>(record->copyKind),
+void process_activity_memcpy(CUpti_ActivityMemcpy3* record) {
+    auto* memcopy_kind = getMemcpyKindString(static_cast<CUpti_ActivityMemcpyKind>(record->copyKind),
                                              static_cast<CUpti_ActivityFlag>(record->flags));
 #ifdef EXTRA_PROF_DEBUG
     std::cout << "MEMCPY " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
@@ -145,9 +145,9 @@ void process_activity_memcpy(CUpti_ActivityMemcpy3 *record) {
         std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCOPY\n";
         return;
     }
-    auto &correlation_data = *correlation_data_ptr;
-    auto *node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
-    auto &metrics = node->per_thread_metrics[correlation_data.thread];
+    auto& correlation_data = *correlation_data_ptr;
+    auto* node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
+    auto& metrics = node->per_thread_metrics[correlation_data.thread];
     metrics.duration += record->end - record->start;
     metrics.visits++;
     metrics.bytes += record->bytes;
@@ -157,8 +157,8 @@ void process_activity_memcpy(CUpti_ActivityMemcpy3 *record) {
                  0, record->correlationId, record->streamId);
 }
 
-void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2 *record) {
-    auto *memcopy_kind = getMemcpyKindString(static_cast<CUpti_ActivityMemcpyKind>(record->copyKind),
+void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2* record) {
+    auto* memcopy_kind = getMemcpyKindString(static_cast<CUpti_ActivityMemcpyKind>(record->copyKind),
                                              static_cast<CUpti_ActivityFlag>(record->flags));
 #ifdef EXTRA_PROF_DEBUG
     std::cout << "MEMCPY P2P " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
@@ -168,9 +168,9 @@ void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2 *record) {
         std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMCPY\n";
         return;
     }
-    auto &correlation_data = *correlation_data_ptr;
-    auto *node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
-    auto &metrics = node->per_thread_metrics[correlation_data.thread];
+    auto& correlation_data = *correlation_data_ptr;
+    auto* node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
+    auto& metrics = node->per_thread_metrics[correlation_data.thread];
     metrics.duration += record->end - record->start;
     metrics.visits++;
     metrics.bytes += record->bytes;
@@ -180,9 +180,9 @@ void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2 *record) {
                  0, record->correlationId, record->streamId);
 }
 
-void process_activity_memset(CUpti_ActivityMemset2 *record) {
+void process_activity_memset(CUpti_ActivityMemset2* record) {
     auto is_async = ((CUPTI_ACTIVITY_FLAG_MEMSET_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMSET_ASYNC);
-    auto *memset_kind = is_async ? GLOBALS.gpu.MEMSET_ASYNC : GLOBALS.gpu.MEMSET;
+    auto* memset_kind = is_async ? GLOBALS.gpu.MEMSET_ASYNC : GLOBALS.gpu.MEMSET;
 #ifdef EXTRA_PROF_DEBUG
     std::cout << "MEMSET " << record->correlationId << " from " << record->start << " to " << record->end << '\n';
 #endif
@@ -191,9 +191,9 @@ void process_activity_memset(CUpti_ActivityMemset2 *record) {
         std::cerr << "EXTRA PROF: Unknown correlation id: " << record->correlationId << " MEMSET\n";
         return;
     }
-    auto &correlation_data = *correlation_data_ptr;
-    auto *node = correlation_data.node->findOrAddChild(memset_kind, CallTreeNodeType::MEMSET);
-    auto &metrics = node->per_thread_metrics[correlation_data.thread];
+    auto& correlation_data = *correlation_data_ptr;
+    auto* node = correlation_data.node->findOrAddChild(memset_kind, CallTreeNodeType::MEMSET);
+    auto& metrics = node->per_thread_metrics[correlation_data.thread];
     metrics.duration += record->end - record->start;
     metrics.visits++;
     metrics.bytes += record->bytes;
@@ -202,7 +202,7 @@ void process_activity_memset(CUpti_ActivityMemset2 *record) {
                  0, record->correlationId, record->streamId);
 }
 
-void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
+void CUPTIAPI on_buffer_request(uint8_t** buffer, size_t* size, size_t* maxNumRecords) {
     extra_prof_scope sc;
     *buffer = GLOBALS.gpu.buffer_pool.get_mem();
     if (((uintptr_t)(buffer) & ((ACTIVITY_RECORD_ALIGNMENT)-1))) {
@@ -211,7 +211,7 @@ void CUPTIAPI on_buffer_request(uint8_t **buffer, size_t *size, size_t *maxNumRe
     *size = sizeof(uint8_t) * GLOBALS.gpu.buffer_pool.size();
     *maxNumRecords = 0;
 }
-void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize) {
+void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t* buffer, size_t size, size_t validSize) {
     extra_prof_scope sc;
 
     if (GLOBALS.magic_number != 0x1A2B3C4D) {
@@ -220,7 +220,7 @@ void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *
     }
 
     CUptiResult status;
-    CUpti_Activity *record = NULL;
+    CUpti_Activity* record = NULL;
 
     if (validSize > 0) {
         do {
@@ -229,19 +229,19 @@ void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *
                 switch (record->kind) {
                 case CUPTI_ACTIVITY_KIND_KERNEL:
                 case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
-                    process_activity_kernel((CUpti_ActivityKernel5 *)record);
+                    process_activity_kernel((CUpti_ActivityKernel5*)record);
                     break;
                 case CUPTI_ACTIVITY_KIND_OVERHEAD:
-                    process_activity_overhead((CUpti_ActivityOverhead *)record);
+                    process_activity_overhead((CUpti_ActivityOverhead*)record);
                     break;
                 case CUPTI_ACTIVITY_KIND_MEMCPY:
-                    process_activity_memcpy((CUpti_ActivityMemcpy3 *)record);
+                    process_activity_memcpy((CUpti_ActivityMemcpy3*)record);
                     break;
                 case CUPTI_ACTIVITY_KIND_MEMSET:
-                    process_activity_memset((CUpti_ActivityMemset2 *)record);
+                    process_activity_memset((CUpti_ActivityMemset2*)record);
                     break;
                 case CUPTI_ACTIVITY_KIND_MEMCPY2:
-                    process_activity_memcpyp2p((CUpti_ActivityMemcpyPtoP2 *)record);
+                    process_activity_memcpyp2p((CUpti_ActivityMemcpyPtoP2*)record);
                     break;
                 default:
                     std::cerr << "EXTRA PROF: WARNING: Unknown CUPTI activity " << record->kind << '\n';
@@ -263,4 +263,4 @@ void CUPTIAPI on_buffer_complete(CUcontext context, uint32_t streamId, uint8_t *
     }
     GLOBALS.gpu.buffer_pool.return_mem(buffer);
 }
-}
+} // namespace extra_prof::gpu::runtime

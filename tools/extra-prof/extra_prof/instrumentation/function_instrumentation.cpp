@@ -1,8 +1,7 @@
 #include "commons.h"
 #include "start_end.h"
-
 extern "C" {
-EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void *this_fn, void *call_site) {
+EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void* this_fn, void* call_site) {
     using namespace extra_prof;
     if (!extra_prof_globals_initialised) {
         return;
@@ -17,7 +16,7 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void *this_fn, void *call_sit
         std::lock_guard<std::mutex> lk(GLOBALS.initialising);
 
         if (!GLOBALS.initialised.load(std::memory_order_relaxed)) {
-            // GLOBALS.main_thread_id = std::this_thread::get_id();
+            GLOBALS.main_thread = pthread_self();
             initialize();
 
             GLOBALS.initialised.store(true, std::memory_order_release);
@@ -36,7 +35,7 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void *this_fn, void *call_sit
     GLOBALS.my_thread_state().depth++;
 }
 
-EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void *this_fn, void *call_site) {
+EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void* this_fn, void* call_site) {
     using namespace extra_prof;
     if (!extra_prof_globals_initialised) {
         return;
@@ -48,7 +47,7 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_exit(void *this_fn, void *call_site
     extra_prof_scope sc;
 
     if (GLOBALS.initialised.load(std::memory_order_relaxed)) {
-        auto &thread_state = GLOBALS.my_thread_state();
+        auto& thread_state = GLOBALS.my_thread_state();
         if (thread_state.depth == 0) {
             throw std::underflow_error("EXTRA PROF: ERROR: Stack depth is already zero.");
         };

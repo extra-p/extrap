@@ -35,13 +35,21 @@ public:
 #else
 #define EXTRA_PROF_EVENT_TRACE_ENABLED 0
 #endif
+
 #ifdef EXTRA_PROF_GPU
 #define EXTRA_PROF_GPU_ENABLED 1
 #else
 #define EXTRA_PROF_GPU_ENABLED 0
 #endif
 
-#define EXTRA_PROF_ENABLED_FEATURES ((EXTRA_PROF_EVENT_TRACE_ENABLED << 0) + (EXTRA_PROF_GPU_ENABLED << 1))
+#ifdef EXTRA_PROF_ENERGY
+#define EXTRA_PROF_ENERGY_ENABLED 1
+#else
+#define EXTRA_PROF_ENERGY_ENABLED 0
+#endif
+
+#define EXTRA_PROF_ENABLED_FEATURES                                                                                    \
+    ((EXTRA_PROF_EVENT_TRACE_ENABLED << 0) + (EXTRA_PROF_GPU_ENABLED << 1) + (EXTRA_PROF_ENERGY_ENABLED << 2))
 
 namespace extra_prof {
 
@@ -68,6 +76,12 @@ struct GlobalState {
         static thread_local ThreadState& state = threads[pthread_self()];
         return state;
     }
+
+    pthread_t main_thread;
+
+#ifdef EXTRA_PROF_ENERGY
+    std::vector<energy_uj> energy_stack_cpu;
+#endif
 
     GlobalState();
     ~GlobalState();

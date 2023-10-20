@@ -1,3 +1,4 @@
+#include "lib_extra_prof.h"
 #include "address_mapping.cpp"
 #include "exit_wrapper.cpp"
 #include "globals.cpp"

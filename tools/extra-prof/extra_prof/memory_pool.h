@@ -70,6 +70,7 @@ public:
 
     inline size_t size() { return _size; }
     inline size_t num_buffers() { return _num_buffers; }
+    inline size_t get_byte_size() { return _num_buffers * _size; }
 
     void initial_buffer_resize(size_t new_size) {
         if (_num_buffers > 0) {

@@ -4,6 +4,7 @@
 #include <memory>
 typedef uint64_t time_point;
 typedef uint64_t duration;
+typedef unsigned long long energy_uj;
 
 template <typename T>
 class OnExit {

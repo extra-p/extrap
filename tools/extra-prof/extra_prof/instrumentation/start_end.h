@@ -23,9 +23,9 @@ void initialize() {
         std::cerr << "EXTRA PROF: ERROR: Features of lib_extra_prof do not match the current executable." << std::endl;
     }
 
-    const char *max_depth_str = std::getenv("EXTRA_PROF_MAX_DEPTH");
+    const char* max_depth_str = std::getenv("EXTRA_PROF_MAX_DEPTH");
     if (max_depth_str != nullptr) {
-        char *end;
+        char* end;
         GLOBALS.MAX_DEPTH = std::strtoul(max_depth_str, &end, 10);
         std::cerr << "EXTRA PROF: MAX DEPTH: " << GLOBALS.MAX_DEPTH << std::endl;
     }
@@ -51,27 +51,27 @@ void finalize() {
     if (!extra_prof_globals_initialised) {
         return;
     }
-    auto &name_register = GLOBALS.name_register;
+    auto& name_register = GLOBALS.name_register;
     std::cerr << "EXTRA PROF: Postprocessing started" << std::endl;
 #ifdef EXTRA_PROF_GPU
     cupti::finalize();
 #endif
 
+    std::cerr << "EXTRA PROF: Size of GLOBALS: " << sizeof(GLOBALS) << '\n';
     std::cerr << "EXTRA PROF: Size of calltree: "
               << GLOBALS.call_tree.calculate_size() + GLOBALS.calltree_nodes_allocator.unused_space() << '\n';
-    // std::cerr << "EXTRA PROF: Size of name_register: "
-    //           << name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
-    //                  std::accumulate(name_register.begin(), name_register.end(), 0,
-    //                                  [](size_t size, auto &kv) { return size + kv.second.size(); })
-    //           << '\n';
+    std::cerr << "EXTRA PROF: Size of name_register: " << GLOBALS.name_register.getByteSize() << '\n';
 #ifdef EXTRA_PROF_GPU
-    std::cerr << "EXTRA PROF: Size of cupti_buffers: "
-              << GLOBALS.gpu.buffer_pool.num_buffers() * GLOBALS.gpu.buffer_pool.size() << '\n';
+    std::cerr << "EXTRA PROF: Size of cupti_buffers: " << GLOBALS.gpu.buffer_pool.get_byte_size() << '\n';
     std::cerr << "EXTRA PROF: Size of event_stream: " << cupti::event_stream_size() << '\n';
     std::cerr << "EXTRA PROF: Size of cupti_mappings: " << cupti::cupti_mappings_size() << '\n';
+
+#ifdef EXTRA_PROF_ENERGY
+    std::cerr << "EXTRA PROF: Size of energy samples: " << GLOBALS.gpu.energySampler.getByteSize() << '\n';
+#endif
 #endif
 
-    const char *slurm_procid = getenv("SLURM_PROCID");
+    const char* slurm_procid = getenv("SLURM_PROCID");
     // if (slurm_procid == nullptr || containers::string(slurm_procid) == "0") {
     //     cupti::write_cupti_names(output_dir);
     // }
@@ -107,14 +107,14 @@ void finalize() {
 void finalize_on_exit() {
     auto time = get_timestamp();
     std::cerr << "EXTRA PROF: Encountered early exit. Wrapping up measurements." << std::endl;
-    for (auto &&[tid, thread_state] : GLOBALS.threads) {
+    for (auto&& [tid, thread_state] : GLOBALS.threads) {
         while (!thread_state.timer_stack.empty()) {
-            auto &current_node = thread_state.current_node;
+            auto& current_node = thread_state.current_node;
             auto duration = time - thread_state.timer_stack.back();
             if (current_node->name() == nullptr) {
                 throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
             }
-            auto &metrics = current_node->my_metrics();
+            auto& metrics = current_node->my_metrics();
             metrics.visits++;
             metrics.duration += duration;
             thread_state.timer_stack.pop_back();
