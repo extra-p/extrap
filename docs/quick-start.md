@@ -214,7 +214,7 @@ extrap --median --modeler Refining --text examples/input.txt
 ### Viewing performance models
 
 By default, Extra-P outputs the performance models and the coordinates to the console. You can change what is printed
-using the `--print` option followed by one of (`all`, `callpaths`, `metrics`, `parameters`, `functions`). If you want to
+using the `--print` option followed by one of (`all`, `callpaths`, `metrics`, `parameters`, `functions`, `latex-functions`). If you want to
 control the output to a finer degree, you can specify a [formatting string using placeholders](output-formatting.md).
 
 ### Saving performance models
