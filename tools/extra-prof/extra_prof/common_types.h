@@ -21,3 +21,15 @@ public:
 #endif
 
 #define EXTRA_PROF_SO_EXPORT
+
+namespace extra_prof {
+struct EnergyCounter {
+    int fileDescriptor = 0;
+    unsigned long long maxValue = 0;
+    unsigned long long previousValue = 0;
+    unsigned long long totalValue = 0;
+
+    EnergyCounter() {}
+    EnergyCounter(int fd, unsigned long long maxValue_) : fileDescriptor(fd), maxValue(maxValue_) {}
+};
+} // namespace extra_prof

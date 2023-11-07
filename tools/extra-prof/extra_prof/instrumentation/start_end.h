@@ -41,6 +41,10 @@ void initialize() {
     }
 
     GLOBALS.name_register.create_address_mapping(GLOBALS.output_dir);
+
+#ifdef EXTRA_PROF_ENERGY
+    cpu::energy::initializeEnergy();
+#endif
 #ifdef EXTRA_PROF_GPU
     cupti::init();
 #endif
@@ -53,6 +57,10 @@ void finalize() {
     }
     auto& name_register = GLOBALS.name_register;
     std::cerr << "EXTRA PROF: Postprocessing started" << std::endl;
+
+#ifdef EXTRA_PROF_ENERGY
+    cpu::energy::finalizeEnergy();
+#endif
 #ifdef EXTRA_PROF_GPU
     cupti::finalize();
 #endif

@@ -81,6 +81,7 @@ struct GlobalState {
 
 #ifdef EXTRA_PROF_ENERGY
     std::vector<energy_uj> energy_stack_cpu;
+    std::vector<EnergyCounter> energyCounters;
 #endif
 
     GlobalState();
