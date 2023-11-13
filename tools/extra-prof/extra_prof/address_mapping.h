@@ -37,8 +37,8 @@ public:
         }
         auto name_ptr = dynamic_name_register.try_get(ptr - adress_offset);
         if (name_ptr == nullptr) {
-            std::cerr << "EXTRA PROF: WARNING unknown function pointer " << fn_ptr << '\n';
-            throw std::runtime_error("EXTRA PROF: ERROR unknown function pointer.");
+            std::cerr << "EXTRA PROF: WARNING: unknown function pointer " << fn_ptr << '\n';
+            // throw std::runtime_error("EXTRA PROF: ERROR: unknown function pointer.");
         }
         return name_ptr;
     }

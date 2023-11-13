@@ -17,7 +17,8 @@ void initializeEnergy() {
         if (fd == -1) {
             int errsv = errno;
             const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string(EXTRA_PROF_CPU_ENERGY_COUNTER_PATH) + " " + error);
+            throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") + EXTRA_PROF_CPU_ENERGY_COUNTER_PATH +
+                                     " " + error);
         }
         GLOBALS.energyCounters.emplace_back(fd, std::numeric_limits<energy_uj>::max());
     }
@@ -33,7 +34,7 @@ void initializeEnergy() {
             if (fd == -1) {
                 int errsv = errno;
                 const char* error = strerror(errsv);
-                throw std::runtime_error(path.string() + " " + error);
+                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") + path.string() + " " + error);
             }
 
             auto max_path = dir_entry.path() / "max_energy_range_uj";
@@ -42,20 +43,23 @@ void initializeEnergy() {
             if (max_fd == -1) {
                 int errsv = errno;
                 const char* error = strerror(errsv);
-                throw std::runtime_error((dir_entry.path() / "max_energy_range_uj ").string() + " " + error);
+                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") +
+                                         (dir_entry.path() / "max_energy_range_uj ").string() + " " + error);
             }
             char buffer[48];
             ssize_t read_count = read(max_fd, buffer, sizeof(buffer));
             if (read_count == -1) {
                 int errsv = errno;
                 const char* error = strerror(errsv);
-                throw std::runtime_error((dir_entry.path() / "max_energy_range_uj ").string() + " " + error);
+                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") +
+                                         (dir_entry.path() / "max_energy_range_uj ").string() + " " + error);
             }
             buffer[read_count] = 0;
             close(max_fd);
             auto max_value = strtoull(buffer, nullptr, 10);
             if (max_value == 0) {
-                throw std::runtime_error((dir_entry.path() / "max_energy_range_uj ").string() +
+                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") +
+                                         (dir_entry.path() / "max_energy_range_uj ").string() +
                                          " could not be interpreted.");
             }
 
@@ -69,22 +73,16 @@ energy_uj getEnergy() {
     char buffer[48];
     for (auto& energyCounter : GLOBALS.energyCounters) {
 
-        ssize_t read_count = read(energyCounter.fileDescriptor, buffer, sizeof(buffer));
+        ssize_t read_count = pread(energyCounter.fileDescriptor, buffer, sizeof(buffer), 0);
         if (read_count == -1) {
             int errsv = errno;
             const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("Reading energy counter ") + error);
+            throw std::runtime_error(containers::string("EXTRA PROF: ERROR: Reading energy counter ") + error);
         }
         buffer[read_count] = 0;
-        auto new_pos = lseek(energyCounter.fileDescriptor, 0, 0);
-        if (new_pos == -1) {
-            int errsv = errno;
-            const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("Resetting energy counter ") + error);
-        }
         auto value = strtoull(buffer, nullptr, 10);
         if (value == 0) {
-            throw std::runtime_error("Energy counter could not be interpreted.");
+            throw std::runtime_error("EXTRA PROF: ERROR: Energy counter could not be interpreted.");
         }
 
         if (value < energyCounter.previousValue) {

@@ -103,22 +103,29 @@ void finalize() {
         output_file += slurm_procid;
     }
     output_file += ".extra-prof.msgpack";
-    std::ofstream stream(output_file);
-    msgpack::pack(stream, Profile(GLOBALS.call_tree
+    Profile profile(GLOBALS.call_tree
 #ifdef EXTRA_PROF_GPU
-                                  ,
-                                  GLOBALS.gpu.metricNames
+                    ,
+                    GLOBALS.gpu.metricNames
 #endif
-                                  ));
+    );
+#ifdef EXTRA_PROF_ENERGY
+    profile.extended_metrics.emplace_back(Metric{"energy_cpu", DeviceType::CPU});
+    profile.extended_metrics.emplace_back(Metric{"energy_gpu", DeviceType::GPU});
+#endif
+    std::ofstream stream(output_file);
+    msgpack::pack(stream, profile);
 }
 
 void finalize_on_exit() {
     auto time = get_timestamp();
     std::cerr << "EXTRA PROF: Encountered early exit. Wrapping up measurements." << std::endl;
+
     for (auto&& [tid, thread_state] : GLOBALS.threads) {
         while (!thread_state.timer_stack.empty()) {
             auto& current_node = thread_state.current_node;
-            auto duration = time - thread_state.timer_stack.back();
+            auto start = thread_state.timer_stack.back();
+            auto duration = time - start;
             if (current_node->name() == nullptr) {
                 throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
             }
@@ -126,6 +133,17 @@ void finalize_on_exit() {
             metrics.visits++;
             metrics.duration += duration;
             thread_state.timer_stack.pop_back();
+
+#ifdef EXTRA_PROF_ENERGY
+            if (GLOBALS.main_thread == tid && GLOBALS.main_thread == pthread_self()) {
+                current_node->energy_cpu += cpu::energy::getEnergy() - GLOBALS.energy_stack_cpu.back();
+                GLOBALS.energy_stack_cpu.pop_back();
+#ifdef EXTRA_PROF_GPU
+                GLOBALS.gpu.energySampler.addEntryTask(current_node, start, time);
+#endif
+            }
+#endif
+
             if (current_node->parent() == nullptr) {
                 throw std::runtime_error("EXTRA PROF: pop_time: Cannot go to parent of root");
             }

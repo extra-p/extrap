@@ -82,9 +82,8 @@ def _read_calltree(ep_root_node, table, len_row):
         output_data = [call_path, m_duration, m_visits, m_bytes]
         if len(ep_node) >= 8 and ep_node[7]:
             output_data += ep_node[7]
-        if len(ep_node) >= 10:
-            output_data.append(ep_node[8])
-            output_data.append(ep_node[9])
+        if len(ep_node) >= 9 and ep_node[8]:
+            output_data += ep_node[8]
 
         table.append(output_data + [None] * (len_row - len(output_data)))
         if _children_are_too_big(m_duration, childs, name):
@@ -122,13 +121,15 @@ def main():
                         gpu_metrics = profile_data[3]
                     else:
                         gpu_metrics = []
+                    if len(profile_data) >= 5:
+                        metrics = [metric[0] for metric in profile_data[4]]
+                    else:
+                        metrics = []
                 except ValueError as e:
                     raise RuntimeError(f"File {path} is no valid Extra-Prof file.") from e
                 if magic_string != "EXTRA PROF":
                     raise RuntimeError(f"File {path} is no valid Extra-Prof file.")
-                header = ["Callpath", "Duration", "Visits", "Bytes"] + gpu_metrics
-                if len(ep_call_tree) >= 10:
-                    header += ['Energy (CPU)', 'Energy (GPU)']
+                header = ["Callpath", "Duration", "Visits", "Bytes"] + gpu_metrics + metrics
 
                 table = []
                 _read_calltree(ep_call_tree, table, len_row=len(header))

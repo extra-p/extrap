@@ -168,7 +168,8 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
     if (fileDescriptor == -1) {
         int errsv = errno;
         const char* error = strerror(errsv);
-        throw std::runtime_error(containers::string(EXTRA_PROF_GPU_ENERGY_COUNTER_PATH) + " " + error);
+        throw std::runtime_error(containers::string("EXTRA PROF: ERROR: Could not open: ") +
+                                 EXTRA_PROF_GPU_ENERGY_COUNTER_PATH + " " + error);
     }
 
     char buffer[48];
@@ -179,22 +180,16 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
     while (sampling) {
         auto now = get_timestamp();
 
-        ssize_t read_count = read(fileDescriptor, buffer, sizeof(buffer));
+        ssize_t read_count = pread(fileDescriptor, buffer, sizeof(buffer), 0);
         if (read_count == -1) {
             int errsv = errno;
             const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("Reading energy counter ") + error);
+            throw std::runtime_error(containers::string("EXTRA PROF: ERROR: Reading energy counter: ") + error);
         }
         buffer[read_count] = 0;
-        auto new_pos = lseek(fileDescriptor, 0, 0);
-        if (new_pos == -1) {
-            int errsv = errno;
-            const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("Resetting energy counter ") + error);
-        }
         auto value = strtoull(buffer, nullptr, 10);
         if (value == 0) {
-            throw std::runtime_error("Energy counter could not be interpreted.");
+            throw std::runtime_error("EXTRA PROF: ERROR: Energy counter could not be interpreted.");
         }
 
         if (prevEnergy == value) {

@@ -181,8 +181,16 @@ public:
         MetricAdapter visits(per_thread_metrics, [](const auto& metrics) { return metrics.visits.load(); });
         MetricAdapter bytes(per_thread_metrics, [](const auto& metrics) { return metrics.bytes.load(); });
 
-        msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes, gpu_metrics, energy_cpu,
-                                         energy_gpu)
+#ifdef EXTRA_PROF_ENERGY
+        auto energy_tuple = std::make_tuple(std::make_tuple(energy_cpu.load()), std::make_tuple(energy_gpu.load()));
+#endif
+
+        msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes, gpu_metrics
+#ifdef EXTRA_PROF_ENERGY
+                                         ,
+                                         energy_tuple
+#endif
+                                         )
             .msgpack_pack(msgpack_pk);
     }
 };
