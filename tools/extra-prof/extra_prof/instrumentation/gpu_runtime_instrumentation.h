@@ -31,8 +31,8 @@ void process_activity_kernel(CUpti_ActivityKernel5* record) {
     auto* node = correlation_data.node->findOrAddChild(record->name, CallTreeNodeType::KERNEL);
     node->setAsync(true);
     auto& metrics = node->per_thread_metrics[correlation_data.thread];
-    metrics.duration += record->end - record->start;
-    metrics.visits++;
+    metrics.duration.fetch_add(record->end - record->start, std::memory_order_acq_rel);
+    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
     int maxActiveBlocksPerMP = 0;
     extra_prof::gpu::calculateMaxActiveBlocksPerMultiprocessor(&maxActiveBlocksPerMP, correlation_data.function_ptr,
                                                                record->blockX * record->blockY * record->blockZ,
@@ -71,8 +71,8 @@ void process_activity_overhead(CUpti_ActivityOverhead* record) {
 #endif
     auto* node = GLOBALS.call_tree.findOrAddChild(overheadKind, CallTreeNodeType::OVERHEAD);
     auto& metrics = node->my_metrics();
-    metrics.duration += record->end - record->start;
-    metrics.visits++;
+    metrics.duration.fetch_add(record->end - record->start, std::memory_order_acq_rel);
+    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
     addEventPair(GLOBALS.gpu.event_stream, EventType::OVERHEAD, record->start, record->end, node, pthread_self(), 0, 0,
                  -3);
 }
@@ -148,9 +148,9 @@ void process_activity_memcpy(CUpti_ActivityMemcpy3* record) {
     auto& correlation_data = *correlation_data_ptr;
     auto* node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
     auto& metrics = node->per_thread_metrics[correlation_data.thread];
-    metrics.duration += record->end - record->start;
-    metrics.visits++;
-    metrics.bytes += record->bytes;
+    metrics.duration.fetch_add(record->end - record->start, std::memory_order_acq_rel);
+    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
+    metrics.bytes.fetch_add(record->bytes, std::memory_order_acq_rel);
     node->setAsync((CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC);
 
     addEventPair(GLOBALS.gpu.event_stream, EventType::MEMCPY, record->start, record->end, node, correlation_data.thread,
@@ -171,9 +171,9 @@ void process_activity_memcpyp2p(CUpti_ActivityMemcpyPtoP2* record) {
     auto& correlation_data = *correlation_data_ptr;
     auto* node = correlation_data.node->findOrAddChild(memcopy_kind, CallTreeNodeType::MEMCPY);
     auto& metrics = node->per_thread_metrics[correlation_data.thread];
-    metrics.duration += record->end - record->start;
-    metrics.visits++;
-    metrics.bytes += record->bytes;
+    metrics.duration.fetch_add(record->end - record->start, std::memory_order_acq_rel);
+    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
+    metrics.bytes.fetch_add(record->bytes, std::memory_order_acq_rel);
     node->setAsync((CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC & record->flags) == CUPTI_ACTIVITY_FLAG_MEMCPY_ASYNC);
 
     addEventPair(GLOBALS.gpu.event_stream, EventType::MEMCPY, record->start, record->end, node, correlation_data.thread,
@@ -194,9 +194,9 @@ void process_activity_memset(CUpti_ActivityMemset2* record) {
     auto& correlation_data = *correlation_data_ptr;
     auto* node = correlation_data.node->findOrAddChild(memset_kind, CallTreeNodeType::MEMSET);
     auto& metrics = node->per_thread_metrics[correlation_data.thread];
-    metrics.duration += record->end - record->start;
-    metrics.visits++;
-    metrics.bytes += record->bytes;
+    metrics.duration.fetch_add(record->end - record->start, std::memory_order_acq_rel);
+    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
+    metrics.bytes.fetch_add(record->bytes, std::memory_order_acq_rel);
     node->setAsync(is_async);
     addEventPair(GLOBALS.gpu.event_stream, EventType::MEMSET, record->start, record->end, node, correlation_data.thread,
                  0, record->correlationId, record->streamId);

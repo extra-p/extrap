@@ -68,25 +68,25 @@ private:
 public:
     ConcurrentArrayList() {
         first_chunk = new Chunk();
-        first_free_chunk = first_chunk;
+        first_free_chunk.store(first_chunk, std::memory_order_release);
     };
 
     template <class... Args>
     T& emplace(Args&&... args) {
-        Chunk* free_chunk = first_free_chunk;
+        Chunk* free_chunk = first_free_chunk.load(std::memory_order_acquire);
         auto spot = free_chunk->find_next_empty_spot();
         int ctr = 0;
         if (spot.first != nullptr && !spot.second) {
             Chunk* expected = free_chunk;
             free_chunk = free_chunk->get_or_create_next_chunk();
-            first_free_chunk.compare_exchange_strong(expected, free_chunk);
+            first_free_chunk.compare_exchange_strong(expected, free_chunk, std::memory_order_acq_rel);
         }
         while (spot.first == nullptr) {
 
             Chunk* expected = free_chunk;
             free_chunk = free_chunk->get_or_create_next_chunk();
             if (!spot.second) {
-                first_free_chunk.compare_exchange_strong(expected, free_chunk);
+                first_free_chunk.compare_exchange_strong(expected, free_chunk, std::memory_order_acq_rel);
             }
 
             spot = free_chunk->find_next_empty_spot();
@@ -172,7 +172,7 @@ public:
     const ConcurrentArrayList& crange() const noexcept { return *this; }
 
     ~ConcurrentArrayList() {
-        first_free_chunk = nullptr;
+        first_free_chunk.store(nullptr, std::memory_order_release);
         delete first_chunk;
     };
 };

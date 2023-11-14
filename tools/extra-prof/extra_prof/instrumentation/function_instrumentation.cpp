@@ -32,6 +32,7 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void* this_fn, void* call_sit
     if (GLOBALS.my_thread_state().depth < GLOBALS.MAX_DEPTH) {
         push_time(this_fn);
     }
+
     GLOBALS.my_thread_state().depth++;
 }
 

@@ -37,7 +37,7 @@ void wrap_start_gomp(void* wrapped_args_ptr) {
     }
     auto start_routine = wrapped_args->start_routine;
     auto args = wrapped_args->argument;
-    if ((++wrapped_args->references) >= omp_get_num_threads()) {
+    if ((wrapped_args->references.fetch_add(1, std::memory_order_acq_rel) + 1) >= omp_get_num_threads()) {
         delete wrapped_args;
     }
 

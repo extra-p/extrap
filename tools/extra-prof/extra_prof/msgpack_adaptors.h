@@ -23,7 +23,7 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
             template <typename Stream>
             packer<Stream>& operator()(msgpack::packer<Stream>& o, std::atomic<uint64_t> const& v) const {
                 // packing member variables as an array.
-                o.pack_uint64(v);
+                o.pack_uint64(v.load(std::memory_order_acquire));
                 return o;
             }
         };

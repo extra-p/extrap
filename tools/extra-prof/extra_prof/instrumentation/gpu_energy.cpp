@@ -79,7 +79,7 @@ void* EnergySampler::samplingThreadFunc(void* ptr) {
         (time_t)(pause_time_in_us / 1000000), (time_t)((pause_time_in_us % 1000000) * 1000)
     };
 
-    self->byteSizeSamplingBuffers = sizeof(utilSamples) + sizeof(samples);
+    self->byteSizeSamplingBuffers.store(sizeof(utilSamples) + sizeof(samples), std::memory_order_relaxed);
 
     while (true) {
         auto num_samples = self->loadEnergySamples(device, maxSampleCount, samples, lastSeenTimeStamp, energy);
@@ -87,14 +87,14 @@ void* EnergySampler::samplingThreadFunc(void* ptr) {
             self->loadUtilizationSamples(device, maxUtilSampleCount, utilSamples, utilLastSeenTimeStamp);
         if (num_samples == 0 && util_num_samples == 0) {
             self->processEntries(lastSeenTimeStamp, utilLastSeenTimeStamp);
-            if (!sampling) {
+            if (!sampling.load(std::memory_order_relaxed)) {
                 return 0;
             }
             nanosleep(&ts, NULL);
         } else {
             NVML_CALL(result);
             auto start_idx = energy_samples.size();
-            if (!sampling) {
+            if (!sampling.load(std::memory_order_relaxed)) {
                 self->processEntries(lastSeenTimeStamp, utilLastSeenTimeStamp);
                 return 0;
             }
@@ -158,7 +158,7 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
     //     (time_t)(pause_time_in_us / 1000000), (time_t)((pause_time_in_us % 1000000) * 1000)
     // };
 
-    self->byteSizeSamplingBuffers = sizeof(utilSamples);
+    self->byteSizeSamplingBuffers.store(sizeof(utilSamples), std::memory_order_relaxed);
     const char* EXTRA_PROF_GPU_ENERGY_COUNTER_PATH = getenv("EXTRA_PROF_GPU_ENERGY_COUNTER_PATH");
     assert(EXTRA_PROF_GPU_ENERGY_COUNTER_PATH != nullptr);
 
@@ -177,7 +177,7 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
     time_point pause_time = 0;
 
     lastSeenTimeStamp = get_timestamp();
-    while (sampling) {
+    while (sampling.load(std::memory_order_relaxed)) {
         auto now = get_timestamp();
 
         ssize_t read_count = pread(fileDescriptor, buffer, sizeof(buffer), 0);

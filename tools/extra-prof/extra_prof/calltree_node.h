@@ -177,12 +177,16 @@ public:
             name = "";
         }
 
-        MetricAdapter duration(per_thread_metrics, [](const auto& metrics) { return metrics.duration.load(); });
-        MetricAdapter visits(per_thread_metrics, [](const auto& metrics) { return metrics.visits.load(); });
-        MetricAdapter bytes(per_thread_metrics, [](const auto& metrics) { return metrics.bytes.load(); });
+        MetricAdapter duration(per_thread_metrics,
+                               [](const auto& metrics) { return metrics.duration.load(std::memory_order_acquire); });
+        MetricAdapter visits(per_thread_metrics,
+                             [](const auto& metrics) { return metrics.visits.load(std::memory_order_acquire); });
+        MetricAdapter bytes(per_thread_metrics,
+                            [](const auto& metrics) { return metrics.bytes.load(std::memory_order_acquire); });
 
 #ifdef EXTRA_PROF_ENERGY
-        auto energy_tuple = std::make_tuple(std::make_tuple(energy_cpu.load()), std::make_tuple(energy_gpu.load()));
+        auto energy_tuple = std::make_tuple(std::make_tuple(energy_cpu.load(std::memory_order_acquire)),
+                                            std::make_tuple(energy_gpu.load(std::memory_order_acquire)));
 #endif
 
         msgpack::type::make_define_array(name, _children, type, flags, duration, visits, bytes, gpu_metrics

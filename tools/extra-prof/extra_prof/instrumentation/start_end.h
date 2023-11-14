@@ -130,8 +130,8 @@ void finalize_on_exit() {
                 throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
             }
             auto& metrics = current_node->my_metrics();
-            metrics.visits++;
-            metrics.duration += duration;
+            metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
+            metrics.visits.fetch_add(1, std::memory_order_acq_rel);
             thread_state.timer_stack.pop_back();
 
 #ifdef EXTRA_PROF_ENERGY

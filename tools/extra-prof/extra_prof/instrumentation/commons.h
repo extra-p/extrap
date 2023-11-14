@@ -91,8 +91,8 @@ EP_INLINE time_point pop_time(char const* name) {
         throw std::runtime_error("EXTRA PROF: ERROR: popping different node than previously pushed");
     }
     auto& metrics = current_node->my_metrics();
-    metrics.visits++;
-    metrics.duration += duration;
+    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
+    metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
     thread_state.timer_stack.pop_back();
 #ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
     if (!current_node->validateChildren()) {
@@ -102,7 +102,8 @@ EP_INLINE time_point pop_time(char const* name) {
 
 #ifdef EXTRA_PROF_ENERGY
     if (GLOBALS.main_thread == pthread_self()) {
-        current_node->energy_cpu += GLOBALS.cpuEnergy.getEnergy() - GLOBALS.energy_stack_cpu.back();
+        current_node->energy_cpu.fetch_add(GLOBALS.cpuEnergy.getEnergy() - GLOBALS.energy_stack_cpu.back(),
+                                           std::memory_order_acq_rel);
         GLOBALS.energy_stack_cpu.pop_back();
 #ifdef EXTRA_PROF_GPU
         GLOBALS.gpu.energySampler.addEntryTask(current_node, start, time);

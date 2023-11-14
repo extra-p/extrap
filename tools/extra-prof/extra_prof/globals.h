@@ -82,9 +82,6 @@ struct GlobalState {
 
 #ifdef EXTRA_PROF_ENERGY
     std::vector<energy_uj> energy_stack_cpu;
-    std::vector<EnergyCounter> energyCounters;
-    time_point energyLastUpdate = 0;
-    energy_uj energyMinWraparoundValue = std::numeric_limits<energy_uj>::max();
     cpu::energy::EnergyMeasurementSystem cpuEnergy;
 #endif
 

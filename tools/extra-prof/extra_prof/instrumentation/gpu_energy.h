@@ -78,7 +78,7 @@ public:
     energy_uj getEnergy(time_point start_tp, time_point end_tp);
 
     size_t getByteSize() {
-        return byteSizeSamplingBuffers + energy_samples.size() * sizeof(EnergySample);
+        return byteSizeSamplingBuffers.load(std::memory_order_relaxed) + energy_samples.size() * sizeof(EnergySample);
         +entry_tasks.size_approx() * sizeof(EntryTask);
     }
 };

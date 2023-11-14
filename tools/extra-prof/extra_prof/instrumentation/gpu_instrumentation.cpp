@@ -52,8 +52,9 @@ namespace cupti {
             if (rtdata->callbackSite == CUPTI_API_ENTER) {
                 if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000 ||
                     cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunch_v3020) {
-                    if (GLOBALS.gpu.onKernelLaunch != nullptr) {
-                        (*GLOBALS.gpu.onKernelLaunch)(rtdata);
+                    auto onKernelLaunch = GLOBALS.gpu.onKernelLaunch.load(std::memory_order_acquire);
+                    if (onKernelLaunch != nullptr) {
+                        (*onKernelLaunch)(rtdata);
                     }
                     auto [time, call_tree_node] =
                         extra_prof::push_time(rtdata->symbolName, CallTreeNodeType::KERNEL_LAUNCH);
@@ -154,7 +155,8 @@ namespace cupti {
             }
             auto* kernel_overlap = overlap->findOrAddChild(
                 ke->start_event.node->name(), enum_cast<CallTreeNodeType>(ke->get_type()), CallTreeNodeFlags::OVERLAP);
-            kernel_overlap->per_thread_metrics[ke->start_event.thread].duration += duration;
+            kernel_overlap->per_thread_metrics[ke->start_event.thread].duration.fetch_add(duration,
+                                                                                          std::memory_order_acq_rel);
         }
     }
 
@@ -197,27 +199,32 @@ namespace cupti {
                         GLOBALS.gpu.OVERLAP, CallTreeNodeType::OVERLAP, CallTreeNodeFlags::OVERLAP);
                     auto& overlap_metrics = overlap->per_thread_metrics[se->start_event.thread];
                     if (se->get_type() == EventType::KERNEL) {
-                        overlap_metrics.duration += (total_MP_usage - se->resourceUsage) * duration / total_MP_usage;
+                        overlap_metrics.duration.fetch_add((total_MP_usage - se->resourceUsage) * duration /
+                                                               total_MP_usage,
+                                                           std::memory_order_acq_rel);
                         make_overlap(stack, se, overlap, duration);
                     } else if (se->get_type() == EventType::MEMCPY) {
                         if (stack_contains_kernels > 0) {
-                            overlap_metrics.duration += duration;
+                            overlap_metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
                             make_overlap(stack, se, overlap, duration);
                         } else if (stack_contains_memcpy > 1) {
-                            overlap_metrics.duration += duration * (stack_contains_memcpy - 1) / stack_contains_memcpy;
+                            overlap_metrics.duration.fetch_add(duration * (stack_contains_memcpy - 1) /
+                                                                   stack_contains_memcpy,
+                                                               std::memory_order_acq_rel);
                             make_overlap(stack, se, overlap, duration);
                         }
                     } else if (se->get_type() == EventType::MEMSET) {
                         if (stack_contains_kernels > 0 || stack_contains_memcpy > 0) {
-                            overlap_metrics.duration += duration;
+                            overlap_metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
                             make_overlap(stack, se, overlap, duration);
                         } else if (stack_contains_memset > 1) {
-                            overlap_metrics.duration += duration * (stack_contains_memset - 1) / stack_contains_memset;
+                            overlap_metrics.duration.fetch_add(duration * (stack_contains_memset - 1) /
+                                                               stack_contains_memset);
                             make_overlap(stack, se, overlap, duration);
                         }
                     } else if (se->get_type() == EventType::SYNCHRONIZE || se->get_type() == EventType::MEMMGMT) {
                         if (stack_contains_kernels > 0 || stack_contains_memcpy > 0 || stack_contains_memset > 0) {
-                            overlap_metrics.duration += duration;
+                            overlap_metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
                             make_overlap(stack, se, overlap, duration);
                         }
                     }

@@ -1,7 +1,6 @@
 #pragma once
 #include "../common_types.h"
 
-
 #include <iostream>
 #include <unistd.h>
 
