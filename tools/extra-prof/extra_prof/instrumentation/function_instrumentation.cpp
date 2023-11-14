@@ -34,7 +34,7 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void* this_fn, void* call_sit
     }
 #ifdef EXTRA_PROF_ENERGY
     else if (GLOBALS.main_thread == pthread_self()) {
-        cpu::energy::getEnergy(); // read counters to detect wraparound
+        cpu::energy::updateEnergy(); // read counters to detect wraparound
     }
 #endif
     GLOBALS.my_thread_state().depth++;

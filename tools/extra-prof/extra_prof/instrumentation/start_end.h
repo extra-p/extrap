@@ -136,7 +136,7 @@ void finalize_on_exit() {
 
 #ifdef EXTRA_PROF_ENERGY
             if (GLOBALS.main_thread == tid && GLOBALS.main_thread == pthread_self()) {
-                current_node->energy_cpu += cpu::energy::getEnergy() - GLOBALS.energy_stack_cpu.back();
+                current_node->energy_cpu += cpu::energy::getEnergy(time) - GLOBALS.energy_stack_cpu.back();
                 GLOBALS.energy_stack_cpu.pop_back();
 #ifdef EXTRA_PROF_GPU
                 GLOBALS.gpu.energySampler.addEntryTask(current_node, start, time);

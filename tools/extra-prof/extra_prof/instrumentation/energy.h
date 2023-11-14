@@ -1,4 +1,5 @@
 #include "../common_types.h"
+
 #include "../globals.h"
 #include <fcntl.h>
 #include <filesystem>
@@ -6,8 +7,13 @@
 #include <iostream>
 #include <unistd.h>
 
+namespace extra_prof {
+time_point get_timestamp();
+}
+
 namespace extra_prof::cpu::energy {
 #ifdef EXTRA_PROF_ENERGY
+
 void initializeEnergy() {
 
     const char* EXTRA_PROF_CPU_ENERGY_COUNTER_PATH = getenv("EXTRA_PROF_CPU_ENERGY_COUNTER_PATH");
@@ -63,12 +69,14 @@ void initializeEnergy() {
                                          " could not be interpreted.");
             }
 
+            GLOBALS.energyMinWraparoundValue = std::min(GLOBALS.energyMinWraparoundValue, max_value);
+
             GLOBALS.energyCounters.emplace_back(fd, max_value);
         }
     }
 }
 
-energy_uj getEnergy() {
+energy_uj getEnergy(time_point update_time) {
     energy_uj energy = 0;
     char buffer[48];
     for (auto& energyCounter : GLOBALS.energyCounters) {
@@ -93,7 +101,19 @@ energy_uj getEnergy() {
         energyCounter.previousValue = value;
         energy += energyCounter.totalValue;
     }
+    GLOBALS.energyLastUpdate = update_time;
     return energy;
+}
+
+void updateEnergy() {
+    time_point time = get_timestamp();
+
+    time_point threshold = GLOBALS.energyMinWraparoundValue; // = GLOBALS.energyMinWraparoundValue / (10^6 J/uj) / (10^3
+                                                             // J/s == 1000 W) * (10^9 ns/s)
+
+    if (GLOBALS.energyLastUpdate + threshold < time) {
+        getEnergy(time);
+    }
 }
 
 void finalizeEnergy() {
