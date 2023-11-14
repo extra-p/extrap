@@ -60,7 +60,7 @@ EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, Call
 
 #ifdef EXTRA_PROF_ENERGY
     if (GLOBALS.main_thread == pthread_self()) {
-        GLOBALS.energy_stack_cpu.push_back(cpu::energy::getEnergy(time));
+        GLOBALS.energy_stack_cpu.push_back(GLOBALS.cpuEnergy.getEnergy());
     }
 #endif
 
@@ -102,7 +102,7 @@ EP_INLINE time_point pop_time(char const* name) {
 
 #ifdef EXTRA_PROF_ENERGY
     if (GLOBALS.main_thread == pthread_self()) {
-        current_node->energy_cpu += cpu::energy::getEnergy(time) - GLOBALS.energy_stack_cpu.back();
+        current_node->energy_cpu += GLOBALS.cpuEnergy.getEnergy() - GLOBALS.energy_stack_cpu.back();
         GLOBALS.energy_stack_cpu.pop_back();
 #ifdef EXTRA_PROF_GPU
         GLOBALS.gpu.energySampler.addEntryTask(current_node, start, time);

@@ -43,7 +43,7 @@ void initialize() {
     GLOBALS.name_register.create_address_mapping(GLOBALS.output_dir);
 
 #ifdef EXTRA_PROF_ENERGY
-    cpu::energy::initializeEnergy();
+    GLOBALS.cpuEnergy.start();
 #endif
 #ifdef EXTRA_PROF_GPU
     cupti::init();
@@ -59,7 +59,7 @@ void finalize() {
     std::cerr << "EXTRA PROF: Postprocessing started" << std::endl;
 
 #ifdef EXTRA_PROF_ENERGY
-    cpu::energy::finalizeEnergy();
+    GLOBALS.cpuEnergy.stop();
 #endif
 #ifdef EXTRA_PROF_GPU
     cupti::finalize();
@@ -136,7 +136,7 @@ void finalize_on_exit() {
 
 #ifdef EXTRA_PROF_ENERGY
             if (GLOBALS.main_thread == tid && GLOBALS.main_thread == pthread_self()) {
-                current_node->energy_cpu += cpu::energy::getEnergy(time) - GLOBALS.energy_stack_cpu.back();
+                current_node->energy_cpu += GLOBALS.cpuEnergy.getEnergy() - GLOBALS.energy_stack_cpu.back();
                 GLOBALS.energy_stack_cpu.pop_back();
 #ifdef EXTRA_PROF_GPU
                 GLOBALS.gpu.energySampler.addEntryTask(current_node, start, time);

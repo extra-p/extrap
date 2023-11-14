@@ -1,4 +1,5 @@
 #include "../calltree_node.cpp"
+#include "energy.cpp"
 #ifdef EXTRA_PROF_GPU
 #ifdef EXTRA_PROF_ENERGY
 #include "gpu_energy.cpp"

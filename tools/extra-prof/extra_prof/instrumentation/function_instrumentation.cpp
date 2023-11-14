@@ -32,11 +32,6 @@ EXTRA_PROF_SO_EXPORT void __cyg_profile_func_enter(void* this_fn, void* call_sit
     if (GLOBALS.my_thread_state().depth < GLOBALS.MAX_DEPTH) {
         push_time(this_fn);
     }
-#ifdef EXTRA_PROF_ENERGY
-    else if (GLOBALS.main_thread == pthread_self()) {
-        cpu::energy::updateEnergy(); // read counters to detect wraparound
-    }
-#endif
     GLOBALS.my_thread_state().depth++;
 }
 

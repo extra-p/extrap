@@ -1,126 +1,37 @@
+#pragma once
 #include "../common_types.h"
 
-#include "../globals.h"
-#include <fcntl.h>
-#include <filesystem>
-#include <fstream>
+
 #include <iostream>
 #include <unistd.h>
-
-namespace extra_prof {
-time_point get_timestamp();
-}
 
 namespace extra_prof::cpu::energy {
 #ifdef EXTRA_PROF_ENERGY
 
-void initializeEnergy() {
+class EnergyMeasurementSystem {
+private:
+    std::atomic<energy_uj> energy = 0;
+    pthread_t samplingThread;
+    std::atomic<bool> sampling = true;
+    std::vector<EnergyCounter> energyCounters;
 
-    const char* EXTRA_PROF_CPU_ENERGY_COUNTER_PATH = getenv("EXTRA_PROF_CPU_ENERGY_COUNTER_PATH");
-    if (EXTRA_PROF_CPU_ENERGY_COUNTER_PATH != nullptr) {
-        std::cerr << "EXTRA PROF: CPU ENERGY COUNTER PATH: " << EXTRA_PROF_CPU_ENERGY_COUNTER_PATH << '\n';
-        int fd = open(EXTRA_PROF_CPU_ENERGY_COUNTER_PATH, O_RDONLY | O_CLOEXEC);
-        if (fd == -1) {
-            int errsv = errno;
-            const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") + EXTRA_PROF_CPU_ENERGY_COUNTER_PATH +
-                                     " " + error);
+    static void* samplingThreadFunc(void* ptr);
+
+public:
+    void start();
+
+    void stop() {
+        sampling = false;
+        void* thread_return;
+        pthread_join(samplingThread, &thread_return);
+        for (auto& energyCounter : energyCounters) {
+            close(energyCounter.fileDescriptor);
         }
-        GLOBALS.energyCounters.emplace_back(fd, std::numeric_limits<energy_uj>::max());
+        energyCounters.clear();
     }
 
-    const std::filesystem::path rapl_folder{"/sys/class/powercap/intel-rapl"};
-    for (auto const& dir_entry : std::filesystem::directory_iterator{rapl_folder}) {
-        containers::string dir_name = dir_entry.path().filename().string();
-        if (dir_name.rfind("intel-rapl:", 0) == 0) { // pos=0 limits the search to the prefix
+    energy_uj getEnergy() { return energy.load(std::memory_order_relaxed); }
+};
 
-            auto path = dir_entry.path() / "energy_uj";
-            int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
-
-            if (fd == -1) {
-                int errsv = errno;
-                const char* error = strerror(errsv);
-                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") + path.string() + " " + error);
-            }
-
-            auto max_path = dir_entry.path() / "max_energy_range_uj";
-            int max_fd = open(max_path.c_str(), O_RDONLY | O_CLOEXEC);
-
-            if (max_fd == -1) {
-                int errsv = errno;
-                const char* error = strerror(errsv);
-                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") +
-                                         (dir_entry.path() / "max_energy_range_uj ").string() + " " + error);
-            }
-            char buffer[48];
-            ssize_t read_count = read(max_fd, buffer, sizeof(buffer));
-            if (read_count == -1) {
-                int errsv = errno;
-                const char* error = strerror(errsv);
-                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") +
-                                         (dir_entry.path() / "max_energy_range_uj ").string() + " " + error);
-            }
-            buffer[read_count] = 0;
-            close(max_fd);
-            auto max_value = strtoull(buffer, nullptr, 10);
-            if (max_value == 0) {
-                throw std::runtime_error(containers::string("EXTRA PROF: ERROR: ") +
-                                         (dir_entry.path() / "max_energy_range_uj ").string() +
-                                         " could not be interpreted.");
-            }
-
-            GLOBALS.energyMinWraparoundValue = std::min(GLOBALS.energyMinWraparoundValue, max_value);
-
-            GLOBALS.energyCounters.emplace_back(fd, max_value);
-        }
-    }
-}
-
-energy_uj getEnergy(time_point update_time) {
-    energy_uj energy = 0;
-    char buffer[48];
-    for (auto& energyCounter : GLOBALS.energyCounters) {
-
-        ssize_t read_count = pread(energyCounter.fileDescriptor, buffer, sizeof(buffer), 0);
-        if (read_count == -1) {
-            int errsv = errno;
-            const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("EXTRA PROF: ERROR: Reading energy counter ") + error);
-        }
-        buffer[read_count] = 0;
-        auto value = strtoull(buffer, nullptr, 10);
-        if (value == 0) {
-            throw std::runtime_error("EXTRA PROF: ERROR: Energy counter could not be interpreted.");
-        }
-
-        if (value < energyCounter.previousValue) {
-            energyCounter.totalValue += energyCounter.maxValue - energyCounter.previousValue;
-            energyCounter.previousValue = 0;
-        }
-        energyCounter.totalValue += value - energyCounter.previousValue;
-        energyCounter.previousValue = value;
-        energy += energyCounter.totalValue;
-    }
-    GLOBALS.energyLastUpdate = update_time;
-    return energy;
-}
-
-void updateEnergy() {
-    time_point time = get_timestamp();
-
-    time_point threshold = GLOBALS.energyMinWraparoundValue; // = GLOBALS.energyMinWraparoundValue / (10^6 J/uj) / (10^3
-                                                             // J/s == 1000 W) * (10^9 ns/s)
-
-    if (GLOBALS.energyLastUpdate + threshold < time) {
-        getEnergy(time);
-    }
-}
-
-void finalizeEnergy() {
-    for (auto& energyCounter : GLOBALS.energyCounters) {
-        close(energyCounter.fileDescriptor);
-    }
-    GLOBALS.energyCounters.clear();
-}
 #endif
 } // namespace extra_prof::cpu::energy

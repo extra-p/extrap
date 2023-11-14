@@ -8,6 +8,7 @@
 #endif
 #include "containers/string.h"
 #include "globals_thread.h"
+#include "instrumentation/energy.h"
 #include "memory_pool.h"
 #include <atomic>
 #include <deque>
@@ -84,6 +85,7 @@ struct GlobalState {
     std::vector<EnergyCounter> energyCounters;
     time_point energyLastUpdate = 0;
     energy_uj energyMinWraparoundValue = std::numeric_limits<energy_uj>::max();
+    cpu::energy::EnergyMeasurementSystem cpuEnergy;
 #endif
 
     GlobalState();
