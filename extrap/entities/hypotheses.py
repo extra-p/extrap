@@ -8,6 +8,7 @@
 from typing import Sequence
 
 import numpy
+import math
 from marshmallow import fields
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
@@ -23,6 +24,7 @@ class Hypothesis:
         self.function: Function = function
         self._RSS = 0
         self._rRSS = 0
+        self._nRSS = 0
         self._SMAPE = 0
         self._AR2 = 0
         self._RE = 0
@@ -37,6 +39,15 @@ class Hypothesis:
         if not self._costs_are_calculated:
             raise RuntimeError("Costs are not calculated.")
         return self._RSS
+    
+    @property
+    def nRSS(self):
+        """
+        Return the nRSS.
+        """
+        if not self._costs_are_calculated:
+            raise RuntimeError("Costs are not calculated.")
+        return self._nRSS
 
     @property
     def rRSS(self):
@@ -139,6 +150,7 @@ class Hypothesis:
 MAX_HYPOTHESIS = Hypothesis(Function(), False)
 MAX_HYPOTHESIS._RSS = float('inf')
 MAX_HYPOTHESIS._rRSS = float('inf')
+MAX_HYPOTHESIS._nRSS = float('inf')
 MAX_HYPOTHESIS._SMAPE = float('inf')
 MAX_HYPOTHESIS._AR2 = float('inf')
 MAX_HYPOTHESIS._RE = float('inf')
@@ -178,12 +190,14 @@ class ConstantHypothesis(Hypothesis):
         """
         self._AR2 = 1  # TODO: should this be calculated?
         smape = 0
+        actuals = []
         for measurement in measurements:
             predicted = self.function.constant_coefficient
             if self._use_median:
                 actual = measurement.median
             else:
                 actual = measurement.mean
+            actuals.append(actual)
             
             difference = predicted - actual
             self._RSS += difference * difference
@@ -200,6 +214,7 @@ class ConstantHypothesis(Hypothesis):
                 smape += abs(difference) / abssum * 2
 
         self._SMAPE = smape / len(measurements) * 100
+        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
         self._costs_are_calculated = True
 
 
@@ -230,6 +245,8 @@ class SingleParameterHypothesis(Hypothesis):
         
         difference = predicted - actual
         self._RSS += difference * difference
+        self._nRSS = math.sqrt(self._RSS) / numpy.mean(numpy.array([m.value(self._use_median) for m in training_measurements]))
+
         if actual != 0:
             relative_difference = difference / actual
             self._RE += numpy.abs(relative_difference) / (len(training_measurements) + 1)
@@ -248,6 +265,7 @@ class SingleParameterHypothesis(Hypothesis):
         
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
+        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actual)
 
         relativeDifference = difference / actual
         self._rRSS = numpy.sum(relativeDifference * relativeDifference)
