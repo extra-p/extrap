@@ -347,6 +347,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         for m in models:
             #print("nRSS:",m._nRSS)
             nRSS_values.append(abs(m._nRSS))
+            #print(str(m.function))
             
         print(nRSS_values)
         theta = max(nRSS_values)
@@ -357,16 +358,86 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         epsilon_values = []
         for i in range(len(subsets)):
-            if i == len(subsets)-1:
+            if i == 0:
                 epsilon_values.append(math.nan)
             else:
-                epsilon_values.append(nRSS_values[i+1]/(nRSS_values[i]+0.000000001))
+                epsilon_values.append(nRSS_values[i]/(nRSS_values[i-1]+0.000000001))
 
         print("DEBUG epsilon_values:",epsilon_values)
 
-        if max(epsilon_values) > 4:
-            print("data segmented")
-        else:
-            print("data not segmented")
+        pattern = ""
+        subset_segmented = False
+        for i in range(len(nRSS_values)):
+            nRSS = nRSS_values[i]
+            epsilon = epsilon_values[i]
+            if nRSS >= 0.1:
+                pattern += "1"
+            elif epsilon > 4:
+                subset_segmented = True
+                pattern += "1"
+            else:
+                subset_segmented = False
+                pattern += "0"
 
-        return Model(best_hypothesis)
+        print("DEBUG pattern:",pattern)
+
+        import re
+        index = [m.start() for m in re.finditer(r"1",pattern)][2]
+        print("DEBUG index:",index)
+        ones = 0
+        for c in pattern:
+            if c == "1":
+                ones += 1
+        print("DEBUG ones:",ones)
+        change_point = None
+        if ones == 3:
+            subset = subsets[index-1]
+            change_point = subset[2]
+        else:
+            subset = subsets[index-1]
+            change_point = [subset[2], subset[3]]
+
+        print("DEBUG change_point:",change_point)
+
+        models = []
+
+        # if the change point is between two points of the subsets
+        if change_point is list:
+            pass
+
+        # if the change point is a common point in both sets
+        else:
+            index = measurements.index(change_point)
+            print("DEBUG index:",index)
+            subsets = []
+            subsets.append(measurements[:index])
+            subsets.append(measurements[index:])
+            #print("DEBUG subset_one:",subset_one)
+            #print("DEBUG subset_two:",subset_two)
+            
+            for subset in subsets:
+                # create a constant model
+                constant_hypothesis, constant_cost = self.create_constant_model(subset)
+                logging.debug("Constant model: " + constant_hypothesis.function.to_string())
+                logging.debug("Constant model cost: " + str(constant_cost))
+
+                # use constant model when cost is 0
+                if constant_cost == 0:
+                    logging.debug("Using constant model.")
+                    models.append(Model(constant_hypothesis))
+
+                # otherwise start searching for the best hypothesis based on the PMNF
+                else:
+                    logging.debug("Searching for a single-parameter model.")
+                    # search for the best single parameter hypothesis
+                    hypotheses_generator = self.build_hypotheses(subset)
+                    best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, subset,
+                                                                constant_hypothesis)
+                    models.append(Model(best_hypothesis))
+
+            print("DEBUG final models:",models)
+
+
+        #TODO: add code for normal homogeneous model case, only returns one model
+
+        return (models, change_point)

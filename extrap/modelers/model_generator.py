@@ -77,14 +77,38 @@ class ModelGenerator:
         return result_modeler
 
     def model_all(self, progress_bar=DUMMY_PROGRESS):
-        models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
-        self.models = {
-            k: m for k, m in zip(self.experiment.measurements.keys(), models)
-        }
-        for (callpath, metric), model in self.models.items():
-            model.callpath = callpath
-            model.metric = metric
-            model.measurements = self.experiment.measurements[(callpath, metric)]
+        if self._modeler.NAME.upper() == "SEGMENTED":
+            results = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
+            models = []
+            change_points = []
+            for result in results:
+                model = result[0]
+                models.append(result[0])
+                change_points.append(result[1])
+            self.models = {
+                k: m for k, m in zip(self.experiment.measurements.keys(), models)
+            }
+            counter = 0
+            for (callpath, metric), model in self.models.items():
+                for i in range(len(model)):
+                    model[i].callpath = callpath
+                    model[i].metric = metric
+                    index = self.experiment.measurements[(callpath, metric)].index(change_points[counter])
+                    if i == 0:
+                        model[i].measurements = self.experiment.measurements[(callpath, metric)][:index]
+                    else:
+                        model[i].measurements = self.experiment.measurements[(callpath, metric)][index:]
+                counter += 1
+        else:
+            models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
+            self.models = {
+                k: m for k, m in zip(self.experiment.measurements.keys(), models)
+            }
+            for (callpath, metric), model in self.models.items():
+                model.callpath = callpath
+                model.metric = metric
+                model.measurements = self.experiment.measurements[(callpath, metric)]
+                
         # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
 
