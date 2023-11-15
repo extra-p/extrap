@@ -41,9 +41,9 @@ before_script:
   artifacts:
     when: always
     paths:
-      - junit/test-results.xml
+      - tests/junit/test-results.xml
     reports:
-      junit: junit/test-results.xml
+      junit: tests/junit/test-results.xml
 
 test-3.8:
     extends: ".test"
