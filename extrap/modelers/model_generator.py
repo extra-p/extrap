@@ -98,6 +98,7 @@ class ModelGenerator:
                         model[i].measurements = self.experiment.measurements[(callpath, metric)][:index]
                     else:
                         model[i].measurements = self.experiment.measurements[(callpath, metric)][index:]
+                    model[i].changing_point = change_points[counter]
                 counter += 1
         else:
             models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
