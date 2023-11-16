@@ -235,6 +235,7 @@ def test1(arguments):
     g = "30+p"
     changing_point = 6
     experiment = create_experiment(g, f, parameter_values, changing_point)
+    write_output(experiment, "tests/data/text/one_parameter_segmented_1.txt")
     default_function_string, default_function_string_latex = get_default_model(experiment, arguments)
     experiment2 = create_experiment(g, f, parameter_values, changing_point)
     functions, latex_functions, changing_points = get_segmented_model(experiment2, arguments)
@@ -246,6 +247,7 @@ def test2(arguments):
     g = "p**2"
     changing_point = 22
     experiment = create_experiment(g, f, parameter_values, changing_point)
+    write_output(experiment, "tests/data/text/one_parameter_segmented_2.txt")
     default_function_string, default_function_string_latex = get_default_model(experiment, arguments)
     experiment2 = create_experiment(g, f, parameter_values, changing_point)
     functions, latex_functions, changing_points = get_segmented_model(experiment2, arguments)
@@ -257,11 +259,28 @@ def test3(arguments):
     g = "p**2*log2(p)**1"
     changing_point = 50
     experiment = create_experiment(g, f, parameter_values, changing_point)
+    write_output(experiment, "tests/data/text/one_parameter_segmented_3.txt")
     default_function_string, default_function_string_latex = get_default_model(experiment, arguments)
     experiment2 = create_experiment(g, f, parameter_values, changing_point)
     functions, latex_functions, changing_points = get_segmented_model(experiment2, arguments)
     plot(parameter_values, changing_point, g, f, default_function_string, functions, latex_functions, changing_points, default_function_string_latex)
 
+def write_output(experiment, filename):
+    f = open(filename, "w")
+    line = "PARAMETER "+str(experiment.parameters[0])+"\n\n"
+    f.write(line)
+    for cord in experiment.coordinates:
+        line = "POINTS ( "+str(cord._values[0])+" )\n"
+        f.write(line)
+    f.write("\nREGION "+str(experiment.callpaths[0])+"\n")
+    f.write("METRIC "+str(experiment.metrics[0])+"\n")
+    for measure in experiment.measurements[(experiment.callpaths[0], experiment.metrics[0])]:
+        line = "DATA "
+        for i in range(5):
+            line += str(measure.mean) + " "
+        line += "\n"
+        f.write(line)
+    f.close()
 
 def main(args=None, prog=None):
     # argparse
