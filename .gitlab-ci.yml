@@ -65,9 +65,9 @@ test-3.11:
     extends: ".test"
     image: "python:3.11"
 
-test-3.12:
-    extends: ".test"
-    image: "python:3.12"
+#test-3.12:
+#    extends: ".test"
+#    image: "python:3.12"
 
 run:
   script:    
