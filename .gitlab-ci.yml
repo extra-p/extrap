@@ -37,11 +37,12 @@ before_script:
     - pip install pytest pytest-cov # flake8
 #    - flake8 --max-line-length=120 extrap tests setup.py
     - cd tests
-    - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml
+    - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
   artifacts:
     when: always
     paths:
       - tests/junit/test-results.xml
+      - tests/coverage/*
     reports:
       junit: tests/junit/test-results.xml
       coverage_report:
@@ -63,6 +64,10 @@ test-3.10:
 test-3.11:
     extends: ".test"
     image: "python:3.11"
+
+test-3.12:
+    extends: ".test"
+    image: "python:3.12"
 
 run:
   script:    
