@@ -33,7 +33,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
     """
 
     NAME = 'Segmented'
-    DESCRIPTION = "Modeler for single-parameter models; traverses the search-space of all defined hypotheses. Able to detect segmented behavior in measurements."
+    DESCRIPTION = "Modeler for single-parameter models; traverses the search-space of all defined hypotheses. Able to detect segmented behavior in measurements. When segmented data is found the modeler will return two models."
 
     allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms',
                                           on_change=lambda self, v: self._exponents_changed())
@@ -53,7 +53,6 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                                                    'If set adds neagtive exponents for strong scaling.',
                                                    name='Negative exponents',
                                                    on_change=lambda self, v: self._exponents_changed())
-    interval_size = modeler_options.add(5, int, 'If set sets the interval size for the search of segmented behavior in the measurements.', name='Interval size')
     modeler_options.group('Exponents', poly_exponents, log_exponents, retain_default_exponents,
                           force_combination_exponents, allow_negative_exponents)
 

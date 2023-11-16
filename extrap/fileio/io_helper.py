@@ -16,6 +16,7 @@ from extrap.entities.calltree import Node
 from extrap.entities.measurement import Measurement
 from extrap.util.exceptions import InvalidExperimentError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.entities.model import Model
 
 if TYPE_CHECKING:
     from extrap.entities.experiment import Experiment
@@ -68,10 +69,21 @@ def format_functions(experiment):
     models = modeler.models
     text = ""
     for model in models.values():
-        hypothesis = model.hypothesis
-        function = hypothesis.function
-        function_string = function.to_string(*experiment.parameters)
-        text += function_string + "\n"
+        if modeler._modeler.NAME.upper() == "SEGMENTED":
+            if isinstance(model, Model):
+                function_string = model.hypothesis.function.to_string(*experiment.parameters)
+                text += function_string + "\n"
+            else:
+                counter = 1
+                for m in model:
+                    function_string = m.hypothesis.function.to_string(*experiment.parameters)
+                    text += "Model " +str(counter)+ ": " + function_string + "\n"
+                    counter += 1
+        else:
+            hypothesis = model.hypothesis
+            function = hypothesis.function
+            function_string = function.to_string(*experiment.parameters)
+            text += function_string + "\n"
     return text
 
 
@@ -83,10 +95,21 @@ def format_latex_functions(experiment):
     models = modeler.models
     text = ""
     for model in models.values():
-        hypothesis = model.hypothesis
-        function = hypothesis.function
-        function_string = function.to_latex_string(*experiment.parameters)
-        text += function_string + "\n"
+        if modeler._modeler.NAME.upper() == "SEGMENTED":
+            if isinstance(model, Model):
+                function_string = model.hypothesis.function.to_latex_string(*experiment.parameters)
+                text += function_string + "\n"
+            else:
+                counter = 1
+                for m in model:
+                    function_string = m.hypothesis.function.to_latex_string(*experiment.parameters)
+                    text += "Model " +str(counter)+ ": " + function_string + "\n"
+                    counter += 1
+        else:
+            hypothesis = model.hypothesis
+            function = hypothesis.function
+            function_string = function.to_latex_string(*experiment.parameters)
+            text += function_string + "\n"
     return text
 
 
@@ -130,18 +153,60 @@ def format_all(experiment):
             except KeyError as e:
                 model = None
             if model != None:
-                hypothesis = model.hypothesis
-                function = hypothesis.function
-                rss = hypothesis.RSS
-                ar2 = hypothesis.AR2
-                function_string = function.to_string(*experiment.parameters)
+                if modeler._modeler.NAME.upper() == "SEGMENTED":
+                    hypotheses = []
+                    function_strings = []
+                    rss_values = []
+                    ar2_values = []
+                    if isinstance(model, Model):
+                        hypotheses.append(model.hypothesis)
+                        function_strings.append(model.hypothesis.function.to_string(*experiment.parameters))
+                        rss_values.append(model.hypothesis.RSS)
+                        ar2_values.append(model.hypothesis.AR2)
+                    else:
+                        for m in model:
+                            hypotheses.append(m.hypothesis)
+                            function_strings.append(m.hypothesis.function.to_string(*experiment.parameters))
+                            rss_values.append(m.hypothesis.RSS)
+                            ar2_values.append(m.hypothesis.AR2)
+                else:
+                    hypothesis = model.hypothesis
+                    function = hypothesis.function
+                    function_string = function.to_string(*experiment.parameters)
+                    rss = hypothesis.RSS
+                    ar2 = hypothesis.AR2
             else:
                 rss = 0
                 ar2 = 0
                 function_string = "None"
-            text += "\t\tModel: " + function_string + "\n"
-            text += "\t\tRSS: {:.2E}\n".format(rss)
-            text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
+            if modeler._modeler.NAME.upper() == "SEGMENTED":
+                if isinstance(model, Model):
+                    if model.changing_point is None:
+                        text += "\t\tModel: " + function_strings[0] + "\n"
+                        text += "\t\tRSS: {:.2E}\n".format(rss_values[0])
+                        text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2_values[0])
+                else:
+                    if isinstance(model[0].changing_point, Measurement):
+                        param_value = model[0].changing_point.coordinate._values[0]
+                        text += "\t\tModel 1: " + function_strings[0] + " for "+str(experiment.parameters[0])+"<="+str(param_value)+"\n"
+                        text += "\t\tModel 2: " + function_strings[1] + " for "+str(experiment.parameters[0])+">="+str(param_value)+"\n"
+                        text += "\t\tRSS Model 1: {:.2E}\n".format(rss_values[0])
+                        text += "\t\tAdjusted R^2 Model 1: {:.2E}\n".format(ar2_values[0])
+                        text += "\t\tRSS Model 2: {:.2E}\n".format(rss_values[1])
+                        text += "\t\tAdjusted R^2 Model 2: {:.2E}\n".format(ar2_values[1])
+                    else:
+                        param_value_1 = model[0].changing_point[0].coordinate._values[0]
+                        param_value_2 = model[0].changing_point[1].coordinate._values[0]
+                        text += "\t\tModel 1: " + function_strings[0] + " for "+str(experiment.parameters[0])+"<="+str(param_value_1)+"\n"
+                        text += "\t\tModel 2: " + function_strings[1] + " for "+str(experiment.parameters[0])+">="+str(param_value_2)+"\n"
+                        text += "\t\tRSS Model 1: {:.2E}\n".format(rss_values[0])
+                        text += "\t\tAdjusted R^2 Model 1: {:.2E}\n".format(ar2_values[0])
+                        text += "\t\tRSS Model 2: {:.2E}\n".format(rss_values[1])
+                        text += "\t\tAdjusted R^2 Model 2: {:.2E}\n".format(ar2_values[1])
+            else:
+                text += "\t\tModel: " + function_string + "\n"
+                text += "\t\tRSS: {:.2E}\n".format(rss)
+                text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
     return text
 
 
@@ -171,7 +236,7 @@ def save_output(text, path):
     """
     This method saves the output of the modeler, i.e. it's results to a text file at the given path.
     """
-    with open(path, "w+") as out:
+    with open(path, "w+", encoding="utf-8") as out:
         out.write(text)
 
 
