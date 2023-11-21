@@ -7,6 +7,7 @@
 
 import unittest
 
+from extrap.entities.metric import Metric
 from extrap.fileio.file_reader.extra_prof import ExtraProf2Reader
 
 
@@ -22,6 +23,13 @@ class TestExtraProfFileLoader(unittest.TestCase):
 
     def test_load_basic4(self):
         experiment = ExtraProf2Reader().read_experiment('data/extra_prof/test4/')
+
+    def test_load_with_energy(self):
+        experiment = ExtraProf2Reader().read_experiment('data/extra_prof/test_with_energy/')
+        self.assertIn(Metric('energy_cpu'), experiment.metrics)
+        self.assertIn(Metric('energy_gpu'), experiment.metrics)
+        for key, value in experiment.measurements.items():
+            self.assertGreaterEqual(value[0].mean, 0)
 
 
 if __name__ == '__main__':

@@ -39,6 +39,7 @@ from extrap.util.warnings import DetailedWarning
 METRIC_TIME = Metric('time')
 METRIC_VISITS = Metric('visits')
 METRIC_BYTES = Metric('bytes')
+METRIC_ENERGY = Metric('energy')
 
 
 class CallTreeNodeType(Enum):
@@ -69,6 +70,7 @@ class _ExtraProfInputNode(Node):
         self.visits = np.zeros(num_values)
         self.disable_exclusive_conversion = False
         self.gpu_metrics: dict[Metric, list[numbers.Number]] = defaultdict(list)
+        self.additional_metrics: dict[Metric, np.ndarray] = defaultdict(lambda: np.zeros(num_values))
 
 
 class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader):
@@ -101,6 +103,7 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
         call_tree = None
 
         all_gpu_metrics = set()
+        all_additional_metrics = set()
 
         reordered_files = sorted(zip(files, parameter_values), key=itemgetter(1))
         for parameter_value, point_group in groupby(reordered_files, key=itemgetter(1)):
@@ -121,11 +124,16 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
                             all_gpu_metrics.update(gpu_metrics)
                         else:
                             gpu_metrics = []
+                        if len(profile_data) >= 5:
+                            additional_metrics = [self.convert_to_metric(m) for m in profile_data[4]]
+                            all_additional_metrics.update(additional_metrics)
+                        else:
+                            additional_metrics = []
                     except ValueError as e:
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.") from e
                     if magic_string != "EXTRA PROF":
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.")
-                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, i)
+                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, additional_metrics, i)
             for node in call_tree.iterate_nodes():
                 node: _ExtraProfInputNode
                 progress_bar.update(0)
@@ -133,7 +141,7 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
                 child_durations = np.sum([c.duration for c in node.childs if not c.disable_exclusive_conversion],
                                          axis=0)
 
-                if np.any(child_durations > node.duration):
+                if np.sum(child_durations) > np.sum(node.duration):
                     logging.info(f"Extra-Prof overflow {node.path} {(node.duration - child_durations) / 10 ** 9}")
                     duration = node.duration / 10 ** 9
                     node.childs = []
@@ -148,12 +156,36 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
                 for metric, values in node.gpu_metrics.items():
                     experiment.add_measurement(Measurement(coordinate, node.path, metric, values))
 
+                for metric, values in node.additional_metrics.items():
+                    child_values = np.sum(
+                        [c.additional_metrics[metric] for c in node.childs if not c.disable_exclusive_conversion],
+                        axis=0)
+
+                    if np.sum(child_values) > np.sum(values):
+                        logging.info(f"Extra-Prof overflow {node.path} {values - child_values}")
+                        exclusive_values = values
+                    else:
+                        exclusive_values = values - child_values
+                    experiment.add_measurement(Measurement(coordinate, node.path, metric, exclusive_values))
+
+                # if np.any(node.energy_cpu != 0):
+                #     child_energy_cpu = np.sum([c.energy_cpu for c in node.childs if not c.disable_exclusive_conversion],
+                #                               axis=0)
+                #     if np.any(child_energy_cpu > node.energy_cpu):
+                #         logging.info(f"Extra-Prof overflow {node.path} {(node.energy_cpu - child_energy_cpu)}")
+                #         energy_cpu = node.energy_cpu
+                #         node.childs = []
+                #     else:
+                #         energy_cpu = (node.energy_cpu - child_energy_cpu)
+                #     experiment.add_measurement(Measurement(coordinate, node.path, METRIC_ENERGY, energy_cpu))
+
                 del node.duration
                 del node.bytes
                 del node.visits
                 del node.gpu_metrics
 
-        experiment.metrics = [METRIC_VISITS, METRIC_TIME, METRIC_BYTES] + list(all_gpu_metrics)
+        experiment.metrics = [METRIC_VISITS, METRIC_TIME, METRIC_BYTES] + list(all_gpu_metrics) + list(
+            all_additional_metrics)
         experiment.callpaths = [node.path for node in call_tree.iterate_nodes()]
         experiment.call_tree = call_tree
         errors = io_helper.validate_experiment(experiment, progress_bar, collect_and_return=True)
@@ -202,7 +234,7 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
             pass
         return name.replace('->', '- >')
 
-    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, i):
+    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, additional_metrics, i):
         def _read_calltree_node(parent_node: _ExtraProfInputNode, ep_node):
             name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
             n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
@@ -230,7 +262,15 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
             if gpu_metrics and len(ep_node) >= 8:
                 for metric, value in zip(gpu_metrics, ep_node[7]):
                     node.gpu_metrics[metric].append(value)
-            elif isinstance(m_duration, list):
+            if additional_metrics and len(ep_node) >= 9:
+                for metric, value in zip(additional_metrics, ep_node[8]):
+                    if self.scaling_type == ScalingType.WEAK_PARALLEL:
+                        node.additional_metrics[metric][i] += np.mean(value)
+                    elif self.scaling_type == ScalingType.STRONG:
+                        node.additional_metrics[metric][i] += np.sum(value)
+                    else:
+                        raise ValueError(f"Unsupported scaling type: {self.scaling_type}")
+            if isinstance(m_duration, list):
                 if self.scaling_type == ScalingType.WEAK_PARALLEL:
                     node.duration[i] += np.mean(m_duration)
                     node.bytes[i] += np.mean(m_bytes)
@@ -255,3 +295,7 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
         assert not rm_bytes
         for r_child in r_childs:
             _read_calltree_node(call_tree, r_child)
+
+    @staticmethod
+    def convert_to_metric(m: (str, int, ...)):
+        return Metric(m[0])
