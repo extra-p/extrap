@@ -343,12 +343,12 @@ def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS, col
                 raise InvalidExperimentError(error_msg)
 
     for k, measurements in progress_bar(experiment.measurements.items(), len(experiment.measurements)):
-        if not len(measurements) == length_coordinates or k[0].lookup_tag('validation__ignore__num_measurements',
-                                                                          False):
+        if not (len(measurements) == length_coordinates or k[0].lookup_tag('validation__ignore__num_measurements',
+                                                                           False)):
             error_msg = (f'The number of measurements ({len(measurements)}) for {k} does not match the number of '
                          f'coordinates ({length_coordinates}) for the following coordinates: ')
             error_msg += ','.join(
-                [c.as_tuple() for c in experiment.coordinates if c not in (m.coordinate for m in measurements)])
+                [str(c.as_tuple()) for c in experiment.coordinates if c not in (m.coordinate for m in measurements)])
             if collect_and_return:
                 errors.append(error_msg)
             else:
