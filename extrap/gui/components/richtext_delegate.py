@@ -7,7 +7,7 @@
 
 from PySide6.QtCore import QModelIndex, QSize, QRectF
 from PySide6.QtGui import QTextDocument, QTextOption, QPalette, QAbstractTextDocumentLayout, \
-    QFont, QFontMetrics
+    QFont, QFontMetrics, QPainter
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QApplication, QStyle
 
 
@@ -48,6 +48,7 @@ class RichTextDelegate(QStyledItemDelegate):
         renderer.adjustSize()
 
         option.text = ''
+        painter.setRenderHint(QPainter.TextAntialiasing)
 
         style = QApplication.style()
         if option.widget:
@@ -72,6 +73,11 @@ class RichTextDelegate(QStyledItemDelegate):
             ellipsis_margin = 1
 
             painter.save()
+            if QStyle.State_Selected in option.state:
+                painter.setPen(option.palette.color(QPalette.HighlightedText))
+            else:
+                painter.setPen(option.palette.color(QPalette.Text))
+
             painter.drawText(QRectF(textRect.width() - ellipsis_width, 0, ellipsis_width, textRect.height()), ellipsis)
             painter.restore()
 
