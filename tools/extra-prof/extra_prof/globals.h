@@ -15,20 +15,20 @@
 #include <shared_mutex>
 #include <string>
 
-namespace ep {
-template <typename mutex>
-class lock_guard : public std::lock_guard<mutex> {
-    const char* m_name;
+// namespace ep {
+// template <typename mutex>
+// class lock_guard : public std::lock_guard<mutex> {
+//     const char* m_name;
 
-public:
-    lock_guard(mutex& mu) : std::lock_guard<mutex>(mu) {}
-    lock_guard(mutex& mu, const char* name) : std::lock_guard<mutex>(mu), m_name(name) {
-        std::cout << "LOCK " << m_name << std::endl;
-    }
+// public:
+//     lock_guard(mutex& mu) : std::lock_guard<mutex>(mu) {}
+//     lock_guard(mutex& mu, const char* name) : std::lock_guard<mutex>(mu), m_name(name) {
+//         std::cout << "LOCK " << m_name << std::endl;
+//     }
 
-    ~lock_guard() { std::cout << "UNLOCK " << m_name << std::endl; }
-};
-} // namespace ep
+//     ~lock_guard() { std::cout << "UNLOCK " << m_name << std::endl; }
+// };
+// } // namespace ep
 // #define std::lock_guard ep::lockguard
 
 #ifdef EXTRA_PROF_EVENT_TRACE

@@ -58,7 +58,8 @@ private:
     static void* fileBasedSamplingThreadFunc(void* ptr);
 
     void processEntries(unsigned long long lastSeen_us, unsigned long long utilLastSeen_us);
-    void processEntry(EntryTask* front);
+    energy_uj processEntry(EntryTask* front);
+    void finalizeProcessingEntries();
 
     int loadEnergySamples(nvmlDevice_t device, unsigned int maxSampleCount, nvmlSample_t* samples,
                           unsigned long long& lastSeenTimeStamp, energy_uj& energy);

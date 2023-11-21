@@ -86,17 +86,16 @@ void* EnergySampler::samplingThreadFunc(void* ptr) {
         auto util_num_samples =
             self->loadUtilizationSamples(device, maxUtilSampleCount, utilSamples, utilLastSeenTimeStamp);
         if (num_samples == 0 && util_num_samples == 0) {
-            self->processEntries(lastSeenTimeStamp, utilLastSeenTimeStamp);
             if (!sampling.load(std::memory_order_relaxed)) {
-                return 0;
+                break;
             }
+            self->processEntries(lastSeenTimeStamp, utilLastSeenTimeStamp);
             nanosleep(&ts, NULL);
         } else {
             NVML_CALL(result);
             auto start_idx = energy_samples.size();
             if (!sampling.load(std::memory_order_relaxed)) {
-                self->processEntries(lastSeenTimeStamp, utilLastSeenTimeStamp);
-                return 0;
+                break;
             }
             if (num_samples + sampleCountOffset < maxSampleCount) {
                 self->processEntries(lastSeenTimeStamp, utilLastSeenTimeStamp);
@@ -104,6 +103,27 @@ void* EnergySampler::samplingThreadFunc(void* ptr) {
             }
         }
     }
+    nanosleep(&ts, NULL);
+    self->loadEnergySamples(device, maxSampleCount, samples, lastSeenTimeStamp, energy);
+    self->loadUtilizationSamples(device, maxUtilSampleCount, utilSamples, utilLastSeenTimeStamp);
+    self->finalizeProcessingEntries();
+    return 0;
+}
+
+energy_uj readEnergyFile(int fileDescriptor, char* buffer, int buffer_size) {
+    ssize_t read_count = pread(fileDescriptor, buffer, buffer_size, 0);
+    if (read_count == -1) {
+        int errsv = errno;
+        const char* error = strerror(errsv);
+        throw std::runtime_error(containers::string("EXTRA PROF: ERROR: Reading energy counter: ") + error);
+    }
+    buffer[read_count] = 0;
+    auto value = strtoull(buffer, nullptr, 10);
+    if (value == 0) {
+        throw std::runtime_error("EXTRA PROF: ERROR: Energy counter could not be interpreted.");
+    }
+
+    return value;
 }
 
 void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
@@ -180,17 +200,7 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
     while (sampling.load(std::memory_order_relaxed)) {
         auto now = get_timestamp();
 
-        ssize_t read_count = pread(fileDescriptor, buffer, sizeof(buffer), 0);
-        if (read_count == -1) {
-            int errsv = errno;
-            const char* error = strerror(errsv);
-            throw std::runtime_error(containers::string("EXTRA PROF: ERROR: Reading energy counter: ") + error);
-        }
-        buffer[read_count] = 0;
-        auto value = strtoull(buffer, nullptr, 10);
-        if (value == 0) {
-            throw std::runtime_error("EXTRA PROF: ERROR: Energy counter could not be interpreted.");
-        }
+        auto value = readEnergyFile(fileDescriptor, buffer, sizeof(buffer));
 
         if (prevEnergy == value) {
             energy_samples.back().tp = now;
@@ -198,10 +208,10 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
             energy_samples.emplace_back(now, value);
         }
 
-        time_point utilLastSeenTimeStamp_ns = utilLastSeenTimeStamp + util_pause_time_in_us;
-        utilLastSeenTimeStamp_ns *= 1000;
+        time_point utilNextSeeTimeStamp_ns = utilLastSeenTimeStamp + util_pause_time_in_us;
+        utilNextSeeTimeStamp_ns *= 1000;
 
-        if (utilLastSeenTimeStamp_ns > now) {
+        if (utilNextSeeTimeStamp_ns <= now) {
             auto util_num_samples =
                 self->loadUtilizationSamples(device, maxUtilSampleCount, utilSamples, utilLastSeenTimeStamp);
         }
@@ -223,6 +233,19 @@ void* EnergySampler::fileBasedSamplingThreadFunc(void* ptr) {
             prevEnergy = value;
         }
     }
+    struct timespec ts {
+        (time_t)(0), (time_t)(pause_time >> 4)
+    };
+    nanosleep(&ts, nullptr);
+    auto now = get_timestamp();
+    auto value = readEnergyFile(fileDescriptor, buffer, sizeof(buffer));
+    if (prevEnergy == value) {
+        energy_samples.back().tp = now;
+    } else {
+        energy_samples.emplace_back(now, value);
+    }
+    self->loadUtilizationSamples(device, maxUtilSampleCount, utilSamples, utilLastSeenTimeStamp);
+    self->finalizeProcessingEntries();
     close(fileDescriptor);
     return 0;
 }
@@ -280,12 +303,26 @@ void EnergySampler::processEntries(unsigned long long lastSeen_us, unsigned long
 
     while (front != nullptr && front->end <= lastSeen_ns && front->end <= utilLastSeen_ns) {
         processEntry(front);
+        // std::cout << "Processed: " << front->node << ' ' << front->node->name() << " " << processEntry(front) <<
+        // "\n";
 
         front = entry_tasks.peek();
     }
 }
 
-void EnergySampler::processEntry(EntryTask* front) {
+void EnergySampler::finalizeProcessingEntries() {
+
+    auto* front = entry_tasks.peek();
+    while (front != nullptr) {
+        processEntry(front);
+        // std::cout << "Processed: " << front->node << ' ' << front->node->name() << " " << processEntry(front) <<
+        // "\n";
+
+        front = entry_tasks.peek();
+    }
+}
+
+energy_uj EnergySampler::processEntry(EntryTask* front) {
     auto idle_begin = std::upper_bound(idle_ranges.begin(), idle_ranges.end(), front->begin,
                                        [](const time_point& a, const IdleRange& b) { return a < b.end; });
 
@@ -319,6 +356,7 @@ void EnergySampler::processEntry(EntryTask* front) {
     }
     front->node->energy_gpu += energy;
     entry_tasks.pop();
+    return front->node->energy_gpu;
 }
 
 void EnergySampler::start() {

@@ -14,6 +14,7 @@
 #include <msgpack.hpp>
 #include <mutex>
 #include <numeric>
+#include <stdexcept>
 #include <vector>
 namespace extra_prof {
 
@@ -81,6 +82,18 @@ public:
                dynamic_name_register.size() * (sizeof(intptr_t) + sizeof(containers::string)) +
                std::accumulate(dynamic_name_register.cbegin(), dynamic_name_register.cend(), 0,
                                [](size_t size, auto& kv) { return size + kv.second.size(); });
+    }
+
+    const containers::string& search_for_name(const containers::string& name) {
+        for (const auto& [key, value] : name_register)
+            if (value == name)
+                return value;
+
+        for (const auto& [key, value] : dynamic_name_register)
+            if (value == name)
+                return value;
+
+        throw std::runtime_error("Name is not registered");
     }
 };
 } // namespace extra_prof

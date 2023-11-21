@@ -12,6 +12,7 @@
 #endif
 
 #include <numeric>
+extern "C" int main(int, char**);
 
 namespace extra_prof {
 
@@ -115,6 +116,11 @@ void finalize() {
 #endif
     std::ofstream stream(output_file);
     msgpack::pack(stream, profile);
+
+    auto main_name = GLOBALS.name_register.check_ptr((void*)&main);
+
+    // std::cout << "Main " << GLOBALS.call_tree.findOrAddChild(main_name->c_str())
+    //           << " energy_gpu: " << GLOBALS.call_tree.findOrAddChild(main_name->c_str())->energy_gpu << '\n';
 }
 
 void finalize_on_exit() {

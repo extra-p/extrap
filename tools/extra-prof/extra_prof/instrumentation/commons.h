@@ -56,11 +56,13 @@ EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, Call
     time_point time = get_timestamp();
     auto& current_node = GLOBALS.my_thread_state().current_node;
     current_node = current_node->findOrAddChild(name, type);
+
     GLOBALS.my_thread_state().timer_stack.push_back(time);
 
 #ifdef EXTRA_PROF_ENERGY
     if (GLOBALS.main_thread == pthread_self()) {
         GLOBALS.energy_stack_cpu.push_back(GLOBALS.cpuEnergy.getEnergy());
+        // std::cout << "Current node: " << current_node << ' ' << name << '\n';
     }
 #endif
 
