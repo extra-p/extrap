@@ -98,7 +98,6 @@ class Hypothesis:
             minimum = min(m.median for m in training_measurements)
         else:
             minimum = min(m.mean for m in training_measurements)
-        
         if minimum == 0:
             if abs(self.function.constant_coefficient - minimum) < phi:
                 self.function.constant_coefficient = 0
@@ -114,7 +113,7 @@ class Hypothesis:
             actual = numpy.array([m.median for m in measurements])
         else:
             actual = numpy.array([m.mean for m in measurements])
-        
+
         if measurements[0].coordinate.dimensions > 1:
             points = numpy.array([m.coordinate.as_tuple() for m in measurements]).T
         else:
@@ -171,7 +170,7 @@ class ConstantHypothesis(Hypothesis):
             self.function.constant_coefficient = numpy.mean([m.median for m in measurements])
         else:
             self.function.constant_coefficient = numpy.mean([m.mean for m in measurements])
-        
+
     def compute_cost(self, measurements: Sequence[Measurement]):
         """
         Computes the cost of the constant hypothesis using all data points.
@@ -184,7 +183,7 @@ class ConstantHypothesis(Hypothesis):
                 actual = measurement.median
             else:
                 actual = measurement.mean
-            
+
             difference = predicted - actual
             self._RSS += difference * difference
             if actual != 0:
@@ -223,11 +222,8 @@ class SingleParameterHypothesis(Hypothesis):
         """
         value = validation_measurement.coordinate[0]
         predicted = self.function.evaluate(value)
-        if self._use_median:
-            actual = validation_measurement.median
-        else:
-            actual = validation_measurement.mean
-        
+        actual = validation_measurement.value(self._use_median)
+
         difference = predicted - actual
         self._RSS += difference * difference
         if actual != 0:
@@ -244,8 +240,11 @@ class SingleParameterHypothesis(Hypothesis):
         points = numpy.array([m.coordinate[0] for m in measurements])
         predicted = self.function.evaluate(points)
 
-        actual = numpy.array([m.value(self._use_median) for m in measurements])
-        
+        if self._use_median:
+            actual = numpy.array([m.median for m in measurements])
+        else:
+            actual = numpy.array([m.mean for m in measurements])
+
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
 
@@ -281,7 +280,6 @@ class SingleParameterHypothesis(Hypothesis):
             b_list = numpy.array([m.median for m in measurements])
         else:
             b_list = numpy.array([m.mean for m in measurements])
-        
         points = numpy.array([m.coordinate[0] for m in measurements])
 
         a_list = [numpy.ones((1, len(points)))]
@@ -337,10 +335,7 @@ class MultiParameterHypothesis(Hypothesis):
             predicted = self.function.evaluate(parameter_value_pairs)
             # print(predicted)
 
-            if self._use_median:
-                actual = measurement.median
-            else:
-                actual = measurement.mean
+            actual = measurement.value(self._use_median)
 
             # print(actual)
 
@@ -394,11 +389,7 @@ class MultiParameterHypothesis(Hypothesis):
         self.function.reset_coefficients()
 
         for measurement in measurements:
-            if self._use_median:
-                value = measurement.median
-            else:
-                value = measurement.mean
-
+            value = measurement.value(self._use_median)
             list_element = [1]  # 1 for constant coefficient
             for multi_parameter_term in self.function:
                 coordinate = measurement.coordinate

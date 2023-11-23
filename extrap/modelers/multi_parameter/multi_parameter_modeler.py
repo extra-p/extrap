@@ -213,17 +213,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         meanModel = 0
 
         for m in measurements:
-            if self.use_median:
-                value = m.median
-            else:
-                value = m.mean
-            meanModel += value / float(len(measurements))
+            meanModel += m.value(self.use_median) / float(len(measurements))
         for m in measurements:
-            if self.use_median:
-                value = m.median
-            else:
-                value = m.mean
-            constantCost += (value - meanModel) * (value - meanModel)
+            constantCost += (m.value(self.use_median) - meanModel) * (m.value(self.use_median) - meanModel)
 
         # find out which parameters should be kept
         compound_term_pairs = []

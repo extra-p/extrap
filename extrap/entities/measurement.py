@@ -18,7 +18,7 @@ class Measurement:
     """
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
-    
+
     def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values):
         """
         Initialize the Measurement object.
@@ -28,7 +28,7 @@ class Measurement:
         self.metric: Metric = metric
         if values is None:
             return
-        self.values: np.typing.NDArray = np.array(values)
+        values = np.array(values)
         self.median: float = np.median(values)
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
@@ -37,14 +37,6 @@ class Measurement:
 
     def value(self, use_median):
         return self.median if use_median else self.mean
-    
-    def add_value(self, value):
-        self.values = np.append(self.values, value)
-        self.median = np.median(self.values)
-        self.mean = np.mean(self.values)
-        self.minimum = np.min(self.values)
-        self.maximum = np.max(self.values)
-        self.std = np.std(self.values)
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
@@ -81,7 +73,6 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
-    values = fields.List(fields.Float())
 
     @post_load
     def report_progress(self, data, **kwargs):

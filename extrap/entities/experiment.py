@@ -80,11 +80,6 @@ class Experiment:
         else:
             self.measurements[key] = [measurement]
 
-    def delete_measurement(self, callpath: Callpath, metric: Metric):
-        key = (callpath,
-               metric)
-        self.measurements.pop(key)
-   
     def clear_measurements(self):
         self.measurements = {}
 
