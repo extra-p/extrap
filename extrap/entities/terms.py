@@ -1,11 +1,12 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from abc import ABC, abstractmethod
+from itertools import chain
 from numbers import Real
 from typing import Tuple, List, Union, Mapping
 
@@ -16,6 +17,7 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
 from extrap.util.serialization_schema import Schema, NumberField
+from extrap.util.string_formats import FunctionFormats
 
 DEFAULT_PARAM_NAMES = (
     'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
@@ -28,7 +30,7 @@ class Term(ABC):
         self.coefficient = 1
 
     @abstractmethod
-    def to_string(self):
+    def to_string(self, *, format: FunctionFormats = None):
         raise NotImplementedError
 
     def reset_coefficients(self):
@@ -55,7 +57,7 @@ class SingleParameterTerm(Term, ABC):
         return CompoundTerm(self, other)
 
     @abstractmethod
-    def to_string(self, parameter: Union[Parameter, str] = 'p'):
+    def to_string(self, parameter: Union[Parameter, str] = 'p', *, format: FunctionFormats = None):
         raise NotImplementedError
 
 
@@ -91,10 +93,14 @@ class SimpleTerm(SingleParameterTerm):
     def reset_coefficients(self):
         pass
 
-    def to_string(self, parameter='p'):
+    def to_string(self, parameter='p', *, format: FunctionFormats = None):
         if self._term_type == "polynomial":
+            if format == FunctionFormats.PYTHON:
+                return f"{parameter}**({self.exponent})"
             return f"{parameter}^({self.exponent})"
         elif self._term_type == "logarithm":
+            if format == FunctionFormats.PYTHON:
+                return f"log2({parameter})**({self.exponent})"
             return f"log2({parameter})^({self.exponent})"
 
     def _evaluate_polynomial(self, parameter_value):
@@ -116,7 +122,7 @@ class SimpleTerm(SingleParameterTerm):
             return True
         else:
             return self.exponent == other.exponent and \
-                   self._term_type == other._term_type
+                self._term_type == other._term_type
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -134,10 +140,15 @@ class CompoundTerm(SingleParameterTerm):
             function_value *= t.evaluate(parameter_value)
         return function_value
 
-    def to_string(self, parameter='p'):
-        function_string = ' * '.join(t.to_string(parameter) for t in self.simple_terms)
-        if self.coefficient != 1:
-            function_string = str(self.coefficient) + ' * ' + function_string
+    def to_string(self, parameter='p', *, format: FunctionFormats = None):
+        term_list = (t.to_string(parameter, format=format) for t in self.simple_terms)
+        if self.coefficient != 1 or not self.simple_terms:
+            term_list = chain([str(self.coefficient)], term_list)
+
+        joiner = ' * '
+        if format == FunctionFormats.PYTHON:
+            joiner = '*'
+        function_string = joiner.join(term_list)
         return function_string
 
     def __imul__(self, term: SimpleTerm):
@@ -165,7 +176,7 @@ class CompoundTerm(SingleParameterTerm):
             return True
         else:
             return self.coefficient == other.coefficient and \
-                   self.simple_terms == other.simple_terms
+                self.simple_terms == other.simple_terms
 
 
 class MultiParameterTerm(Term):
@@ -191,15 +202,21 @@ class MultiParameterTerm(Term):
             function_value *= term.evaluate(parameter_value)
         return function_value
 
-    def to_string(self, *parameters: Union[Parameter, str, Mapping[int, Union[Parameter, str]]]):
+    def to_string(self, *parameters: Union[Parameter, str, Mapping[int, Union[Parameter, str]]],
+                  format: FunctionFormats = None):
         if len(parameters) == 0:
             parameters = DEFAULT_PARAM_NAMES
         elif len(parameters) == 1 and not isinstance(parameters[0], str):
             parameters = parameters[0]
-        function_string = str(self.coefficient)
-        for param, term in self.parameter_term_pairs:
-            function_string += ' * '
-            function_string += term.to_string(parameters[param])
+
+        term_list = (term.to_string(parameters[param], format=format) for param, term in self.parameter_term_pairs)
+        if self.coefficient != 1 or not self.parameter_term_pairs:
+            term_list = chain([str(self.coefficient)], term_list)
+
+        joiner = ' * '
+        if format == FunctionFormats.PYTHON:
+            joiner = '*'
+        function_string = joiner.join(term_list)
         return function_string
 
     def __imul__(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
@@ -216,7 +233,7 @@ class MultiParameterTerm(Term):
             return True
         else:
             return self.parameter_term_pairs == other.parameter_term_pairs and \
-                   self.coefficient == other.coefficient
+                self.coefficient == other.coefficient
 
 
 class TermSchema(Schema):

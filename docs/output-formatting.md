@@ -33,6 +33,7 @@ and their matching options are:
 - `{metric}`
 - `{callpath}`
 - `{model}`
+    - formatting options: `default`,`python`
 - `{smape}`
 - `{rrss}`
 - `{rss}`
@@ -48,6 +49,7 @@ have to be escaped by doubling them (`{{` or `}}`). Placeholders with numerical 
 [python format specification mini language](https://docs.python.org/3/library/string.html#format-specification-mini-language)
 to specify decimal places and precision. With `{metric}, {callpath}, {points}`
 and `{parameters}`, you can remove duplicates by adding `?` before the placeholder names.
+For `{model}`, you can switch between formats by adding the format option behind a colon: `{model:<formatting option>}`.
 
 **Example formatting strings:**
 
@@ -55,4 +57,5 @@ and `{parameters}`, you can remove duplicates by adding `?` before the placehold
  "{?metric}, {callpath}: errors: {rss:.2e}, {re}"
  "{{{points: sep:' \' ' ; format:'({point})'}}}"
  "{measurements: sep:', '; format:'{point: sep:';';format:'{parameter}{coordinate}'}--{mean}\n'}"
+ "{metric}, {callpath}: {rss}/{smape} {model:python}"
 ```

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -70,6 +70,29 @@ class TestConsole(unittest.TestCase):
         self.assertOutput('reg', extrap.main, ['--print', 'callpaths', '--text', 'data/text/two_parameter_1.txt'])
         extrap.main(['--print', 'metrics', '--text', 'data/text/two_parameter_1.txt'])
         extrap.main(['--print', 'parameters', '--text', 'data/text/two_parameter_1.txt'])
+
+    def test_print_python(self):
+        self.assertOutputRegex(
+            "Callpath\:\s+compute\s+"
+            "Metric\:\s+time\s+"
+            "Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            "Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
+            "Model\:\s+\-0\.88979\d+\+0\.20168\d+\*x\*\*\(2\)\s+"
+            "RSS\:\s+3\.43E\+01\s+"
+            "Adjusted\s+R\^2\:\s+1\.00E\+00",
+            extrap.main, ['--print', 'all-python', '--text', 'data/text/one_parameter_1.txt'])  # noqa
+        # noqa
+        self.assertOutputRegex(r"-0\.88979\d+\+0\.20168\d+\*x\*\*\(2\)", extrap.main,
+                               ['--print', 'functions-python', '--text', 'data/text/one_parameter_1.txt'])
+
+        extrap.main(['--print', 'all-python', '--text', 'data/text/two_parameter_1.txt'])
+        self.assertOutputRegex(r"1\.37420\d+\+6\.69808\d+\*log2\(y\)\*\*\(1\)\+0\.043841\d+\*x\*\*\(3/2\)"
+                               r"\*log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)",
+                               extrap.main,
+                               ['--print', 'functions-python', '--text', 'data/text/two_parameter_1.txt'])
 
     def assertOutput(self, text, command, *args, **kwargs):
         temp_stdout = StringIO()
