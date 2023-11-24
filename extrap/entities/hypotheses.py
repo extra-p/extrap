@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -228,8 +228,7 @@ class SingleParameterHypothesis(Hypothesis):
             self._rRSS += relative_difference * relative_difference
         abssum = abs(actual) + abs(predicted)
         if abssum != 0:
-            self._SMAPE += (abs(difference) / abssum * 2) / \
-                           len(training_measurements) * 100
+            self._SMAPE += (abs(difference) / abssum * 2) / (len(training_measurements) + 1) * 100
         self._costs_are_calculated = True
 
     def compute_cost(self, measurements: Sequence[Measurement]):

@@ -80,21 +80,6 @@ def format_functions(experiment):
     return text
 
 
-def format_latex_functions(experiment):
-    """
-    This method formats the output so that only the functions are shown.
-    """
-    modeler = experiment.modelers[0]
-    models = modeler.models
-    text = ""
-    for model in models.values():
-        hypothesis = model.hypothesis
-        function = hypothesis.function
-        function_string = function.to_latex_string(*experiment.parameters)
-        text += function_string + "\n"
-    return text
-
-
 def format_all(experiment):
     """
     This method formats the output so that all information is shown.
@@ -165,8 +150,6 @@ def format_output(experiment, printtype):
         text = format_parameters(experiment)
     elif printtype == "FUNCTIONS":
         text = format_functions(experiment)
-    elif printtype == "LATEX-FUNCTIONS":
-        text = format_latex_functions(experiment)
     else:
         raise ValueError('printtype does not exist')
     return text

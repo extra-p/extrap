@@ -36,7 +36,7 @@ alt="IMAGE ALT TEXT HERE" width="240" height="180" border="10" /></a>
 Extra-P is developed by [TU Darmstadt](https://www.parallel.informatik.tu-darmstadt.de/) – 
 in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 
-*For questions regarding Extra-P please send a message to <extra-p-support@lists.parallel.informatik.tu-darmstadt.de>.*
+*For questions regarding Extra-P, please send a message to <extra-p-support@lists.parallel.informatik.tu-darmstadt.de>.*
 
 --------------------------------------------------------------------------------------------
 
