@@ -10,9 +10,7 @@ from __future__ import annotations
 import enum
 import numbers
 from collections.abc import Iterable
-from typing import Union, Generator
-
-import copy
+from typing import Union, Generator, Optional
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -51,7 +49,7 @@ class Measurement:
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
 
-    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values):
+    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values, *, keep_values=False):
         """
         Initialize the Measurement object.
         """
@@ -60,7 +58,11 @@ class Measurement:
         self.metric: Metric = metric
         if values is None:
             return
-        self.values: np.typing.NDArray = np.array(values)
+        values = np.array(values)
+        if keep_values:
+            self.values: Optional[np.typing.NDArray] = values
+        else:
+            self.values = None
         self.median: float = np.median(values)
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
@@ -84,6 +86,8 @@ class Measurement:
             raise ValueError("Unknown measure.")
 
     def add_value(self, value):
+        if not self.values:
+            raise
         self.values = np.append(self.values, value)
         self.median = np.median(self.values)
         self.mean = np.mean(self.values)
@@ -110,11 +114,11 @@ class Measurement:
         elif self is other:
             return True
         else:
-            return self.coordinate == other.coordinate and \
-                   self.metric == other.metric and \
-                   self.callpath == other.callpath and \
-                   self.mean == other.mean and \
-                   self.median == other.median
+            return (self.coordinate == other.coordinate and
+                    self.metric == other.metric and
+                    self.callpath == other.callpath and
+                    self.mean == other.mean and
+                    self.median == other.median)
 
     @staticmethod
     def select_measure(measurements: Iterable[Measurement], measure: Union[bool, Measure]) -> Generator[numbers.Real]:
