@@ -57,6 +57,24 @@ class TestOutput(unittest.TestCase):
             extrap.main,
             ['--print', '{metric}, {callpath}: {rss}/{smape} {model}', '--text', 'data/text/two_parameter_3.txt'])
 
+    def test_model_python(self):
+        self.assertOutputRegex(
+            r"time,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"time,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"flops,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"flops,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)",
+            extrap.main,
+            ['--print', '{metric}, {callpath}: {rss}/{smape} {model:python}', '--text',
+             'data/text/two_parameter_3.txt'])
+
     def test_invalid(self):
         with self.assertRaises(OutputFormatError):
             extrap.main(['--print', '{metric}, {a}', '--text', 'data/text/two_parameter_3.txt'])

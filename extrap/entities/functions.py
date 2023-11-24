@@ -1,10 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from itertools import chain
 from typing import List, Mapping, Union
 
 import numpy
@@ -13,6 +14,7 @@ from marshmallow import fields
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
 from extrap.util.serialization_schema import BaseSchema, NumberField
+from extrap.util.string_formats import FunctionFormats
 
 
 class Function:
@@ -54,14 +56,18 @@ class Function:
             function_value += t.evaluate(parameter_value)
         return function_value
 
-    def to_string(self, *parameters: Union[str, Parameter]):
+    def to_string(self, *parameters: Union[str, Parameter], format: FunctionFormats = None):
         """
         Return a string representation of the function.
         """
-        function_string = str(self.constant_coefficient)
-        for t in self.compound_terms:
-            function_string += ' + '
-            function_string += t.to_string(*parameters)
+        term_list = (t.to_string(*parameters, format=format) for t in self.compound_terms)
+        if self.constant_coefficient != 0 or not self.compound_terms:
+            term_list = chain([str(self.constant_coefficient)], term_list)
+
+        joiner = ' + '
+        if format == FunctionFormats.PYTHON:
+            joiner = '+'
+        function_string = joiner.join(term_list)
         return function_string
 
     def __repr__(self):
@@ -96,7 +102,7 @@ class ConstantFunction(Function):
         self.add_compound_term = None
         self.__iadd__ = None
 
-    def to_string(self, *_):
+    def to_string(self, *_, format: FunctionFormats = None):
         """
         Returns a string representation of the constant function.
         """

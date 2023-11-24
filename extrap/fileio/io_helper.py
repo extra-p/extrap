@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -16,6 +16,7 @@ from extrap.entities.calltree import Node
 from extrap.entities.measurement import Measurement
 from extrap.util.exceptions import InvalidExperimentError
 from extrap.util.progress_bar import DUMMY_PROGRESS
+from extrap.util.string_formats import FunctionFormats
 
 if TYPE_CHECKING:
     from extrap.entities.experiment import Experiment
@@ -60,7 +61,7 @@ def format_parameters(experiment):
     return text
 
 
-def format_functions(experiment):
+def format_functions(experiment, format: FunctionFormats = None):
     """
     This method formats the output so that only the functions are shown.
     """
@@ -70,12 +71,12 @@ def format_functions(experiment):
     for model in models.values():
         hypothesis = model.hypothesis
         function = hypothesis.function
-        function_string = function.to_string(*experiment.parameters)
+        function_string = function.to_string(*experiment.parameters, format=format)
         text += function_string + "\n"
     return text
 
 
-def format_all(experiment):
+def format_all(experiment, format: FunctionFormats = None):
     """
     This method formats the output so that all information is shown.
     """
@@ -114,12 +115,12 @@ def format_all(experiment):
                 model = modeler.models[callpath, metric]
             except KeyError as e:
                 model = None
-            if model != None:
+            if model is not None:
                 hypothesis = model.hypothesis
                 function = hypothesis.function
                 rss = hypothesis.RSS
                 ar2 = hypothesis.AR2
-                function_string = function.to_string(*experiment.parameters)
+                function_string = function.to_string(*experiment.parameters, format=format)
             else:
                 rss = 0
                 ar2 = 0
@@ -135,8 +136,11 @@ def format_output(experiment, printtype):
     This method formats the output of the modeler to a string that can be printed in the console
     or to a file. Depending on the given options only parts of the modelers output get printed.
     """
+    printtype = printtype.upper()
     if printtype == "ALL":
         text = format_all(experiment)
+    elif printtype == "ALL-PYTHON":
+        text = format_all(experiment, FunctionFormats.PYTHON)
     elif printtype == "CALLPATHS":
         text = format_callpaths(experiment)
     elif printtype == "METRICS":
@@ -145,8 +149,10 @@ def format_output(experiment, printtype):
         text = format_parameters(experiment)
     elif printtype == "FUNCTIONS":
         text = format_functions(experiment)
+    elif printtype == "FUNCTIONS-PYTHON":
+        text = format_functions(experiment, FunctionFormats.PYTHON)
     else:
-        raise ValueError('printtype does not exist')
+        return None
     return text
 
 

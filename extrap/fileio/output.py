@@ -12,11 +12,13 @@ import extrap.fileio.io_helper as io
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
 from extrap.util.exceptions import RecoverableError
+from extrap.util.string_formats import FunctionFormats
 
 """
 This module provides the custom output formatting for the experiments. 
 You can find the explanation of the placeholders in docs/output-formatting.md
 """
+
 
 class OutputFormatError(RecoverableError):
     NAME = 'Output Format Error'
@@ -183,7 +185,6 @@ _re_points = re.compile(r"(\?)?points(\s*:\s*(.*?))?")
 _re_point = re.compile(r"(\?)?point(\s*:\s*(.*?))?")
 _re_measurements = re.compile(r"measurements(\s*:\s*(.*?))?")
 _re_parameters = re.compile(r"(\?)?parameters(\s*:\s*(.*?))?")
-_re_legacy_options = re.compile(r"all|callpaths|metrics|parameters|functions")
 
 
 def _parse_options(options, format_remove_str=False):
@@ -210,11 +211,10 @@ def _parse_options(options, format_remove_str=False):
 
 
 def format_output(experiment: Experiment, printtype: str):
-    print_str = printtype.lower()
-
-    # backward compatibility
-    if _re_legacy_options.fullmatch(print_str):
-        return io.format_output(experiment, print_str.upper())
+    # predefined outputs
+    output = io.format_output(experiment, printtype)
+    if output is not None:
+        return output
 
     models = experiment.modelers[0].models
 
@@ -248,7 +248,8 @@ def format_output(experiment: Experiment, printtype: str):
                 metric_list.append(m.metric.name)
             elif o == "model":
                 temp = m.hypothesis.function.to_string(*experiment.parameters)
-
+            elif o == "model:python":
+                temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.PYTHON)
             elif _re_points.fullmatch(o):
                 data = _re_points.fullmatch(o)
                 coordinate_text = format_points(data.group(2), experiment)
