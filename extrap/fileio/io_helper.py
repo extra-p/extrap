@@ -196,7 +196,7 @@ def append_to_repetition_dict(complete_data, key, coordinate, value, progress_ba
             progress_bar.total += 1
 
 
-def repetition_dict_to_experiment(complete_data, experiment, progress_bar=DUMMY_PROGRESS):
+def repetition_dict_to_experiment(complete_data, experiment, progress_bar=DUMMY_PROGRESS, keep_values=False):
     progress_bar.step('Creating experiment')
     for mi, key in enumerate(complete_data):
         progress_bar.update()
@@ -207,7 +207,7 @@ def repetition_dict_to_experiment(complete_data, experiment, progress_bar=DUMMY_
         for coordinate in measurementset:
             values = measurementset[coordinate]
             experiment.add_coordinate(coordinate)
-            experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
+            experiment.add_measurement(Measurement(coordinate, callpath, metric, values, keep_values=keep_values))
 
 
 def create_call_tree(callpaths: List[Callpath], progress_bar=DUMMY_PROGRESS, progress_total_added=False,

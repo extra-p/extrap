@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -19,6 +19,7 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader import FileReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.fileio.file_reader.jsonlines_file_reader import read_jsonlines_file
 from extrap.fileio.io_helper import create_call_tree
 from extrap.util.exceptions import FileFormatError
@@ -27,7 +28,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 SCHEMA_URI = ""
 
 
-class JsonFileReader(FileReader):
+class JsonFileReader(FileReader, TKeepValuesReader):
     NAME = "json"
     GUI_ACTION = "Open &JSON input"
     DESCRIPTION = "Load data from JSON or JSON Lines input file"
@@ -44,7 +45,7 @@ class JsonFileReader(FileReader):
                 is_jsonlines = any(line.strip().startswith('{') for line in inputfile) and \
                                all(line.strip().startswith('{') or line.strip() == "" for line in inputfile)
                 if is_jsonlines:
-                    return read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS)
+                    return read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS, keep_values=self.keep_values)
                 else:
                     raise FileFormatError(str(error)) from error
 
@@ -53,12 +54,12 @@ class JsonFileReader(FileReader):
 
         if "callpaths" not in json_data:
             try:
-                self._read_new_json_file(experiment, json_data, progress_bar)
+                self._read_new_json_file(experiment, json_data, progress_bar, self.keep_values)
             except KeyError as err:
                 raise FileFormatError(str(err)) from err
         else:
             try:
-                self._read_legacy_json_file(experiment, json_data, progress_bar)
+                self._read_legacy_json_file(experiment, json_data, progress_bar, self.keep_values)
             except KeyError as err:
                 raise FileFormatError(str(err)) from err
 
@@ -70,7 +71,7 @@ class JsonFileReader(FileReader):
         return experiment
 
     @staticmethod
-    def _read_new_json_file(experiment, json_data, progress_bar):
+    def _read_new_json_file(experiment, json_data, progress_bar, keep_values):
         parameter_data = json_data["parameters"]
         for p in parameter_data:
             parameter = Parameter(p)
@@ -86,11 +87,12 @@ class JsonFileReader(FileReader):
                     experiment.add_callpath(callpath)
                     metric = Metric(metric_name)
                     experiment.add_metric(metric)
-                    measurement = Measurement(coordinate, callpath, metric, measurement['values'])
+                    measurement = Measurement(coordinate, callpath, metric, measurement['values'],
+                                              keep_values=keep_values)
                     experiment.add_measurement(measurement)
 
     @staticmethod
-    def _read_legacy_json_file(experiment, json_data, progress_bar):
+    def _read_legacy_json_file(experiment, json_data, progress_bar, keep_values):
         # read parameters
         parameter_data = json_data["parameters"]
         parameter_data = sorted(parameter_data, key=lambda x: x["id"])
@@ -148,5 +150,5 @@ class JsonFileReader(FileReader):
             callpath = experiment.callpaths[callpath_id]
             metric = experiment.metrics[metric_id]
             values = aggregate_data[key]
-            measurement = Measurement(coordinate, callpath, metric, values)
+            measurement = Measurement(coordinate, callpath, metric, values, keep_values=keep_values)
             experiment.add_measurement(measurement)
