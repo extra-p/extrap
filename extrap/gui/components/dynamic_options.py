@@ -7,9 +7,10 @@
 
 from typing import Mapping, Collection, cast
 
-from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox, \
+from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit, QSpinBox, QDoubleSpinBox, QGroupBox, \
     QComboBox, QLabel, QPushButton
 
+from extrap.gui.components.switch_widget import SwitchWidget
 from extrap.util.dynamic_options import DynamicOptions, DynamicOptionsGroup, DynamicOption
 
 
@@ -94,7 +95,7 @@ class DynamicOptionsWidget(QWidget):
                     field.setCurrentText(name)
             field.currentIndexChanged.connect(lambda: self._check_and_apply(option, field.currentText()))
         elif option.type is bool:
-            field = QCheckBox()
+            field = SwitchWidget()
             field.setChecked(option.value)
             field.stateChanged[int].connect(slot)
         elif option.type is float:
