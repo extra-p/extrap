@@ -87,7 +87,7 @@ class Measurement:
 
     def add_value(self, value):
         if not self.values:
-            raise
+            raise RuntimeError("Cannot add value, because the list of original values does not exist.")
         self.values = np.append(self.values, value)
         self.median = np.median(self.values)
         self.mean = np.mean(self.values)
