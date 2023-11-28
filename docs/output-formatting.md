@@ -1,6 +1,7 @@
 Output formatting documentation
 ===============================
 
+
 It is possible to customize the output of Extra-P by using placeholders. Use placeholders enclosed in curly brackets in
 any string. You can modify the behaviour of the placeholders, by specifying additional options. Possible placeholders
 and their matching options are:
@@ -33,7 +34,7 @@ and their matching options are:
 - `{metric}`
 - `{callpath}`
 - `{model}`
-    - formatting options: `default`,`python`
+    - formatting options: _default_ (if nothing is specified),`python`,`latex`
 - `{smape}`
 - `{rrss}`
 - `{rss}`
