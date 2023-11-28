@@ -7,12 +7,7 @@
 
 from __future__ import annotations
 
-import enum
-import numbers
-from collections.abc import Iterable
-from typing import Union, Generator
-
-import copy
+from typing import Optional
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -50,7 +45,7 @@ class Measurement:
 
     def value(self, use_median):
         return self.median if use_median else self.mean
-    
+
     def add_value(self, value):
         if not self.values:
             raise RuntimeError("Cannot add value, because the list of original values does not exist.")
@@ -85,6 +80,7 @@ class Measurement:
                     self.callpath == other.callpath and
                     self.mean == other.mean and
                     self.median == other.median)
+
     def __imul__(self, other):
         if isinstance(other, Measurement):
             if self.coordinate != other.coordinate:
