@@ -121,8 +121,8 @@ class SimpleTerm(SingleParameterTerm):
         elif self is other:
             return True
         else:
-            return self.exponent == other.exponent and \
-                self._term_type == other._term_type
+            return (self.exponent == other.exponent and
+                    self._term_type == other._term_type)
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -175,8 +175,8 @@ class CompoundTerm(SingleParameterTerm):
         elif self is other:
             return True
         else:
-            return self.coefficient == other.coefficient and \
-                self.simple_terms == other.simple_terms
+            return (self.coefficient == other.coefficient and
+                    self.simple_terms == other.simple_terms)
 
 
 class MultiParameterTerm(Term):
@@ -232,8 +232,8 @@ class MultiParameterTerm(Term):
         elif self is other:
             return True
         else:
-            return self.parameter_term_pairs == other.parameter_term_pairs and \
-                self.coefficient == other.coefficient
+            return (self.parameter_term_pairs == other.parameter_term_pairs and
+                    self.coefficient == other.coefficient)
 
 
 class TermSchema(Schema):
