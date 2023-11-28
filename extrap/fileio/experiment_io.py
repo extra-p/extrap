@@ -14,6 +14,7 @@ from marshmallow import ValidationError
 
 from extrap.entities.experiment import ExperimentSchema, Experiment
 from extrap.fileio.file_reader import FileReader
+from extrap.fileio.values_io import ValueWriter, ValueReader
 from extrap.util.exceptions import FileFormatError, RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
@@ -30,6 +31,8 @@ def read_experiment(path, progress_bar=DUMMY_PROGRESS) -> Experiment:
             data = file.read(EXPERIMENT_DATA_FILE).decode("utf-8")
             progress_bar.update()
             try:
+                value_reader = ValueReader(file)
+                schema.set_value_io(value_reader)
                 experiment = schema.loads(data)
                 progress_bar.update()
                 return experiment
@@ -60,10 +63,13 @@ def write_experiment(experiment, path, progress_bar=DUMMY_PROGRESS):
     progress_bar.update()
     try:
         with ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as file:
+            value_writer = ValueWriter(file)
+            schema.set_value_io(value_writer)
             progress_bar.update()
             try:
                 data = schema.dumps(experiment)
                 progress_bar.update()
+                value_writer.flush()
                 file.writestr(EXPERIMENT_DATA_FILE, data)
                 progress_bar.update()
             except ValidationError as v_err:
