@@ -93,7 +93,7 @@ class Measurement:
             self.mean *= other.mean
             self.minimum *= other.minimum
             self.maximum *= other.maximum
-            # Var(XY) = E(X²Y²) - (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
+            # Var(XY) = E(XÂ²YÂ²) - (E(XY))Â² = Var(X)Var(Y) + Var(X)(E(Y))Â² + Var(Y)(E(X))Â²
             self_var, other_var = self.std ** 2, other.std ** 2
             variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
             self.std = np.sqrt(variance)
