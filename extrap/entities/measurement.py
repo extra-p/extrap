@@ -116,7 +116,17 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
-    values = fields.List(fields.Float())
+    values = fields.Method('_store_values', '_load_values', allow_none=True, load_default=None)
+
+    def _load_values(self, value):
+        if value is None:
+            return None
+        return self.context['value_io'].read_values(*value)
+
+    def _store_values(self, obj: Measurement):
+        if obj.values is None:
+            return None
+        return self.context['value_io'].write_values(obj.values)
 
     @post_load
     def report_progress(self, data, **kwargs):
