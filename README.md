@@ -119,7 +119,7 @@ The Extra-P command line interface has the following options.
 | `--talpas`                                                           | Load data from Talpas data format
 | `--text`                                                             | Load data from text input file
 | `--experiment`                                                       | Load Extra-P experiment and generate new models
-| `--scaling` {`weak`, `strong`}                                       | Set weak or strong scaling when loading data from CUBE files (default: `weak`) 
+| `--scaling` {`weak`, `weak_parallel`, `strong`}                      | Set scaling type when loading data from per-thread/per-rank files (CUBE files) (default: weak) 
 | **Modeling options**                                                 |                                              
 | `--median`                                                           | Use median values for computation instead of mean values  
 | `--modeler` {`default`, `basic`, `refining`, `multi-parameter`}      | Selects the modeler for generating the performance models 
@@ -127,7 +127,7 @@ The Extra-P command line interface has the following options.
 | `--help-modeler` {`default`, `basic`, `refining`, `multi-parameter`} | Show help for modeler options and exit       
 | **Output options**                                                   |                                              
 | `--out` _OUTPUT_PATH_                                                | Specify the output path for Extra-P results  
-| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`, _FORMAT_STRING_} | Set which information should be displayed after modeling. Use one of the predefined values or specify a formatting string using placeholders (see [docs/output-formatting.md](docs/output-formatting.md)) (default: `all`).
+| `--print` {`all`, `callpaths`, `metrics`, `parameters`, `functions`, _FORMAT_STRING_} | Set which information should be displayed after modeling. Use one of the presets or specify a formatting string using placeholders (see [docs/output-formatting.md](docs/output-formatting.md)). (default: `all`)
 | `--save-experiment` <i>EXPERIMENT_PATH</i>                           | Saves the experiment including all models as Extra-P experiment (if no extension is specified, “.extra-p” is appended) 
 | `--model-set-name` _NAME_                                            | Set the name of the generated set of models when outputting an experiment (default: “New model”)
 

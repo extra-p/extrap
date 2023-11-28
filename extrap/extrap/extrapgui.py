@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
 
 import argparse
 import logging
@@ -18,9 +19,10 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader import all_readers
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -68,13 +70,16 @@ def main(*, args=None, test=False):
 
 
 def parse_arguments(args=None):
-    parser = argparse.ArgumentParser(description=extrap.__description__)
+    parser = argparse.ArgumentParser(description=extrap.__description__, add_help=False)
+    parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                        help='Show this help message and exit')
     parser.add_argument("--log", action="store", dest="log_level", type=str.lower, default='critical',
                         choices=['traceback', 'debug', 'info', 'warning', 'error', 'critical'],
-                        help="set program's log level (default: critical)")
+                        help="Set program's log level (default: %(default)s)")
     parser.add_argument("--logfile", action="store", dest="log_file",
-                        help="set path of log file")
-    parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__)
+                        help="Set path of log file")
+    parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__,
+                        help="Show program's version number and exit")
 
     group = parser.add_mutually_exclusive_group(required=False)
     for reader in all_readers.values():
@@ -82,11 +87,15 @@ def parse_arguments(args=None):
                            help=reader.DESCRIPTION)
 
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
-                        help="specify a file path for Extra-P to work with")
+                        help="Specify a file path for Extra-P to work with")
 
-    parser.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
-                        choices=["weak", "strong"],
-                        help="set weak or strong scaling when loading data from cube files [weak (default), strong]")
+    names_of_scaling_conversion_readers = ", ".join(reader.NAME + " files" for reader in all_readers.values()
+                                                    if issubclass(reader, AbstractScalingConversionReader))
+
+    parser.add_argument("--scaling", action="store", dest="scaling_type", default=ScalingType.WEAK,
+                        type=ScalingType, choices=ScalingType,
+                        help="Set scaling type when loading data from per-thread/per-rank files (" +
+                             names_of_scaling_conversion_readers + ") (default: %(default)s)")
     arguments = parser.parse_args(args)
     return arguments
 
@@ -96,10 +105,13 @@ def load_from_command(arguments, window):
         for reader in all_readers.values():
             if getattr(arguments, reader.NAME):
                 file_reader = reader()
-                if file_reader is CubeFileReader2:
+                if issubclass(reader, AbstractScalingConversionReader):
                     file_reader.scaling_type = arguments.scaling_type
+                elif arguments.scaling_type != ScalingType.WEAK:
+                    warnings.warn(
+                        f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
                 window.import_file(file_reader.read_experiment, file_name=arguments.path,
-                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD)
+                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD, reader=file_reader)
                 return
         window.import_file(read_experiment, file_name=arguments.path, model=False)
 

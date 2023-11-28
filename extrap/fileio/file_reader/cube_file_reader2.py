@@ -5,6 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 import logging
 import warnings
 from collections import defaultdict
@@ -26,8 +28,11 @@ from extrap.entities.experiment import Experiment
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
-from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
+    AbstractScalingConversionReader
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 
@@ -38,14 +43,13 @@ class SmallKernelFilter:
     callpath: Optional[Callpath] = None
 
 
-class CubeFileReader2(AbstractDirectoryReader):
+class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
     NAME = "cube"
     GUI_ACTION = "Open set of &CUBE files"
     DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
     CMD_ARGUMENT = "--cube"
     LOADS_FROM_DIRECTORY = True
 
-    scaling_type = "weak"
     selected_metrics = None
     use_inclusive_measurements = False
     small_kernel_filter: SmallKernelFilter = None
@@ -59,7 +63,11 @@ class CubeFileReader2(AbstractDirectoryReader):
         # iterate over all folders and read the cube profiles in them
         experiment = Experiment()
         # set scaling flag for experiment
-        if self.scaling_type == "weak" or self.scaling_type == "strong":
+
+        if isinstance(self.scaling_type, str):
+            self.scaling_type = ScalingType(self.scaling_type)
+
+        if self.scaling_type in ScalingType:
             experiment.scaling = self.scaling_type
 
         progress_bar.step("Reading cube files")
@@ -68,13 +76,6 @@ class CubeFileReader2(AbstractDirectoryReader):
         # determine non-constant parameters and add them to experiment
         for p in parameter_names:
             experiment.add_parameter(Parameter(p))
-
-        # check number of parameters, if > 1 use weak scaling instead
-        # since sum values for strong scaling does not work for more than 1 parameter
-        if self.scaling_type == 'strong' and len(experiment.parameters) > 1:
-            warnings.warn("Strong scaling only works for one parameter. Using weak scaling instead.")
-            scaling_type = 'weak'
-            experiment.scaling = scaling_type
 
         progress_bar.step("Reading cube files")
 
@@ -148,9 +149,14 @@ class CubeFileReader2(AbstractDirectoryReader):
                                         and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
                                     continue
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
-                                if self.scaling_type == "weak":
+                                if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].extend(map(float, cnode_values))
-                                elif self.scaling_type == "strong":
+                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                    values = [v for v in map(float, cnode_values) if v != 0]
+                                    if not values:
+                                        values = map(float, cnode_values)
+                                    total_values[callpaths[r_cnode.id]].extend(values)
+                                elif self.scaling_type == ScalingType.STRONG:
                                     total_values[callpaths[r_cnode.id]].append(float(sum(cnode_values)))
 
                         for cnode_id in metric_values.cnode_indices:
@@ -164,12 +170,16 @@ class CubeFileReader2(AbstractDirectoryReader):
                                                                       convert_to_inclusive=self.use_inclusive_measurements)
 
                             # in case of weak scaling calculate mean and median over all mpi process values
-                            if self.scaling_type == "weak":
+                            if self.scaling_type == ScalingType.WEAK:
                                 # do NOT use generator it is slower
                                 aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
-
+                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                values = [v for v in map(float, cnode_values) if v != 0]
+                                if not values:
+                                    values = map(float, cnode_values)
+                                aggregated_values[(callpath, metric)].extend(values)
                                 # in case of strong scaling calculate the sum over all mpi process values
-                            elif self.scaling_type == "strong":
+                            elif self.scaling_type == ScalingType.STRONG:
                                 aggregated_values[(callpath, metric)].append(float(sum(cnode_values)))
 
                     # Take care of missing metrics
@@ -204,9 +214,15 @@ class CubeFileReader2(AbstractDirectoryReader):
                                         and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
                                     continue
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
-                                if self.scaling_type == "weak":
+                                if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].extend(cnode_values.astype(float))
-                                elif self.scaling_type == "strong":
+                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                    values = cnode_values.astype(float)
+                                    non_zero_value_mask = values != 0
+                                    if numpy.any(non_zero_value_mask):
+                                        values = values[non_zero_value_mask]
+                                    total_values[callpaths[r_cnode.id]].extend(values)
+                                elif self.scaling_type == ScalingType.STRONG:
                                     total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
 
                         for cnode_id in metric_values.cnode_indices:
@@ -220,11 +236,16 @@ class CubeFileReader2(AbstractDirectoryReader):
                                                                       convert_to_inclusive=self.use_inclusive_measurements)
 
                             # in case of weak scaling calculate mean and median over all mpi process values
-                            if self.scaling_type == "weak":
+                            if self.scaling_type == ScalingType.WEAK:
                                 aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
-
-                                # in case of strong scaling calculate the sum over all mpi process values
-                            elif self.scaling_type == "strong":
+                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                values = cnode_values.astype(float)
+                                non_zero_value_mask = values != 0
+                                if numpy.any(non_zero_value_mask):
+                                    values = values[non_zero_value_mask]
+                                aggregated_values[(callpath, metric)].append(values)
+                            # in case of strong scaling calculate the sum over all mpi process values
+                            elif self.scaling_type == ScalingType.STRONG:
                                 aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
 
                     # Take care of missing metrics
@@ -234,8 +255,7 @@ class CubeFileReader2(AbstractDirectoryReader):
                             f'The cubex file {Path(*path.parts[-2:])} does not contain data for the metric "{e.metric.name}"')
         return aggregated_values, total_values
 
-    @staticmethod
-    def _make_callpath_mapping(cnodes):
+    def _make_callpath_mapping(self, cnodes):
         callpaths = {}
 
         def walk_tree(parent_cnode, parent_name):
@@ -308,8 +328,12 @@ class CubeFileReader2(AbstractDirectoryReader):
             # delete current measurements
             del experiment.measurements[key]
 
-    def read_cube_file(self, dir_name, scaling_type, pbar=DUMMY_PROGRESS, selected_metrics=None):
-        self.scaling_type = scaling_type
+    def read_cube_file(self, dir_name, scaling_type: Union[str, ScalingType], pbar=DUMMY_PROGRESS,
+                       selected_metrics=None):
+        if isinstance(scaling_type, str):
+            self.scaling_type = ScalingType(scaling_type)
+        else:
+            self.scaling_type = scaling_type
         self.selected_metrics = selected_metrics
         return self.read_experiment(dir_name, pbar)
 

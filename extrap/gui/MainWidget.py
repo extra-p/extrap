@@ -9,11 +9,12 @@ import itertools
 import logging
 import signal
 import sys
-from urllib.error import URLError, HTTPError
 from enum import Enum
 from functools import partial
+from numbers import Number
 from pathlib import Path
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Type
+from urllib.error import URLError, HTTPError
 
 from PySide6 import QtGui
 from PySide6.QtCore import *  # @UnusedWildImport
@@ -24,22 +25,27 @@ import extrap
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
 from extrap.entities.model import Model
+from extrap.entities.scaling_type import ScalingType
+from extrap.fileio import io_helper
 from extrap.fileio.experiment_io import read_experiment, write_experiment
-from extrap.fileio.file_reader import all_readers
+from extrap.fileio.file_reader import all_readers, FileReader
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.gui.ColorWidget import ColorWidget
-from extrap.gui.CubeFileReader import CubeFileReader
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
+from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
-from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.SelectorWidget import SelectorWidget
+from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
 from extrap.gui.components import file_dialog
+from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.deprecation import deprecated
+from extrap.util.dynamic_options import DynamicOptions
 
 _SETTING_CHECK_FOR_UPDATES_ON_STARTUP = 'check_for_updates_on_startup'
 
@@ -63,8 +69,6 @@ class MainWidget(QMainWindow):
 
         self.settings = QSettings(QSettings.Scope.UserScope, "Extra-P", "Extra-P GUI")
 
-        status = self.settings.status()
-
         self.max_value = 0
         self.min_value = 0
         self.old_x_pos = 0
@@ -72,7 +76,7 @@ class MainWidget(QMainWindow):
         self.model_color_map = ModelColorMap()
         self.plot_formatting_options = PlotFormattingOptions()
         self.experiment_change = True
-        self.initUI()
+        self._init_ui()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
         # switch for using mean or median measurement values for modeling
@@ -83,7 +87,7 @@ class MainWidget(QMainWindow):
             self._macos_update_title_bar()
 
     # noinspection PyAttributeOutsideInit
-    def initUI(self):
+    def _init_ui(self):
         """
         Initializes the User Interface of the extrap widget. E.g. the menus.
         """
@@ -93,15 +97,15 @@ class MainWidget(QMainWindow):
         # self.statusBar()
 
         # Main splitter
-        self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
-        self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
+        self.setCorner(Qt.Corner.BottomRightCorner, Qt.DockWidgetArea.RightDockWidgetArea)
+        self.setCorner(Qt.Corner.BottomLeftCorner, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.setDockNestingEnabled(True)
 
         # Left side: Callpath and metric selection
         dock = QDockWidget("Selection", self)
         self.selector_widget = SelectorWidget(self, dock)
         dock.setWidget(self.selector_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
         # middle: Graph
 
@@ -112,18 +116,18 @@ class MainWidget(QMainWindow):
         dock = QDockWidget("Modeler", self)
         self.modeler_widget = ModelerWidget(self, dock)
         dock.setWidget(self.modeler_widget)
-        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         # bottom widget
         dock = QDockWidget("Color Info", self)
         self.color_widget = ColorWidget()
         dock.setWidget(self.color_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
         dock = QDockWidget("Graph Limits", self)
         self.graph_limits_widget = GraphLimitsWidget(self, self.data_display)
         dock.setWidget(self.graph_limits_widget)
-        self.addDockWidget(Qt.BottomDockWidgetArea, dock, Qt.Horizontal)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock, Qt.Orientation.Horizontal)
 
         dock2 = QDockWidget("Log", self)
         self.log_widget = LogWidget(self)
@@ -139,29 +143,22 @@ class MainWidget(QMainWindow):
         screenshot_action.triggered.connect(self.screenshot)
 
         exit_action = QAction('E&xit', self)
-        exit_action.setShortcut(QKeySequence.Quit)
+        exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         exit_action.setStatusTip('Exit application')
         exit_action.triggered.connect(self.close)
 
         file_imports = []
         for reader in all_readers.values():
-            if reader is CubeFileReader2:
-                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self.open_cube_file))
-            else:
-                file_mode = QFileDialog.FileMode.Directory if reader.LOADS_FROM_DIRECTORY else None
-                file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION,
-                                     self._make_import_func(reader.DESCRIPTION, reader().read_experiment,
-                                                            filter=reader.FILTER, file_mode=file_mode,
-                                                            model=reader.GENERATE_MODELS_AFTER_LOAD)))
+            file_imports.append((reader.GUI_ACTION, reader.DESCRIPTION, self._make_import_func(reader)))
 
         open_experiment_action = QAction('&Open experiment', self)
         open_experiment_action.setStatusTip('Opens experiment file')
-        open_experiment_action.setShortcut(QKeySequence.Open)
+        open_experiment_action.setShortcut(QKeySequence.StandardKey.Open)
         open_experiment_action.triggered.connect(self.open_experiment)
 
         save_experiment_action = QAction('&Save experiment', self)
         save_experiment_action.setStatusTip('Saves experiment file')
-        save_experiment_action.setShortcut(QKeySequence.Save)
+        save_experiment_action.setShortcut(QKeySequence.StandardKey.Save)
         save_experiment_action.triggered.connect(self.save_experiment)
         save_experiment_action.setEnabled(False)
         self.save_experiment_action = save_experiment_action
@@ -200,10 +197,7 @@ class MainWidget(QMainWindow):
         metric_delete_action = QAction('Dele&te metrics', self)
         metric_delete_action.triggered.connect(self.selector_widget.delete_metric)
 
-        # compare menu
-        compare_action = QAction('&Compare with experiment', self)
-        compare_action.setStatusTip('Compare the current models with ')
-        compare_action.triggered.connect(self.selector_widget.model_delete)
+
 
         # Filter menu
         # filter_callpath_action = QAction('Filter Callpaths', self)
@@ -315,18 +309,18 @@ class MainWidget(QMainWindow):
             self.updateMinMaxValue()
 
     def keyPressEvent(self, e):
-        if e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key.Key_Escape:
             self.close()
 
     def closeEvent(self, event):
         if not self.windowFilePath():
             event.accept()
             return
-        msg_box = QMessageBox(QMessageBox.Question, 'Quit', "Are you sure to quit?",
-                              QMessageBox.No | QMessageBox.Yes, self, Qt.Sheet)
-        msg_box.setDefaultButton(QMessageBox.No)
+        msg_box = QMessageBox(QMessageBox.Icon.Question, 'Quit', "Are you sure to quit?",
+                              QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, self, Qt.WindowType.Sheet)
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
 
-        if msg_box.exec() == QMessageBox.Yes:
+        if msg_box.exec() == QMessageBox.StandardButton.Yes:
             event.accept()
         else:
             event.ignore()
@@ -347,7 +341,7 @@ class MainWidget(QMainWindow):
         return self.selector_widget.get_selected_models()
 
     def open_plot_format_dialog_box(self):
-        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.Sheet)
+        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.WindowType.Sheet)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.data_display.updateWidget()
             self.update()
@@ -398,16 +392,65 @@ class MainWidget(QMainWindow):
             model_generator.model_all(pbar)
         self.set_experiment(experiment, file_name)
 
-    def _make_import_func(self, title, reader_func, **kwargs):
-        return partial(self.import_file, reader_func, title, **kwargs)
+    def _make_import_func(self, reader_class: Type[FileReader]):
+        file_mode = QFileDialog.FileMode.Directory if reader_class.LOADS_FROM_DIRECTORY else None
+        title = reader_class.DESCRIPTION if reader_class.DESCRIPTION else 'Open File'
+
+        if issubclass(reader_class, DynamicOptions):
+            def _import_function():
+                def _process_with_settings(path):
+                    reader: FileReader = reader_class()
+                    dialog = ImportOptionsDialog(self, reader, path)
+                    dialog.setWindowFlag(Qt.WindowType.Sheet, True)
+                    dialog.setModal(True)
+                    # do not use open, wait for loading to finish
+                    if dialog.exec() == QDialog.DialogCode.Accepted:
+                        if reader_class.GENERATE_MODELS_AFTER_LOAD:
+                            experiment = self._check_and_convert_scaling(dialog.experiment, path, reader)
+                            self.model_experiment(experiment, path)
+                        else:
+                            self.set_experiment(dialog.experiment, path)
+
+                file_dialog.show(self, _process_with_settings, title, filter=reader_class.FILTER, file_mode=file_mode)
+
+            return _import_function
+
+        else:
+            reader: FileReader = reader_class()
+            return partial(self.import_file, reader.read_experiment, title, filter=reader_class.FILTER,
+                           model=reader_class.GENERATE_MODELS_AFTER_LOAD, file_mode=file_mode, reader=reader)
+
+    def _check_and_convert_scaling(self, experiment, path, reader=None):
+        check_res = io_helper.check_for_strong_scaling(experiment)
+        if max(check_res) == 0:
+            return experiment
+        if isinstance(reader, AbstractScalingConversionReader):
+            if StrongScalingConversionDialog.pose_question_for_readers_with_scaling_conversion(
+                    self) == QMessageBox.StandardButton.Yes:
+                reader.scaling_type = ScalingType.STRONG
+                dialog = ImportOptionsDialog(self, reader, path)
+                dialog.setWindowFlag(Qt.WindowType.Sheet, True)
+                dialog.setModal(True)
+                dialog.open()
+                dialog.accept()
+
+                return dialog.experiment
+        else:
+            dialog = StrongScalingConversionDialog(experiment, check_res, self)
+            dialog.setWindowFlag(Qt.WindowType.Sheet, True)
+            dialog.setModal(True)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                return dialog.experiment
+        return experiment
 
     def import_file(self, reader_func, title='Open File', filter='', model=True, progress_text="Loading File",
-                    file_name=None, file_mode=None):
+                    file_name=None, file_mode=None, reader=None):
         def _import_file(file_name):
             with ProgressWindow(self, progress_text) as pw:
                 experiment = reader_func(file_name, pw)
                 # call the modeler and create a function model
                 if model:
+                    experiment = self._check_and_convert_scaling(experiment, file_name, reader)
                     self.model_experiment(experiment, file_name)
                 else:
                     self.set_experiment(experiment, file_name)
@@ -440,16 +483,9 @@ class MainWidget(QMainWindow):
 
         file_dialog.showSave(self, _save, 'Save Experiment', filter='Experiments (*.extra-p)')
 
+    @deprecated
     def open_cube_file(self):
-        def _process_cube(dir_name):
-            dialog = CubeFileReader(self, dir_name)
-            dialog.setWindowFlag(Qt.Sheet, True)
-            dialog.setModal(True)
-            dialog.exec()  # do not use open, wait for loading to finish
-            if dialog.valid:
-                self.model_experiment(dialog.experiment, dir_name)
-
-        file_dialog.showOpenDirectory(self, _process_cube, 'Select a Directory with a Set of CUBE Files')
+        self._make_import_func(CubeFileReader2)()
 
     def updateMinMaxValue(self):
         if not self.experiment_change:
@@ -503,7 +539,7 @@ class MainWidget(QMainWindow):
         layout.addWidget(QLabel(' — '), same_row, 2, 1, 1)
 
         check_for_updates = QCheckBox(self)
-        check_for_updates.setChecked(self.settings.value(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, True, bool))
+        check_for_updates.setChecked(bool(self.settings.value(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, True, bool)))
         check_for_updates.setText("Check for updates on start up")
         check_for_updates.toggled.connect(
             lambda status: self.settings.setValue(_SETTING_CHECK_FOR_UPDATES_ON_STARTUP, status))

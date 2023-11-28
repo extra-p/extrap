@@ -48,14 +48,9 @@ class Measurement:
         self.maximum: float = np.max(values)
         self.std: float = np.std(values)
 
-    def value(self, measure: bool):
-        if measure is True:
-            return self.median
-        elif measure is False:
-            return self.mean
-        else:
-            raise ValueError("Unknown measure.")
-
+    def value(self, use_median):
+        return self.median if use_median else self.mean
+    
     def add_value(self, value):
         if not self.values:
             raise
@@ -90,6 +85,26 @@ class Measurement:
                     self.callpath == other.callpath and
                     self.mean == other.mean and
                     self.median == other.median)
+    def __imul__(self, other):
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            self.median *= other.median
+            self.mean *= other.mean
+            self.minimum *= other.minimum
+            self.maximum *= other.maximum
+            # Var(XY) = E(X²Y²) - (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
+            self_var, other_var = self.std ** 2, other.std ** 2
+            variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
+            self.std = np.sqrt(variance)
+        else:
+
+            self.median *= other
+            self.mean *= other
+            self.minimum *= other
+            self.maximum *= other
+            self.std *= abs(other)
+        return self
 
 
 class MeasurementSchema(Schema):
