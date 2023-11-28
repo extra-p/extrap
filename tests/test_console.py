@@ -94,6 +94,30 @@ class TestConsole(unittest.TestCase):
                                extrap.main,
                                ['--print', 'functions-python', '--text', 'data/text/two_parameter_1.txt'])
 
+    def test_print_latex(self):
+        self.assertOutputRegex(
+            "Callpath\:\s+compute\s+"
+            "Metric\:\s+time\s+"
+            "Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            "Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
+            r"Model\:\s+\$\-8\.898\\times10\^\{−1\}\+2\.017\\times10\^\{−1\}\\cdot\ x\^\{2\}\$\s+"
+            "RSS\:\s+3\.43E\+01\s+"
+            "Adjusted\s+R\^2\:\s+1\.00E\+00",
+            extrap.main, ['--print', 'all-latex', '--text', 'data/text/one_parameter_1.txt'])  # noqa
+        # noqa
+        self.assertOutputRegex(r"\$\-8\.898\\times10\^\{−1\}\+2\.017\\times10\^\{−1\}\\cdot\ x\^\{2\}\$", extrap.main,
+                               ['--print', 'functions-latex', '--text', 'data/text/one_parameter_1.txt'])
+
+        extrap.main(['--print', 'all-python', '--text', 'data/text/two_parameter_1.txt'])
+        self.assertOutputRegex(
+            r"\$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ "
+            r"\\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$",
+            extrap.main,
+            ['--print', 'functions-latex', '--text', 'data/text/two_parameter_1.txt'])
+
     def assertOutput(self, text, command, *args, **kwargs):
         temp_stdout = StringIO()
         with contextlib.redirect_stdout(temp_stdout):
@@ -106,7 +130,14 @@ class TestConsole(unittest.TestCase):
         with contextlib.redirect_stdout(temp_stdout):
             command(*args, **kwargs)
         output = temp_stdout.getvalue().strip()
-        self.assertRegex(output, regex)
+        try:
+            self.assertRegex(output, regex)
+        except Exception:
+            print()
+            print("####### ORIGINAL OUTPUT #######")
+            print(output)
+            print("####### END OF ORIGINAL OUTPUT #######")
+            raise
 
     def test_experiment(self):
         temp_dir = tempfile.mkdtemp()

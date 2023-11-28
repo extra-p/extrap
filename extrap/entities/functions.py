@@ -61,6 +61,9 @@ class Function:
         """
         Return a string representation of the function.
         """
+        if format == FunctionFormats.LATEX:
+            return self.to_latex_string(*parameters)
+
         term_list = (t.to_string(*parameters, format=format) for t in self.compound_terms)
         if self.constant_coefficient != 0 or not self.compound_terms:
             term_list = chain([str(self.constant_coefficient)], term_list)

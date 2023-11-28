@@ -75,6 +75,20 @@ class TestOutput(unittest.TestCase):
             ['--print', '{metric}, {callpath}: {rss}/{smape} {model:python}', '--text',
              'data/text/two_parameter_3.txt'])
 
+    def test_model_latex(self):
+        self.assertOutputRegex(
+            r"time,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
+            r"time,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
+            r"flops,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
+            r"flops,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$",
+            extrap.main,
+            ['--print', '{metric}, {callpath}: {rss}/{smape} {model:latex}', '--text',
+             'data/text/two_parameter_3.txt'])
+
     def test_invalid(self):
         with self.assertRaises(OutputFormatError):
             extrap.main(['--print', '{metric}, {a}', '--text', 'data/text/two_parameter_3.txt'])
@@ -158,6 +172,18 @@ class TestOutput(unittest.TestCase):
                                     "6.00E+01'5.00E+00\n")
         self.assertEqual(truth,
                          output.format_output(self.exp, r"{callpath},{metric}:{points:format:'{point:sep:'\''}'}"))
+
+    def test_point_formatting8(self):
+        truth = self._make_expected(
+            "2.00E+01\t1.00E+00 | 2.00E+01\t2.00E+00 | 2.00E+01\t3.00E+00 | 2.00E+01\t4.00E+00 | "
+            "2.00E+01\t5.00E+00 | 3.00E+01\t1.00E+00 | 3.00E+01\t2.00E+00 | 3.00E+01\t3.00E+00 | "
+            "3.00E+01\t4.00E+00 | 3.00E+01\t5.00E+00 | 4.00E+01\t1.00E+00 | 4.00E+01\t2.00E+00 | "
+            "4.00E+01\t3.00E+00 | 4.00E+01\t4.00E+00 | 4.00E+01\t5.00E+00 | 5.00E+01\t1.00E+00 | "
+            "5.00E+01\t2.00E+00 | 5.00E+01\t3.00E+00 | 5.00E+01\t4.00E+00 | 5.00E+01\t5.00E+00 | "
+            "6.00E+01\t1.00E+00 | 6.00E+01\t2.00E+00 | 6.00E+01\t3.00E+00 | 6.00E+01\t4.00E+00 | "
+            "6.00E+01\t5.00E+00\n")
+        self.assertEqual(truth,
+                         output.format_output(self.exp, r"{callpath},{metric}:{points:format:'{point:sep:'\t'}'}"))
 
     def test_point_formatting6(self):
         truth = self._make_expected(

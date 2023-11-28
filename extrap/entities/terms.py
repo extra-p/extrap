@@ -97,10 +97,14 @@ class SimpleTerm(SingleParameterTerm):
         if self._term_type == "polynomial":
             if format == FunctionFormats.PYTHON:
                 return f"{parameter}**({self.exponent})"
+            elif format == FunctionFormats.LATEX:
+                return f"{{{parameter}}}^{{{self.exponent}}}"
             return f"{parameter}^({self.exponent})"
         elif self._term_type == "logarithm":
             if format == FunctionFormats.PYTHON:
                 return f"log2({parameter})**({self.exponent})"
+            elif format == FunctionFormats.LATEX:
+                return f"\\log2{{{parameter}}}^{{{self.exponent}}}"
             return f"log2({parameter})^({self.exponent})"
 
     def _evaluate_polynomial(self, parameter_value):
@@ -148,6 +152,8 @@ class CompoundTerm(SingleParameterTerm):
         joiner = ' * '
         if format == FunctionFormats.PYTHON:
             joiner = '*'
+        elif format == FunctionFormats.LATEX:
+            joiner = '\\cdot '
         function_string = joiner.join(term_list)
         return function_string
 
@@ -216,6 +222,8 @@ class MultiParameterTerm(Term):
         joiner = ' * '
         if format == FunctionFormats.PYTHON:
             joiner = '*'
+        if format == FunctionFormats.LATEX:
+            joiner = '\\cdot '
         function_string = joiner.join(term_list)
         return function_string
 

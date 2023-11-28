@@ -81,21 +81,6 @@ def format_functions(experiment, format: FunctionFormats = None):
     return text
 
 
-def format_latex_functions(experiment):
-    """
-    This method formats the output so that only the functions are shown.
-    """
-    modeler = experiment.modelers[0]
-    models = modeler.models
-    text = ""
-    for model in models.values():
-        hypothesis = model.hypothesis
-        function = hypothesis.function
-        function_string = function.to_latex_string(*experiment.parameters)
-        text += function_string + "\n"
-    return text
-
-
 def format_all(experiment, format: FunctionFormats = None):
     """
     This method formats the output so that all information is shown.
@@ -161,6 +146,8 @@ def format_output(experiment, printtype):
         text = format_all(experiment)
     elif printtype == "ALL-PYTHON":
         text = format_all(experiment, FunctionFormats.PYTHON)
+    elif printtype == "ALL-LATEX":
+        text = format_all(experiment, FunctionFormats.LATEX)
     elif printtype == "CALLPATHS":
         text = format_callpaths(experiment)
     elif printtype == "METRICS":
@@ -172,7 +159,7 @@ def format_output(experiment, printtype):
     elif printtype == "FUNCTIONS-PYTHON":
         text = format_functions(experiment, FunctionFormats.PYTHON)
     elif printtype == "FUNCTIONS-LATEX":
-        text = format_latex_functions(experiment)
+        text = format_functions(experiment, FunctionFormats.LATEX)
     else:
         return None
     return text
