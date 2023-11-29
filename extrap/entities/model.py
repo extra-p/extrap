@@ -29,6 +29,7 @@ class Model:
         self.metric = metric
         self.measurements: Optional[List[Measurement]] = None
         self.annotations: list[Annotation] = []
+        self.changing_point = None
 
     @cached_property
     def predictions(self):
