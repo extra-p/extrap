@@ -5,10 +5,10 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import math
 from typing import Sequence
 
 import numpy
-import math
 from marshmallow import fields
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
@@ -242,7 +242,8 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS += difference * difference
-        self._nRSS = math.sqrt(self._RSS) / numpy.mean(numpy.array([m.value(self._use_median) for m in training_measurements])) #TODO fix
+        self._nRSS += math.sqrt(self._RSS) / numpy.mean(
+            numpy.array([m.value(self._use_median) for m in training_measurements])) / (len(training_measurements) + 1)
 
         if actual != 0:
             relative_difference = difference / actual
@@ -298,7 +299,7 @@ class SingleParameterHypothesis(Hypothesis):
             b_list = numpy.array([m.median for m in measurements])
         else:
             b_list = numpy.array([m.mean for m in measurements])
-        
+
         points = numpy.array([m.coordinate[0] for m in measurements])
 
         a_list = [numpy.ones((1, len(points)))]
@@ -424,8 +425,8 @@ class MultiParameterHypothesis(Hypothesis):
         B = numpy.array(b_list)
         try:
             coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
-            if rank < A.shape[1]: # if rcond is to big the rank of A collapses and the coefficients are wrong
-                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1) # retry with rcond = machine precision
+            if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)  # retry with rcond = machine precision
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
             coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
@@ -445,6 +446,7 @@ class HypothesisSchema(BaseSchema):
     function = fields.Nested(FunctionSchema)
     _RSS = NumberField(data_key='RSS')
     _rRSS = NumberField(data_key='rRSS')
+    _nRSS = NumberField(data_key='nRSS')
     _SMAPE = NumberField(data_key='SMAPE')
     _AR2 = NumberField(data_key='AR2')
     _RE = NumberField(data_key='RE')

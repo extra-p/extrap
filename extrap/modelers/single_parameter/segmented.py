@@ -5,29 +5,23 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import copy
-import itertools
 import logging
-import warnings
 import math
-from typing import List, Sequence
+import warnings
+from typing import Sequence
+
 import numpy as np
 
-from extrap.entities.functions import SingleParameterFunction
-from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.entities.model import Model
-from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm
-from extrap.modelers.abstract_modeler import SingularModeler
 from extrap.modelers.modeler_options import modeler_options
-from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
+from extrap.modelers.single_parameter.basic import SingleParameterModeler
 
 
 @modeler_options
-class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
+class SegmentedModeler(SingleParameterModeler):
     """
-    This class represents the modeler for single parameter functions.
+    This class represents the modeler for segmented single parameter functions.
     In order to create a model measurements at least 5 points are needed.
     The result is either a constant function or one based on the PMNF.
     """
@@ -35,235 +29,11 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
     NAME = 'Segmented'
     DESCRIPTION = "Modeler for single-parameter models; traverses the search-space of all defined hypotheses. Able to detect segmented behavior in measurements. When segmented data is found the modeler will return two models."
 
-    allow_log_terms = modeler_options.add(True, bool, 'Allows models with logarithmic terms',
-                                          on_change=lambda self, v: self._exponents_changed())
-    poly_exponents = modeler_options.add('', str, 'Set of polynomial exponents. Use comma separated list.',
-                                         name='Polynomial', on_change=lambda self, v: self._exponents_changed())
-    log_exponents = modeler_options.add('', str, 'Set of logarithmic exponents. Use comma separated list.',
-                                        name='Logarithmic', on_change=lambda self, v: self._exponents_changed())
-    retain_default_exponents = modeler_options.add(False, bool,
-                                                   'If set the default exponents are added to the given ones.',
-                                                   name='Retain default',
-                                                   on_change=lambda self, v: self._exponents_changed())
-    force_combination_exponents = modeler_options.add(False, bool,
-                                                      'If set the exact combination of exponents is forced.',
-                                                      name='Force combination',
-                                                      on_change=lambda self, v: self._exponents_changed())
-    allow_negative_exponents = modeler_options.add(False, bool,
-                                                   'If set adds neagtive exponents for strong scaling.',
-                                                   name='Negative exponents',
-                                                   on_change=lambda self, v: self._exponents_changed())
-    modeler_options.group('Exponents', poly_exponents, log_exponents, retain_default_exponents,
-                          force_combination_exponents, allow_negative_exponents)
-
     def __init__(self):
         """
-        Initialize SingleParameterModeler object.
+        Initialize SegmentedParameterModeler object.
         """
-        super().__init__(use_median=False)
-
-        # value for the minimum number of measurement points required for modeling
-        self.min_measurement_points = 5
-
-        # create the building blocks for the hypothesis
-        self.hypotheses_building_blocks: List[CompoundTerm] = self.create_default_building_blocks(
-            self.allow_log_terms, self.allow_negative_exponents)
-
-    def _exponents_changed(self):
-        def parse_expos(expos):
-            expos = expos.split(',')
-            result = []
-            for e in expos:
-                try:
-                    result.append(float(e) if '.' in e else int(e))
-                except ValueError:
-                    pass
-            return result
-
-        polyexpos = parse_expos(self.poly_exponents)
-        logexpos = parse_expos(self.log_exponents)
-
-        if len(polyexpos) > 0 or len(logexpos) > 0:
-            self.hypotheses_building_blocks = self.generate_building_blocks(polyexpos, logexpos,
-                                                                            self.force_combination_exponents)
-            if self.retain_default_exponents:
-                self.hypotheses_building_blocks.extend(
-                    self.create_default_building_blocks(self.allow_log_terms, self.allow_negative_exponents))
-        else:
-            self.hypotheses_building_blocks = self.create_default_building_blocks(self.allow_log_terms,
-                                                                                  self.allow_negative_exponents)
-
-    def get_matching_hypotheses(self, measurements: Sequence[Measurement]):
-        """Removes log terms from the returned hypotheses_building_blocks, if those cannot describe the measurements."""
-
-        if self.are_measurements_log_capable(measurements, self.allow_negative_exponents):
-            return self.hypotheses_building_blocks
-
-        if any(t.term_type == "logarithm" for compound_term in self.hypotheses_building_blocks
-               for t in compound_term.simple_terms):
-            warnings.warn("Your measurements contained a point value below one, therefore, "
-                          "Extra-P does not use logarithmic terms for modeling.")
-
-        return [compound_term
-                for compound_term in self.hypotheses_building_blocks
-                if not any(t.term_type == "logarithm"
-                           for t in compound_term.simple_terms)
-                ]
-
-    @staticmethod
-    def create_default_building_blocks(allow_log_terms, allow_negative_exponents=False):
-        """
-        Creates the default building blocks for the single parameter hypothesis
-        that will be used during the search for the best hypothesis.
-        """
-
-        if allow_log_terms:
-            exponents = [(0, 1, 1),
-                         (0, 1, 2),
-                         (1, 4, 0),
-                         (1, 3, 0),
-                         (1, 4, 1),
-                         (1, 3, 1),
-                         (1, 4, 2),
-                         (1, 3, 2),
-                         (1, 2, 0),
-                         (1, 2, 1),
-                         (1, 2, 2),
-                         (2, 3, 0),
-                         (3, 4, 0),
-                         (2, 3, 1),
-                         (3, 4, 1),
-                         (4, 5, 0),
-                         (2, 3, 2),
-                         (3, 4, 2),
-                         (1, 1, 0),
-                         (1, 1, 1),
-                         (1, 1, 2),
-                         (5, 4, 0),
-                         (5, 4, 1),
-                         (4, 3, 0),
-                         (4, 3, 1),
-                         (3, 2, 0),
-                         (3, 2, 1),
-                         (3, 2, 2),
-                         (5, 3, 0),
-                         (7, 4, 0),
-                         (2, 1, 0),
-                         (2, 1, 1),
-                         (2, 1, 2),
-                         (9, 4, 0),
-                         (7, 3, 0),
-                         (5, 2, 0),
-                         (5, 2, 1),
-                         (5, 2, 2),
-                         (8, 3, 0),
-                         (11, 4, 0),
-                         (3, 1, 0),
-                         (3, 1, 1)]
-            # These were used for relearn
-            if allow_negative_exponents:
-                exponents += [(-0, 1, -1),
-                              (-0, 1, -2),
-                              (-1, 4, -1),
-                              (-1, 3, -1),
-                              (-1, 4, -2),
-                              (-1, 3, -2),
-                              (-1, 2, -1),
-                              (-1, 2, -2),
-                              (-2, 3, -1),
-                              (-3, 4, -1),
-                              (-2, 3, -2),
-                              (-3, 4, -2),
-                              (-1, 1, -1),
-                              (-1, 1, -2),
-                              (-5, 4, -1),
-                              (-4, 3, -1),
-                              (-3, 2, -1),
-                              (-3, 2, -2),
-                              (-2, 1, -1),
-                              (-2, 1, -2),
-                              (-5, 2, -1),
-                              (-5, 2, -2),
-                              (-3, 1, -1)]
-
-        else:
-            exponents = [(1, 4, 0),
-                         (1, 3, 0),
-                         (1, 2, 0),
-                         (2, 3, 0),
-                         (3, 4, 0),
-                         (4, 5, 0),
-                         (1, 1, 0),
-                         (5, 4, 0),
-                         (4, 3, 0),
-                         (3, 2, 0),
-                         (5, 3, 0),
-                         (7, 4, 0),
-                         (2, 1, 0),
-                         (9, 4, 0),
-                         (7, 3, 0),
-                         (5, 2, 0),
-                         (8, 3, 0),
-                         (11, 4, 0),
-                         (3, 1, 0)]
-            # These were used for relearn
-            if allow_negative_exponents:
-                exponents += [(-1, 4, 0),
-                              (-1, 3, 0),
-                              (-1, 2, 0),
-                              (-2, 3, 0),
-                              (-3, 4, 0),
-                              (-4, 5, 0),
-                              (-1, 1, 0),
-                              (-5, 4, 0),
-                              (-4, 3, 0),
-                              (-3, 2, 0),
-                              (-5, 3, 0),
-                              (-7, 4, 0),
-                              (-2, 1, 0),
-                              (-9, 4, 0),
-                              (-7, 3, 0),
-                              (-5, 2, 0),
-                              (-8, 3, 0),
-                              (-11, 4, 0),
-                              (-3, 1, 0)]
-
-        hypotheses_building_blocks = [CompoundTerm.create(*e) for e in exponents]
-        # print the hypothesis building blocks, compound terms in debug mode
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
-            parameter = Parameter('p')
-            for i, compound_term in enumerate(hypotheses_building_blocks):
-                logging.debug(
-                    f"Compound term {i}: {compound_term.to_string(parameter)}")
-
-        return hypotheses_building_blocks
-
-    @staticmethod
-    def generate_building_blocks(poly_exponents, log_exponents, force_combination=False):
-        if force_combination:
-            exponents = itertools.product(poly_exponents, log_exponents)
-        else:
-            exponents = itertools.chain(
-                itertools.product(poly_exponents, [0]),
-                itertools.product([0], log_exponents),
-                itertools.product(poly_exponents, log_exponents))
-
-        return [CompoundTerm.create(*e) for e in exponents if not e == (0, 0)]
-
-    def build_hypotheses(self, measurements):
-        """
-        Builds the next hypothesis that should be analysed based on the given compound term.
-        """
-        hypotheses_building_blocks = self.get_matching_hypotheses(measurements)
-
-        # search for the best hypothesis over all functions that can be build with the basic building blocks
-        # using leave one out crossvalidation
-        for i, compound_term in enumerate(hypotheses_building_blocks):
-            # create next function that will be analyzed
-            next_function = SingleParameterFunction(copy.copy(compound_term))
-
-            # create single parameter hypothesis from function
-            yield SingleParameterHypothesis(next_function, self.use_median)
+        super().__init__()
 
     def create_model(self, measurements: Sequence[Measurement]):
         """
@@ -278,14 +48,14 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         # identify subsets
         subsets = []
         nr_subsets = len(measurements) - (self.min_measurement_points - 1)
-        #print("DEBUG nr_subsets:",nr_subsets)
+        # print("DEBUG nr_subsets:",nr_subsets)
         for i in range(nr_subsets):
             subset = []
             for j in range(self.min_measurement_points):
-                subset.append(measurements[i+j])
-            #print("subset:",subset)
+                subset.append(measurements[i + j])
+            # print("subset:",subset)
             subsets.append(subset)
-        #print("DEBUG subsets:",subsets)
+        # print("DEBUG subsets:",subsets)
 
         # create a model for each subset
         models = []
@@ -310,14 +80,14 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                                                             constant_hypothesis)
                 models.append(best_hypothesis)
 
-        #print("DEBUG models:",models)
+        # print("DEBUG models:",models)
         nRSS_values = []
         for m in models:
-            #print("nRSS:",m._nRSS)
+            # print("nRSS:",m._nRSS)
             nRSS_values.append(abs(m._nRSS))
-            #print(str(m.function))
-            
-        #print(nRSS_values)
+            # print(str(m.function))
+
+        # print(nRSS_values)
         theta = max(nRSS_values)
 
         epsilon_values = []
@@ -325,7 +95,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             if i == 0:
                 epsilon_values.append(math.nan)
             else:
-                epsilon_values.append(nRSS_values[i]/(nRSS_values[i-1]+0.000000001))
+                epsilon_values.append(nRSS_values[i] / (nRSS_values[i - 1] + 0.000000001))
 
         dataset_segmented = False
         if theta > 0.5:
@@ -333,8 +103,8 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         if np.nanmax(epsilon_values) > 4:
             dataset_segmented = True
 
-        #print("DEBUG dataset_segmented:",dataset_segmented)
-        #print("DEBUG epsilon_values:",epsilon_values)
+        # print("DEBUG dataset_segmented:",dataset_segmented)
+        # print("DEBUG epsilon_values:",epsilon_values)
 
         if dataset_segmented:
 
@@ -349,31 +119,31 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                 else:
                     pattern += "0"
 
-            #print("DEBUG pattern:",pattern)
+            # print("DEBUG pattern:",pattern)
 
             import re
-            index = [m.start() for m in re.finditer(r"1",pattern)][2]
-            #print("DEBUG index:",index)
+            index = [m.start() for m in re.finditer(r"1", pattern)][2]
+            # print("DEBUG index:",index)
             ones = 0
             for c in pattern:
                 if c == "1":
                     ones += 1
-            #print("DEBUG ones:",ones)
+            # print("DEBUG ones:",ones)
             change_point = None
             if ones == 3:
-                subset = subsets[index-1]
+                subset = subsets[index - 1]
                 change_point = subset[2]
             else:
-                subset = subsets[index-1]
+                subset = subsets[index - 1]
                 change_point = list([subset[2], subset[3]])
 
-            #print("DEBUG change_point:",change_point)
+            # print("DEBUG change_point:",change_point)
 
             models = []
             # if the change point is a common point in both sets
             if isinstance(change_point, Measurement):
                 index = measurements.index(change_point)
-                #print("DEBUG index:",index)
+                # print("DEBUG index:",index)
                 subsets = []
                 subsets.append(measurements[:index])
                 subsets.append(measurements[index:])
@@ -382,12 +152,12 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             else:
                 index_1 = measurements.index(change_point[0])
                 index_2 = measurements.index(change_point[1])
-                #print("DEBUG index:",index_1, index_2)
+                # print("DEBUG index:",index_1, index_2)
                 subsets = []
                 subsets.append(measurements[:index_1])
                 subsets.append(measurements[index_2:])
-                #print("DEBUG subsets:",subsets)
-                
+                # print("DEBUG subsets:",subsets)
+
             for subset in subsets:
                 # create a constant model
                 constant_hypothesis, constant_cost = self.create_constant_model(subset)
@@ -409,7 +179,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                     models.append(Model(best_hypothesis))
 
             return (models, change_point)
-        
+
         else:
             # create a constant model
             constant_hypothesis, constant_cost = self.create_constant_model(measurements)
