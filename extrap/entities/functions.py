@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import numbers
+import warnings
 from numbers import Number
 from typing import List, Mapping, Union, Sequence
 
@@ -43,6 +44,9 @@ class Function:
             t.reset_coefficients()
 
     def __iadd__(self, compound_term: _TermType):
+        warnings.warn("This operator is deprecated use add_compound_term instead.", DeprecationWarning)
+        if not isinstance(compound_term, (CompoundTerm, MultiParameterTerm)):
+            return NotImplemented
         self.add_compound_term(compound_term)
         return self
 
@@ -87,7 +91,11 @@ class Function:
         """
         function_string = ' + '.join(t.to_html(*parameters) for t in self.compound_terms)
         if self.constant_coefficient != 0:
-            function_string = format_number_html(self.constant_coefficient) + ' + ' + function_string
+            coefficient_string = format_number_html(self.constant_coefficient)
+            if coefficient_string[0] == '-':
+                function_string = function_string + ' - ' + coefficient_string[1:]
+            else:
+                function_string = function_string + ' + ' + coefficient_string
         return function_string
 
     def __repr__(self):

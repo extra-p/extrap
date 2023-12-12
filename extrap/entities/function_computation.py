@@ -164,7 +164,7 @@ class HTMLPrinter(StrPrinter):
 
     def _print_Add(self, expr, order=None):
         if self._print_level == 1:
-            return super()._print_Add(expr, order='ilex')
+            return super()._print_Add(expr, order="grlex")
         return super()._print_Add(expr, order)
 
     def _print_Mul(self, expr):
