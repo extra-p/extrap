@@ -111,7 +111,7 @@ create_tarball:
   rules:
     - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
       when: never
-    - if: '$CI_COMMIT_TITLE =~ /^CI.*/'
+  #    - if: '$CI_COMMIT_TITLE =~ /^CI.*/'
   before_script:
     - echo "Project located at $CI_PROJECT_DIR" 
   script:
