@@ -15,6 +15,7 @@ from extrap.entities.calltree import CallTree
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.modelers.postprocessing import PostProcessedModel, PostProcessedModelSchema, PostProcess, PostProcessSchema
+from extrap.modelers.postprocessing.total_energy import CalculateTotalEnergy
 from extrap.util.classproperty import classproperty
 from extrap.util.extension_loader import load_extensions
 from extrap.util.progress_bar import DUMMY_PROGRESS
@@ -62,7 +63,7 @@ class Aggregation(PostProcess):
         return self.aggregate(current_model_set, self.experiment.call_tree, self.experiment.metrics, progress_bar)
 
     def supports_processing(self, post_processing_history: list[PostProcess]) -> bool:
-        return not post_processing_history
+        return not post_processing_history or isinstance(post_processing_history[-1], CalculateTotalEnergy)
 
     @classproperty
     @abstractmethod
