@@ -17,7 +17,7 @@ class CalculateTotalEnergy(PostProcess):
         Tuple[Callpath, Metric], Union[Model, PostProcessedModel]]:
         model_set = {}
         data_set = {}
-        metric_energy = Metric("Energy", postprocess_generated=True)
+        metric_energy = Metric("Energy", postprocess__generated=True)
 
         for (callpath, metric), v in progress_bar(current_model_set.items(), length=len(current_model_set)):
             model_set[callpath, metric] = v

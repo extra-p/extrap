@@ -34,7 +34,7 @@ class ArithmeticIntensityCalculation(PostProcess):
                                                   name="Number of memory transfers metric")
     bytes_per_mem_transfer = DynamicOptions.add(8, int)
 
-    arithmetic_intensity_metric = Metric("Arithmetic Intensity")
+    arithmetic_intensity_metric = Metric("Arithmetic Intensity", postprocess__generated=True)
 
     def __init__(self, experiment: Optional[Experiment]):
         super().__init__(experiment)
