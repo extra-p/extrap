@@ -68,6 +68,10 @@ class Measurement(CalculationElement):
         self.minimum += other.minimum
         self.maximum += other.maximum
         self.std = np.sqrt(self.std ** 2 + other.std ** 2)
+        if self.values and other.values:
+            self.values += other.values
+        else:
+            self.values = None
 
     def __repr__(self):
         return f"Measurement({self.coordinate}: {self.mean:0.6} median={self.median:0.6})"
@@ -95,6 +99,8 @@ class Measurement(CalculationElement):
             result.minimum += other
             result.maximum += other
             result.std = self.std
+            if self.values:
+                self.values += other
         return result
 
     def __radd__(self, other):
@@ -123,6 +129,10 @@ class Measurement(CalculationElement):
             self_var, other_var = self.std ** 2, other.std ** 2
             variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
             self.std = np.sqrt(variance)
+            if self.values and other.values:
+                self.values *= other.values
+            else:
+                self.values = None
         else:
 
             self.median *= other
@@ -130,6 +140,8 @@ class Measurement(CalculationElement):
             self.minimum *= other
             self.maximum *= other
             self.std *= abs(other)
+            if self.values:
+                self.values *= other
         return self
 
     def __rmul__(self, other):
@@ -143,6 +155,8 @@ class Measurement(CalculationElement):
         result.maximum **= other
         variance = (self.std ** 2 + self.mean ** 2) ** other - (self.mean ** 2) ** other
         result.std = np.sqrt(variance)
+        if result.values:
+            result.values **= other
         return result
 
     def __itruediv__(self, other):
@@ -159,6 +173,11 @@ class Measurement(CalculationElement):
             variance = self.std ** 2 / other.mean ** 2 + (self.mean ** 2 * other.std ** 2) / other.mean ** 4 \
                        - (2 * self.mean * self.std * other.std) / other.mean ** 3
             self.std = math.sqrt(variance)
+            if self.values and other.values:
+                self.values /= other.values
+                self.std = np.std(self.values)
+            else:
+                self.values = None
         else:
             self.median /= other
             self.mean /= other
@@ -166,6 +185,8 @@ class Measurement(CalculationElement):
             self.maximum /= other
             variance = self.std ** 2 / other ** 2
             self.std = math.sqrt(variance)
+            if self.values:
+                self.values /= other
         return self
 
     def __truediv__(self, other):
@@ -202,6 +223,13 @@ class Measurement(CalculationElement):
             variance = a.std ** 2 / b.mean ** 2 + (a.mean ** 2 * b.std ** 2) / b.mean ** 4 \
                        - (2 * a.mean * a.std * b.std) / b.mean ** 3
             result.std = math.sqrt(variance)
+
+        if a.values and b.values:
+            divisor = b.values.copy()
+            divisor[b.values == 0 & a.values == 0] = 1
+            result.values = a.values / divisor
+        else:
+            result.values = None
         return result
 
     def __rtruediv__(self, other):
@@ -234,6 +262,11 @@ class Measurement(CalculationElement):
             else:
                 variance = (other ** 2 * self.std ** 2) / self.mean ** 4
                 result.std = math.sqrt(variance)
+                
+            if self.values:
+                result.values = other / self.values
+            else:
+                result.values = None
         return self
 
     def __neg__(self):
@@ -246,6 +279,8 @@ class Measurement(CalculationElement):
         result.minimum = 1
         result.maximum = 1
         result.std = 0
+        if result.values:
+            result.values = np.ones_like(result.values)
         return result
 
     def copy(self):

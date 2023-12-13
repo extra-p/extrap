@@ -21,6 +21,7 @@ import sympy
 from marshmallow import fields
 from mpmath.libmp import fzero, finf, fninf, fnan, to_digits_exp
 from sympy import Float
+from sympy.printing.latex import LatexPrinter
 from sympy.printing.precedence import precedence
 from sympy.printing.str import StrPrinter
 
@@ -30,7 +31,9 @@ from extrap.entities.functions import TermlessFunction, Function, TermlessFuncti
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import DEFAULT_PARAM_NAMES
 from extrap.util import sympy_functions
+from extrap.util.caching import cached_property
 from extrap.util.formatting_helper import format_number_html
+from extrap.util.string_formats import FunctionFormats
 
 PARAM_TOKEN = '\x1B'
 
@@ -275,6 +278,16 @@ class ComputationFunction(TermlessFunction, CalculationElement):
     _PRINTER = FunctionPrinter()
     _PRINTER_HTML = HTMLPrinter()
 
+    @classmethod
+    @cached_property
+    def _PRINTER_LATEX(cls):
+        return LatexPrinter()
+
+    @classmethod
+    @cached_property
+    def _PRINTER_PYTHON(cls):
+        return StrPrinter()
+
     def __init__(self, function: Optional[Function]):
         super().__init__()
         self.original_function: Optional[Function] = function
@@ -338,14 +351,19 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         self._params = sympy.symbols(tuple(PARAM_TOKEN + str(i) for i in range(max_param_id + 1)))
         self._evaluation_function = None  # reset evaluation function
 
-    def to_string(self, *parameters: Union[str, Parameter]):
+    def to_string(self, *parameters: Union[str, Parameter], format: FunctionFormats = None):
         if not parameters:
             parameters = DEFAULT_PARAM_NAMES
         result = self.sympy_function
         for param, new_param in zip(self._params, parameters):
             result = result.subs(param, sympy.Symbol(str(new_param)))
 
-        return self._PRINTER.doprint(result)
+        if format == FunctionFormats.PYTHON:
+            return self._PRINTER_PYTHON.doprint(result)
+        elif format == FunctionFormats.LATEX:
+            return self._PRINTER_LATEX.doprint(result)
+        else:
+            return self._PRINTER.doprint(result)
 
     def to_html(self, *parameters: Union[str, Parameter]):
         if not parameters:

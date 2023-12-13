@@ -31,6 +31,7 @@ from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
     AbstractScalingConversionReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import ProgressBar, DUMMY_PROGRESS
@@ -73,7 +74,7 @@ class _ExtraProfInputNode(Node):
         self.additional_metrics: dict[Metric, np.ndarray] = defaultdict(lambda: np.zeros(num_values))
 
 
-class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader):
+class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader, TKeepValuesReader):
     NAME = "extra-prof"
     GUI_ACTION = "Open set of &Extra-Prof files"
     DESCRIPTION = "Load a set of ExtraProf files and generate a new experiment"
@@ -149,12 +150,15 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
                     duration = (node.duration - child_durations) / 10 ** 9
 
                 experiment.add_measurement(
-                    Measurement(coordinate, node.path, METRIC_TIME, duration))
-                experiment.add_measurement(Measurement(coordinate, node.path, METRIC_VISITS, node.visits))
+                    Measurement(coordinate, node.path, METRIC_TIME, duration, keep_values=self.keep_values))
+                experiment.add_measurement(
+                    Measurement(coordinate, node.path, METRIC_VISITS, node.visits, keep_values=self.keep_values))
                 if np.any(node.bytes != 0):
-                    experiment.add_measurement(Measurement(coordinate, node.path, METRIC_BYTES, node.bytes))
+                    experiment.add_measurement(
+                        Measurement(coordinate, node.path, METRIC_BYTES, node.bytes, keep_values=self.keep_values))
                 for metric, values in node.gpu_metrics.items():
-                    experiment.add_measurement(Measurement(coordinate, node.path, metric, values))
+                    experiment.add_measurement(
+                        Measurement(coordinate, node.path, metric, values, keep_values=self.keep_values))
 
                 for metric, values in node.additional_metrics.items():
                     child_values = np.sum(
@@ -166,7 +170,8 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader)
                         exclusive_values = values
                     else:
                         exclusive_values = values - child_values
-                    experiment.add_measurement(Measurement(coordinate, node.path, metric, exclusive_values))
+                    experiment.add_measurement(
+                        Measurement(coordinate, node.path, metric, exclusive_values, keep_values=self.keep_values))
 
                 # if np.any(node.energy_cpu != 0):
                 #     child_energy_cpu = np.sum([c.energy_cpu for c in node.childs if not c.disable_exclusive_conversion],
