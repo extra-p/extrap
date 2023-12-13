@@ -142,7 +142,13 @@ Once you finished all settings, you must press _Generate models_ to generate new
 ### Viewing performance models
 If multiple performance models are created, you can select one using _Model_ in the _Selection_ panel.
 Below _Model_, you can choose the modeled _Metric_.
-The performance models are then shown in the list/call tree below the selection, including the calculated errors.
+The performance models are then shown in the list/call tree below the selection, including the calculated errors and other statistical quality control metrics.
+
+Extra-P features four statistical quality control metrics: the $RSS$ [(residual sum of squares)](https://en.wikipedia.org/wiki/Residual_sum_of_squares), $SMAPE$ [(Symmetric mean absolute percentage error)](https://en.wikipedia.org/wiki/Symmetric_mean_absolute_percentage_error), $RE$ [(relative error)](https://mathworld.wolfram.com/RelativeError.html), and $Adj. R^2$ [(adjusted coefficient of determination)](https://en.wikipedia.org/wiki/Coefficient_of_determination#Adjusted_R2).
+
+Depending on the modeler configuration Extra-P uses either the $SMAPE$ or $RSS$ metric to identify the best performance model for a callpath metric combination from all possible hypotheses existing in the specified search space.
+
+The $Adj. R^2$ metric provides insights into how well the found model replicates/predicts the metric values observed in the conducted performance measurements while also acknowledging the complexity of the found performance model.
 
 ![Screenshot of a model shown in Extra-P](images/view-models.png)
 

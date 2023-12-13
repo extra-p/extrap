@@ -32,6 +32,7 @@ from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
     AbstractScalingConversionReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
@@ -46,7 +47,7 @@ class SmallKernelFilter:
     callpath: Optional[Callpath] = None
 
 
-class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
+class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, TKeepValuesReader):
     NAME = "cube"
     GUI_ACTION = "Open set of &CUBE files"
     DESCRIPTION = "Load a set of CUBE files and generate a new experiment"
@@ -105,7 +106,8 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader):
             # add measurements to experiment
             for (callpath, metric), values in aggregated_values.items():
                 progress_bar.update(0)
-                experiment.add_measurement(Measurement(coordinate, callpath, metric, values))
+                experiment.add_measurement(
+                    Measurement(coordinate, callpath, metric, values, keep_values=self.keep_values))
 
         progress_bar.step("Unify calltrees")
         callpaths_to_merge = self._determine_and_add_common_callpaths(experiment, num_points, progress_bar)

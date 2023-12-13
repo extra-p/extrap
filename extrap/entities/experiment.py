@@ -80,6 +80,11 @@ class Experiment:
         else:
             self.measurements[key] = [measurement]
 
+    def delete_measurement(self, callpath: Callpath, metric: Metric):
+        key = (callpath,
+               metric)
+        self.measurements.pop(key)
+
     def clear_measurements(self):
         self.measurements = {}
 
@@ -120,6 +125,9 @@ class ExperimentSchema(BaseSchema):
 
     def set_progress_bar(self, pbar):
         self.context['progress_bar'] = pbar
+
+    def set_value_io(self, value_writer):
+        self.context['value_io'] = value_writer
 
     @pre_load
     def add_progress(self, data, **kwargs):

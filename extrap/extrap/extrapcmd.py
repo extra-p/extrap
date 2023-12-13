@@ -18,6 +18,7 @@ from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.fileio.io_helper import save_output
 from extrap.fileio.output import format_output
 from extrap.modelers import multi_parameter
@@ -61,6 +62,8 @@ def main(args=None, prog=None):
                                type=ScalingType, choices=ScalingType,
                                help="Set scaling type when loading data from per-thread/per-rank files (" +
                                     names_of_scaling_conversion_readers + ") (default: %(default)s)")
+    input_options.add_argument("--keep-values", action="store_true", default=False, dest='keep_values',
+                               help="Keeps the original values after import")
 
     modeling_options = parser.add_argument_group("Modeling options")
     modeling_options.add_argument("--median", action="store_true", dest="median",
@@ -80,7 +83,8 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
+                                metavar='{all,all-python,all-latex,callpaths,metrics,parameters,functions,'
+                                        'functions-python,functions-latex,FORMAT_STRING}',
                                 help="Set which information should be displayed after modeling. Use one of "
                                      "the presets or specify a formatting string using placeholders "
                                      f"(see {extrap.__documentation_link__}/output-formatting.md). "
@@ -92,6 +96,8 @@ def main(args=None, prog=None):
                                 dest="model_name", type=str,
                                 help="Sets the name of the generated set of models when outputting an experiment "
                                      '(default: "%(default)s")')
+    output_options.add_argument("--disable-progress", action="store_true", dest="disable_progress", default=False,
+                                help="Disables the progress bar outputs of Extra-P to stdout and stderr")
 
     positional_arguments.add_argument("path", metavar="FILEPATH", type=str, action="store",
                                       help="Specify a file path for Extra-P to work with")
@@ -134,7 +140,7 @@ def main(args=None, prog=None):
         print_output = False
 
     if arguments.path is not None:
-        with ProgressBar(desc='Loading file') as pbar:
+        with ProgressBar(desc='Loading file', disable=arguments.disable_progress) as pbar:
             for reader in chain(all_readers.values(), [ExperimentReader]):
                 if getattr(arguments, reader.NAME):
                     file_reader = reader()
@@ -144,6 +150,12 @@ def main(args=None, prog=None):
                     elif arguments.scaling_type != ScalingType.WEAK:
                         warnings.warn(
                             f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
+
+                    if isinstance(file_reader, TKeepValuesReader):
+                        file_reader.keep_values = arguments.keep_values
+                    elif arguments.keep_values:
+                        warnings.warn(
+                            f"Keeping values is not supported by the {reader.NAME} reader.")
 
                     if reader.LOADS_FROM_DIRECTORY:
                         if os.path.isdir(arguments.path):
@@ -180,13 +192,13 @@ def main(args=None, prog=None):
             if value is not None:
                 setattr(modeler, name, value)
 
-        with ProgressBar(desc='Generating models') as pbar:
+        with ProgressBar(desc='Generating models', disable=arguments.disable_progress) as pbar:
             # create models from data
             model_generator.model_all(pbar)
 
         if arguments.save_experiment:
             try:
-                with ProgressBar(desc='Saving experiment') as pbar:
+                with ProgressBar(desc='Saving experiment', disable=arguments.disable_progress) as pbar:
                     if not os.path.splitext(arguments.save_experiment)[1]:
                         arguments.save_experiment += '.extra-p'
                     experiment_io.write_experiment(experiment, arguments.save_experiment, pbar)

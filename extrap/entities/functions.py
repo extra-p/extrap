@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import numbers
 import warnings
+from itertools import chain
 from numbers import Number
-from typing import List, Mapping, Union, Sequence
+from typing import List, Mapping, Union
+from typing import Sequence
 
 import numpy
 import sympy
@@ -19,7 +21,9 @@ from marshmallow import fields
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
 from extrap.util.formatting_helper import format_number_html
+from extrap.util.latex_formatting import frmt_scientific_coefficient
 from extrap.util.serialization_schema import BaseSchema, NumberField
+from extrap.util.string_formats import FunctionFormats
 
 _TermType = Union[CompoundTerm, MultiParameterTerm]
 
@@ -75,14 +79,24 @@ class Function:
             function_value += t.evaluate(parameter_value)
         return function_value
 
-    def to_string(self, *parameters: Union[str, Parameter]):
+    def to_string(self, *parameters: Union[str, Parameter], format: FunctionFormats = None):
         """
         Return a string representation of the function.
         """
-        function_string = str(self.constant_coefficient)
-        for t in self.compound_terms:
-            function_string += ' + '
-            function_string += t.to_string(*parameters)
+        if format == FunctionFormats.LATEX:
+            return self.to_latex_string(*parameters)
+
+        term_list = (t.to_string(*parameters, format=format) for t in self.compound_terms)
+        if self.constant_coefficient != 0 or not self.compound_terms:
+            term_list = chain([str(self.constant_coefficient)], term_list)
+
+        joiner = ' + '
+        if format == FunctionFormats.PYTHON:
+            joiner = '+'
+        function_string = joiner.join(term_list)
+
+        if format == FunctionFormats.PYTHON:
+            function_string = function_string.replace('+-', '-')
         return function_string
 
     def to_html(self, *parameters: Union[str, Parameter]):
@@ -97,6 +111,43 @@ class Function:
             else:
                 function_string = function_string + ' + ' + coefficient_string
         return function_string
+
+    def to_latex_string(self, *parameters: Union[str, Parameter]):
+        """
+        Return a math string (using latex encoding) representation of the function.
+        """
+        new_coefficients = []
+        new_coefficients.append(frmt_scientific_coefficient(self.constant_coefficient))
+        for t in self.compound_terms:
+            new_coefficients.append(frmt_scientific_coefficient(t.coefficient))
+        function_string = new_coefficients[0]
+        coeff_counter = 1
+        for t in self.compound_terms:
+            if isinstance(t, MultiParameterTerm) is True:
+                sub_terms = t.parameter_term_pairs
+            elif isinstance(t, CompoundTerm) is True:
+                sub_terms = t.simple_terms
+            new_term = new_coefficients[coeff_counter]
+            for sub_term in sub_terms:
+                if type(sub_term) is tuple:
+                    new_term = new_term + "*" + sub_term[1].to_string(parameter=parameters[sub_term[0]],
+                                                                      format=FunctionFormats.PYTHON)
+                    new_term = new_term.replace("log2(" + str(parameters[sub_term[0]]) + ")",
+                                                "\\log_2{" + str(parameters[sub_term[0]]) + "}")
+                else:
+                    new_term = new_term + "*" + sub_term.to_string(parameter=parameters[0],
+                                                                   format=FunctionFormats.PYTHON)
+                    new_term = new_term.replace("log2(" + str(parameters[0]) + ")",
+                                                "\\log_2{" + str(parameters[0]) + "}")
+            new_term = new_term.replace("**", "^")
+            new_term = new_term.replace("*", "\\cdot ")
+            new_term = new_term.replace("(", "{")
+            new_term = new_term.replace(")", "}")
+            if new_term[0] != "-":
+                function_string += "+"
+            function_string += new_term
+            coeff_counter += 1
+        return "$" + function_string + "$"
 
     def __repr__(self):
         return f"Function({self.to_string('p')})"
@@ -169,7 +220,7 @@ class ConstantFunction(TermlessFunction):
         super().__init__()
         self.constant_coefficient = constant_coefficient
 
-    def to_string(self, *_):
+    def to_string(self, *_, format: FunctionFormats = None):
         """
         Returns a string representation of the constant function.
         """

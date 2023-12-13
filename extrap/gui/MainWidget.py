@@ -636,11 +636,12 @@ class MainWidget(QMainWindow):
             from AppKit import NSWindow, NSView, NSColor, NSColorSpace
             ns_view = objc.objc_object(c_void_p=int(self.winId()))
             ns_window = ns_view.window()
-            ns_window.setTitlebarAppearsTransparent_(True)
-            ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
-            c = self.palette().window().color()
-            ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
-            ns_window.setBackgroundColor_(ns_window_color)
+            if ns_window is not None:
+                ns_window.setTitlebarAppearsTransparent_(True)
+                ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
+                c = self.palette().window().color()
+                ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
+                ns_window.setBackgroundColor_(ns_window_color)
         except ImportError:
             pass
 

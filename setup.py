@@ -59,7 +59,7 @@ setup(
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",
-        "packaging>=20.0,<22",
+        "packaging>=20.0",
         "kaitaistruct~=0.9",
         "protobuf~=3.14",
         "itanium_demangler~=1.0",

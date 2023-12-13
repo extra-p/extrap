@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import math
+from typing import Optional
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -25,7 +26,7 @@ class Measurement(CalculationElement):
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
 
-    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values):
+    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values, *, keep_values=False):
         """
         Initialize the Measurement object.
         """
@@ -35,6 +36,10 @@ class Measurement(CalculationElement):
         if values is None:
             return
         values = np.array(values)
+        if keep_values:
+            self.values: Optional[np.typing.NDArray] = values
+        else:
+            self.values = None
         self.median: float = np.median(values)
         self.mean: float = np.mean(values)
         self.minimum: float = np.min(values)
@@ -43,6 +48,16 @@ class Measurement(CalculationElement):
 
     def value(self, use_median):
         return self.median if use_median else self.mean
+
+    def add_value(self, value):
+        if not self.values:
+            raise RuntimeError("Cannot add value, because the list of original values does not exist.")
+        self.values = np.append(self.values, value)
+        self.median = np.median(self.values)
+        self.mean = np.mean(self.values)
+        self.minimum = np.min(self.values)
+        self.maximum = np.max(self.values)
+        self.std = np.std(self.values)
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
@@ -63,11 +78,11 @@ class Measurement(CalculationElement):
         elif self is other:
             return True
         else:
-            return self.coordinate == other.coordinate and \
-                self.metric == other.metric and \
-                self.callpath == other.callpath and \
-                self.mean == other.mean and \
-                self.median == other.median
+            return (self.coordinate == other.coordinate and
+                    self.metric == other.metric and
+                    self.callpath == other.callpath and
+                    self.mean == other.mean and
+                    self.median == other.median)
 
     def __add__(self, other):
         if isinstance(other, Measurement):
@@ -246,6 +261,17 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
+    values = fields.Method('_store_values', '_load_values', allow_none=True, load_default=None)
+
+    def _load_values(self, value):
+        if value is None:
+            return None
+        return self.context['value_io'].read_values(*value)
+
+    def _store_values(self, obj: Measurement):
+        if not hasattr(obj, 'values') or obj.values is None:
+            return None
+        return self.context['value_io'].write_values(obj.values)
 
     @post_load
     def report_progress(self, data, **kwargs):

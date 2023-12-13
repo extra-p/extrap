@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -20,7 +20,7 @@ from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
-def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
+def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS, keep_values=False):
     # create an experiment object to save the date loaded from the text file
     experiment = Experiment()
 
@@ -62,7 +62,7 @@ def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS):
                 raise FileFormatError(f'Missing property in line {ln}: {str(error)}. Line: "{line}"')
 
     # create experiment
-    io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar)
+    io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar, keep_values=keep_values)
 
     for p in parameters:
         experiment.add_parameter(p)

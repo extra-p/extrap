@@ -1,4 +1,5 @@
 import datetime
+import os
 
 license_header = """
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
@@ -22,6 +23,8 @@ find_license_comment = re.compile(r"\s*(?:#.*?\n)+(?:#.*?Copyright.*?(\d\d\d\d).
 
 for file_path in file_paths:
     if file_path.endswith('update_license_header.py') or file_path.endswith('_pb2.py'):
+        continue
+    if file_path.startswith(os.path.join("..", "venv")):
         continue
     print(file_path)
     with open(file_path, 'r', encoding='utf-8') as file:
