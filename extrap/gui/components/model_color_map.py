@@ -13,14 +13,29 @@ from extrap.entities.calltree import Node
 
 
 class ModelColorMap(Mapping[Node, str]):
+    colormaps = {'default': ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                             '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
+                 'extrap3': ['#8B0000', '#00008B', '#006400', '#2F4F4F', '#8B4513', '#556B2F', '#808000', '#008080',
+                             '#FF00FF', '#800000', '#FF0000', '#000080', '#008000', '#00FFFF', '#800080'],
+                 'grayscale': ['#000000', '#d9d9d9', '#777777'],
+                 'grayscale-printable': ['#31688e', '#fde725', '#35b779', '#440154'],
+                 'colorbrewer-set1': ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628',
+                                      '#f781bf', '#999999']}
+
     def __init__(self):
-        self.color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-                           '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-        self.default_color = self.color_list[0]
-        self.graph_light_color_list = []
-        # ['#8B0000', '#00008B', '#006400', '#2F4F4F', '#8B4513', '#556B2F',
-        #  '#808000', '#008080', '#FF00FF', '#800000', '#FF0000', '#000080', '#008000', '#00FFFF', '#800080']
+        self.color_list = []
+        self.name = ''
+        self.default_color = None
         self.dict_callpath_color: Dict[Node, str] = {}
+
+        self.set_colormap('default')
+
+    def set_colormap(self, name):
+        self.name = name
+        self.color_list = self.colormaps[name]
+        self.default_color = self.color_list[0]
+        keys = list(self.dict_callpath_color.keys())
+        self.update(keys)
 
     def __getitem__(self, k):
         if k not in self.dict_callpath_color:

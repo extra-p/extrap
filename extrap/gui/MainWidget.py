@@ -346,7 +346,7 @@ class MainWidget(QMainWindow):
         return self.selector_widget.get_selected_models()
 
     def open_plot_format_dialog_box(self):
-        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.WindowType.Sheet)
+        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.WindowType.Sheet, self.model_color_map)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.data_display.updateWidget()
             self.update()
