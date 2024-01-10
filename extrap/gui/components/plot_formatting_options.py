@@ -8,7 +8,9 @@
 import dataclasses
 
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout
+from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout, QComboBox
+
+from extrap.gui.components.model_color_map import ModelColorMap
 
 
 @dataclasses.dataclass
@@ -20,10 +22,11 @@ class PlotFormattingOptions:
 
 class PlotFormattingDialog(QDialog):
 
-    def __init__(self, options: PlotFormattingOptions, parent=None, f=...):
+    def __init__(self, options: PlotFormattingOptions, parent=None, f=..., model_color_map=None):
         super().__init__(parent, f)
 
         self._options = options
+        self._model_color_map = model_color_map
 
         # init UI
         self.setWindowTitle("Plot Formatting Options")
@@ -42,6 +45,11 @@ class PlotFormattingDialog(QDialog):
         self._legend_font_size_selector.setMaximum(20)
         self._legend_font_size_selector.setValue(self._options.legend_font_size)
         layout.addRow("Legend font size", self._legend_font_size_selector)
+        self._colormap_selector = QComboBox()
+        self._colormap_selector.addItems(ModelColorMap.colormaps)
+        self._colormap_selector.setCurrentText(self._model_color_map.name)
+        self._colormap_selector.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        layout.addRow("Colormap", self._colormap_selector)
 
         _dialog_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         _dialog_buttons.accepted.connect(self.accept)
@@ -54,5 +62,6 @@ class PlotFormattingDialog(QDialog):
         self._options.font_family = self._font_family_selector.currentFont().family()
         self._options.font_size = self._font_size_selector.value()
         self._options.legend_font_size = self._legend_font_size_selector.value()
+        self._model_color_map.set_colormap(self._colormap_selector.currentText())
 
         super().accept()
