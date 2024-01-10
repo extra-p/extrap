@@ -27,14 +27,16 @@ class ModelColorMap(Mapping[Node, str]):
         self.color_list = []
         self.name = ''
         self.default_color = None
-        self.set_colormap('default')
-
         self.dict_callpath_color: Dict[Node, str] = {}
+        
+        self.set_colormap('default')
 
     def set_colormap(self, name):
         self.name = name
         self.color_list = self.colormaps[name]
         self.default_color = self.color_list[0]
+        keys = list(self.dict_callpath_color.keys())
+        self.update(keys)
 
     def __getitem__(self, k):
         if k not in self.dict_callpath_color:
