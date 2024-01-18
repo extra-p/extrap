@@ -321,10 +321,14 @@ class SelectorWidget(QWidget):
         for callpath in callpaths:
             model = models.get((callpath.path, metric))
             if model is not None:
-                formula = model.hypothesis.function
-                value = formula.evaluate(param_value_list)
-                if not math.isinf(value) and not math.isnan(value):
-                    value_list.append(value)
+                if isinstance(model, list):
+                    pass
+                    #TODO: need code here
+                else:
+                    formula = model.hypothesis.function
+                    value = formula.evaluate(param_value_list)
+                    if not math.isinf(value) and not math.isnan(value):
+                        value_list.append(value)
             children = callpath.childs
             value_list += self.iterate_children(models, param_value_list, children, metric)
         return value_list

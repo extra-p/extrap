@@ -84,7 +84,7 @@ class TreeModel(QAbstractItemModel):
         if callpath is None:
             return "Invalid"
 
-        model = self.getSelectedModel(callpath)
+        model, _ = self.getSelectedModel(callpath)
         if model is None and index.column() != 0:
             return None
 
@@ -111,12 +111,15 @@ class TreeModel(QAbstractItemModel):
             return self.main_widget.color_widget.getColor(relativeValue)
 
         if get_tooltip_annotations:
-            if model.annotations:
-                parameters = self.main_widget.getExperiment().parameters
-                parameter_values = self.selector_widget.getParameterValues()
-                return "\n".join(ann.title(parameters=parameters,
-                                           parameter_values=parameter_values)
-                                 for ann in model.annotations)
+            if isinstance(model, list):
+                pass
+            else:
+                if model.annotations:
+                    parameters = self.main_widget.getExperiment().parameters
+                    parameter_values = self.selector_widget.getParameterValues()
+                    return "\n".join(ann.title(parameters=parameters,
+                                            parameter_values=parameter_values)
+                                    for ann in model.annotations)
             return None
 
         if index.column() == 0:
@@ -125,42 +128,112 @@ class TreeModel(QAbstractItemModel):
             else:
                 return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
-            if model.annotations:
-                parameters = self.main_widget.getExperiment().parameters
-                parameter_values = self.selector_widget.getParameterValues()
-                return [ann.icon(parameters=parameters,
-                                 parameter_values=parameter_values)
-                        for ann in model.annotations]
+            if isinstance(model, list):
+                pass
+                #TODO: need some code here that return correct value
+            else:
+                if model.annotations:
+                    parameters = self.main_widget.getExperiment().parameters
+                    parameter_values = self.selector_widget.getParameterValues()
+                    return [ann.icon(parameters=parameters,
+                                    parameter_values=parameter_values)
+                            for ann in model.annotations]
             return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
-            formula = model.hypothesis.function
-            if self.selector_widget.asymptoticCheckBox.isChecked():
-                parameters = tuple(experiment.parameters)
-                return formatFormula(formula.to_string(*parameters))
+            if isinstance(model, list):
+                segmented_model = ""
+                for i in range(len(model)):
+                    formula = model[i].hypothesis.function
+                    if self.selector_widget.asymptoticCheckBox.isChecked():
+                        parameters = tuple(experiment.parameters)
+                        param_value = model[i].changing_point.coordinate._values[0]
+                        if i == 0:
+                            segmented_model = segmented_model + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
+                        else:
+                            segmented_model = segmented_model + "\n" + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
+                    else:
+                        param_value = model[i].changing_point.coordinate._values[0]
+                        parameters = self.selector_widget.getParameterValues()
+                        previous = numpy.seterr(divide='ignore', invalid='ignore')
+                        res = formatNumber(str(formula.evaluate(parameters)))
+                        numpy.seterr(**previous)
+                        if i == 0:
+                            segmented_model += res + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
+                        else:
+                            segmented_model = segmented_model + "\n" + res + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
+                return segmented_model
             else:
-                parameters = self.selector_widget.getParameterValues()
-                previous = numpy.seterr(divide='ignore', invalid='ignore')
-                res = formatNumber(str(formula.evaluate(parameters)))
-                numpy.seterr(**previous)
-                return res
+                formula = model.hypothesis.function
+                if self.selector_widget.asymptoticCheckBox.isChecked():
+                    parameters = tuple(experiment.parameters)
+                    return formatFormula(formula.to_string(*parameters))
+                else:
+                    parameters = self.selector_widget.getParameterValues()
+                    previous = numpy.seterr(divide='ignore', invalid='ignore')
+                    res = formatNumber(str(formula.evaluate(parameters)))
+                    numpy.seterr(**previous)
+                    return res
         elif index.column() == 4:
-            return formatNumber(str(model.hypothesis.RSS))
+            if isinstance(model, list):
+                rss = ""
+                for i in range(len(model)):
+                    if i == 0:
+                        rss = rss + formatNumber(str(model[i].hypothesis.RSS))
+                    else:
+                        rss = rss + "\n" + formatNumber(str(model[i].hypothesis.RSS))
+                return rss
+            else:
+                return formatNumber(str(model.hypothesis.RSS))
         elif index.column() == 5:
-            return formatNumber(str(model.hypothesis.AR2))
+            if isinstance(model, list):
+                ar2 = ""
+                for i in range(len(model)):
+                    if i == 0:
+                        ar2 = ar2 + formatNumber(str(model[i].hypothesis.AR2))
+                    else:
+                        ar2 = ar2 + "\n" + formatNumber(str(model[i].hypothesis.AR2))
+                return ar2
+            else:
+                return formatNumber(str(model.hypothesis.AR2))
         elif index.column() == 6:
-            return formatNumber(str(model.hypothesis.SMAPE))
+            if isinstance(model, list):
+                smape = ""
+                for i in range(len(model)):
+                    if i == 0:
+                        smape = smape + formatNumber(str(model[i].hypothesis.SMAPE))
+                    else:
+                        smape = smape + "\n" + formatNumber(str(model[i].hypothesis.SMAPE))
+                return smape
+            else:
+                return formatNumber(str(model.hypothesis.SMAPE))
         elif index.column() == 7:
-            return formatNumber(str(model.hypothesis.RE))
+            if isinstance(model, list):
+                re = ""
+                for i in range(len(model)):
+                    if i == 0:
+                        re = re + formatNumber(str(model[i].hypothesis.RE))
+                    else:
+                        re = re + "\n" + formatNumber(str(model[i].hypothesis.RE))
+                return re
+            else:
+                return formatNumber(str(model.hypothesis.RE))
         return None
 
     def get_comparison_value(self, model):
         parameters = self.selector_widget.getParameterValues()
-        formula = model.hypothesis.function
-        previous = numpy.seterr(divide='ignore', invalid='ignore')
-        value = formula.evaluate(parameters)
-        numpy.seterr(**previous)
-        return value
+        if isinstance(model, list):
+            formula = model[0].hypothesis.function
+            previous = numpy.seterr(divide='ignore', invalid='ignore')
+            value = formula.evaluate(parameters)
+            numpy.seterr(**previous)
+            return value
+        else:
+            formula = model.hypothesis.function
+            previous = numpy.seterr(divide='ignore', invalid='ignore')
+            value = formula.evaluate(parameters)
+            numpy.seterr(**previous)
+            return value
 
     def remove_method_parameters(self, name):
         def _replace_braces(name, lb, rb):
@@ -189,13 +262,14 @@ class TreeModel(QAbstractItemModel):
         return name
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
+        experiment = self.main_widget.getExperiment()
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
         if model is None or metric is None:
             return None
         key = (callpath, metric)
         if key in model.models:
-            return model.models[key]  # might be None
+            return model.models[key], experiment  # might be None
         else:
             return None
 

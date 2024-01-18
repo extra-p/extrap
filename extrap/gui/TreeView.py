@@ -34,8 +34,11 @@ class TreeView(QTreeView):
 
         child_count = index.model().rowCount(parent=index)
         for i in range(0, child_count):
-            child = index.child(i, 0)
-            self.collapseRecursively(child)
+            try:
+                child = index.child(i, 0)
+                self.collapseRecursively(child)
+            except AttributeError:
+                pass
 
     def expand_largest(self, model, index):
         root = index.internalPointer()
@@ -71,7 +74,7 @@ class TreeView(QTreeView):
     def get_value_from_node(self, tree_model, node, parent_index):
         index = tree_model.index(node.row(), 0, parent_index)
         callpath = tree_model.getValue(index).path
-        node_model = tree_model.getSelectedModel(callpath)
+        node_model, _ = tree_model.getSelectedModel(callpath)
         if node_model:
             return tree_model.get_comparison_value(node_model)
         else:
@@ -87,7 +90,7 @@ class TreeView(QTreeView):
                     self.selectedIndexes()[0])
                 if selectedCallpath is None:
                     return
-                selectedModel = model.getSelectedModel(selectedCallpath.path)
+                selectedModel, experiment = model.getSelectedModel(selectedCallpath.path)
 
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
@@ -106,7 +109,7 @@ class TreeView(QTreeView):
                 copyModel = menu.addAction("Copy model")
                 copyModel.setDisabled(selectedModel is None)
                 copyModel.triggered.connect(
-                    lambda: self.copy_model_to_clipboard(selectedModel)
+                    lambda: self.copy_model_to_clipboard(selectedModel, experiment)
                 )
                 menu.exec(self.mapToGlobal(event.pos()))
 
@@ -127,10 +130,17 @@ class TreeView(QTreeView):
             lambda: self.collapseRecursively(self.selectedIndexes()[0]))
         return expand_collapse_submenu
 
-    def copy_model_to_clipboard(self, selectedModel):
+    def copy_model_to_clipboard(self, selectedModel, experiment):
         parameters = self.model().main_widget.getExperiment().parameters
-        function_string = selectedModel.hypothesis.function.to_string(*parameters)
-        QGuiApplication.clipboard().setText(function_string)
+        if isinstance(selectedModel, list):
+            param_value = selectedModel[0].changing_point.coordinate._values[0]
+            function_string = selectedModel[0].hypothesis.function.to_string(*parameters) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
+            function_string = function_string + "\n" + selectedModel[1].hypothesis.function.to_string(*parameters) + " for " + str(
+                            experiment.parameters[0]) + ">=" + str(param_value)
+            QGuiApplication.clipboard().setText(function_string)
+        else:
+            function_string = selectedModel.hypothesis.function.to_string(*parameters)
+            QGuiApplication.clipboard().setText(function_string)
 
     @staticmethod
     def showComments(model):
@@ -163,17 +173,34 @@ class TreeView(QTreeView):
         layout.addWidget(btn)
         msgBox.setLayout(layout)
 
-        msg_txt = "Callpath: " + model.callpath.name + "\n\n"
-
-        if model.predictions is not None and model.measurements is not None:
-            row_format = "{:20} {:>15} {:>15} {:>15}\n"
-            msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
-            row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
-            for pred, m in zip(model.predictions, model.measurements):
-                msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
-                # print(str(ps[i])+","+str(actual_points[i]))
+        if isinstance(model, list):
+            msg_txt = "Callpath: " + model[0].callpath.name + "\n\n"
         else:
-            msg_txt += "No data available."
+            msg_txt = "Callpath: " + model.callpath.name + "\n\n"
+
+        if isinstance(model, list):
+            for i in range(len(model)):
+                if model[i].predictions is not None and model[i].measurements is not None:
+                    msg_txt += "Model "+str(i+1)+":\n\n"
+                    row_format = "{:20} {:>15} {:>15} {:>15}\n"
+                    msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
+                    row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
+                    for pred, m in zip(model[i].predictions, model[i].measurements):
+                        msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
+                        # print(str(ps[i])+","+str(actual_points[i]))
+                    msg_txt += "\n"
+                else:
+                    msg_txt += "No data available."
+        else:
+            if model.predictions is not None and model.measurements is not None:
+                row_format = "{:20} {:>15} {:>15} {:>15}\n"
+                msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
+                row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
+                for pred, m in zip(model.predictions, model.measurements):
+                    msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
+                    # print(str(ps[i])+","+str(actual_points[i]))
+            else:
+                msg_txt += "No data available."
 
         print(msg_txt)
         print("")

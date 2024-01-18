@@ -419,18 +419,33 @@ class GraphWidget(QWidget):
                            Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
 
     def drawModel(self, paint, model, color):
-        function = model.hypothesis.function
+        if isinstance(model, list):
+            for m in model:
+                function = m.hypothesis.function
 
-        cord_list = self.calculate_function(function, self.graph_width)
+                cord_list = self.calculate_function(function, self.graph_width)
 
-        pen = QPen(QColor(color))
-        pen.setWidth(2)
-        paint.setPen(pen)
+                pen = QPen(QColor(color))
+                pen.setWidth(2)
+                paint.setPen(pen)
 
-        points = [
-            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
-        ]
-        paint.drawPolyline(points)
+                points = [
+                    QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+                ]
+                paint.drawPolyline(points)
+        else:
+            function = model.hypothesis.function
+
+            cord_list = self.calculate_function(function, self.graph_width)
+
+            pen = QPen(QColor(color))
+            pen.setWidth(2)
+            paint.setPen(pen)
+
+            points = [
+                QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+            ]
+            paint.drawPolyline(points)
 
     def drawAggregratedModel(self, paint, model_list):
         functions = list()
@@ -754,20 +769,34 @@ class GraphWidget(QWidget):
 
         # Check the value at the end of the displayed interval
         for model in modelList:
-            function = model.hypothesis.function
-            y = function.evaluate(pv_list)
-            if math.isinf(y):
-                y = max(model.predictions)
-            y_max = max(y, y_max)
+            if isinstance(model, list):
+                function = model[len(model)-1].hypothesis.function
+                y = function.evaluate(pv_list)
+                if math.isinf(y):
+                    y = max(model.predictions)
+                y_max = max(y, y_max)
+            else:
+                function = model.hypothesis.function
+                y = function.evaluate(pv_list)
+                if math.isinf(y):
+                    y = max(model.predictions)
+                y_max = max(y, y_max)
 
         # Check the value at the beginning of the displayed interval
         pv_list[param] = 1
         for model in modelList:
-            function = model.hypothesis.function
-            y = function.evaluate(pv_list)
-            if math.isinf(y):
-                y = max(model.predictions)
-            y_max = max(y, y_max)
+            if isinstance(model, list):
+                function = model[0].hypothesis.function
+                y = function.evaluate(pv_list)
+                if math.isinf(y):
+                    y = max(model.predictions)
+                y_max = max(y, y_max)
+            else:
+                function = model.hypothesis.function
+                y = function.evaluate(pv_list)
+                if math.isinf(y):
+                    y = max(model.predictions)
+                y_max = max(y, y_max)
 
         numpy.seterr(**previous)
         # Ensure that the maximum value is never too small
