@@ -170,7 +170,7 @@ def format_all(experiment, format: FunctionFormats = None):
                         text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2_values[0])
                 else:
                     if isinstance(model[0].changing_point, Measurement):
-                        param_value = model[0].changing_point.coordinate._values[0]
+                        param_value = model[0].changing_point.coordinate._values[0]                        
                         text += "\t\tModel 1: " + function_strings[0] + " for " + str(
                             experiment.parameters[0]) + "<=" + str(param_value) + "\n"
                         text += "\t\tModel 2: " + function_strings[1] + " for " + str(
