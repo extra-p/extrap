@@ -19,6 +19,7 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.model import Model
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
+from extrap.entities.measurement import Measurement
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
@@ -147,11 +148,22 @@ class TreeModel(QAbstractItemModel):
                     formula = model[i].hypothesis.function
                     if self.selector_widget.asymptoticCheckBox.isChecked():
                         parameters = tuple(experiment.parameters)
-                        param_value = model[i].changing_point.coordinate._values[0]
-                        if i == 0:
-                            segmented_model = segmented_model + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
+
+                        if isinstance(model[i].changing_point, Measurement):
+                            param_value = model[i].changing_point.coordinate._values[0]
+                            if i == 0:
+                                segmented_model = segmented_model + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
+                            else:
+                                segmented_model = segmented_model + "\n" + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
+
                         else:
-                            segmented_model = segmented_model + "\n" + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
+                            if i == 0:
+                                param_value = model[i].changing_point[0].coordinate._values[0]
+                                segmented_model = segmented_model + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
+                            else:
+                                param_value = model[i].changing_point[1].coordinate._values[0]
+                                segmented_model = segmented_model + "\n" + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
+ 
                     else:
                         param_value = model[i].changing_point.coordinate._values[0]
                         parameters = self.selector_widget.getParameterValues()
