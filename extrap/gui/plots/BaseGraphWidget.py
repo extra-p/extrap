@@ -19,6 +19,7 @@ from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
+from extrap.entities.measurement import Measurement
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -96,28 +97,82 @@ class GraphDisplayWindow(FigureCanvas):
         return z_value
 
     def calculate_z_models(self, maxX, maxY, model_list, max_z=0):
-        # define grid parameters based on max x and max y value
-        pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
-        # Get the grid of the x and y values
-        x = np.arange(1.0, maxX, pixelGap_x)
-        y = np.arange(1.0, maxY, pixelGap_y)
-        X, Y = np.meshgrid(x, y)
-        # Get the z value for the x and y value
-        z_List = list()
-        Z_List = list()
-        previous = np.seterr(invalid='ignore', divide='ignore')
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = self.calculate_z_optimized(X, Y, function)
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
-            max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
-        np.seterr(**previous)
-        for z, Z in zip(z_List, Z_List):
-            z[np.isinf(z)] = max_z
-            Z[np.isinf(Z)] = max_z
-        return X, Y, Z_List, z_List
+        if isinstance(model_list[0], list):
+            # define grid parameters based on max x and max y value
+            pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
+            
+            # Get the z value for the x and y value
+            z_List = list()
+            Z_List = list()
+            previous = np.seterr(invalid='ignore', divide='ignore')
+
+            for model in model_list:
+                function = model[0].hypothesis.function
+                # Get the grid of the x and y values
+                if isinstance(model[0].changing_point, Measurement):
+                    x = np.arange(1.0, model[0].changing_point.coordinate._values[0], pixelGap_x)
+                else:
+                    x = np.arange(1.0, model[0].changing_point[0].coordinate._values[0], pixelGap_x)
+                y = np.arange(1.0, maxY, pixelGap_y)
+                X, Y = np.meshgrid(x, y)
+                zs = self.calculate_z_optimized(X, Y, function)
+                Z = zs.reshape(X.shape)
+                z_List.append(zs)
+                Z_List.append(Z)
+                max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
+            np.seterr(**previous)
+            for z, Z in zip(z_List, Z_List):
+                z[np.isinf(z)] = max_z
+                Z[np.isinf(Z)] = max_z
+
+            # Get the z value for the x and y value
+            z_List2 = list()
+            Z_List2 = list()
+            previous = np.seterr(invalid='ignore', divide='ignore')
+
+            for model in model_list:
+                function = model[1].hypothesis.function
+                # Get the grid of the x and y values
+                if isinstance(model[1].changing_point, Measurement):
+                    x = np.arange(model[1].changing_point.coordinate._values[0], maxX, pixelGap_x)
+                else:
+                    x = np.arange(model[1].changing_point[1].coordinate._values[0], maxX, pixelGap_x)
+                y = np.arange(1.0, maxY, pixelGap_y)
+                X2, Y2 = np.meshgrid(x, y)
+                zs = self.calculate_z_optimized(X2, Y2, function)
+                Z = zs.reshape(X2.shape)
+                z_List2.append(zs)
+                Z_List2.append(Z)
+                max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
+            np.seterr(**previous)
+            for z, Z in zip(z_List2, Z_List2):
+                z[np.isinf(z)] = max_z
+                Z[np.isinf(Z)] = max_z
+            return X, Y, Z_List, z_List, X2, Y2, Z_List2, z_List2
+
+        else:
+            # define grid parameters based on max x and max y value
+            pixelGap_x, pixelGap_y = self._calculate_grid_parameters(maxX, maxY)
+            # Get the grid of the x and y values
+            x = np.arange(1.0, maxX, pixelGap_x)
+            y = np.arange(1.0, maxY, pixelGap_y)
+            X, Y = np.meshgrid(x, y)
+            # Get the z value for the x and y value
+            z_List = list()
+            Z_List = list()
+            previous = np.seterr(invalid='ignore', divide='ignore')
+            for model in model_list:
+                function = model.hypothesis.function
+                zs = self.calculate_z_optimized(X, Y, function)
+                Z = zs.reshape(X.shape)
+                z_List.append(zs)
+                Z_List.append(Z)
+                max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
+            np.seterr(**previous)
+            for z, Z in zip(z_List, Z_List):
+                z[np.isinf(z)] = max_z
+                Z[np.isinf(Z)] = max_z
+            return X, Y, Z_List, z_List
 
     def draw_legend(self, ax_all, dict_callpath_color):
         # draw legend
