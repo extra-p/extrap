@@ -36,52 +36,122 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
         # Get max x and max y value as a initial default value or a value provided by user
         maxX, maxY = self.get_max()
 
-        X, Y, Z_list, z_List = self.calculate_z_models(maxX, maxY, model_list)
+        if isinstance(model_list[0], list):
+            X, Y, Z_List, z_List, X2, Y2, Z_List2, z_List2 = self.calculate_z_models(maxX, maxY, model_list)
+            
+            # Get the callpath color map
+            widget = self.main_widget
+            dict_callpath_color = widget.model_color_map
 
-        # Get the callpath color map
-        widget = self.main_widget
-        dict_callpath_color = widget.model_color_map
+            # calculate max_z value
+            color_for_max_z = dict_callpath_color[selected_callpaths[0]]
+            max_z_list = list()
+            max_color_list = list()
 
-        # calculate max_z value
-        color_for_max_z = dict_callpath_color[selected_callpaths[0]]
-        max_z_list = list()
-        max_color_list = list()
+            for i in range(len(z_List[0])):
+                max_z_val = z_List[0][i]
+                for j in range(len(model_list)):
+                    if z_List[j][i] > max_z_val:
+                        max_z_val = z_List[j][i]
+                        # func_with_max_z = model_list[j]
+                        color_for_max_z = dict_callpath_color[selected_callpaths[j]]
+                max_z_list.append(max_z_val)
+                max_color_list.append(color_for_max_z)
 
-        for i in range(len(z_List[0])):
-            max_z_val = z_List[0][i]
-            for j in range(len(model_list)):
-                if z_List[j][i] > max_z_val:
-                    max_z_val = z_List[j][i]
-                    # func_with_max_z = model_list[j]
-                    color_for_max_z = dict_callpath_color[selected_callpaths[j]]
-            max_z_list.append(max_z_val)
-            max_color_list.append(color_for_max_z)
+            max_Z_List = np.array(max_z_list).reshape(X.shape)
+            max_Color_List = np.array(max_color_list).reshape(X.shape)
 
-        max_Z_List = np.array(max_z_list).reshape(X.shape)
-        max_Color_List = np.array(max_color_list).reshape(X.shape)
+            max_z_list2 = list()
+            max_color_list2 = list()
 
-        # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).name
-        if x_label.startswith("_"):
-            x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).name
-        if y_label.startswith("_"):
-            y_label = y_label[1:]
+            for i in range(len(z_List2[0])):
+                max_z_val = z_List2[0][i]
+                for j in range(len(model_list)):
+                    if z_List2[j][i] > max_z_val:
+                        max_z_val = z_List2[j][i]
+                        # func_with_max_z = model_list[j]
+                        color_for_max_z = dict_callpath_color[selected_callpaths[j]]
+                max_z_list2.append(max_z_val)
+                max_color_list2.append(color_for_max_z)
 
-        # Draw the graph showing the max z value
-        number_of_subplots = 1
-        ax = self.fig.add_subplot(1, number_of_subplots, number_of_subplots, projection='3d')
-        ax.mouse_init()
-        ax.xaxis.major.formatter._useMathText = True
-        ax.yaxis.major.formatter._useMathText = True
-        ax.zaxis.major.formatter._useMathText = True
-        ax.get_xaxis().get_major_formatter().set_scientific(True)
-        for (x, y, z, colour) in zip(X, Y, max_Z_List, max_Color_List):
-            ax.scatter(x, y, z, c=colour)
-        ax.set_xlabel('\n' + x_label)
-        ax.set_ylabel('\n' + y_label, linespacing=3.1)
-        ax.set_zlabel(
-            '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
-        ax.set_title(r'Dominating Functions')
+            max_Z_List2 = np.array(max_z_list2).reshape(X2.shape)
+            max_Color_List2 = np.array(max_color_list2).reshape(X2.shape)
 
-        self.draw_legend(ax, dict_callpath_color)
+            # Set the x_label and y_label based on parameter selected.
+            x_label = self.main_widget.data_display.getAxisParameter(0).name
+            if x_label.startswith("_"):
+                x_label = x_label[1:]
+            y_label = self.main_widget.data_display.getAxisParameter(1).name
+            if y_label.startswith("_"):
+                y_label = y_label[1:]
+
+            # Draw the graph showing the max z value
+            number_of_subplots = 1
+            ax = self.fig.add_subplot(1, number_of_subplots, number_of_subplots, projection='3d')
+            ax.mouse_init()
+            ax.xaxis.major.formatter._useMathText = True
+            ax.yaxis.major.formatter._useMathText = True
+            ax.zaxis.major.formatter._useMathText = True
+            ax.get_xaxis().get_major_formatter().set_scientific(True)
+            for (x, y, z, colour) in zip(X, Y, max_Z_List, max_Color_List):
+                ax.scatter(x, y, z, c=colour)
+            for (x, y, z, colour) in zip(X2, Y2, max_Z_List2, max_Color_List2):
+                ax.scatter(x, y, z, c=colour)
+            ax.set_xlabel('\n' + x_label)
+            ax.set_ylabel('\n' + y_label, linespacing=3.1)
+            ax.set_zlabel(
+                '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+            ax.set_title(r'Dominating Functions')
+
+            self.draw_legend(ax, dict_callpath_color)
+
+        else:
+            X, Y, Z_list, z_List = self.calculate_z_models(maxX, maxY, model_list)
+
+            # Get the callpath color map
+            widget = self.main_widget
+            dict_callpath_color = widget.model_color_map
+
+            # calculate max_z value
+            color_for_max_z = dict_callpath_color[selected_callpaths[0]]
+            max_z_list = list()
+            max_color_list = list()
+
+            for i in range(len(z_List[0])):
+                max_z_val = z_List[0][i]
+                for j in range(len(model_list)):
+                    if z_List[j][i] > max_z_val:
+                        max_z_val = z_List[j][i]
+                        # func_with_max_z = model_list[j]
+                        color_for_max_z = dict_callpath_color[selected_callpaths[j]]
+                max_z_list.append(max_z_val)
+                max_color_list.append(color_for_max_z)
+
+            max_Z_List = np.array(max_z_list).reshape(X.shape)
+            max_Color_List = np.array(max_color_list).reshape(X.shape)
+
+            # Set the x_label and y_label based on parameter selected.
+            x_label = self.main_widget.data_display.getAxisParameter(0).name
+            if x_label.startswith("_"):
+                x_label = x_label[1:]
+            y_label = self.main_widget.data_display.getAxisParameter(1).name
+            if y_label.startswith("_"):
+                y_label = y_label[1:]
+
+            # Draw the graph showing the max z value
+            number_of_subplots = 1
+            ax = self.fig.add_subplot(1, number_of_subplots, number_of_subplots, projection='3d')
+            ax.mouse_init()
+            ax.xaxis.major.formatter._useMathText = True
+            ax.yaxis.major.formatter._useMathText = True
+            ax.zaxis.major.formatter._useMathText = True
+            ax.get_xaxis().get_major_formatter().set_scientific(True)
+            for (x, y, z, colour) in zip(X, Y, max_Z_List, max_Color_List):
+                ax.scatter(x, y, z, c=colour)
+            ax.set_xlabel('\n' + x_label)
+            ax.set_ylabel('\n' + y_label, linespacing=3.1)
+            ax.set_zlabel(
+                '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+            ax.set_title(r'Dominating Functions')
+
+            self.draw_legend(ax, dict_callpath_color)

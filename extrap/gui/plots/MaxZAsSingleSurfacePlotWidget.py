@@ -34,52 +34,115 @@ class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
         if model_list is None:
             return
 
-            # Get max x and max y value as a initial default value or a value provided by user
+        # Get max x and max y value as a initial default value or a value provided by user
         maxX, maxY = self.get_max()
 
-        X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
+        if isinstance(model_list[0], list):
+            X, Y, Z_List, z_List, X2, Y2, Z_List2, z_List2 = self.calculate_z_models(maxX, maxY, model_list)
 
-        # calculate max_z value
-        if len(model_list) == 1:
-            max_Z_List = Z_List[0]
+            # calculate max_z value
+            if len(model_list) == 1:
+                max_Z_List = Z_List[0]
+                max_Z_List2 = Z_List2[0]
+
+            else:
+                # for each x,y value , calculate max z for all function
+                max_z_list = list()
+                for i in range(len(z_List[0])):
+                    max_z_val = z_List[0][i]
+                    for j in range(len(model_list)):
+                        if z_List[j][i] > max_z_val:
+                            max_z_val = z_List[j][i]
+                    max_z_list.append(max_z_val)
+
+                max_Z_List = np.array(max_z_list).reshape(X.shape)
+
+                max_z_list2 = list()
+                for i in range(len(z_List2[0])):
+                    max_z_val = z_List2[0][i]
+                    for j in range(len(model_list)):
+                        if z_List2[j][i] > max_z_val:
+                            max_z_val = z_List2[j][i]
+                    max_z_list2.append(max_z_val)
+
+                max_Z_List2 = np.array(max_z_list2).reshape(X2.shape)
+
+            # Get the callpath color map
+            # dict_callpath_color = self.main_widget.get_callpath_color_map()
+            # Set the x_label and y_label based on parameter selected.
+            x_label = self.main_widget.data_display.getAxisParameter(0).name
+            if x_label.startswith("_"):
+                x_label = x_label[1:]
+            y_label = self.main_widget.data_display.getAxisParameter(1).name
+            if y_label.startswith("_"):
+                y_label = y_label[1:]
+
+            # Draw plot showing max z value considering all the selected models
+            number_of_subplots = 1
+            ax = self.fig.add_subplot(
+                1, number_of_subplots, number_of_subplots, projection='3d')
+            ax.mouse_init()
+            ax.xaxis.major.formatter._useMathText = True
+            ax.yaxis.major.formatter._useMathText = True
+            ax.zaxis.major.formatter._useMathText = True
+            im = ax.plot_surface(X, Y, max_Z_List, cmap=self.colormap)
+            im2 = ax.plot_surface(X2, Y2, max_Z_List2, cmap=self.colormap)
+
+            ax.set_xlabel('\n' + x_label, linespacing=3.2)
+            ax.set_ylabel('\n' + y_label, linespacing=3.1)
+            ax.set_zlabel(
+                '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+            ax.set_title('Max. Z Value')
+            self.fig.colorbar(im, ax=ax, orientation="horizontal",
+                            pad=0, format=ticker.ScalarFormatter(useMathText=True))
+            self.fig.colorbar(im2, ax=ax, orientation="horizontal",
+                            pad=0, format=ticker.ScalarFormatter(useMathText=True))
+            # self.fig.tight_layout()
 
         else:
-            # for each x,y value , calculate max z for all function
-            max_z_list = list()
-            for i in range(len(z_List[0])):
-                max_z_val = z_List[0][i]
-                for j in range(len(model_list)):
-                    if z_List[j][i] > max_z_val:
-                        max_z_val = z_List[j][i]
-                max_z_list.append(max_z_val)
+            X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
-            max_Z_List = np.array(max_z_list).reshape(X.shape)
+            # calculate max_z value
+            if len(model_list) == 1:
+                max_Z_List = Z_List[0]
 
-        # Get the callpath color map
-        # dict_callpath_color = self.main_widget.get_callpath_color_map()
-        # Set the x_label and y_label based on parameter selected.
-        x_label = self.main_widget.data_display.getAxisParameter(0).name
-        if x_label.startswith("_"):
-            x_label = x_label[1:]
-        y_label = self.main_widget.data_display.getAxisParameter(1).name
-        if y_label.startswith("_"):
-            y_label = y_label[1:]
+            else:
+                # for each x,y value , calculate max z for all function
+                max_z_list = list()
+                for i in range(len(z_List[0])):
+                    max_z_val = z_List[0][i]
+                    for j in range(len(model_list)):
+                        if z_List[j][i] > max_z_val:
+                            max_z_val = z_List[j][i]
+                    max_z_list.append(max_z_val)
 
-        # Draw plot showing max z value considering all the selected models
-        number_of_subplots = 1
-        ax = self.fig.add_subplot(
-            1, number_of_subplots, number_of_subplots, projection='3d')
-        ax.mouse_init()
-        ax.xaxis.major.formatter._useMathText = True
-        ax.yaxis.major.formatter._useMathText = True
-        ax.zaxis.major.formatter._useMathText = True
-        im = ax.plot_surface(X, Y, max_Z_List, cmap=self.colormap)
+                max_Z_List = np.array(max_z_list).reshape(X.shape)
 
-        ax.set_xlabel('\n' + x_label, linespacing=3.2)
-        ax.set_ylabel('\n' + y_label, linespacing=3.1)
-        ax.set_zlabel(
-            '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
-        ax.set_title('Max. Z Value')
-        self.fig.colorbar(im, ax=ax, orientation="horizontal",
-                          pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
-        # self.fig.tight_layout()
+            # Get the callpath color map
+            # dict_callpath_color = self.main_widget.get_callpath_color_map()
+            # Set the x_label and y_label based on parameter selected.
+            x_label = self.main_widget.data_display.getAxisParameter(0).name
+            if x_label.startswith("_"):
+                x_label = x_label[1:]
+            y_label = self.main_widget.data_display.getAxisParameter(1).name
+            if y_label.startswith("_"):
+                y_label = y_label[1:]
+
+            # Draw plot showing max z value considering all the selected models
+            number_of_subplots = 1
+            ax = self.fig.add_subplot(
+                1, number_of_subplots, number_of_subplots, projection='3d')
+            ax.mouse_init()
+            ax.xaxis.major.formatter._useMathText = True
+            ax.yaxis.major.formatter._useMathText = True
+            ax.zaxis.major.formatter._useMathText = True
+            im = ax.plot_surface(X, Y, max_Z_List, cmap=self.colormap)
+
+            ax.set_xlabel('\n' + x_label, linespacing=3.2)
+            ax.set_ylabel('\n' + y_label, linespacing=3.1)
+            ax.set_zlabel(
+                '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+            ax.set_title('Max. Z Value')
+            self.fig.colorbar(im, ax=ax, orientation="horizontal",
+                            pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
+            # self.fig.tight_layout()
