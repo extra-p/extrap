@@ -21,6 +21,7 @@ class ExpanderWidget(QGroupBox):
 
     def setTitle(self, title: str):
         self._title = title
+        self._toggle.setText(self._title)
 
     def title(self) -> str:
         return self._title

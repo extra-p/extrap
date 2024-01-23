@@ -147,6 +147,7 @@ class SelectorWidget(QWidget):
                            (c.path, metric) in self.getCurrentModel().models]
         self.main_widget.model_color_map.update(call_tree_nodes)
         self.main_widget.on_selection_changed()
+        self.main_widget.measurementWizard_widget.callpath_selection_changed()
 
     def fillMetricList(self):
         self.metric_selector.clear()
