@@ -1,6 +1,6 @@
 # Extra-P Authors
 
-The following cumulative list contains the names (in alphabetical order) of all
+The following cumulative list contains the names of all
 individuals who have contributed code to this repository:
 
 * Alexandru Calotoiu (calotoiu@cs.tu-darmstadt.de)
@@ -21,3 +21,4 @@ individuals who have contributed code to this repository:
 * Moritz Vanderheyden (moritz.vanderheyden@stud.tu-darmstadt.de)
 * Johannes Wehrstein (johannes.wehrstein@gmx.de)
 * Paul Wiedeking (p.wiedeking@grs-sim.de)
+* Luis Dreher (luis.dreher@stud.tu-darmstadt.de)
