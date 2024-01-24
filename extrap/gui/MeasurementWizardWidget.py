@@ -12,7 +12,7 @@ import sys
 
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import *  # @UnusedWildImport
-from PySide6.QtGui import QDoubleValidator
+from PySide6.QtGui import QDoubleValidator, QIntValidator
 
 import matplotlib
 
@@ -90,6 +90,8 @@ class MeasurementWizardWidget(QWidget):
         self.main_widget = mainWidget
         self.main_layout = QHBoxLayout(self)
         self.init_empty()
+        self.calculate_cost_manual = False
+        self.experiment = None
 
     def init_empty(self):
         self.setLayout(self.main_layout)
@@ -102,30 +104,262 @@ class MeasurementWizardWidget(QWidget):
         self.empty_label.deleteLater()
         self.empty_label = None
 
-        layout = QGridLayout(self)
-        layout.setRowStretch(99, 1)
-        layout.setColumnStretch(0, 0)
-        layout.setColumnStretch(1, 1)
+        self.layout = QGridLayout(self)
+        self.layout.setRowStretch(99, 1)
+        self.layout.setColumnStretch(0, 0)
+        self.layout.setColumnStretch(1, 1)
 
-        self.main_layout.addLayout(layout)
+        self.main_layout.addLayout(self.layout)
 
-        label = QLabel(self)
-        label.setText("Dummy Text")
-        layout.addWidget(label, 0, 0)
+        self.checkbox = QCheckBox("Model parameters is the no. of processes (MPI ranks)", self)
+        self.checkbox.setChecked(True)
+        self.checkbox.toggled.connect(self.clickCheckbox)
+        self.layout.addWidget(self.checkbox, 0, 0)
 
-        modeling_budget = QLineEdit(self)
-        modeling_budget.setValidator(QDoubleValidator())
-        layout.addWidget(modeling_budget, 0, 1)
+        self.process_label = QLabel(self)
+        self.process_label.setText("No. of processes (MPI ranks):")
+        self.layout.addWidget(self.process_label, 1, 0)
+        self.process_label.setVisible(False)
 
-        #self.setLayout(grid)
-        """grid.addWidget(QWidget(), 99, 0)
-        grid.setRowStretch(99, 1)
-        grid.setColumnStretch(0, 0)
-        grid.setColumnStretch(1, 1)
-        label = QLabel(self)
-        label.setText("Dummy Text")
-        grid.addWidget(label, 0, 0)"""
+        self.processes = QLineEdit(self)
+        self.processes.setValidator(QIntValidator())
+        self.layout.addWidget(self.processes, 1, 1)
+        self.processes.setVisible(False)
+        self.processes.setText("2")
+        self.processes.textChanged.connect(self.processesChanged)
 
+        metric_label = QLabel(self)
+        metric_label.setText("Metric used for cost calculation:")
+        self.layout.addWidget(metric_label, 2, 0)
+
+        self.metric_selector = QComboBox(self)
+        for metric in self.experiment.metrics:
+            self.metric_selector.addItem(str(metric))
+        self.layout.addWidget(self.metric_selector, 2, 1)
+
+        budget_label = QLabel(self)
+        budget_label.setText("Modeling Budget [core hours]:")
+        self.layout.addWidget(budget_label, 3, 0)
+
+        self.modeling_budget = QLineEdit(self)
+        self.modeling_budget.setValidator(QDoubleValidator())
+        self.layout.addWidget(self.modeling_budget, 3, 1)
+        self.modeling_budget.textChanged.connect(self.budgetChanged)
+
+        current_cost_label = QLabel(self)
+        current_cost_label.setText("Current Measurement Cost [core hours]:")
+        self.layout.addWidget(current_cost_label, 4, 0)
+
+        self.current_cost = QLineEdit(self)
+        self.current_cost.setEnabled(False)
+        self.current_cost.setText("0.0")
+        self.layout.addWidget(self.current_cost, 4, 1)
+
+        self.calculate_current_measurement_cost()
+
+        used_budget_label = QLabel(self)
+        used_budget_label.setText("Used Modeling Budget [%]:")
+        self.layout.addWidget(used_budget_label, 5, 0)
+
+        self.used_budget_edit = QLineEdit(self)
+        self.used_budget_edit.setEnabled(False)
+        self.used_budget_edit.setText("0.0")
+        self.layout.addWidget(self.used_budget_edit, 5, 1)
+
+        self.calculate_used_budget()
+
+
+    def calculate_used_budget(self):
+        try:
+            modeling_budget = float(self.modeling_budget.text())
+        except:
+            modeling_budget = 1000.0
+        used_budget_percent = 100.0
+        used_budget_percent_str = "{:.2f}".format(used_budget_percent)
+        #TODO: calculate the used budget in percent
+        self.used_budget_edit.setText(used_budget_percent_str)
+
+
+    def calculate_current_measurement_cost(self):
+        current_cost_str = "0.0"
+        metric_string = self.metric_selector.currentText()
+        metrics = self.experiment.metrics
+        runtime_metric = None
+        for metric in metrics:
+            if metric_string == str(metric):
+                runtime_metric = metric
+        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+        
+        # if the model parameter is not the number of mpi ranks or processes
+        if self.calculate_cost_manual:
+            try:
+                number_processes = int(self.processes.text())
+            except ValueError:
+                number_processes = 1.0
+
+            # if there is only one callpath selected
+            if len(selected_callpath) == 1:
+                callpath = None
+                for call in self.experiment.callpaths:
+                    if str(call) == str(selected_callpath[0]):
+                        callpath = call
+                measurements = self.experiment.measurements
+                core_hours_total = 0
+                for measurement in measurements[(callpath, runtime_metric)]:
+                    core_hours_per_point = 0
+                    try:
+                        for value in measurement.values:
+                            core_hours_per_point += value * number_processes
+                    except TypeError:
+                        core_hours_per_point += measurement.mean * number_processes
+                    core_hours_total += core_hours_per_point
+
+                current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(current_cost)
+
+            # if there is no callpath selected
+            elif len(selected_callpath) == 0:
+                measurements = self.experiment.measurements
+                core_hours_total = 0
+                for callpath in self.experiment.callpaths:
+                    core_hours_callpath = 0
+                    for measurement in measurements[(callpath, runtime_metric)]:
+                        core_hours_per_point = 0
+                        try:
+                            for value in measurement.values:
+                                core_hours_per_point += value * number_processes
+                        except TypeError:
+                            core_hours_per_point += measurement.mean * number_processes
+                        core_hours_callpath += core_hours_per_point
+                    core_hours_total += core_hours_callpath
+    
+                current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(current_cost)
+            
+            # if there are several callpaths selected
+            elif len(selected_callpath) > 1:
+                callpaths = []
+                for i in range(len(selected_callpath)):
+                    current_callpath = selected_callpath[i]
+                    for j in range(len(self.experiment.callpaths)):
+                        if str(current_callpath) == str(self.experiment.callpaths[j]):
+                            callpaths.append(self.experiment.callpaths[j])
+            
+                measurements = self.experiment.measurements
+                core_hours_total = 0
+                for callpath in callpaths:
+                    core_hours_callpath = 0
+                    for measurement in measurements[(callpath, runtime_metric)]:
+                        core_hours_per_point = 0
+                        try:
+                            for value in measurement.values:
+                                core_hours_per_point += value * number_processes
+                        except TypeError:
+                            core_hours_per_point += measurement.mean * number_processes
+                        core_hours_callpath += core_hours_per_point
+                    core_hours_total += core_hours_callpath
+    
+                current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(current_cost)
+
+        # if the model parameter is the number of processes or mpi ranks
+        else:
+
+            # if there is only one callpath selected
+            if len(selected_callpath) == 1:
+                callpath = None
+                for call in self.experiment.callpaths:
+                    if str(call) == str(selected_callpath[0]):
+                        callpath = call
+                measurements = self.experiment.measurements
+                core_hours_total = 0
+                for measurement in measurements[(callpath, runtime_metric)]:
+                    core_hours_per_point = 0
+                    parameter_values = measurement.coordinate.as_tuple()
+                    try:
+                        for value in measurement.values:
+                            core_hours_per_point += value * parameter_values[0]
+                    except TypeError:
+                        core_hours_per_point += measurement.mean * parameter_values[0]
+                    core_hours_total += core_hours_per_point
+
+                current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(current_cost)
+
+            # if there is no callpath selected
+            elif len(selected_callpath) == 0:
+                measurements = self.experiment.measurements
+                core_hours_total = 0
+                for callpath in self.experiment.callpaths:
+                    core_hours_callpath = 0
+                    for measurement in measurements[(callpath, runtime_metric)]:
+                        core_hours_per_point = 0
+                        parameter_values = measurement.coordinate.as_tuple()
+                        try:
+                            for value in measurement.values:
+                                core_hours_per_point += value * parameter_values[0]
+                        except TypeError:
+                            core_hours_per_point += measurement.mean * parameter_values[0]
+                        core_hours_callpath += core_hours_per_point
+                    core_hours_total += core_hours_callpath
+    
+                current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(current_cost)
+            
+            # if there are several callpaths selected
+            elif len(selected_callpath) > 1:
+                callpaths = []
+                for i in range(len(selected_callpath)):
+                    current_callpath = selected_callpath[i]
+                    for j in range(len(self.experiment.callpaths)):
+                        if str(current_callpath) == str(self.experiment.callpaths[j]):
+                            callpaths.append(self.experiment.callpaths[j])
+            
+                measurements = self.experiment.measurements
+                core_hours_total = 0
+                for callpath in callpaths:
+                    core_hours_callpath = 0
+                    for measurement in measurements[(callpath, runtime_metric)]:
+                        core_hours_per_point = 0
+                        parameter_values = measurement.coordinate.as_tuple()
+                        try:
+                            for value in measurement.values:
+                                core_hours_per_point += value * parameter_values[0]
+                        except TypeError:
+                            core_hours_per_point += measurement.mean * parameter_values[0]
+                        core_hours_callpath += core_hours_per_point
+                    core_hours_total += core_hours_callpath
+    
+                current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(current_cost)
+
+        self.current_cost.setText(current_cost_str)
+
+
+    def budgetChanged(self):
+        self.calculate_used_budget()
+
+
+    def processesChanged(self):
+        self.calculate_current_measurement_cost()
+        self.calculate_used_budget()
+
+
+    def clickCheckbox(self):
+        cbutton = self.sender()
+        if cbutton.isChecked():
+            self.process_label.setVisible(False)
+            self.calculate_cost_manual = False
+            self.processes.setVisible(False)
+            self.calculate_current_measurement_cost()
+            self.calculate_used_budget()
+        else:
+            self.process_label.setVisible(True)
+            self.calculate_cost_manual = True
+            self.processes.setVisible(True)
+            self.calculate_current_measurement_cost()
+            self.calculate_used_budget()
+        
     def init(self):    
         maxNumberOfParameters = 4
         grid = QGridLayout(self)
@@ -258,13 +492,13 @@ class MeasurementWizardWidget(QWidget):
     
     def experimentChanged(self):
         
-        experiment = self.main_widget.getExperiment()
+        self.experiment = self.main_widget.getExperiment()
         
-        if experiment is None:
+        if self.experiment is None:
             self.reset()
             return
         
-        self.reset(len(experiment.parameters))
+        self.reset(len(self.experiment.parameters))
         
         #Budget for improvment
         #self._experimentBudget.setEnabled(True)
@@ -334,9 +568,8 @@ class MeasurementWizardWidget(QWidget):
             
 
     def callpath_selection_changed(self):    
-        #self.calculateSunkenCost()
-        #TODO: fix
-        pass
+        self.calculate_current_measurement_cost()
+        self.calculate_used_budget()
 
 
     def adviceMeasurment(self):
