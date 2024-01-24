@@ -15,12 +15,10 @@ from marshmallow import fields
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model, ModelSchema
-from extrap.entities.measurement import Measurement
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
 from extrap.modelers.modeler_options import modeler_options
-from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import Schema, TupleKeyDict
 
@@ -78,52 +76,15 @@ class ModelGenerator:
         return result_modeler
 
     def model_all(self, progress_bar=DUMMY_PROGRESS):
-        if self._modeler.NAME.upper() == "SEGMENTED":
-            results = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
-            models = []
-            change_points = []
-            for result in results:
-                model = result[0]
-                models.append(result[0])
-                change_points.append(result[1])
-            self.models = {
-                k: m for k, m in zip(self.experiment.measurements.keys(), models)
-            }
-            counter = 0
-            for (callpath, metric), model in self.models.items():
-                if change_points[counter] is not None:
-                    for i in range(len(model)):
-                        model[i].callpath = callpath
-                        model[i].metric = metric
-                        if isinstance(change_points[counter], Measurement):
-                            index = self.experiment.measurements[(callpath, metric)].index(change_points[counter])
-                            if i == 0:
-                                model[i].measurements = self.experiment.measurements[(callpath, metric)][:index]
-                            else:
-                                model[i].measurements = self.experiment.measurements[(callpath, metric)][index:]
-                        else:
-                            index_1 = self.experiment.measurements[(callpath, metric)].index(change_points[counter][0])
-                            index_2 = self.experiment.measurements[(callpath, metric)].index(change_points[counter][1])
-                            if i == 0:
-                                model[i].measurements = self.experiment.measurements[(callpath, metric)][:index_1]
-                            else:
-                                model[i].measurements = self.experiment.measurements[(callpath, metric)][index_2:]
-                        model[i].changing_point = change_points[counter]
-                    counter += 1
-                else:
-                    model.callpath = callpath
-                    model.metric = metric
-                    model.measurements = self.experiment.measurements[(callpath, metric)]
-        else:
-            models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
-            self.models = {
-                k: m for k, m in zip(self.experiment.measurements.keys(), models)
-            }
-            for (callpath, metric), model in self.models.items():
-                model.callpath = callpath
-                model.metric = metric
-                model.measurements = self.experiment.measurements[(callpath, metric)]
-                
+        models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
+        self.models = {
+            k: m for k, m in zip(self.experiment.measurements.keys(), models)
+        }
+        for (callpath, metric), model in self.models.items():
+            model.callpath = callpath
+            model.metric = metric
+            model.measurements = self.experiment.measurements[(callpath, metric)]
+
         # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
 
@@ -133,10 +94,10 @@ class ModelGenerator:
         elif self is other:
             return True
         else:
-            return self.models == other.models and \
-                   self._modeler.NAME == other._modeler.NAME and \
-                   self._modeler.use_median == other._modeler.use_median and \
-                   modeler_options.equal(self._modeler, other._modeler)
+            return (self.models == other.models and
+                    self._modeler.NAME == other._modeler.NAME and
+                    self._modeler.use_median == other._modeler.use_median and
+                    modeler_options.equal(self._modeler, other._modeler))
 
 
 class ModelGeneratorSchema(Schema):

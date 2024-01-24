@@ -4,11 +4,15 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+from __future__ import annotations
 
+import math
+import numbers
 from itertools import chain
-from typing import List, Mapping, Union
+from typing import List, Mapping, Union, Sequence
 
 import numpy
+import numpy as np
 from marshmallow import fields
 
 from extrap.entities.parameter import Parameter
@@ -165,6 +169,64 @@ class SingleParameterFunction(Function):
         if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
             parameter_value = parameter_value[0]
         return super().evaluate(parameter_value)
+
+
+class SegmentedFunction(SingleParameterFunction):
+    MAX_NUM_SEGMENTS = 2
+
+    def __init__(self, segments: list[SingleParameterFunction],
+                 intervals: Sequence[tuple[numbers.Number, numbers.Number]]):
+
+        super().__init__()
+        self.add_compound_term = None
+        if len(segments) > self.MAX_NUM_SEGMENTS:
+            raise ValueError(f"Only {self.MAX_NUM_SEGMENTS} are allowed.")
+        if len(segments) != len(intervals):
+            raise ValueError("Number of intervals must be equal to the number of segments")
+        self.segments = segments
+        self.intervals = np.array(intervals, dtype=float)
+
+    def reset_coefficients(self):
+        for v in self.segments:
+            v.reset_coefficients()
+
+    def evaluate(self, parameter_value):
+        if not self.segments:
+            return super().evaluate(parameter_value)
+
+        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
+            parameter_value = parameter_value[0]
+
+        if isinstance(parameter_value, np.ndarray):
+            function_value = np.full_like(parameter_value, math.nan, dtype=float)
+            int_start = self.intervals[:, 0]
+            int_end = self.intervals[:, 1]
+            int_start_mask = int_start.reshape(1, -1) <= parameter_value.reshape(-1, 1)
+            int_end_mask = parameter_value.reshape(-1, 1) <= int_end.reshape(1, -1)
+            mask = int_start_mask & int_end_mask
+            match = np.argmax(mask, axis=1)
+            for i, segment in enumerate(self.segments):
+                function_value[match == i] = segment.evaluate(parameter_value[match == i])
+            return function_value
+        else:
+            for (int_start, int_end), segment in zip(self.intervals, self.segments):
+                if int_start <= parameter_value <= int_end:
+                    return segment.evaluate(parameter_value)
+            return math.nan
+
+    def to_string(self, *parameters: Union[str, Parameter], format: FunctionFormats = None):
+        """
+        Return a string representation of the function.
+        """
+        if format == FunctionFormats.LATEX:
+            return self.to_latex_string(*parameters)
+
+        function_string = self.segments[0].to_string(*parameters, format=format)
+        function_string += f" for {parameters[0]}<={self.intervals[0][1]}\n"
+        function_string += self.segments[1].to_string(*parameters, format=format)
+        function_string += f" for {parameters[0]}>={self.intervals[1][0]}"
+
+        return function_string
 
 
 class MultiParameterFunction(Function):

@@ -29,7 +29,6 @@ class Model:
         self.metric = metric
         self.measurements: Optional[List[Measurement]] = None
         self.annotations: list[Annotation] = []
-        self.changing_point = None
 
     @cached_property
     def predictions(self):
@@ -43,9 +42,37 @@ class Model:
             return True
         else:
             return self.callpath == other.callpath and \
-                   self.metric == other.metric and \
-                   self.hypothesis == other.hypothesis and \
-                   self.measurements == other.measurements
+                self.metric == other.metric and \
+                self.hypothesis == other.hypothesis and \
+                self.measurements == other.measurements
+
+
+class SegmentedModel(Model):
+    def __init__(self, hypothesis, segment_models, changing_points, callpath=None, metric=None):
+        self._measurements = None
+        self.changing_points: list[Measurement] = changing_points
+        self.segment_models: list[Model] = segment_models
+        super().__init__(hypothesis, callpath, metric)
+
+    @property
+    def measurements(self):
+        return self._measurements
+
+    @measurements.setter
+    def measurements(self, value):
+        self._measurements = value
+        if value is None:
+            return
+
+        index = value.index(self.changing_points[0])
+        self.segment_models[0].measurements = value[:index]
+        if len(self.changing_points) == 1:
+            self.segment_models[1].measurements = value[index:]
+        elif len(self.changing_points) == 2:
+            index2 = value.index(self.changing_points[1])
+            self.segment_models[1].measurements = value[index2:]
+        else:
+            raise NotImplementedError()
 
 
 class ModelSchema(Schema):

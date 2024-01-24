@@ -12,8 +12,10 @@ from typing import Sequence
 
 import numpy as np
 
+from extrap.entities.functions import SegmentedFunction
+from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.measurement import Measurement
-from extrap.entities.model import Model
+from extrap.entities.model import Model, SegmentedModel
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
 
@@ -93,7 +95,7 @@ class SegmentedModeler(SingleParameterModeler):
         epsilon_values = []
         for i in range(len(subsets)):
             if i == 0:
-                epsilon_values.append(math.nan)
+                epsilon_values.append(-math.inf)
             else:
                 epsilon_values.append(nRSS_values[i] / (nRSS_values[i - 1] + 0.000000001))
 
@@ -135,10 +137,9 @@ class SegmentedModeler(SingleParameterModeler):
                 change_point = subset[2]
             else:
                 subset = subsets[index - 1]
-                change_point = list([subset[2], subset[3]])
+                change_point = [subset[2], subset[3]]
 
             # print("DEBUG change_point:",change_point)
-
             models = []
             # if the change point is a common point in both sets
             if isinstance(change_point, Measurement):
@@ -178,7 +179,16 @@ class SegmentedModeler(SingleParameterModeler):
                                                                 constant_hypothesis)
                     models.append(Model(best_hypothesis))
 
-            return (models, change_point)
+            if isinstance(change_point, Measurement):
+                intervals = [(-math.inf, change_point.coordinate[0]), (change_point.coordinate[0], math.inf)]
+                change_point = [change_point]
+            else:
+                intervals = [(-math.inf, change_point[0].coordinate[0]), (change_point[1].coordinate[0], math.inf)]
+
+            function = SegmentedFunction([m.hypothesis.function for m in models], intervals)
+            hypothesis = SingleParameterHypothesis(function, self.use_median)
+            hypothesis.compute_cost(measurements)
+            return SegmentedModel(hypothesis, models, change_point)
 
         else:
             # create a constant model
@@ -189,7 +199,7 @@ class SegmentedModeler(SingleParameterModeler):
             # use constant model when cost is 0
             if constant_cost == 0:
                 logging.debug("Using constant model.")
-                return (Model(constant_hypothesis), None)
+                return Model(constant_hypothesis)
 
             # otherwise start searching for the best hypothesis based on the PMNF
             else:
@@ -198,4 +208,4 @@ class SegmentedModeler(SingleParameterModeler):
                 hypotheses_generator = self.build_hypotheses(measurements)
                 best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, measurements,
                                                             constant_hypothesis)
-                return (Model(best_hypothesis), None)
+                return Model(best_hypothesis)
