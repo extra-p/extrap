@@ -39,7 +39,7 @@ done
 
 extra_prof_root="$(dirname "${BASH_SOURCE[0]}")"
 msg_pack_root="$extra_prof_root/msgpack"
-instrumentation_arguments=("-g" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions")
+instrumentation_arguments=("-g")
 extra_prof_arguments=("$extra_prof_optimization" "-std=c++17" "-DMSGPACK_NO_BOOST=1" "-I$msg_pack_root/include" "$extra_prof_event_trace")
 link_extra_prof_wrap="-Xlinker --no-as-needed -Xlinker --rpath=\$ORIGIN -l_extra_prof -Xlinker --as-needed -L."
 
@@ -78,56 +78,64 @@ if [ "${EXTRA_PROF_DEBUG_INSTRUMENTATION}" = on ] || [ "${EXTRA_PROF_DEBUG_INSTR
     extra_prof_arguments+=("-DEXTRA_PROF_DEBUG_INSTRUMENTATION=1")
 fi
 
-if [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "off" ] && [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "OFF" ]; then
-    #find path to headers that should be excluded
-    combined=("$compiler_dir" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -H "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -E $extra_prof_root/extra_prof/compiler_information/find_libstd_include.cpp)
-    echo "EXTRA PROF FIND INCLUDES: " $EXTRA_PROF_COMPILER ${combined[*]}
-    potential_include_paths=$($EXTRA_PROF_COMPILER ${combined[*]} 2>&1)
+if [ -z ${EXTRA_PROF_SCOREP_INSTRUMENTATION+y} ]; then
+    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions")
 
-    declare -a all_include_paths
-    while IFS= read -r line; do
-        if [[ $line == .* ]]; then
-            line_without_dot="${line#*. }" # Remove the dot and space from the beginning of the line
+    if [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "off" ] && [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "OFF" ] && [ -z ${EXTRA_PROF_SCOREP_INSTRUMENTATION+y} ]; then
+        #find path to headers that should be excluded
+        combined=("$compiler_dir" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -H "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -E $extra_prof_root/extra_prof/compiler_information/find_libstd_include.cpp)
+        echo "EXTRA PROF FIND INCLUDES: " $EXTRA_PROF_COMPILER ${combined[*]}
+        potential_include_paths=$($EXTRA_PROF_COMPILER ${combined[*]} 2>&1)
 
-            if [[ $line_without_dot != *"/tmp/"* ]]; then
-                all_include_paths+=($(dirname "$line_without_dot"))
+        declare -a all_include_paths
+        while IFS= read -r line; do
+            if [[ $line == .* ]]; then
+                line_without_dot="${line#*. }" # Remove the dot and space from the beginning of the line
+
+                if [[ $line_without_dot != *"/tmp/"* ]]; then
+                    all_include_paths+=($(dirname "$line_without_dot"))
+                fi
             fi
-        fi
-    done <<<"$potential_include_paths"
+        done <<<"$potential_include_paths"
 
-    path_string=$(printf "%s\n" "${all_include_paths[@]}")
-    IFS=$'\n' read -rd '' -a unique_include_paths <<<"$(echo "$path_string" | sort -r -u)"
+        path_string=$(printf "%s\n" "${all_include_paths[@]}")
+        IFS=$'\n' read -rd '' -a unique_include_paths <<<"$(echo "$path_string" | sort -r -u)"
 
-    remove_entries() {
-        local -n arr=$1
-        local prev_entry=${arr[-1]}
-        for ((i = ${#arr[@]} - 2; i > 0; i--)); do
-            if [[ ${arr[$i]} == "$prev_entry"* ]]; then
-                unset 'arr[i]' # Remove the entry if it begins with the previous entry
-            else
-                prev_entry=${arr[$i]}
-            fi
+        remove_entries() {
+            local -n arr=$1
+            local prev_entry=${arr[-1]}
+            for ((i = ${#arr[@]} - 2; i > 0; i--)); do
+                if [[ ${arr[$i]} == "$prev_entry"* ]]; then
+                    unset 'arr[i]' # Remove the entry if it begins with the previous entry
+                else
+                    prev_entry=${arr[$i]}
+                fi
+            done
+        }
+
+        remove_entries unique_include_paths
+
+        for unique_include_path in "${unique_include_paths[@]}"; do
+            instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$unique_include_path")
         done
-    }
 
-    remove_entries unique_include_paths
+    fi #end EXTRA_PROF_ADVANCED_INSTRUMENTATION
 
-    for unique_include_path in "${unique_include_paths[@]}"; do
-        instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$unique_include_path")
-    done
+    if [ -z ${EXTRA_PROF_EXCLUDE_FILES+y} ]; then
+        :
+    else
+        instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$EXTRA_PROF_EXCLUDE_FILES")
+    fi
 
-fi #end EXTRA_PROF_ADVANCED_INSTRUMENTATION
+    if [ -z ${EXTRA_PROF_EXCLUDE_FUNCTIONS+y} ]; then
+        :
+    else
+        instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-function-list=$EXTRA_PROF_EXCLUDE_FUNCTIONS")
+    fi
 
-if [ -z ${EXTRA_PROF_EXCLUDE_FILES+y} ]; then
-    :
 else
-    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-file-list=$EXTRA_PROF_EXCLUDE_FILES")
-fi
-
-if [ -z ${EXTRA_PROF_EXCLUDE_FUNCTIONS+y} ]; then
-    :
-else
-    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions-exclude-function-list=$EXTRA_PROF_EXCLUDE_FUNCTIONS")
+    instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fplugin=$EXTRA_PROF_SCOREP_INSTRUMENTATION")
+    extra_prof_arguments+=("-DEXTRA_PROF_SCOREP_INSTRUMENTATION=1")
 fi
 
 if $compile_only; then

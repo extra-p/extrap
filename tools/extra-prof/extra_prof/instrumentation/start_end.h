@@ -117,7 +117,7 @@ void finalize() {
     std::ofstream stream(output_file);
     msgpack::pack(stream, profile);
 
-    auto main_name = GLOBALS.name_register.check_ptr((void*)&main);
+    // auto main_name = GLOBALS.name_register.check_ptr((void*)&main);
 
     // std::cout << "Main " << GLOBALS.call_tree.findOrAddChild(main_name->c_str())
     //           << " energy_gpu: " << GLOBALS.call_tree.findOrAddChild(main_name->c_str())->energy_gpu << '\n';

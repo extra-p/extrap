@@ -25,30 +25,64 @@ class NameRegistry {
     static constexpr uintptr_t adress_offset = 0;
 
     uintptr_t main_function_ptr = 0;
+    uint32_t region_counter = 0;
+    std::mutex region_mutex;
 
 public:
     containers::string defaultExperimentDirName();
     void create_address_mapping(containers::string output_dir);
 
-    EP_INLINE containers::string* check_ptr(const void* fn_ptr) {
-        auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
+    EP_INLINE containers::string* check_ptr(const intptr_t ptr) {
         auto iter = name_register.find(ptr - adress_offset);
         if (iter != name_register.end()) {
             return &iter->second;
         }
         auto name_ptr = dynamic_name_register.try_get(ptr - adress_offset);
         if (name_ptr == nullptr) {
-            std::cerr << "EXTRA PROF: WARNING: unknown function pointer " << fn_ptr << '\n';
+            std::cerr << "EXTRA PROF: WARNING: unknown function pointer " << ptr << '\n';
             // throw std::runtime_error("EXTRA PROF: ERROR: unknown function pointer.");
         }
         return name_ptr;
     }
 
-    EP_INLINE bool is_main_function(void* this_fn) {
-        return reinterpret_cast<uintptr_t>(this_fn) - adress_offset == main_function_ptr;
+    EP_INLINE containers::string* check_ptr(const void* fn_ptr) {
+        auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
+        return check_ptr(ptr);
     }
 
-    EP_INLINE containers::string& get_name_ptr(const void* fn_ptr) {
+    EP_INLINE bool is_main_function(intptr_t this_fn) {
+        return static_cast<uintptr_t>(this_fn) - adress_offset == main_function_ptr;
+    }
+
+    EP_INLINE bool add_scorep_region(uint32_t* handle, const char* name, const char* canonical_name) {
+        std::lock_guard lg(region_mutex); // lock is necessary to prevent multiple assignments by different threads
+        if (*handle == 0) {
+            auto region = ++region_counter;
+            auto result = dynamic_name_register.emplace(region - adress_offset, name);
+            if (main_function_ptr == 0 && strcmp(canonical_name, "main") == 0) {
+                main_function_ptr = region - adress_offset;
+            }
+            *handle = region; // needs to be assigned at the end
+            return result;
+        }
+        return false;
+    }
+
+    __attribute__((used)) EP_INLINE containers::string& get_name_ptr(const intptr_t ptr) {
+        auto iter = name_register.find(ptr - adress_offset);
+        if (iter != name_register.end()) {
+            return iter->second;
+        }
+        auto dynamic_name = dynamic_name_register.try_get(ptr - adress_offset);
+        if (dynamic_name != nullptr) {
+            return *dynamic_name;
+        }
+        std::cerr << "EXTRA PROF: WARNING unknown function pointer " << ptr << '\n';
+        dynamic_name_register[ptr - adress_offset] = std::to_string(ptr);
+
+        return dynamic_name_register[ptr - adress_offset];
+    }
+    __attribute__((used)) EP_INLINE containers::string& get_name_ptr(const void* fn_ptr) {
         auto ptr = reinterpret_cast<intptr_t>(fn_ptr);
         auto iter = name_register.find(ptr - adress_offset);
         if (iter != name_register.end()) {

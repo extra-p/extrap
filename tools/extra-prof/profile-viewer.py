@@ -79,6 +79,11 @@ def _read_calltree(ep_root_node, table, len_row):
         elif n_type == CallTreeNodeType.MEMSET or n_type == CallTreeNodeType.MEMCPY:
             name = "GPU " + name
         call_path += "->" + name
+        if isinstance(m_duration, list):
+            m_duration = [d / 10 ** 9 for d in m_duration]
+        else:
+            m_duration = m_duration / 10 ** 9
+
         output_data = [call_path, m_duration, m_visits, m_bytes]
         if len(ep_node) >= 8 and ep_node[7]:
             output_data += ep_node[7]

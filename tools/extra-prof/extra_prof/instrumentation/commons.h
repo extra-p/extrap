@@ -74,11 +74,19 @@ EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, Call
     return {time, current_node};
 }
 
+EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(intptr_t fn_ptr,
+                                                          CallTreeNodeType type = CallTreeNodeType::NONE) {
+    auto& name_register = GLOBALS.name_register;
+    auto* name_ptr = name_register.get_name_ptr(fn_ptr).c_str();
+    return push_time(name_ptr, type);
+}
+
 template <typename T>
 EP_INLINE time_point pop_time(T* fn_ptr) {
     auto& name_register = GLOBALS.name_register;
     return pop_time(name_register.check_ptr(fn_ptr)->c_str());
 }
+
 template <>
 EP_INLINE time_point pop_time(char const* name) {
     time_point time = get_timestamp();
@@ -122,6 +130,11 @@ EP_INLINE time_point pop_time(char const* name) {
     thread_state.event_stack.pop_back();
 #endif
     return time;
+}
+
+EP_INLINE time_point pop_time(intptr_t fn_ptr) {
+    auto& name_register = GLOBALS.name_register;
+    return pop_time(name_register.check_ptr(fn_ptr)->c_str());
 }
 
 void show_data_sizes() {

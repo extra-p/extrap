@@ -22,6 +22,10 @@ struct offset_pair {
 };
 
 void NameRegistry::create_address_mapping(containers::string output_dir) {
+#ifdef EXTRA_PROF_SCOREP_INSTRUMENTATION
+    return;
+#endif
+
     containers::string nm_command("nm --numeric-sort --demangle ");
     auto app_filename = filesystem::read_symlink("/proc/self/exe");
 
