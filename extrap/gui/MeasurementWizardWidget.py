@@ -94,6 +94,9 @@ class MeasurementWizardWidget(QWidget):
         self.experiment = None
         self.mean_noise_level = 0.0
         self.initialized = False
+        self.processes_parameter_id = 0
+        self.no_model_parameters = 0
+
 
     def init_empty(self):
         self.setLayout(self.main_layout)
@@ -101,8 +104,122 @@ class MeasurementWizardWidget(QWidget):
         self.empty_label.setText("Please load a performance experiment.")
         self.main_layout.addWidget(self.empty_label)
 
+    
+    def init_multi_parameter(self):
+        self.initialized = True
+
+        self.no_model_parameters = len(self.experiment.parameters)
+    
+        self.main_layout.removeWidget(self.empty_label)
+        if self.empty_label is not None:
+            self.empty_label.deleteLater()
+            self.empty_label = None
+
+        self.layout = QGridLayout(self)
+        self.layout.setRowStretch(99, 1)
+        self.layout.setColumnStretch(0, 0)
+        self.layout.setColumnStretch(1, 1)
+
+        self.main_layout.addLayout(self.layout)
+
+        self.checkbox = QCheckBox("No. of processes (MPI ranks) is one of the model parameters", self)
+        self.checkbox.setChecked(True)
+        self.checkbox.toggled.connect(self.clickCheckbox)
+        self.layout.addWidget(self.checkbox, 0, 0)
+
+        self.parameter_selector_label = QLabel(self)
+        self.parameter_selector_label.setText("Model Paramater resembling the number of processes (MPI ranks):")
+        self.layout.addWidget(self.parameter_selector_label, 1, 0)
+
+        self.parameter_selector = QComboBox(self)
+        for parameter in self.experiment.parameters:
+            self.parameter_selector.addItem(str(parameter))
+        self.layout.addWidget(self.parameter_selector, 1, 1)
+        for i in range(len(self.experiment.parameters)):
+            if self.parameter_selector.currentText() == str(self.experiment.parameters[i]):
+                self.processes_parameter_id = i
+                break
+        self.parameter_selector.currentIndexChanged.connect(self.parameterChanged)
+
+        self.process_label = QLabel(self)
+        self.process_label.setText("No. of processes (MPI ranks):")
+        self.layout.addWidget(self.process_label, 2, 0)
+        self.process_label.setVisible(False)
+
+        self.processes = QLineEdit(self)
+        self.processes.setValidator(QIntValidator())
+        self.layout.addWidget(self.processes, 2, 1)
+        self.processes.setVisible(False)
+        self.processes.setText("2")
+        self.processes.textChanged.connect(self.processesChanged)
+
+        metric_label = QLabel(self)
+        metric_label.setText("Metric used for cost calculation:")
+        self.layout.addWidget(metric_label, 3, 0)
+
+        self.metric_selector = QComboBox(self)
+        for metric in self.experiment.metrics:
+            self.metric_selector.addItem(str(metric))
+        self.layout.addWidget(self.metric_selector, 3, 1)
+        self.metric_selector.currentIndexChanged.connect(self.metricChanged)
+
+        budget_label = QLabel(self)
+        budget_label.setText("Modeling Budget [core hours]:")
+        self.layout.addWidget(budget_label, 4, 0)
+
+        self.modeling_budget = QLineEdit(self)
+        self.modeling_budget.setValidator(QDoubleValidator())
+        self.layout.addWidget(self.modeling_budget, 4, 1)
+        self.modeling_budget.textChanged.connect(self.budgetChanged)
+
+        current_cost_label = QLabel(self)
+        current_cost_label.setText("Current Measurement Cost [core hours]:")
+        self.layout.addWidget(current_cost_label, 5, 0)
+
+        self.current_cost = QLineEdit(self)
+        self.current_cost.setEnabled(False)
+        self.current_cost.setText("0.0")
+        self.layout.addWidget(self.current_cost, 5, 1)
+
+        self.calculate_current_measurement_cost()
+
+        used_budget_label = QLabel(self)
+        used_budget_label.setText("Used Modeling Budget [%]:")
+        self.layout.addWidget(used_budget_label, 6, 0)
+
+        self.used_budget_edit = QLineEdit(self)
+        self.used_budget_edit.setEnabled(False)
+        self.used_budget_edit.setText("0.0")
+        self.layout.addWidget(self.used_budget_edit, 6, 1)
+
+        self.calculate_used_budget()
+
+        noise_level_label = QLabel(self)
+        noise_level_label.setText("Measurement Noise Level [%]:")
+        self.layout.addWidget(noise_level_label, 7, 0)
+
+        self.noise_level_edit = QLineEdit(self)
+        self.noise_level_edit.setEnabled(False)
+        noise_level_str = "{:.2f}".format(self.mean_noise_level)
+        self.noise_level_edit.setText(noise_level_str)
+        self.layout.addWidget(self.noise_level_edit, 7, 1)
+
+        self.calculate_noise_level()
+
+        self.advise_button = QPushButton(self)
+        self.layout.addWidget(self.advise_button, 8, 0)
+        self.advise_button.setText("Suggest Additional Measurement Points")
+        self.advise_button.clicked.connect(self.advice_button_clicked)
+
+        self.measurement_point_suggestions_label = QPlainTextEdit(self)
+        self.measurement_point_suggestions_label.setPlainText("")
+        self.measurement_point_suggestions_label.setEnabled(False)
+        self.layout.addWidget(self.measurement_point_suggestions_label, 9, 0)
+
+
     def init_single_parameter(self):
         self.initialized = True
+        self.no_model_parameters = 1
         self.main_layout.removeWidget(self.empty_label)
         if self.empty_label is not None:
             self.empty_label.deleteLater()
@@ -140,6 +257,7 @@ class MeasurementWizardWidget(QWidget):
         for metric in self.experiment.metrics:
             self.metric_selector.addItem(str(metric))
         self.layout.addWidget(self.metric_selector, 2, 1)
+        self.metric_selector.currentIndexChanged.connect(self.metricChanged)
 
         budget_label = QLabel(self)
         budget_label.setText("Modeling Budget [core hours]:")
@@ -184,11 +302,20 @@ class MeasurementWizardWidget(QWidget):
 
         self.calculate_noise_level()
 
+        self.advise_button= QPushButton(self)
+        self.advise_button.setText("Suggest Additional Measurement Points")
+        self.layout.addWidget(self.advise_button, 7, 0)
+        self.advise_button.clicked.connect(self.advice_button_clicked)
+
+        self.measurement_point_suggestions_label = QPlainTextEdit(self)
+        self.measurement_point_suggestions_label.setPlainText("")
+        self.measurement_point_suggestions_label.setEnabled(False)
+        self.layout.addWidget(self.measurement_point_suggestions_label, 8, 0)
+
 
     def calculate_noise_level(self):
         # do an noise analysis on the existing measurement points
         mm = self.experiment.measurements
-        
         metric_string = self.metric_selector.currentText()
         metrics = self.experiment.metrics
         runtime_metric = None
@@ -372,9 +499,15 @@ class MeasurementWizardWidget(QWidget):
                         parameter_values = measurement.coordinate.as_tuple()
                         try:
                             for value in measurement.values:
-                                core_hours_per_point += value * parameter_values[0]
+                                if self.no_model_parameters == 1:
+                                    core_hours_per_point += value * parameter_values[0]
+                                else:
+                                    core_hours_per_point += value * parameter_values[self.processes_parameter_id]
                         except TypeError:
-                            core_hours_per_point += measurement.mean * parameter_values[0]
+                            if self.no_model_parameters == 1:
+                                core_hours_per_point += measurement.mean * parameter_values[0]
+                            else:
+                                core_hours_per_point += measurement.mean * parameter_values[self.processes_parameter_id]
                         core_hours_total += core_hours_per_point
                 except KeyError:
                     pass
@@ -393,9 +526,15 @@ class MeasurementWizardWidget(QWidget):
                             parameter_values = measurement.coordinate.as_tuple()
                             try:
                                 for value in measurement.values:
-                                    core_hours_per_point += value * parameter_values[0]
+                                    if self.no_model_parameters == 1:
+                                        core_hours_per_point += value * parameter_values[0]
+                                    else:
+                                        core_hours_per_point += value * parameter_values[self.processes_parameter_id]
                             except TypeError:
-                                core_hours_per_point += measurement.mean * parameter_values[0]
+                                if self.no_model_parameters == 1:
+                                    core_hours_per_point += measurement.mean * parameter_values[0]
+                                else:
+                                    core_hours_per_point += measurement.mean * parameter_values[self.processes_parameter_id]
                             core_hours_callpath += core_hours_per_point
                     except KeyError:
                         pass
@@ -416,9 +555,15 @@ class MeasurementWizardWidget(QWidget):
                             parameter_values = measurement.coordinate.as_tuple()
                             try:
                                 for value in measurement.values:
-                                    core_hours_per_point += value * parameter_values[0]
+                                    if self.no_model_parameters == 1:
+                                        core_hours_per_point += value * parameter_values[0]
+                                    else:
+                                        core_hours_per_point += value * parameter_values[self.processes_parameter_id]
                             except TypeError:
-                                core_hours_per_point += measurement.mean * parameter_values[0]
+                                if self.no_model_parameters == 1:
+                                    core_hours_per_point += measurement.mean * parameter_values[0]
+                                else:
+                                    core_hours_per_point += measurement.mean * parameter_values[self.processes_parameter_id]
                             core_hours_callpath += core_hours_per_point
                     except KeyError:
                         pass
@@ -430,7 +575,25 @@ class MeasurementWizardWidget(QWidget):
         self.current_cost.setText(current_cost_str)
 
 
+    def advice_button_clicked(self):
+        self.measurement_point_suggestions_label.setPlainText("HAHAHA")
+
+
     def budgetChanged(self):
+        self.calculate_used_budget()
+
+
+    def parameterChanged(self):
+        for i in range(len(self.experiment.parameters)):
+            if str(self.experiment.parameters[i]) == self.parameter_selector.currentText():
+                self.processes_parameter_id = i
+                break
+        self.calculate_current_measurement_cost()
+        self.calculate_used_budget()
+
+
+    def metricChanged(self):
+        self.calculate_current_measurement_cost()
         self.calculate_used_budget()
 
 
@@ -444,17 +607,27 @@ class MeasurementWizardWidget(QWidget):
         if cbutton.isChecked():
             self.process_label.setVisible(False)
             self.calculate_cost_manual = False
+            for i in range(len(self.experiment.parameters)):
+                if str(self.experiment.parameters[i]) == self.parameter_selector.currentText():
+                    self.processes_parameter_id = i
+                    break
             self.processes.setVisible(False)
+            self.parameter_selector_label.setVisible(True)
+            self.parameter_selector.setVisible(True)
             self.calculate_current_measurement_cost()
             self.calculate_used_budget()
         else:
             self.process_label.setVisible(True)
             self.calculate_cost_manual = True
             self.processes.setVisible(True)
+            self.processes_parameter_id = -1
+            self.parameter_selector.setVisible(False)
+            self.parameter_selector_label.setVisible(False)
             self.calculate_current_measurement_cost()
             self.calculate_used_budget()
         
-    def init(self):    
+
+    """def init(self):    
         maxNumberOfParameters = 4
         grid = QGridLayout(self)
         self.setLayout(grid)
@@ -537,7 +710,7 @@ class MeasurementWizardWidget(QWidget):
         grid.addWidget(self._adviseMeasurementPoints, row +rowCorrection, 0)
         self._adviseMeasurementStats = QLabel(self)
         grid.addWidget(self._adviseMeasurementStats, row +rowCorrection, 1, 2, 1)  
-        row +=1  
+        row +=1  """
    
 
     def reset(self, model_parameters=1):
@@ -554,37 +727,13 @@ class MeasurementWizardWidget(QWidget):
         
         # if there are several model parameters
         else:
-            pass
-            #TODO: fix this stuff
-            """#Budget for improvment
-            self._experimentBudget.setEnabled(False)
-                    
-            #Processes parameter
-            self.processesParameter.setEnabled(False)
-            self.processesParameter.setCurrentIndex(-1)
-            
-            #Sunken Cost
-            self._sunkenCost.setText("")
-            
-            #Limitations for parameters        
-            for i, parameter in enumerate(self._parameters):
-                parameter[0].reset()
-                parameter[1].setTitle("Parameter")
-                parameter[1].setEnabled(False)
-                parameter[1].toggle(False)
-                if i >= model_parameters:
-                    parameter[1].setVisible(False)
-                else:
-                    parameter[1].setVisible(True)
-            
-            #Advise future measurement
-            self._adviseMeasurement.setEnabled(False)  
-            self._adviseStrategy.setEnabled(False)
-            
-            #Advice Labels
-            self._adviseMeasurementLabel.setText("")
-            self._adviseMeasurementPoints.setText("")
-            self._adviseMeasurementStats.setText("")"""
+            if self.initialized == False:
+                self.init_multi_parameter()
+            self.metric_selector.clear()
+            for metric in self.experiment.metrics:
+                self.metric_selector.addItem(str(metric))
+            self.repaint()
+            self.update()
         
     
     def experimentChanged(self):
