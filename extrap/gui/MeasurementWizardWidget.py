@@ -92,6 +92,7 @@ class MeasurementWizardWidget(QWidget):
         self.init_empty()
         self.calculate_cost_manual = False
         self.experiment = None
+        self.mean_noise_level = 0.0
 
     def init_empty(self):
         self.setLayout(self.main_layout)
@@ -167,16 +168,99 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(self.used_budget_edit, 5, 1)
 
         self.calculate_used_budget()
+        self.calculate_noise_level()
+
+
+    def calculate_noise_level(self):
+        # do an noise analysis on the existing measurement points
+        mm = self.experiment.measurements
+        
+        metric_string = self.metric_selector.currentText()
+        metrics = self.experiment.metrics
+        runtime_metric = None
+        for metric in metrics:
+            if metric_string == str(metric):
+                runtime_metric = metric
+        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+
+        # if there is one callpath selected in the tree
+        if len(selected_callpath) == 1:
+            callpath = None
+            for call in self.experiment.callpaths:
+                if str(call) == str(selected_callpath[0]):
+                    callpath = call
+            try:
+                nns = []
+                for meas in mm[(callpath, runtime_metric)]:
+                    pps = []
+                    for val in meas.values:
+                        if np.mean(meas.values) == 0.0:
+                            pp = 0
+                        else:
+                            pp = abs((val / (np.mean(meas.values) / 100)) - 100)
+                        pps.append(pp)
+                    nns.append(np.mean(pps))
+                self.mean_noise_level = np.mean(nns)
+            except TypeError:
+                self.mean_noise_level = 0.0
+
+        # if there is more than one callpath selected in the tree
+        elif len(selected_callpath) > 1:
+            measurements = self.experiment.measurements
+            callpaths = []
+            for i in range(len(selected_callpath)):
+                current_callpath = selected_callpath[i]
+                for j in range(len(self.experiment.callpaths)):
+                    if str(current_callpath) == str(self.experiment.callpaths[j]):
+                        callpaths.append(self.experiment.callpaths[j])
+            try:
+                callpath_noise_levels = []
+                for callpath in callpaths:
+                    nns = []
+                    for meas in measurements[(callpath, runtime_metric)]:
+                        pps = []
+                        for val in meas.values:
+                            if np.mean(meas.values) == 0.0:
+                                pp = 0
+                            else:
+                                pp = abs((val / (np.mean(meas.values) / 100)) - 100)
+                            pps.append(pp)
+                        nns.append(np.mean(pps))
+                    callpath_noise_levels.append(np.mean(nns))
+                self.mean_noise_level = np.mean(callpath_noise_levels)
+            except TypeError:
+                self.mean_noise_level = 0.0
+            
+        # if there is no callpath selected in the tree
+        elif len(selected_callpath) == 0:
+            measurements = self.experiment.measurements
+            try:
+                callpath_noise_levels = []
+                for callpath in self.experiment.callpaths:
+                    nns = []
+                    for meas in measurements[(callpath, runtime_metric)]:
+                        pps = []
+                        for val in meas.values:
+                            if np.mean(meas.values) == 0.0:
+                                pp = 0
+                            else:
+                                pp = abs((val / (np.mean(meas.values) / 100)) - 100)
+                            pps.append(pp)
+                        nns.append(np.mean(pps))
+                    callpath_noise_levels.append(np.mean(nns))
+                self.mean_noise_level = np.mean(callpath_noise_levels)
+            except TypeError:
+                self.mean_noise_level = 0.0
 
 
     def calculate_used_budget(self):
         try:
             modeling_budget = float(self.modeling_budget.text())
+            used_budget_percent = float(self.current_cost.text()) / (modeling_budget / 100)
         except:
-            modeling_budget = 1000.0
-        used_budget_percent = 100.0
+            modeling_budget = float(self.current_cost.text())
+            used_budget_percent = 100.0
         used_budget_percent_str = "{:.2f}".format(used_budget_percent)
-        #TODO: calculate the used budget in percent
         self.used_budget_edit.setText(used_budget_percent_str)
 
 
@@ -570,6 +654,7 @@ class MeasurementWizardWidget(QWidget):
     def callpath_selection_changed(self):    
         self.calculate_current_measurement_cost()
         self.calculate_used_budget()
+        self.calculate_noise_level()
 
 
     def adviceMeasurment(self):
