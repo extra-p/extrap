@@ -11,6 +11,7 @@ from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.model import SegmentedModel
 from extrap.gui.TreeModel import TreeModel
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
 
@@ -109,7 +110,7 @@ class TreeView(QTreeView):
                 copyModel = menu.addAction("Copy model")
                 copyModel.setDisabled(selectedModel is None)
                 copyModel.triggered.connect(
-                    lambda: self.copy_model_to_clipboard(selectedModel, experiment)
+                    lambda: self.copy_model_to_clipboard(selectedModel)
                 )
                 menu.exec(self.mapToGlobal(event.pos()))
 
@@ -130,17 +131,10 @@ class TreeView(QTreeView):
             lambda: self.collapseRecursively(self.selectedIndexes()[0]))
         return expand_collapse_submenu
 
-    def copy_model_to_clipboard(self, selectedModel, experiment):
+    def copy_model_to_clipboard(self, selectedModel):
         parameters = self.model().main_widget.getExperiment().parameters
-        if isinstance(selectedModel, list):
-            param_value = selectedModel[0].changing_point.coordinate._values[0]
-            function_string = selectedModel[0].hypothesis.function.to_string(*parameters) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
-            function_string = function_string + "\n" + selectedModel[1].hypothesis.function.to_string(*parameters) + " for " + str(
-                            experiment.parameters[0]) + ">=" + str(param_value)
-            QGuiApplication.clipboard().setText(function_string)
-        else:
-            function_string = selectedModel.hypothesis.function.to_string(*parameters)
-            QGuiApplication.clipboard().setText(function_string)
+        function_string = selectedModel.hypothesis.function.to_string(*parameters)
+        QGuiApplication.clipboard().setText(function_string)
 
     @staticmethod
     def showComments(model):
@@ -173,34 +167,28 @@ class TreeView(QTreeView):
         layout.addWidget(btn)
         msgBox.setLayout(layout)
 
-        if isinstance(model, list):
-            msg_txt = "Callpath: " + model[0].callpath.name + "\n\n"
-        else:
-            msg_txt = "Callpath: " + model.callpath.name + "\n\n"
+        msg_txt = "Callpath: " + model.callpath.name + "\n\n"
 
-        if isinstance(model, list):
-            for i in range(len(model)):
-                if model[i].predictions is not None and model[i].measurements is not None:
-                    msg_txt += "Model "+str(i+1)+":\n\n"
+        if model.predictions is not None and model.measurements is not None:
+            row_format = "{:20} {:>15} {:>15} {:>15}\n"
+            msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
+            row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
+            for pred, m in zip(model.predictions, model.measurements):
+                msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
+                # print(str(ps[i])+","+str(actual_points[i]))
+        else:
+            msg_txt += "No data available."
+
+        if isinstance(model, SegmentedModel):
+            for i, segment_model in enumerate(model.segment_models):
+                if segment_model.predictions is not None and segment_model.measurements is not None:
+                    msg_txt += "\nModel " + str(i + 1) + ":\n\n"
                     row_format = "{:20} {:>15} {:>15} {:>15}\n"
                     msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
                     row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
-                    for pred, m in zip(model[i].predictions, model[i].measurements):
+                    for pred, m in zip(segment_model.predictions, segment_model.measurements):
                         msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
                         # print(str(ps[i])+","+str(actual_points[i]))
-                    msg_txt += "\n"
-                else:
-                    msg_txt += "No data available."
-        else:
-            if model.predictions is not None and model.measurements is not None:
-                row_format = "{:20} {:>15} {:>15} {:>15}\n"
-                msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
-                row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
-                for pred, m in zip(model.predictions, model.measurements):
-                    msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
-                    # print(str(ps[i])+","+str(actual_points[i]))
-            else:
-                msg_txt += "No data available."
 
         print(msg_txt)
         print("")

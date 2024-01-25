@@ -118,6 +118,29 @@ class TestConsole(unittest.TestCase):
             extrap.main,
             ['--print', 'functions-latex', '--text', 'data/text/two_parameter_1.txt'])
 
+    def test_segmented_output(self):
+        self.assertOutputRegex(
+            r"Callpath:\s+main\s+"
+            r"\s+Metric:\s+runtime\s+"
+            r"\s+Measurement\s+point:\s+\(1\.00E\+00\)\s+Mean:\s+1\.00E\+00\s+Median:\s+1\.00E\+00\s+"
+            r"\s+Measurement\s+point:\s+\(2\.00E\+00\)\s+Mean:\s+4\.00E\+00\s+Median:\s+4\.00E\+00\s+"
+            r"\s+Measurement\s+point:\s+\(3\.00E\+00\)\s+Mean:\s+9\.00E\+00\s+Median:\s+9\.00E\+00\s+"
+            r"\s+Measurement\s+point:\s+\(4\.00E\+00\)\s+Mean:\s+1\.60E\+01\s+Median:\s+1\.60E\+01\s+"
+            r"\s+Measurement\s+point:\s+\(5\.00E\+00\)\s+Mean:\s+2\.50E\+01\s+Median:\s+2\.50E\+01\s+"
+            r"\s+Measurement\s+point:\s+\(6\.00E\+00\)\s+Mean:\s+3\.60E\+01\s+Median:\s+3\.60E\+01\s+"
+            r"\s+Measurement\s+point:\s+\(7\.00E\+00\)\s+Mean:\s+3\.70E\+01\s+Median:\s+3\.70E\+01\s+"
+            r"\s+Measurement\s+point:\s+\(8\.00E\+00\)\s+Mean:\s+3\.80E\+01\s+Median:\s+3\.80E\+01\s+"
+            r"\s+Measurement\s+point:\s+\(9\.00E\+00\)\s+Mean:\s+3\.90E\+01\s+Median:\s+3\.90E\+01\s+"
+            r"\s+Measurement\s+point:\s+\(1\.00E\+01\)\s+Mean:\s+4\.00E\+01\s+Median:\s+4\.00E\+01\s+"
+            r"\s+Model\s+1:\s+\-5\.753052622747037e\-16\s+\+\s+p\^\(2\)\s+for\s+p<=6\.0\s+"
+            r"\s+Model\s+2:\s+29\.999999999999975\s+\+\s+1\.0000000000000029\s+\*\s+p\^\(1\)\s+for\s+p>=6\.0\s+"
+            r"\s+RSS\s+Model\s+1:\s+5\.45E\-29\s+"
+            r"\s+Adjusted\s+R\^2\s+Model\s+1:\s+1\.00E\+00\s+"
+            r"\s+RSS\s+Model\s+2:\s+5\.55E\-28\s+"
+            r"\s+Adjusted\s+R\^2\s+Model\s+2:\s+1\.00E\+00",
+            extrap.main,
+            ['--text', 'data/text/one_parameter_segmented_1.txt', '--modeler', 'segmented'])
+
     def assertOutput(self, text, command, *args, **kwargs):
         temp_stdout = StringIO()
         with contextlib.redirect_stdout(temp_stdout):

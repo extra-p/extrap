@@ -9,20 +9,26 @@ from __future__ import annotations
 
 import copy
 from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING, List, Callable
+from typing import Optional, TYPE_CHECKING, List, Callable, Any
 
 import numpy
 from PySide6.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
-from extrap.entities.model import Model
+from extrap.entities.model import Model, SegmentedModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
-from extrap.entities.measurement import Measurement
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
+
+
+def _format_number_segmented_model(segmented_model: SegmentedModel, selector: Callable[[Model], Any]) -> str:
+    val = formatNumber(str(selector(segmented_model))) + "\n"
+    val += "\n".join(f"Model {i + 1}: " + formatNumber(str(selector(m)))
+                     for i, m in enumerate(segmented_model.segment_models))
+    return val
 
 
 class TreeModel(QAbstractItemModel):
@@ -74,7 +80,7 @@ class TreeModel(QAbstractItemModel):
         getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
         get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
+        if role != Qt.DisplayRole and role != Qt.ToolTipRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
         call_tree_node = index.internalPointer().data()
@@ -112,15 +118,12 @@ class TreeModel(QAbstractItemModel):
             return self.main_widget.color_widget.getColor(relativeValue)
 
         if get_tooltip_annotations:
-            if isinstance(model, list):
-                pass
-            else:
-                if model.annotations:
-                    parameters = self.main_widget.getExperiment().parameters
-                    parameter_values = self.selector_widget.getParameterValues()
-                    return "\n".join(ann.title(parameters=parameters,
-                                            parameter_values=parameter_values)
-                                    for ann in model.annotations)
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return "\n".join(ann.title(parameters=parameters,
+                                           parameter_values=parameter_values)
+                                 for ann in model.annotations)
             return None
 
         if index.column() == 0:
@@ -129,123 +132,57 @@ class TreeModel(QAbstractItemModel):
             else:
                 return self.remove_method_parameters(call_tree_node.name)
         elif index.column() == 2:
-            if isinstance(model, list):
-                pass
-                #TODO: need some code here that return correct value
-            else:
-                if model.annotations:
-                    parameters = self.main_widget.getExperiment().parameters
-                    parameter_values = self.selector_widget.getParameterValues()
-                    return [ann.icon(parameters=parameters,
-                                    parameter_values=parameter_values)
-                            for ann in model.annotations]
-            return None
+            if model.annotations:
+                parameters = self.main_widget.getExperiment().parameters
+                parameter_values = self.selector_widget.getParameterValues()
+                return [ann.icon(parameters=parameters,
+                                 parameter_values=parameter_values)
+                        for ann in model.annotations]
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
-            if isinstance(model, list):
-                segmented_model = ""
-                for i in range(len(model)):
-                    formula = model[i].hypothesis.function
-                    if self.selector_widget.asymptoticCheckBox.isChecked():
-                        parameters = tuple(experiment.parameters)
 
-                        if isinstance(model[i].changing_point, Measurement):
-                            param_value = model[i].changing_point.coordinate._values[0]
-                            if i == 0:
-                                segmented_model = segmented_model + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
-                            else:
-                                segmented_model = segmented_model + "\n" + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
-
-                        else:
-                            if i == 0:
-                                param_value = model[i].changing_point[0].coordinate._values[0]
-                                segmented_model = segmented_model + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
-                            else:
-                                param_value = model[i].changing_point[1].coordinate._values[0]
-                                segmented_model = segmented_model + "\n" + formatFormula(formula.to_string(*parameters)) + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
- 
-                    else:
-                        param_value = model[i].changing_point.coordinate._values[0]
-                        parameters = self.selector_widget.getParameterValues()
-                        previous = numpy.seterr(divide='ignore', invalid='ignore')
-                        res = formatNumber(str(formula.evaluate(parameters)))
-                        numpy.seterr(**previous)
-                        if i == 0:
-                            segmented_model += res + " for " + str(experiment.parameters[0]) + "<=" + str(param_value)
-                        else:
-                            segmented_model = segmented_model + "\n" + res + " for " + str(experiment.parameters[0]) + ">=" + str(param_value)
-                return segmented_model
+            formula = model.hypothesis.function
+            if self.selector_widget.asymptoticCheckBox.isChecked():
+                parameters = tuple(experiment.parameters)
+                return formatFormula(formula.to_string(*parameters))
             else:
-                formula = model.hypothesis.function
-                if self.selector_widget.asymptoticCheckBox.isChecked():
-                    parameters = tuple(experiment.parameters)
-                    return formatFormula(formula.to_string(*parameters))
+                parameters = self.selector_widget.getParameterValues()
+                previous = numpy.seterr(divide='ignore', invalid='ignore')
+                if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                    res = _format_number_segmented_model(model, lambda m: m.hypothesis.function.evaluate(parameters))
                 else:
-                    parameters = self.selector_widget.getParameterValues()
-                    previous = numpy.seterr(divide='ignore', invalid='ignore')
                     res = formatNumber(str(formula.evaluate(parameters)))
-                    numpy.seterr(**previous)
-                    return res
+                numpy.seterr(**previous)
+                return res
         elif index.column() == 4:
-            if isinstance(model, list):
-                rss = ""
-                for i in range(len(model)):
-                    if i == 0:
-                        rss = rss + formatNumber(str(model[i].hypothesis.RSS))
-                    else:
-                        rss = rss + "\n" + formatNumber(str(model[i].hypothesis.RSS))
-                return rss
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.RSS)
             else:
                 return formatNumber(str(model.hypothesis.RSS))
         elif index.column() == 5:
-            if isinstance(model, list):
-                ar2 = ""
-                for i in range(len(model)):
-                    if i == 0:
-                        ar2 = ar2 + formatNumber(str(model[i].hypothesis.AR2))
-                    else:
-                        ar2 = ar2 + "\n" + formatNumber(str(model[i].hypothesis.AR2))
-                return ar2
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.AR2)
             else:
                 return formatNumber(str(model.hypothesis.AR2))
         elif index.column() == 6:
-            if isinstance(model, list):
-                smape = ""
-                for i in range(len(model)):
-                    if i == 0:
-                        smape = smape + formatNumber(str(model[i].hypothesis.SMAPE))
-                    else:
-                        smape = smape + "\n" + formatNumber(str(model[i].hypothesis.SMAPE))
-                return smape
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.SMAPE)
             else:
                 return formatNumber(str(model.hypothesis.SMAPE))
         elif index.column() == 7:
-            if isinstance(model, list):
-                re = ""
-                for i in range(len(model)):
-                    if i == 0:
-                        re = re + formatNumber(str(model[i].hypothesis.RE))
-                    else:
-                        re = re + "\n" + formatNumber(str(model[i].hypothesis.RE))
-                return re
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.RE)
             else:
                 return formatNumber(str(model.hypothesis.RE))
         return None
 
     def get_comparison_value(self, model):
         parameters = self.selector_widget.getParameterValues()
-        if isinstance(model, list):
-            formula = model[0].hypothesis.function
-            previous = numpy.seterr(divide='ignore', invalid='ignore')
-            value = formula.evaluate(parameters)
-            numpy.seterr(**previous)
-            return value
-        else:
-            formula = model.hypothesis.function
-            previous = numpy.seterr(divide='ignore', invalid='ignore')
-            value = formula.evaluate(parameters)
-            numpy.seterr(**previous)
-            return value
+        formula = model.hypothesis.function
+        previous = numpy.seterr(divide='ignore', invalid='ignore')
+        value = formula.evaluate(parameters)
+        numpy.seterr(**previous)
+        return value
 
     def remove_method_parameters(self, name):
         def _replace_braces(name, lb, rb):
