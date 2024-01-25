@@ -16,7 +16,8 @@ import numpy as np
 from marshmallow import fields
 
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
+from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema, \
+    SegmentedTerm
 from extrap.util.latex_formatting import frmt_scientific_coefficient
 from extrap.util.serialization_schema import BaseSchema, NumberField, NumpyField
 from extrap.util.string_formats import FunctionFormats
@@ -193,7 +194,16 @@ class SegmentedFunction(SingleParameterFunction):
     @constant_coefficient.setter
     def constant_coefficient(self, value):
         if value != 0:
-            raise NotImplementedError
+            raise NotImplementedError()
+
+    @property
+    def compound_terms(self):
+        return [SegmentedTerm(self.segments, self.intervals)]
+
+    @compound_terms.setter
+    def compound_terms(self, value):
+        if value:
+            raise NotImplementedError()
 
     def reset_coefficients(self):
         for v in self.segments:
