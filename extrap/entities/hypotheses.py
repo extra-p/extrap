@@ -214,7 +214,10 @@ class ConstantHypothesis(Hypothesis):
                 smape += abs(difference) / abssum * 2
 
         self._SMAPE = smape / len(measurements) * 100
-        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
+        if numpy.mean(actuals) != 0.0:
+            self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
+        else:
+            self._nRSS = math.nan
         self._costs_are_calculated = True
 
 
