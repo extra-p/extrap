@@ -93,6 +93,7 @@ class MeasurementWizardWidget(QWidget):
         self.calculate_cost_manual = False
         self.experiment = None
         self.mean_noise_level = 0.0
+        self.initialized = False
 
     def init_empty(self):
         self.setLayout(self.main_layout)
@@ -101,9 +102,11 @@ class MeasurementWizardWidget(QWidget):
         self.main_layout.addWidget(self.empty_label)
 
     def init_single_parameter(self):
+        self.initialized = True
         self.main_layout.removeWidget(self.empty_label)
-        self.empty_label.deleteLater()
-        self.empty_label = None
+        if self.empty_label is not None:
+            self.empty_label.deleteLater()
+            self.empty_label = None
 
         self.layout = QGridLayout(self)
         self.layout.setRowStretch(99, 1)
@@ -196,14 +199,10 @@ class MeasurementWizardWidget(QWidget):
 
         # if there is one callpath selected in the tree
         if len(selected_callpath) == 1:
-            callpath = None
-            for call in self.experiment.callpaths:
-                if str(call) == str(selected_callpath[0]):
-                    callpath = call
             try:
                 nns = []
                 try:
-                    for meas in mm[(callpath, runtime_metric)]:
+                    for meas in mm[(selected_callpath[0].path, runtime_metric)]:
                         pps = []
                         for val in meas.values:
                             if np.mean(meas.values) == 0.0:
@@ -221,18 +220,12 @@ class MeasurementWizardWidget(QWidget):
         # if there is more than one callpath selected in the tree
         elif len(selected_callpath) > 1:
             measurements = self.experiment.measurements
-            callpaths = []
-            for i in range(len(selected_callpath)):
-                current_callpath = selected_callpath[i]
-                for j in range(len(self.experiment.callpaths)):
-                    if str(current_callpath) == str(self.experiment.callpaths[j]):
-                        callpaths.append(self.experiment.callpaths[j])
             try:
                 callpath_noise_levels = []
-                for callpath in callpaths:
+                for callpath in selected_callpath:
                     nns = []
                     try:
-                        for meas in measurements[(callpath, runtime_metric)]:
+                        for meas in measurements[(callpath.path, runtime_metric)]:
                             pps = []
                             for val in meas.values:
                                 if np.mean(meas.values) == 0.0:
@@ -305,20 +298,19 @@ class MeasurementWizardWidget(QWidget):
 
             # if there is only one callpath selected
             if len(selected_callpath) == 1:
-                callpath = None
-                for call in self.experiment.callpaths:
-                    if str(call) == str(selected_callpath[0]):
-                        callpath = call
                 measurements = self.experiment.measurements
                 core_hours_total = 0
-                for measurement in measurements[(callpath, runtime_metric)]:
-                    core_hours_per_point = 0
-                    try:
-                        for value in measurement.values:
-                            core_hours_per_point += value * number_processes
-                    except TypeError:
-                        core_hours_per_point += measurement.mean * number_processes
-                    core_hours_total += core_hours_per_point
+                try:
+                    for measurement in measurements[(selected_callpath[0].path, runtime_metric)]:
+                        core_hours_per_point = 0
+                        try:
+                            for value in measurement.values:
+                                core_hours_per_point += value * number_processes
+                        except TypeError:
+                            core_hours_per_point += measurement.mean * number_processes
+                        core_hours_total += core_hours_per_point
+                except KeyError:
+                    pass
 
                 current_cost = core_hours_total
                 current_cost_str = "{:.2f}".format(current_cost)
@@ -329,14 +321,17 @@ class MeasurementWizardWidget(QWidget):
                 core_hours_total = 0
                 for callpath in self.experiment.callpaths:
                     core_hours_callpath = 0
-                    for measurement in measurements[(callpath, runtime_metric)]:
-                        core_hours_per_point = 0
-                        try:
-                            for value in measurement.values:
-                                core_hours_per_point += value * number_processes
-                        except TypeError:
-                            core_hours_per_point += measurement.mean * number_processes
-                        core_hours_callpath += core_hours_per_point
+                    try:
+                        for measurement in measurements[(callpath, runtime_metric)]:
+                            core_hours_per_point = 0
+                            try:
+                                for value in measurement.values:
+                                    core_hours_per_point += value * number_processes
+                            except TypeError:
+                                core_hours_per_point += measurement.mean * number_processes
+                            core_hours_callpath += core_hours_per_point
+                    except KeyError:
+                        pass
                     core_hours_total += core_hours_callpath
     
                 current_cost = core_hours_total
@@ -344,25 +339,21 @@ class MeasurementWizardWidget(QWidget):
             
             # if there are several callpaths selected
             elif len(selected_callpath) > 1:
-                callpaths = []
-                for i in range(len(selected_callpath)):
-                    current_callpath = selected_callpath[i]
-                    for j in range(len(self.experiment.callpaths)):
-                        if str(current_callpath) == str(self.experiment.callpaths[j]):
-                            callpaths.append(self.experiment.callpaths[j])
-            
                 measurements = self.experiment.measurements
                 core_hours_total = 0
-                for callpath in callpaths:
+                for callpath in selected_callpath:
                     core_hours_callpath = 0
-                    for measurement in measurements[(callpath, runtime_metric)]:
-                        core_hours_per_point = 0
-                        try:
-                            for value in measurement.values:
-                                core_hours_per_point += value * number_processes
-                        except TypeError:
-                            core_hours_per_point += measurement.mean * number_processes
-                        core_hours_callpath += core_hours_per_point
+                    try:
+                        for measurement in measurements[(callpath.path, runtime_metric)]:
+                            core_hours_per_point = 0
+                            try:
+                                for value in measurement.values:
+                                    core_hours_per_point += value * number_processes
+                            except TypeError:
+                                core_hours_per_point += measurement.mean * number_processes
+                            core_hours_callpath += core_hours_per_point
+                    except KeyError:
+                        pass
                     core_hours_total += core_hours_callpath
     
                 current_cost = core_hours_total
@@ -373,14 +364,10 @@ class MeasurementWizardWidget(QWidget):
 
             # if there is only one callpath selected
             if len(selected_callpath) == 1:
-                callpath = None
-                for call in self.experiment.callpaths:
-                    if str(call) == str(selected_callpath[0]):
-                        callpath = call
                 measurements = self.experiment.measurements
                 core_hours_total = 0
                 try:
-                    for measurement in measurements[(callpath, runtime_metric)]:
+                    for measurement in measurements[(selected_callpath[0].path, runtime_metric)]:
                         core_hours_per_point = 0
                         parameter_values = measurement.coordinate.as_tuple()
                         try:
@@ -418,20 +405,13 @@ class MeasurementWizardWidget(QWidget):
                 current_cost_str = "{:.2f}".format(current_cost)
             
             # if there are several callpaths selected
-            elif len(selected_callpath) > 1:
-                callpaths = []
-                for i in range(len(selected_callpath)):
-                    current_callpath = selected_callpath[i]
-                    for j in range(len(self.experiment.callpaths)):
-                        if str(current_callpath) == str(self.experiment.callpaths[j]):
-                            callpaths.append(self.experiment.callpaths[j])
-            
+            elif len(selected_callpath) > 1:         
                 measurements = self.experiment.measurements
                 core_hours_total = 0
-                for callpath in callpaths:
+                for callpath in selected_callpath:
                     core_hours_callpath = 0
                     try:
-                        for measurement in measurements[(callpath, runtime_metric)]:
+                        for measurement in measurements[(callpath.path, runtime_metric)]:
                             core_hours_per_point = 0
                             parameter_values = measurement.coordinate.as_tuple()
                             try:
@@ -564,10 +544,13 @@ class MeasurementWizardWidget(QWidget):
     
         # if there is only one model parameter
         if model_parameters == 1:
-            self.init_single_parameter()
+            if self.initialized == False:
+                self.init_single_parameter()
+            self.metric_selector.clear()
+            for metric in self.experiment.metrics:
+                self.metric_selector.addItem(str(metric))
             self.repaint()
             self.update()
-            #TODO:
         
         # if there are several model parameters
         else:
@@ -650,35 +633,6 @@ class MeasurementWizardWidget(QWidget):
         self._adviseMeasurementLabel.setText("")
         self._adviseMeasurementPoints.setText("")
         self._adviseMeasurementStats.setText("")"""
-        
-            
-    def calculateSunkenCost(self):
-        self._sunkenCost.setText("")
-        self._adviseMeasurement.setEnabled(False) 
-        experiment = self.main_widget.getExperiment()
-        numProc_ParamIndex = self.processesParameter.currentIndex()
-        if experiment is None or numProc_ParamIndex < 0 :
-            return
-
-        #TODO: does not work anymore
-        #selected_callpath = self.main_widget.getSelectedCallpath()
-        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
-        print("DEBUG selected_callpath:",selected_callpath)
-
-        #corehourse_struct = GPR_Interface.calculateSunkenCost(experiment, numProc_ParamIndex, selectedCallpath=selected_callpath)
-        #self._sunkenCost.setText(corehourse_struct.msg)
-        self._sunkenCost.setText("Dummy TEXT")
-
-        if len(selected_callpath) < 1:
-            budget = int(self._experimentBudget.value())
-            if budget > 0:
-                #self._sunkenCost.setText(self._sunkenCost.text() +" ("+ str(corehourse_struct.val//budget) +"%)")
-                self._sunkenCost.setText(self._sunkenCost.text() +" (100%)")
-                
-        #if corehourse_struct.check:
-        #    self._adviseMeasurement.setEnabled(True) 
-        #else:
-        #    self._adviseMeasurement.setEnabled(False) 
             
 
     def callpath_selection_changed(self):    
