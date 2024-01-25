@@ -259,3 +259,16 @@ class ListToMappingField(fields.List):
             return self.list_type(result)
         else:
             return result
+
+
+class NumpyField(fields.List):
+    import numpy
+
+    def __init__(self, **kwargs):
+        super().__init__(fields.Field, **kwargs)
+
+    def _deserialize(self, value, attr, obj, **kwargs):
+        return self.numpy.array(value)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        return super()._serialize(value.tolist(), attr, obj)

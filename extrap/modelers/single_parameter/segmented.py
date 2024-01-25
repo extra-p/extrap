@@ -188,6 +188,7 @@ class SegmentedModeler(SingleParameterModeler):
             function = SegmentedFunction([m.hypothesis.function for m in models], intervals)
             hypothesis = SingleParameterHypothesis(function, self.use_median)
             hypothesis.compute_cost(measurements)
+            hypothesis.compute_adjusted_rsquared(self.create_constant_model(measurements)[1], measurements)
             return SegmentedModel(hypothesis, models, change_point)
 
         else:

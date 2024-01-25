@@ -18,7 +18,7 @@ from marshmallow import fields
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
 from extrap.util.latex_formatting import frmt_scientific_coefficient
-from extrap.util.serialization_schema import BaseSchema, NumberField
+from extrap.util.serialization_schema import BaseSchema, NumberField, NumpyField
 from extrap.util.string_formats import FunctionFormats
 
 
@@ -176,15 +176,24 @@ class SegmentedFunction(SingleParameterFunction):
 
     def __init__(self, segments: list[SingleParameterFunction],
                  intervals: Sequence[tuple[numbers.Number, numbers.Number]]):
-
         super().__init__()
         self.add_compound_term = None
+        self.__iadd__ = None
         if len(segments) > self.MAX_NUM_SEGMENTS:
             raise ValueError(f"Only {self.MAX_NUM_SEGMENTS} are allowed.")
         if len(segments) != len(intervals):
             raise ValueError("Number of intervals must be equal to the number of segments")
         self.segments = segments
         self.intervals = np.array(intervals, dtype=float)
+
+    @property
+    def constant_coefficient(self):
+        return 0
+
+    @constant_coefficient.setter
+    def constant_coefficient(self, value):
+        if value != 0:
+            raise NotImplementedError
 
     def reset_coefficients(self):
         for v in self.segments:
@@ -198,7 +207,7 @@ class SegmentedFunction(SingleParameterFunction):
             parameter_value = parameter_value[0]
 
         if isinstance(parameter_value, np.ndarray):
-            function_value = np.full_like(parameter_value, math.nan, dtype=float)
+            function_value = np.ndarray(parameter_value.shape, dtype=float)
             int_start = self.intervals[:, 0]
             int_end = self.intervals[:, 1]
             int_start_mask = int_start.reshape(1, -1) <= parameter_value.reshape(-1, 1)
@@ -207,6 +216,7 @@ class SegmentedFunction(SingleParameterFunction):
             match = np.argmax(mask, axis=1)
             for i, segment in enumerate(self.segments):
                 function_value[match == i] = segment.evaluate(parameter_value[match == i])
+            function_value[~np.any(mask, axis=1)] = math.nan
             return function_value
         else:
             for (int_start, int_end), segment in zip(self.intervals, self.segments):
@@ -221,11 +231,29 @@ class SegmentedFunction(SingleParameterFunction):
         if format == FunctionFormats.LATEX:
             return self.to_latex_string(*parameters)
 
-        function_string = self.segments[0].to_string(*parameters, format=format)
-        function_string += f" for {parameters[0]}<={self.intervals[0][1]}\n"
-        function_string += self.segments[1].to_string(*parameters, format=format)
-        function_string += f" for {parameters[0]}>={self.intervals[1][0]}"
+        elif format == FunctionFormats.PYTHON:
+            function_string = self.segments[0].to_string(*parameters, format=format)
+            function_string += f" if {parameters[0]}<={self.intervals[0][1]} else"
+            function_string += self.segments[1].to_string(*parameters, format=format)
+            if self.intervals[0][1] != self.intervals[1][0]:
+                function_string += f" if {parameters[0]}>={self.intervals[1][0]} else math.nan"
 
+        else:
+            function_string = self.segments[0].to_string(*parameters, format=format)
+            function_string += f" for {parameters[0]}<={self.intervals[0][1]}\n"
+            function_string += self.segments[1].to_string(*parameters, format=format)
+            function_string += f" for {parameters[0]}>={self.intervals[1][0]}"
+
+        return function_string
+
+    def to_latex_string(self, *parameters: Union[str, Parameter]):
+        """
+        Return a math string (using latex encoding) representation of the function.
+        """
+        function_string = self.segments[0].to_latex_string(*parameters)
+        function_string += f" for ${parameters[0]}<={self.intervals[0][1]}$\n"
+        function_string += self.segments[1].to_latex_string(*parameters)
+        function_string += f" for ${parameters[0]}>={self.intervals[1][0]}$"
         return function_string
 
 
@@ -263,3 +291,13 @@ class MultiParameterFunctionSchema(FunctionSchema):
 
     def create_object(self):
         return MultiParameterFunction()
+
+
+class SegmentedFunctionSchema(SingleParameterFunctionSchema):
+    compound_terms = fields.Constant([], load_only=True)
+    constant_coefficient = fields.Constant(0, load_only=True)
+    segments = fields.List(fields.Nested(SingleParameterFunctionSchema))
+    intervals = NumpyField()
+
+    def create_object(self):
+        return SegmentedFunction([], [])
