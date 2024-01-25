@@ -45,207 +45,87 @@ class HeatMapGraph(BaseContourGraph):
         # Get max x and max y value as a initial default value or a value provided by user
         maxX, maxY = self.get_max()
 
-        if isinstance(model_list[0], list):
-            X, Y, Z_List, z_List, X2, Y2, Z_List2, z_List2 = self.calculate_z_models(maxX, maxY, model_list)
+        X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
 
-            # Get the callpath color map
-            widget = self.main_widget
-            dict_callpath_color = widget.model_color_map
+        # Get the callpath color map
+        widget = self.main_widget
+        dict_callpath_color = widget.model_color_map
 
-            # for each x,y value , calculate max z for all function and
-            # get the associated model functions for which z is highest.
-            # Also store the the associated z value.
+        # for each x,y value , calculate max z for all function and
+        # get the associated model functions for which z is highest.
+        # Also store the the associated z value.
 
-            color_for_max_z = dict_callpath_color[selected_callpaths[0]]
-            max_z_list = list()
-            max_color_list = list()
-            max_function_list = list()
-            func_with_max_z = model_list[0]
+        color_for_max_z = dict_callpath_color[selected_callpaths[0]]
+        max_z_list = list()
+        max_color_list = list()
+        max_function_list = list()
+        func_with_max_z = model_list[0]
 
-            for i in range(len(z_List[0])):
-                max_z_val = z_List[0][i]
-                for j in range(len(model_list)):
-                    if z_List[j][i] > max_z_val:
-                        max_z_val = z_List[j][i]
-                        func_with_max_z = model_list[j]
-                        color_for_max_z = dict_callpath_color[selected_callpaths[j]]
-                max_z_list.append(max_z_val)
-                max_function_list.append(func_with_max_z)
-                max_color_list.append(color_for_max_z)
+        for i in range(len(z_List[0])):
+            max_z_val = z_List[0][i]
+            for j in range(len(model_list)):
+                if z_List[j][i] > max_z_val:
+                    max_z_val = z_List[j][i]
+                    func_with_max_z = model_list[j]
+                    color_for_max_z = dict_callpath_color[selected_callpaths[j]]
+            max_z_list.append(max_z_val)
+            max_function_list.append(func_with_max_z)
+            max_color_list.append(color_for_max_z)
 
-            max_z_list2 = list()
-            max_color_list2 = list()
-            max_function_list2 = list()
-            func_with_max_z2 = model_list[0]
+        # get the indices of the dominating model functions
+        # indicesList = list()
+        function_indices_map = {}
+        for i in range(len(model_list)):
+            indices = self.get_dominating_function_indices(
+                model_list[i], max_function_list)
+            if indices:
+                function_indices_map[selected_callpaths[i]] = indices
+                # function_indices_map[model_list[i]] = indices
 
-            for i in range(len(z_List2[0])):
-                max_z_val = z_List2[0][i]
-                for j in range(len(model_list)):
-                    if z_List2[j][i] > max_z_val:
-                        max_z_val = z_List2[j][i]
-                        func_with_max_z2 = model_list[j]
-                        color_for_max_z = dict_callpath_color[selected_callpaths[j]]
-                max_z_list2.append(max_z_val)
-                max_function_list2.append(func_with_max_z2)
-                max_color_list2.append(color_for_max_z)
+        # reshape the Max Z and corresponding color to give plot as input
+        max_Z_List = np.array(max_z_list).reshape(X.shape)
+        # max_Color_List = np.array(max_color_list).reshape(X.shape)
 
-            # get the indices of the dominating model functions
-            # indicesList = list()
-            function_indices_map = {}
-            for i in range(len(model_list)):
-                indices = self.get_dominating_function_indices(
-                    model_list[i], max_function_list)
-                if indices:
-                    function_indices_map[selected_callpaths[i]] = indices
-                    # function_indices_map[model_list[i]] = indices
+        # Set the x_label and y_label based on parameter selected.
+        x_label = self.main_widget.data_display.getAxisParameter(0).name
+        if x_label.startswith("_"):
+            x_label = x_label[1:]
+        y_label = self.main_widget.data_display.getAxisParameter(1).name
+        if y_label.startswith("_"):
+            y_label = y_label[1:]
 
-            # reshape the Max Z and corresponding color to give plot as input
-            max_Z_List = np.array(max_z_list).reshape(X.shape)
-            # max_Color_List = np.array(max_color_list).reshape(X.shape)
+        # Draw the graph showing the max z value
 
-            # reshape the Max Z and corresponding color to give plot as input
-            max_Z_List2 = np.array(max_z_list2).reshape(X2.shape)
-            # max_Color_List = np.array(max_color_list).reshape(X.shape)
+        # Step1: Draw the max Z value
+        ax = self.fig.add_subplot(1, 1, 1)
+        ax.get_xaxis().get_major_formatter().set_scientific(True)
+        ax.xaxis.major.formatter._useMathText = True
+        ax.yaxis.major.formatter._useMathText = True
+        ax.set_xlabel('\n' + x_label)
+        ax.set_ylabel('\n' + y_label)
+        ax.set_title('Max. Z Value')
+        im = ax.scatter(X, Y, c=max_Z_List, cmap=self.colormap)
+        self.fig.colorbar(im, ax=ax, orientation="horizontal",
+                          pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
 
-            # Set the x_label and y_label based on parameter selected.
-            x_label = self.main_widget.data_display.getAxisParameter(0).name
-            if x_label.startswith("_"):
-                x_label = x_label[1:]
-            y_label = self.main_widget.data_display.getAxisParameter(1).name
-            if y_label.startswith("_"):
-                y_label = y_label[1:]
+        # Step 2 : Mark the dominating functions by drawing boundary lines
+        # For each dominating function, extract the (x, y)pair in which they dominate using the indices we got in
+        # function_indices_map and then find the boundary of these points and plot on the graph
+        for function in function_indices_map:
+            indices_per_function = function_indices_map[function]
+            x_indices = [X.ravel()[index] for index in indices_per_function]
+            y_indices = [Y.ravel()[index] for index in indices_per_function]
+            x_y_indices = list(zip(x_indices, y_indices))
+            boundaryPoints = self.findBoundaryPoints(x_y_indices)
+            i = 0
+            while i < len(boundaryPoints) - 1:
+                ax.plot([boundaryPoints[i][0], boundaryPoints[i + 1][0]], [boundaryPoints[i]
+                                                                           [1], boundaryPoints[i + 1][1]],
+                        color=dict_callpath_color[function])
+                i = i + 1
 
-            # Draw the graph showing the max z value
-
-            # Step1: Draw the max Z value
-            ax = self.fig.add_subplot(1, 1, 1)
-            ax.get_xaxis().get_major_formatter().set_scientific(True)
-            ax.xaxis.major.formatter._useMathText = True
-            ax.yaxis.major.formatter._useMathText = True
-            ax.set_xlabel('\n' + x_label)
-            ax.set_ylabel('\n' + y_label)
-            ax.set_title('Max. Z Value')
-            im = ax.scatter(X, Y, c=max_Z_List, cmap=self.colormap)
-            self.fig.colorbar(im, ax=ax, orientation="horizontal",
-                            pad=0, format=ticker.ScalarFormatter(useMathText=True))
-            im2 = ax.scatter(X2, Y2, c=max_Z_List2, cmap=self.colormap)
-            self.fig.colorbar(im2, ax=ax, orientation="horizontal",
-                            pad=0, format=ticker.ScalarFormatter(useMathText=True))
-
-            # Step 2 : Mark the dominating functions by drawing boundary lines
-            # For each dominating function, extract the (x, y)pair in which they dominate using the indices we got in
-            # function_indices_map and then find the boundary of these points and plot on the graph
-            for function in function_indices_map:
-                indices_per_function = function_indices_map[function]
-                x_indices = [X.ravel()[index] for index in indices_per_function]
-                y_indices = [Y.ravel()[index] for index in indices_per_function]
-                x_y_indices = list(zip(x_indices, y_indices))
-                boundaryPoints = self.findBoundaryPoints(x_y_indices)
-                i = 0
-                while i < len(boundaryPoints) - 1:
-                    ax.plot([boundaryPoints[i][0], boundaryPoints[i + 1][0]], [boundaryPoints[i]
-                                                                            [1], boundaryPoints[i + 1][1]],
-                            color=dict_callpath_color[function])
-                    i = i + 1
-
-            for function in function_indices_map:
-                indices_per_function = function_indices_map[function]
-                x_indices = [X2.ravel()[index] for index in indices_per_function]
-                y_indices = [Y2.ravel()[index] for index in indices_per_function]
-                x_y_indices = list(zip(x_indices, y_indices))
-                boundaryPoints = self.findBoundaryPoints(x_y_indices)
-                i = 0
-                while i < len(boundaryPoints) - 1:
-                    ax.plot([boundaryPoints[i][0], boundaryPoints[i + 1][0]], [boundaryPoints[i]
-                                                                            [1], boundaryPoints[i + 1][1]],
-                            color=dict_callpath_color[function])
-                    i = i + 1
-
-            # Step 3: Draw legend
-            self.draw_legend(ax, dict_callpath_color)
-
-        else:
-            X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
-
-            # Get the callpath color map
-            widget = self.main_widget
-            dict_callpath_color = widget.model_color_map
-
-            # for each x,y value , calculate max z for all function and
-            # get the associated model functions for which z is highest.
-            # Also store the the associated z value.
-
-            color_for_max_z = dict_callpath_color[selected_callpaths[0]]
-            max_z_list = list()
-            max_color_list = list()
-            max_function_list = list()
-            func_with_max_z = model_list[0]
-
-            for i in range(len(z_List[0])):
-                max_z_val = z_List[0][i]
-                for j in range(len(model_list)):
-                    if z_List[j][i] > max_z_val:
-                        max_z_val = z_List[j][i]
-                        func_with_max_z = model_list[j]
-                        color_for_max_z = dict_callpath_color[selected_callpaths[j]]
-                max_z_list.append(max_z_val)
-                max_function_list.append(func_with_max_z)
-                max_color_list.append(color_for_max_z)
-
-            # get the indices of the dominating model functions
-            # indicesList = list()
-            function_indices_map = {}
-            for i in range(len(model_list)):
-                indices = self.get_dominating_function_indices(
-                    model_list[i], max_function_list)
-                if indices:
-                    function_indices_map[selected_callpaths[i]] = indices
-                    # function_indices_map[model_list[i]] = indices
-
-            # reshape the Max Z and corresponding color to give plot as input
-            max_Z_List = np.array(max_z_list).reshape(X.shape)
-            # max_Color_List = np.array(max_color_list).reshape(X.shape)
-
-            # Set the x_label and y_label based on parameter selected.
-            x_label = self.main_widget.data_display.getAxisParameter(0).name
-            if x_label.startswith("_"):
-                x_label = x_label[1:]
-            y_label = self.main_widget.data_display.getAxisParameter(1).name
-            if y_label.startswith("_"):
-                y_label = y_label[1:]
-
-            # Draw the graph showing the max z value
-
-            # Step1: Draw the max Z value
-            ax = self.fig.add_subplot(1, 1, 1)
-            ax.get_xaxis().get_major_formatter().set_scientific(True)
-            ax.xaxis.major.formatter._useMathText = True
-            ax.yaxis.major.formatter._useMathText = True
-            ax.set_xlabel('\n' + x_label)
-            ax.set_ylabel('\n' + y_label)
-            ax.set_title('Max. Z Value')
-            im = ax.scatter(X, Y, c=max_Z_List, cmap=self.colormap)
-            self.fig.colorbar(im, ax=ax, orientation="horizontal",
-                            pad=0.2, format=ticker.ScalarFormatter(useMathText=True))
-
-            # Step 2 : Mark the dominating functions by drawing boundary lines
-            # For each dominating function, extract the (x, y)pair in which they dominate using the indices we got in
-            # function_indices_map and then find the boundary of these points and plot on the graph
-            for function in function_indices_map:
-                indices_per_function = function_indices_map[function]
-                x_indices = [X.ravel()[index] for index in indices_per_function]
-                y_indices = [Y.ravel()[index] for index in indices_per_function]
-                x_y_indices = list(zip(x_indices, y_indices))
-                boundaryPoints = self.findBoundaryPoints(x_y_indices)
-                i = 0
-                while i < len(boundaryPoints) - 1:
-                    ax.plot([boundaryPoints[i][0], boundaryPoints[i + 1][0]], [boundaryPoints[i]
-                                                                            [1], boundaryPoints[i + 1][1]],
-                            color=dict_callpath_color[function])
-                    i = i + 1
-
-            # Step 3: Draw legend
-            self.draw_legend(ax, dict_callpath_color)
+        # Step 3: Draw legend
+        self.draw_legend(ax, dict_callpath_color)
 
     # @staticmethod
     # def getColorMap():
