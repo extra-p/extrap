@@ -168,6 +168,17 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(self.used_budget_edit, 5, 1)
 
         self.calculate_used_budget()
+
+        noise_level_label = QLabel(self)
+        noise_level_label.setText("Measurement Noise Level [%]:")
+        self.layout.addWidget(noise_level_label, 6, 0)
+
+        self.noise_level_edit = QLineEdit(self)
+        self.noise_level_edit.setEnabled(False)
+        noise_level_str = "{:.2f}".format(self.mean_noise_level)
+        self.noise_level_edit.setText(noise_level_str)
+        self.layout.addWidget(self.noise_level_edit, 6, 1)
+
         self.calculate_noise_level()
 
 
@@ -191,15 +202,18 @@ class MeasurementWizardWidget(QWidget):
                     callpath = call
             try:
                 nns = []
-                for meas in mm[(callpath, runtime_metric)]:
-                    pps = []
-                    for val in meas.values:
-                        if np.mean(meas.values) == 0.0:
-                            pp = 0
-                        else:
-                            pp = abs((val / (np.mean(meas.values) / 100)) - 100)
-                        pps.append(pp)
-                    nns.append(np.mean(pps))
+                try:
+                    for meas in mm[(callpath, runtime_metric)]:
+                        pps = []
+                        for val in meas.values:
+                            if np.mean(meas.values) == 0.0:
+                                pp = 0
+                            else:
+                                pp = abs((val / (np.mean(meas.values) / 100)) - 100)
+                            pps.append(pp)
+                        nns.append(np.mean(pps))
+                except KeyError:
+                    nns = [0.0]
                 self.mean_noise_level = np.mean(nns)
             except TypeError:
                 self.mean_noise_level = 0.0
@@ -217,15 +231,18 @@ class MeasurementWizardWidget(QWidget):
                 callpath_noise_levels = []
                 for callpath in callpaths:
                     nns = []
-                    for meas in measurements[(callpath, runtime_metric)]:
-                        pps = []
-                        for val in meas.values:
-                            if np.mean(meas.values) == 0.0:
-                                pp = 0
-                            else:
-                                pp = abs((val / (np.mean(meas.values) / 100)) - 100)
-                            pps.append(pp)
-                        nns.append(np.mean(pps))
+                    try:
+                        for meas in measurements[(callpath, runtime_metric)]:
+                            pps = []
+                            for val in meas.values:
+                                if np.mean(meas.values) == 0.0:
+                                    pp = 0
+                                else:
+                                    pp = abs((val / (np.mean(meas.values) / 100)) - 100)
+                                pps.append(pp)
+                            nns.append(np.mean(pps))
+                    except KeyError:
+                        nns = [0.0]
                     callpath_noise_levels.append(np.mean(nns))
                 self.mean_noise_level = np.mean(callpath_noise_levels)
             except TypeError:
@@ -238,19 +255,24 @@ class MeasurementWizardWidget(QWidget):
                 callpath_noise_levels = []
                 for callpath in self.experiment.callpaths:
                     nns = []
-                    for meas in measurements[(callpath, runtime_metric)]:
-                        pps = []
-                        for val in meas.values:
-                            if np.mean(meas.values) == 0.0:
-                                pp = 0
-                            else:
-                                pp = abs((val / (np.mean(meas.values) / 100)) - 100)
-                            pps.append(pp)
-                        nns.append(np.mean(pps))
+                    try:
+                        for meas in measurements[(callpath, runtime_metric)]:
+                            pps = []
+                            for val in meas.values:
+                                if np.mean(meas.values) == 0.0:
+                                    pp = 0
+                                else:
+                                    pp = abs((val / (np.mean(meas.values) / 100)) - 100)
+                                pps.append(pp)
+                            nns.append(np.mean(pps))
+                    except KeyError:
+                        nns = [0.0]
                     callpath_noise_levels.append(np.mean(nns))
                 self.mean_noise_level = np.mean(callpath_noise_levels)
             except TypeError:
                 self.mean_noise_level = 0.0
+        noise_level_str = "{:.2f}".format(self.mean_noise_level)
+        self.noise_level_edit.setText(noise_level_str)
 
 
     def calculate_used_budget(self):
@@ -357,16 +379,18 @@ class MeasurementWizardWidget(QWidget):
                         callpath = call
                 measurements = self.experiment.measurements
                 core_hours_total = 0
-                for measurement in measurements[(callpath, runtime_metric)]:
-                    core_hours_per_point = 0
-                    parameter_values = measurement.coordinate.as_tuple()
-                    try:
-                        for value in measurement.values:
-                            core_hours_per_point += value * parameter_values[0]
-                    except TypeError:
-                        core_hours_per_point += measurement.mean * parameter_values[0]
-                    core_hours_total += core_hours_per_point
-
+                try:
+                    for measurement in measurements[(callpath, runtime_metric)]:
+                        core_hours_per_point = 0
+                        parameter_values = measurement.coordinate.as_tuple()
+                        try:
+                            for value in measurement.values:
+                                core_hours_per_point += value * parameter_values[0]
+                        except TypeError:
+                            core_hours_per_point += measurement.mean * parameter_values[0]
+                        core_hours_total += core_hours_per_point
+                except KeyError:
+                    pass
                 current_cost = core_hours_total
                 current_cost_str = "{:.2f}".format(current_cost)
 
@@ -376,15 +400,18 @@ class MeasurementWizardWidget(QWidget):
                 core_hours_total = 0
                 for callpath in self.experiment.callpaths:
                     core_hours_callpath = 0
-                    for measurement in measurements[(callpath, runtime_metric)]:
-                        core_hours_per_point = 0
-                        parameter_values = measurement.coordinate.as_tuple()
-                        try:
-                            for value in measurement.values:
-                                core_hours_per_point += value * parameter_values[0]
-                        except TypeError:
-                            core_hours_per_point += measurement.mean * parameter_values[0]
-                        core_hours_callpath += core_hours_per_point
+                    try:
+                        for measurement in measurements[(callpath, runtime_metric)]:
+                            core_hours_per_point = 0
+                            parameter_values = measurement.coordinate.as_tuple()
+                            try:
+                                for value in measurement.values:
+                                    core_hours_per_point += value * parameter_values[0]
+                            except TypeError:
+                                core_hours_per_point += measurement.mean * parameter_values[0]
+                            core_hours_callpath += core_hours_per_point
+                    except KeyError:
+                        pass
                     core_hours_total += core_hours_callpath
     
                 current_cost = core_hours_total
@@ -403,15 +430,18 @@ class MeasurementWizardWidget(QWidget):
                 core_hours_total = 0
                 for callpath in callpaths:
                     core_hours_callpath = 0
-                    for measurement in measurements[(callpath, runtime_metric)]:
-                        core_hours_per_point = 0
-                        parameter_values = measurement.coordinate.as_tuple()
-                        try:
-                            for value in measurement.values:
-                                core_hours_per_point += value * parameter_values[0]
-                        except TypeError:
-                            core_hours_per_point += measurement.mean * parameter_values[0]
-                        core_hours_callpath += core_hours_per_point
+                    try:
+                        for measurement in measurements[(callpath, runtime_metric)]:
+                            core_hours_per_point = 0
+                            parameter_values = measurement.coordinate.as_tuple()
+                            try:
+                                for value in measurement.values:
+                                    core_hours_per_point += value * parameter_values[0]
+                            except TypeError:
+                                core_hours_per_point += measurement.mean * parameter_values[0]
+                            core_hours_callpath += core_hours_per_point
+                    except KeyError:
+                        pass
                     core_hours_total += core_hours_callpath
     
                 current_cost = core_hours_total
