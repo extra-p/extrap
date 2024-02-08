@@ -125,9 +125,9 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
         if not isinstance(path, list):
             extra_data_path = Path(path) / "extra_data"
             if extra_data_path.exists():
-                breakpoint()
+                # breakpoint()
                 self._load_extra_data(experiment, extra_data_path, progress_bar)
-                breakpoint()
+                # breakpoint()
 
         # determine calltree
         call_tree = io_helper.create_call_tree(experiment.callpaths, progress_bar, progress_scale=0.1)
@@ -143,7 +143,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
 
     def _load_extra_data(self, experiment, path, progress_bar):
         extra_experiment = self.read_experiment(path, progress_bar)
-        breakpoint()
+        # breakpoint()
         if extra_experiment.parameters != experiment.parameters:
             raise FileFormatError("Cannot load extra data without matching parameters.")
         if extra_experiment.coordinates != experiment.coordinates:
