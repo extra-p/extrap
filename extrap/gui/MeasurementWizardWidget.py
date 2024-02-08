@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -9,79 +9,13 @@ import numpy as np
 from extrap.entities.callpath import Callpath
 from extrap.entities.metric import Metric
 import sys
-
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import *  # @UnusedWildImport
 from PySide6.QtGui import QDoubleValidator, QIntValidator
-
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+from extrap.gpr.measurement_point_advisor import MeasurementPointAdvisor
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
-from extrap.gui.components.ExpanderWidget import ExpanderWidget
-from extrap.gui.GPR_Interface import GPR_Interface, Struct
-from extrap.gui.Utils import tryCastListToInt
-
-class HistogrammWidget(FigureCanvasQTAgg):
-    def __init__(self):
-        fig = Figure(dpi=85, figsize=(5, 2), facecolor="#bebebe")
-        super(HistogrammWidget, self).__init__(fig) 
-        self._axes = fig.add_subplot(111)
-        self._axes.margins(tight=True)
-        
-    def setData(self, x, y):
-        self.reset()
-        self._axes.bar(x, y, width=0.9, color="#2277b0", edgecolor="black")
-        self.y = y
-        self.x = x
-        self.draw() #trigger to rerender plot
-        
-    def addData(self, stackedY):
-        if len(self.y) == len(stackedY):
-            self._axes.bar(self.x, stackedY, width=0.9, color="green", edgecolor="black", bottom=self.y)
-            self.y = [sum(i) for i in zip(self.y, stackedY)]
-            self.draw() #trigger to rerender plot
-      
-    def reset(self):
-        self._axes.clear()
-        
-        
-class ParameterCourse_Manual(QWidget):
-    def __init__(self):
-        super(ParameterCourse_Manual, self).__init__()
-        grid = QGridLayout(self)
-        grid.setColumnStretch(0, 0)
-        grid.setColumnStretch(1, 1)
-        grid.setContentsMargins(11, 3, 11, 7)
-        grid.setSpacing(7)
-        self.setLayout(grid)
-
-        
-class ParameterWidget(QWidget):
-    def __init__(self):
-        super(ParameterWidget, self).__init__()
-        grid = QGridLayout(self)
-        grid.setContentsMargins(11, 3, 11, 7)
-        grid.setSpacing(0)
-        self.setLayout(grid)
-        
-        #Charactersitics of the parameter 
-        self.parameterShape = ParameterCourse_Manual()
-        grid.addWidget(self.parameterShape, 0, 0, 1, 2)        
-           
-        #Histogramm of parameter values
-        self.histogram = HistogrammWidget()
-        self.histogram.setToolTip("Historgamm over the measured values of this parameter.")
-        grid.addWidget(self.histogram, 1, 0, 1, 2)
-        grid.setRowMinimumHeight(1, 25)
-        grid.setColumnMinimumWidth(0, 130)
-        grid.setColumnMinimumWidth(1, 130)
-    
-    def reset(self):
-        self.histogram.reset()
-        
 
 class MeasurementWizardWidget(QWidget):
     
@@ -236,6 +170,7 @@ class MeasurementWizardWidget(QWidget):
         self.checkbox.setChecked(True)
         self.checkbox.toggled.connect(self.clickCheckbox)
         self.layout.addWidget(self.checkbox, 0, 0)
+        self.processes_parameter_id = 0
 
         self.process_label = QLabel(self)
         self.process_label.setText("No. of processes (MPI ranks):")
@@ -576,7 +511,54 @@ class MeasurementWizardWidget(QWidget):
 
 
     def advice_button_clicked(self):
-        self.measurement_point_suggestions_label.setPlainText("HAHAHA")
+
+        # get the modeling budget from the GUI
+        budget = self.modeling_budget.text()
+        if budget == "":
+            budget = float(self.current_cost.text())*2
+        else:
+            budget = float(budget)
+        
+        # get the performance metric that should be used for the analysis
+        metric_string = self.metric_selector.currentText()
+        metrics = self.experiment.metrics
+        runtime_metric = None
+        for metric in metrics:
+            if metric_string == str(metric):
+                runtime_metric = metric
+            
+        # get the selected callpath(s) in the tree
+        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+        
+        # initialize a new measurement point advisor object
+        mpa = MeasurementPointAdvisor(budget=budget, 
+                                      processes=self.processes_parameter_id, 
+                                      callpaths=selected_callpath,
+                                      metric=runtime_metric,
+                                      experiment=self.experiment)
+
+
+        point_suggestions = []
+        # (point_parameter_values, repetition no.)
+        point_suggestions.append(([32.0, 10.0], 1))
+        point_suggestions.append(([128.0, 50.0], 3))
+
+        text = ""
+        for i in range(len(point_suggestions)):
+            temp = ""
+            temp += str(i+1) + "."
+            temp += " P("
+            for j in range(len(self.experiment.parameters)):
+                if j != 0:
+                    temp += ","
+                temp += str(self.experiment.parameters[j])
+                temp += "="
+                temp += str(point_suggestions[i][0][j])
+            temp += "), repetition no.="
+            temp += str(point_suggestions[i][1])
+            temp += "\n"
+            text += temp
+        self.measurement_point_suggestions_label.setPlainText(text)
 
 
     def budgetChanged(self):
