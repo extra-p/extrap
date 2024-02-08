@@ -30,6 +30,8 @@ class MeasurementWizardWidget(QWidget):
         self.initialized = False
         self.processes_parameter_id = 0
         self.no_model_parameters = 0
+        self.budget = 0.0
+        self.current_cost = 0.0
 
 
     def init_empty(self):
@@ -110,10 +112,10 @@ class MeasurementWizardWidget(QWidget):
         current_cost_label.setText("Current Measurement Cost [core hours]:")
         self.layout.addWidget(current_cost_label, 5, 0)
 
-        self.current_cost = QLineEdit(self)
-        self.current_cost.setEnabled(False)
-        self.current_cost.setText("0.0")
-        self.layout.addWidget(self.current_cost, 5, 1)
+        self.current_cost_edit = QLineEdit(self)
+        self.current_cost_edit.setEnabled(False)
+        self.current_cost_edit.setText("0.0")
+        self.layout.addWidget(self.current_cost_edit, 5, 1)
 
         self.calculate_current_measurement_cost()
 
@@ -125,8 +127,6 @@ class MeasurementWizardWidget(QWidget):
         self.used_budget_edit.setEnabled(False)
         self.used_budget_edit.setText("0.0")
         self.layout.addWidget(self.used_budget_edit, 6, 1)
-
-        self.calculate_used_budget()
 
         noise_level_label = QLabel(self)
         noise_level_label.setText("Measurement Noise Level [%]:")
@@ -207,10 +207,10 @@ class MeasurementWizardWidget(QWidget):
         current_cost_label.setText("Current Measurement Cost [core hours]:")
         self.layout.addWidget(current_cost_label, 4, 0)
 
-        self.current_cost = QLineEdit(self)
-        self.current_cost.setEnabled(False)
-        self.current_cost.setText("0.0")
-        self.layout.addWidget(self.current_cost, 4, 1)
+        self.current_cost_edit = QLineEdit(self)
+        self.current_cost_edit.setEnabled(False)
+        self.current_cost_edit.setText("0.0")
+        self.layout.addWidget(self.current_costb_edit, 4, 1)
 
         self.calculate_current_measurement_cost()
 
@@ -222,8 +222,6 @@ class MeasurementWizardWidget(QWidget):
         self.used_budget_edit.setEnabled(False)
         self.used_budget_edit.setText("0.0")
         self.layout.addWidget(self.used_budget_edit, 5, 1)
-
-        self.calculate_used_budget()
 
         noise_level_label = QLabel(self)
         noise_level_label.setText("Measurement Noise Level [%]:")
@@ -331,12 +329,8 @@ class MeasurementWizardWidget(QWidget):
 
 
     def calculate_used_budget(self):
-        try:
-            modeling_budget = float(self.modeling_budget.text())
-            used_budget_percent = float(self.current_cost.text()) / (modeling_budget / 100)
-        except:
-            modeling_budget = float(self.current_cost.text())
-            used_budget_percent = 100.0
+        self.budget = float(self.modeling_budget.text())
+        used_budget_percent = self.current_cost / (self.budget / 100)
         used_budget_percent_str = "{:.2f}".format(used_budget_percent)
         self.used_budget_edit.setText(used_budget_percent_str)
 
@@ -374,8 +368,8 @@ class MeasurementWizardWidget(QWidget):
                 except KeyError:
                     pass
 
-                current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(current_cost)
+                self.current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(self.current_cost)
 
             # if there is no callpath selected
             elif len(selected_callpath) == 0:
@@ -396,8 +390,8 @@ class MeasurementWizardWidget(QWidget):
                         pass
                     core_hours_total += core_hours_callpath
     
-                current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(current_cost)
+                self.current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(self.current_cost)
             
             # if there are several callpaths selected
             elif len(selected_callpath) > 1:
@@ -418,8 +412,8 @@ class MeasurementWizardWidget(QWidget):
                         pass
                     core_hours_total += core_hours_callpath
     
-                current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(current_cost)
+                self.current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(self.current_cost)
 
         # if the model parameter is the number of processes or mpi ranks
         else:
@@ -446,8 +440,8 @@ class MeasurementWizardWidget(QWidget):
                         core_hours_total += core_hours_per_point
                 except KeyError:
                     pass
-                current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(current_cost)
+                self.current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(self.current_cost)
 
             # if there is no callpath selected
             elif len(selected_callpath) == 0:
@@ -475,8 +469,8 @@ class MeasurementWizardWidget(QWidget):
                         pass
                     core_hours_total += core_hours_callpath
     
-                current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(current_cost)
+                self.current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(self.current_cost)
             
             # if there are several callpaths selected
             elif len(selected_callpath) > 1:         
@@ -504,61 +498,66 @@ class MeasurementWizardWidget(QWidget):
                         pass
                     core_hours_total += core_hours_callpath
     
-                current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(current_cost)
+                self.current_cost = core_hours_total
+                current_cost_str = "{:.2f}".format(self.current_cost)
 
-        self.current_cost.setText(current_cost_str)
+        if self.budget == 0.0:
+            self.budget = self.current_cost
+            self.modeling_budget.setText(str(current_cost_str))
+
+        self.current_cost_edit.setText(str(current_cost_str))
 
 
     def advice_button_clicked(self):
 
         # get the modeling budget from the GUI
-        budget = self.modeling_budget.text()
-        if budget == "":
-            budget = float(self.current_cost.text())*2
+        if self.budget == self.current_cost:
+            self.measurement_point_suggestions_label.setPlainText("Not enough budget available to suggest further measurement points!")
+        
         else:
-            budget = float(budget)
-        
-        # get the performance metric that should be used for the analysis
-        metric_string = self.metric_selector.currentText()
-        metrics = self.experiment.metrics
-        runtime_metric = None
-        for metric in metrics:
-            if metric_string == str(metric):
-                runtime_metric = metric
+            # get the performance metric that should be used for the analysis
+            metric_string = self.metric_selector.currentText()
+            metrics = self.experiment.metrics
+            runtime_metric = None
+            for metric in metrics:
+                if metric_string == str(metric):
+                    runtime_metric = metric
+                
+            # get the selected callpath(s) in the tree
+            selected_callpath = self.main_widget.get_selected_call_tree_nodes()
             
-        # get the selected callpath(s) in the tree
-        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
-        
-        # initialize a new measurement point advisor object
-        mpa = MeasurementPointAdvisor(budget=budget, 
-                                      processes=self.processes_parameter_id, 
-                                      callpaths=selected_callpath,
-                                      metric=runtime_metric,
-                                      experiment=self.experiment)
+            # initialize a new measurement point advisor object
+            mpa = MeasurementPointAdvisor(budget=self.budget, 
+                                        processes=self.processes_parameter_id, 
+                                        callpaths=selected_callpath,
+                                        metric=runtime_metric,
+                                        experiment=self.experiment,
+                                        self.current_cost)
+            
+            points = mpa.suggest_points()
 
 
-        """point_suggestions = []
-        # (point_parameter_values, repetition no.)
-        point_suggestions.append(([32.0, 10.0], 1))
-        point_suggestions.append(([128.0, 50.0], 3))"""
+            """point_suggestions = []
+            # (point_parameter_values, repetition no.)
+            point_suggestions.append(([32.0, 10.0], 1))
+            point_suggestions.append(([128.0, 50.0], 3))"""
 
-        text = ""
-        """for i in range(len(point_suggestions)):
-            temp = ""
-            temp += str(i+1) + "."
-            temp += " P("
-            for j in range(len(self.experiment.parameters)):
-                if j != 0:
-                    temp += ","
-                temp += str(self.experiment.parameters[j])
-                temp += "="
-                temp += str(point_suggestions[i][0][j])
-            temp += "), repetition no.="
-            temp += str(point_suggestions[i][1])
-            temp += "\n"
-            text += temp"""
-        self.measurement_point_suggestions_label.setPlainText(text)
+            text = ""
+            """for i in range(len(point_suggestions)):
+                temp = ""
+                temp += str(i+1) + "."
+                temp += " P("
+                for j in range(len(self.experiment.parameters)):
+                    if j != 0:
+                        temp += ","
+                    temp += str(self.experiment.parameters[j])
+                    temp += "="
+                    temp += str(point_suggestions[i][0][j])
+                temp += "), repetition no.="
+                temp += str(point_suggestions[i][1])
+                temp += "\n"
+                text += temp"""
+            self.measurement_point_suggestions_label.setPlainText(text)
 
 
     def budgetChanged(self):
@@ -644,76 +643,8 @@ class MeasurementWizardWidget(QWidget):
         
         self.reset(len(self.experiment.parameters))
         
-        #Budget for improvment
-        #self._experimentBudget.setEnabled(True)
-                
-        """#Processes parameter
-        self.processesParameter.clear()
-        for i, p in enumerate(experiment.parameters):
-            self.processesParameter.addItem(str(p))
-            self._parameters[i][1].setTitle("Parameter "+ str(p))
-        self.processesParameter.setEnabled(True)
-        if len(experiment.parameters) == 1:
-            self.processesParameter.setCurrentIndex(0)
-        else:
-            self.processesParameter.setCurrentIndex(-1)
-        
-        #Sunken Cost
-        self.calculateSunkenCost()
-            
-        #Limitations for parameters                   
-        for parameterIndex, parameter in enumerate(self._parameters): 
-            if parameterIndex >= numberOfParameters:
-                break
-            paramValues_allOccurrences = tryCastListToInt(list(map(lambda coord: coord[parameterIndex], experiment.coordinates)))
-            paramValues_distinct = list(dict.fromkeys(paramValues_allOccurrences))
-            paramValues_occurrencesCounts = list(map(lambda x: round(paramValues_allOccurrences.count(x)), paramValues_distinct))
-            
-            parameter[0].histogram.setData(list(map(str, paramValues_distinct)), paramValues_occurrencesCounts)
-            parameter[1].setEnabled(True)
-            parameter[1].toggle(False)
-   
-        #Advise future measurement 
-        self._adviseStrategy.setEnabled(True)
-        
-        #Advice Labels
-        self._adviseMeasurementLabel.setText("")
-        self._adviseMeasurementPoints.setText("")
-        self._adviseMeasurementStats.setText("")"""
-            
 
     def callpath_selection_changed(self):    
         self.calculate_current_measurement_cost()
         self.calculate_used_budget()
         self.calculate_noise_level()
-
-
-    def adviceMeasurment(self):
-        self._adviseMeasurementLabel.setText("")
-        self._adviseMeasurementPoints.setText("")
-        self._adviseMeasurementStats.setText("")
-        
-        experiment = self.main_widget.getExperiment()
-        if experiment is None:
-            self.reset()
-            return
-        
-        result_struct = GPR_Interface.adviceMeasurement(self)
-
-        if result_struct.check:
-            self._adviseMeasurementLabel.setText("Measure next at these points:")
-            headerString = str(tuple([p.name for p in experiment.parameters]))
-            self._adviseMeasurementPoints.setText(headerString +"\n"+ result_struct.msg)
-            for parameterIndex, parameter in enumerate(self._parameters): 
-                if parameterIndex >= len(experiment.parameters):
-                    break
-
-                paramValues_allOccurrences = tryCastListToInt(list(map(lambda coord: coord[parameterIndex], experiment.coordinates)))
-                paramValues_distinct = list(dict.fromkeys(paramValues_allOccurrences))
-                stacked = [0] * len(paramValues_distinct)
-                for p in result_struct.payload:
-                	stacked[paramValues_distinct.index(p[1][parameterIndex])] += 1
-
-                parameter[0].histogram.addData(stacked)   
-        else:
-            self._adviseMeasurementLabel.setText(result_struct.msg)

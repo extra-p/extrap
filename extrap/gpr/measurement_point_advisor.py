@@ -17,7 +17,7 @@ from extrap.gpr.util import identify_selection_mode
 class MeasurementPointAdvisor():
 
 
-    def __init__(self, budget, processes, callpaths, metric, experiment) -> None:
+    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost) -> None:
         self.budget = budget
         print("budget:",budget)
 
@@ -27,6 +27,8 @@ class MeasurementPointAdvisor():
         self.experiment = experiment
 
         self.normalization = True
+
+        self.current_cost = current_cost
 
         self.parameters = []
         for i in range(len(self.experiment.parameters)):
@@ -81,11 +83,18 @@ class MeasurementPointAdvisor():
         # gpr -> suggest additional measurement points with the gpr method
         # add -> suggest an additional point that is not part of the lines for each parameter
         # base -> suggest points to complete the lines of points for each parameter
-        selection_mode = identify_selection_mode(self.experiment, min_points)
+        self.selection_mode = identify_selection_mode(self.experiment, min_points)
 
-        print("DEBUG selection_mode:",selection_mode)
+        print("DEBUG selection_mode:",self.selection_mode)
+
+
+    def suggest_points(self):
+
+
         
         
+
+        return [(0,0),(1,1)]
 
 
         """#TODO: if modeling requirements are not satisfied 
