@@ -90,6 +90,33 @@ class MeasurementPointAdvisor():
 
     def suggest_points(self):
 
+        #TODO: how large should the search space be, set via GUI parameter?
+
+        # 1. build a value series for each parameter
+        # 2. continue and complete these series for each parameter
+        # 3. build a 1D, 2D, 3D, ND, ..., search space of potential points (does not contain already measured points!)
+
+        # a. base mode
+        # a.1 choose the smallest of the values for each parameter
+        # a.2 combine these values of each parameter to a coordinate
+        # a.3 repeat until enough suggestions for cords to complete a line of 5 points for each parameter
+        #NOTE: need to ignore set budget and availability because anyway not enough points for modeling
+
+        # b. add mode
+        # b.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
+        # b.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
+        # b.3 choose the point from the seach space with the lowest cost
+        # b.4 check if that point fits into the available budget
+        # b.41 create a coordinate from it and suggest it if fits into budget
+        # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
+
+        # c. gpr mode
+        # c.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
+        # c.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
+        #NOTE: the search space points should have a dict like for the costs of the remaining points for my case study analysis...
+        # c.3 all of the data is used as input to the GPR method
+        # c.4 get the top x points suggested by the GPR method that do fit into the available budget
+        # c.5 create coordinates and suggest them
 
         
         
