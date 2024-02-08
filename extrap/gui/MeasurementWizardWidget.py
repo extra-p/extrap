@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -538,13 +538,13 @@ class MeasurementWizardWidget(QWidget):
                                       experiment=self.experiment)
 
 
-        point_suggestions = []
+        """point_suggestions = []
         # (point_parameter_values, repetition no.)
         point_suggestions.append(([32.0, 10.0], 1))
-        point_suggestions.append(([128.0, 50.0], 3))
+        point_suggestions.append(([128.0, 50.0], 3))"""
 
         text = ""
-        for i in range(len(point_suggestions)):
+        """for i in range(len(point_suggestions)):
             temp = ""
             temp += str(i+1) + "."
             temp += " P("
@@ -557,7 +557,7 @@ class MeasurementWizardWidget(QWidget):
             temp += "), repetition no.="
             temp += str(point_suggestions[i][1])
             temp += "\n"
-            text += temp
+            text += temp"""
         self.measurement_point_suggestions_label.setPlainText(text)
 
 
