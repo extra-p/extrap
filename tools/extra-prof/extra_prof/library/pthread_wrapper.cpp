@@ -20,13 +20,23 @@ void* wrap_start_thread(void* wrapped_args_ptr) {
     pthread_t new_tid = pthread_self();
     {
         extra_prof_scope sc;
+        *wrapped_args->thread_state.isRunning = true;
+        wrapped_args->thread_state.current_node = wrapped_args->thread_state.current_node->findOrAddPeer();
+#ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
+        wrapped_args->thread_state.creation_node = wrapped_args->thread_state.current_node;
+#endif
         extra_prof::GLOBALS.threads.emplace(new_tid, std::move(wrapped_args->thread_state));
     }
     auto start_routine = wrapped_args->start_routine;
     auto args = wrapped_args->argument;
     delete wrapped_args;
 
-    return start_routine(args);
+    void* result = start_routine(args);
+    {
+        extra_prof_scope sc;
+        *GLOBALS.my_thread_state().isRunning = false;
+    }
+    return result;
 }
 
 EXTRA_PROF_SO_EXPORT int create_pthread_without_instrumentation(pthread_t* thread, const pthread_attr_t* attr,

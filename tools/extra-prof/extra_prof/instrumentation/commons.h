@@ -44,20 +44,22 @@ EP_INLINE time_point get_timestamp() {
 #endif
 }
 
-template <typename T>
-EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(T* fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE) {
-    auto& name_register = GLOBALS.name_register;
-    auto* name_ptr = name_register.get_name_ptr(fn_ptr).c_str();
-    return push_time(name_ptr, type);
-}
+// template <typename T>
+// EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(T* fn_ptr, CallTreeNodeType type = CallTreeNodeType::NONE)
+// {
+//     auto& name_register = GLOBALS.name_register;
+//     auto* name_ptr = name_register.get_name_ptr(fn_ptr).c_str();
+//     return push_time(name_ptr, type);
+// }
 
-template <>
-EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, CallTreeNodeType type) {
+EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(RegionType region_type, RegionID region,
+                                                          CallTreeNodeType type = CallTreeNodeType::NONE,
+                                                          ThreadState& state = GLOBALS.my_thread_state()) {
     time_point time = get_timestamp();
-    auto& current_node = GLOBALS.my_thread_state().current_node;
-    current_node = current_node->findOrAddChild(name, type);
+    auto& current_node = state.current_node;
+    current_node = current_node->findOrAddChild(region_type, region, type);
 
-    GLOBALS.my_thread_state().timer_stack.push_back(time);
+    state.timer_stack.push_back(time);
 
 #ifdef EXTRA_PROF_ENERGY
     if (GLOBALS.main_thread == pthread_self()) {
@@ -69,40 +71,40 @@ EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(char const* name, Call
 #ifdef EXTRA_PROF_EVENT_TRACE
     auto& ref = GLOBALS.cpu_event_stream.emplace(time, EventType::START, EventStart{current_node, pthread_self()},
                                                  pthread_self());
-    GLOBALS.my_thread_state().event_stack.push_back(&ref);
+    state.event_stack.push_back(&ref);
 #endif
     return {time, current_node};
 }
 
-EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(intptr_t fn_ptr,
+EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(const char* name,
                                                           CallTreeNodeType type = CallTreeNodeType::NONE) {
-    auto& name_register = GLOBALS.name_register;
-    auto* name_ptr = name_register.get_name_ptr(fn_ptr).c_str();
-    return push_time(name_ptr, type);
+    return push_time(RegionType::NAMED_REGION, toRegionID(name), type);
+}
+EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(void* function_ptr,
+                                                          CallTreeNodeType type = CallTreeNodeType::NONE) {
+    return push_time(RegionType::FUNCTION_PTR_REGION, toRegionID(function_ptr), type);
 }
 
-template <typename T>
-EP_INLINE time_point pop_time(T* fn_ptr) {
-    auto& name_register = GLOBALS.name_register;
-    return pop_time(name_register.check_ptr(fn_ptr)->c_str());
-}
-
-template <>
-EP_INLINE time_point pop_time(char const* name) {
+EP_INLINE time_point pop_time(RegionType region_type, RegionID region,
+                              ThreadState& thread_state = GLOBALS.my_thread_state()) {
     time_point time = get_timestamp();
-    auto& thread_state = GLOBALS.my_thread_state();
     auto& current_node = thread_state.current_node; // Must be a reference, so that we can change it below
     auto start = thread_state.timer_stack.back();
     auto duration = time - start;
-    if (current_node->name() == nullptr) {
+#ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
+    if (current_node->is_root()) {
         throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
     }
-    if (current_node->name() != name) {
+    if (current_node->region_type != region_type && current_node->region.function_ptr != region.function_ptr) {
         throw std::runtime_error("EXTRA PROF: ERROR: popping different node than previously pushed");
     }
+#endif
     auto& metrics = current_node->my_metrics();
-    metrics.visits.fetch_add(1, std::memory_order_acq_rel);
-    metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
+    metrics.duration += duration;
+    metrics.visits += 1;
+    // auto& metrics = current_node->my_metrics();
+    // metrics.visits.fetch_add(1, std::memory_order_acq_rel);
+    // metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
     thread_state.timer_stack.pop_back();
 #ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
     if (!current_node->validateChildren()) {
@@ -131,11 +133,7 @@ EP_INLINE time_point pop_time(char const* name) {
 #endif
     return time;
 }
-
-EP_INLINE time_point pop_time(intptr_t fn_ptr) {
-    auto& name_register = GLOBALS.name_register;
-    return pop_time(name_register.check_ptr(fn_ptr)->c_str());
-}
+EP_INLINE time_point pop_time(const char* name) { return pop_time(RegionType::NAMED_REGION, toRegionID(name)); }
 
 void show_data_sizes() {
     std::cerr << "EXTRA PROF: GlobalState size: " << sizeof(GlobalState) << '\n';

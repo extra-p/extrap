@@ -4,6 +4,7 @@
 #include <optional>
 #include <shared_mutex>
 #include <unordered_map>
+
 template <typename K, typename V>
 class ConcurrentMap {
 private:
@@ -54,6 +55,34 @@ public:
             return &iterator->second;
         }
         return nullptr;
+    }
+
+    template <class F>
+    bool visit(const K& key, F func) const {
+        std::shared_lock lk(mutex);
+        auto iterator = map.find(key);
+        if (iterator != map.end()) {
+            func(*iterator);
+            return true;
+        }
+        return false;
+    }
+
+    template <class F>
+    bool visit_while(F func) {
+        std::shared_lock lk(mutex);
+        for (auto&& iterator : map) {
+            if (!func(iterator)) {
+                return false;
+            };
+        }
+        return true;
+    }
+
+    bool insert_or_assign(K& key, V value) {
+        std::shared_lock lk(mutex);
+        map[key] = value;
+        return true;
     }
 
     EP_INLINE iterator begin() {

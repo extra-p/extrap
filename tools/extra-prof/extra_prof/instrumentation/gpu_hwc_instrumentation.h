@@ -189,7 +189,8 @@ void postprocess_counter_data() {
                                      std::to_string(correlationId));
         }
         auto* kernel_launch_node = correlationData->node;
-        auto* gpu_node = kernel_launch_node->findOrAddChild(kernel_launch_node->name(), CallTreeNodeType::KERNEL);
+        auto* gpu_node = kernel_launch_node->findOrAddChild(kernel_launch_node->region_type, kernel_launch_node->region,
+                                                            CallTreeNodeType::KERNEL);
 
         auto& gpu_metrics = gpu_node->gpu_metrics;
 

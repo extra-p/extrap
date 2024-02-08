@@ -28,12 +28,13 @@ void wrap_start_gomp(void* wrapped_args_ptr) {
         extra_prof_scope sc;
         auto& my_thread_state = extra_prof::GLOBALS.my_thread_state();
         auto& caller_thread_state = wrapped_args->thread_state;
-        my_thread_state.current_node = caller_thread_state.current_node;
+        my_thread_state.current_node = caller_thread_state.current_node->findOrAddPeer();
         my_thread_state.depth = caller_thread_state.depth;
 #ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
         my_thread_state.creation_depth = my_thread_state.depth;
         my_thread_state.creation_node = my_thread_state.current_node;
 #endif
+        *my_thread_state.isRunning = true;
     }
     auto start_routine = wrapped_args->start_routine;
     auto args = wrapped_args->argument;
@@ -42,6 +43,10 @@ void wrap_start_gomp(void* wrapped_args_ptr) {
     }
 
     start_routine(args);
+    if (new_tid != GLOBALS.main_thread) {
+        extra_prof_scope sc;
+        *GLOBALS.my_thread_state().isRunning = false;
+    }
 }
 } // namespace extra_prof::wrappers
 

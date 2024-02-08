@@ -58,6 +58,7 @@ namespace cupti {
                     }
                     auto [time, call_tree_node] =
                         extra_prof::push_time(rtdata->symbolName, CallTreeNodeType::KERNEL_LAUNCH);
+
                     // std::cout << "Kernel " << rtdata->symbolName << " Id: " << rtdata->correlationId << '\n';
                     if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000) {
                         const auto* params =
@@ -153,10 +154,11 @@ namespace cupti {
             if (ke->get_type() == EventType::SYNCHRONIZE || ke->get_type() == EventType::MEMMGMT) {
                 continue;
             }
-            auto* kernel_overlap = overlap->findOrAddChild(
-                ke->start_event.node->name(), enum_cast<CallTreeNodeType>(ke->get_type()), CallTreeNodeFlags::OVERLAP);
-            kernel_overlap->per_thread_metrics[ke->start_event.thread].duration.fetch_add(duration,
-                                                                                          std::memory_order_acq_rel);
+            auto* kernel_overlap =
+                overlap->findOrAddChild(ke->start_event.node->region_type, ke->start_event.node->region,
+                                        enum_cast<CallTreeNodeType>(ke->get_type()), CallTreeNodeFlags::OVERLAP);
+            kernel_overlap->update_metrics(ke->start_event.thread,
+                                           [&](auto& metrics) { metrics.duration += duration; });
         }
     }
 
@@ -175,6 +177,7 @@ namespace cupti {
         std::vector<const Event*> stack;
 
         time_point previous_timestamp = 0;
+        pthread_t my_thread = pthread_self();
 
         for (auto& event_ptr : sorted_stream) {
             auto& event = *event_ptr;
@@ -195,39 +198,43 @@ namespace cupti {
                 }
                 for (auto& se : stack) {
                     time_point duration = event.timestamp - previous_timestamp;
-                    CallTreeNode* overlap = se->start_event.node->findOrAddChild(
-                        GLOBALS.gpu.OVERLAP, CallTreeNodeType::OVERLAP, CallTreeNodeFlags::OVERLAP);
-                    auto& overlap_metrics = overlap->per_thread_metrics[se->start_event.thread];
-                    if (se->get_type() == EventType::KERNEL) {
-                        overlap_metrics.duration.fetch_add((total_MP_usage - se->resourceUsage) * duration /
-                                                               total_MP_usage,
-                                                           std::memory_order_acq_rel);
-                        make_overlap(stack, se, overlap, duration);
-                    } else if (se->get_type() == EventType::MEMCPY) {
-                        if (stack_contains_kernels > 0) {
-                            overlap_metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
-                            make_overlap(stack, se, overlap, duration);
-                        } else if (stack_contains_memcpy > 1) {
-                            overlap_metrics.duration.fetch_add(duration * (stack_contains_memcpy - 1) /
-                                                                   stack_contains_memcpy,
-                                                               std::memory_order_acq_rel);
-                            make_overlap(stack, se, overlap, duration);
-                        }
-                    } else if (se->get_type() == EventType::MEMSET) {
-                        if (stack_contains_kernels > 0 || stack_contains_memcpy > 0) {
-                            overlap_metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
-                            make_overlap(stack, se, overlap, duration);
-                        } else if (stack_contains_memset > 1) {
-                            overlap_metrics.duration.fetch_add(duration * (stack_contains_memset - 1) /
-                                                               stack_contains_memset);
-                            make_overlap(stack, se, overlap, duration);
-                        }
-                    } else if (se->get_type() == EventType::SYNCHRONIZE || se->get_type() == EventType::MEMMGMT) {
-                        if (stack_contains_kernels > 0 || stack_contains_memcpy > 0 || stack_contains_memset > 0) {
-                            overlap_metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
-                            make_overlap(stack, se, overlap, duration);
-                        }
+                    CallTreeNode* event_node = se->start_event.node;
+                    if (event_node->owner_thread != my_thread) {
+                        event_node = event_node->findOrAddPeer(false);
                     }
+                    CallTreeNode* overlap =
+                        event_node->findOrAddChild(RegionType::NAMED_REGION, toRegionID(GLOBALS.gpu.OVERLAP),
+                                                   CallTreeNodeType::OVERLAP, CallTreeNodeFlags::OVERLAP);
+                    overlap->update_metrics(se->start_event.thread, [&](auto& overlap_metrics) {
+                        if (se->get_type() == EventType::KERNEL) {
+                            overlap_metrics.duration +=
+                                (total_MP_usage - se->resourceUsage) * duration / total_MP_usage;
+                            make_overlap(stack, se, overlap, duration);
+                        } else if (se->get_type() == EventType::MEMCPY) {
+                            if (stack_contains_kernels > 0) {
+                                overlap_metrics.duration += duration;
+                                make_overlap(stack, se, overlap, duration);
+                            } else if (stack_contains_memcpy > 1) {
+                                overlap_metrics.duration +=
+                                    duration * (stack_contains_memcpy - 1) / stack_contains_memcpy;
+                                make_overlap(stack, se, overlap, duration);
+                            }
+                        } else if (se->get_type() == EventType::MEMSET) {
+                            if (stack_contains_kernels > 0 || stack_contains_memcpy > 0) {
+                                overlap_metrics.duration += duration;
+                                make_overlap(stack, se, overlap, duration);
+                            } else if (stack_contains_memset > 1) {
+                                overlap_metrics.duration +=
+                                    duration * (stack_contains_memset - 1) / stack_contains_memset;
+                                make_overlap(stack, se, overlap, duration);
+                            }
+                        } else if (se->get_type() == EventType::SYNCHRONIZE || se->get_type() == EventType::MEMMGMT) {
+                            if (stack_contains_kernels > 0 || stack_contains_memcpy > 0 || stack_contains_memset > 0) {
+                                overlap_metrics.duration += duration;
+                                make_overlap(stack, se, overlap, duration);
+                            }
+                        }
+                    });
                 }
             }
 
@@ -294,6 +301,7 @@ namespace cupti {
             extra_prof::gpu::hwc::postprocess_counter_data();
         }
         postprocess_event_stream();
+        cudaDeviceReset();
     }
 }; // namespace cupti
 }; // namespace extra_prof

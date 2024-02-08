@@ -134,6 +134,11 @@ public:
         return sizeof(T) * (block_size - next_element);
     }
 
+    size_t byte_size() {
+        std::lock_guard lg(mutex);
+        return sizeof(T) * block_size * blocks.size();
+    }
+
     ~NonReusableBlockPool() {
         for (auto block = blocks.begin(); block != blocks.end() - 1; ++block) {
             for (size_t i = 0; i < block_size; i++) {

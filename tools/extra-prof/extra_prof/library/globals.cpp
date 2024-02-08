@@ -5,9 +5,10 @@
 
 namespace extra_prof {
 const uint64_t lib_enabled_features = EXTRA_PROF_ENABLED_FEATURES;
-std::atomic<bool> extra_prof_globals_initialised = false;
+bool extra_prof_globals_initialised = false;
 
 GlobalState::GlobalState() {
+    call_tree.flags = CallTreeNodeFlags::ROOT;
     if (!extra_prof_globals_initialised) {
         threads.emplace(pthread_self(), ThreadState{0, &call_tree});
         std::cerr << "EXTRA PROF: Global state initialized" << std::endl;

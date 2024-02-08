@@ -80,6 +80,18 @@ void finalize() {
 #endif
 #endif
 
+    for (auto&& [thread, state] : GLOBALS.threads) {
+        if (*state.isRunning) {
+            char buffer[16];
+            pthread_getname_np(thread, buffer, 16);
+            if (strncmp("cuda", buffer, 4) != 0) {
+                std::cerr << "EXTRA PROF: WARNING: Thread still running: " << buffer << ' ' << thread << '\n';
+            }
+        }
+    }
+
+    GLOBALS.call_tree.collectData();
+
     const char* slurm_procid = getenv("SLURM_PROCID");
     // if (slurm_procid == nullptr || containers::string(slurm_procid) == "0") {
     //     cupti::write_cupti_names(output_dir);
@@ -135,9 +147,13 @@ void finalize_on_exit() {
             if (current_node->name() == nullptr) {
                 throw std::runtime_error("EXTRA PROF: ERROR: accessing calltree root");
             }
-            auto& metrics = current_node->my_metrics();
-            metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
-            metrics.visits.fetch_add(1, std::memory_order_acq_rel);
+            auto& metrics = current_node->my_metrics(true);
+            metrics.duration += duration;
+            metrics.visits += 1;
+
+            // auto& metrics = current_node->my_metrics();
+            // metrics.duration.fetch_add(duration, std::memory_order_acq_rel);
+            // metrics.visits.fetch_add(1, std::memory_order_acq_rel);
             thread_state.timer_stack.pop_back();
 
 #ifdef EXTRA_PROF_ENERGY

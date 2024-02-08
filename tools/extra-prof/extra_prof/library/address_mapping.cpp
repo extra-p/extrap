@@ -77,7 +77,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
                 name_register.emplace(translated_adress, path);
 
                 if (strcmp(path, "main") == 0) {
-                    main_function_ptr = translated_adress;
+                    main_function_ptr[FUNCTION_PTR_REGION].function_ptr = reinterpret_cast<void*>(translated_adress);
                 }
 
                 // stream << translated_adress << ' ' << path << '\n';
@@ -87,7 +87,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
         /* close */
         pclose(fp);
     }
-    if (main_function_ptr == 0) {
+    if (main_function_ptr[FUNCTION_PTR_REGION].function_ptr == 0) {
         throw std::runtime_error("EXTRA PROF: ERROR: Failed to identify main function");
     }
 }

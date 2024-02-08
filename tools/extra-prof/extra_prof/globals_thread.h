@@ -22,12 +22,14 @@ struct ThreadState {
     CallTreeNode* creation_node;
 #endif
 
+    std::unique_ptr<std::atomic<bool>> isRunning;
+
     ThreadState() {
         std::cerr << "EXTRA PROF: Auto creation of threads not allowed\n";
         std::raise(SIGTRAP);
     }
     ThreadState(uint32_t depth_, CallTreeNode* node) : depth(depth_), current_node(node) {
-
+        isRunning = std::make_unique<std::atomic<bool>>();
 #ifdef EXTRA_PROF_DEBUG_INSTRUMENTATION
         creation_depth = depth_;
         creation_node = node;

@@ -58,7 +58,7 @@ struct GlobalState {
 
     const uint32_t magic_number = 0x1A2B3C4D;
 
-    std::atomic<bool> initialised = false;
+    volatile bool initialised = false;
     std::mutex initialising;
 
     containers::string output_dir;
@@ -97,7 +97,7 @@ struct GlobalState {
 #endif
 };
 extern const uint64_t lib_enabled_features;
-extern std::atomic<bool> extra_prof_globals_initialised;
+extern bool extra_prof_globals_initialised;
 extern thread_local int extra_prof_scope_counter;
 extern GlobalState GLOBALS;
 

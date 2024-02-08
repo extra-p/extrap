@@ -295,9 +295,9 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
 
         r_name, r_childs, r_type, r_flags, rm_duration, rm_visits, rm_bytes = ep_root_node[0:7]
         assert r_name == ""
-        assert not rm_duration
-        assert not rm_visits
-        assert not rm_bytes
+        assert not rm_duration or isinstance(rm_duration, list) and rm_duration[0] == 0
+        assert not rm_visits or isinstance(rm_visits, list) and rm_visits[0] == 0
+        assert not rm_bytes or isinstance(rm_bytes, list) and rm_bytes[0] == 0
         for r_child in r_childs:
             _read_calltree_node(call_tree, r_child)
 
