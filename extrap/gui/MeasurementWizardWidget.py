@@ -117,8 +117,6 @@ class MeasurementWizardWidget(QWidget):
         self.current_cost_edit.setText("0.0")
         self.layout.addWidget(self.current_cost_edit, 5, 1)
 
-        self.calculate_current_measurement_cost()
-
         used_budget_label = QLabel(self)
         used_budget_label.setText("Used Modeling Budget [%]:")
         self.layout.addWidget(used_budget_label, 6, 0)
@@ -138,8 +136,6 @@ class MeasurementWizardWidget(QWidget):
         self.noise_level_edit.setText(noise_level_str)
         self.layout.addWidget(self.noise_level_edit, 7, 1)
 
-        self.calculate_noise_level()
-
         self.advise_button = QPushButton(self)
         self.layout.addWidget(self.advise_button, 8, 0)
         self.advise_button.setText("Suggest Additional Measurement Points")
@@ -149,6 +145,9 @@ class MeasurementWizardWidget(QWidget):
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setEnabled(False)
         self.layout.addWidget(self.measurement_point_suggestions_label, 9, 0)
+
+        self.calculate_current_measurement_cost()
+        self.calculate_noise_level()
 
 
     def init_single_parameter(self):
@@ -210,9 +209,7 @@ class MeasurementWizardWidget(QWidget):
         self.current_cost_edit = QLineEdit(self)
         self.current_cost_edit.setEnabled(False)
         self.current_cost_edit.setText("0.0")
-        self.layout.addWidget(self.current_costb_edit, 4, 1)
-
-        self.calculate_current_measurement_cost()
+        self.layout.addWidget(self.current_cost_edit, 4, 1)
 
         used_budget_label = QLabel(self)
         used_budget_label.setText("Used Modeling Budget [%]:")
@@ -233,8 +230,6 @@ class MeasurementWizardWidget(QWidget):
         self.noise_level_edit.setText(noise_level_str)
         self.layout.addWidget(self.noise_level_edit, 6, 1)
 
-        self.calculate_noise_level()
-
         self.advise_button= QPushButton(self)
         self.advise_button.setText("Suggest Additional Measurement Points")
         self.layout.addWidget(self.advise_button, 7, 0)
@@ -244,6 +239,9 @@ class MeasurementWizardWidget(QWidget):
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setEnabled(False)
         self.layout.addWidget(self.measurement_point_suggestions_label, 8, 0)
+
+        self.calculate_current_measurement_cost()
+        self.calculate_noise_level()
 
 
     def calculate_noise_level(self):
@@ -332,7 +330,8 @@ class MeasurementWizardWidget(QWidget):
         self.budget = float(self.modeling_budget.text())
         used_budget_percent = self.current_cost / (self.budget / 100)
         used_budget_percent_str = "{:.2f}".format(used_budget_percent)
-        self.used_budget_edit.setText(used_budget_percent_str)
+        #print("DEBUG:",self.used_budget_edit)
+        self.used_budget_edit.setText(str(used_budget_percent_str))
 
 
     def calculate_current_measurement_cost(self):
@@ -532,7 +531,7 @@ class MeasurementWizardWidget(QWidget):
                                         callpaths=selected_callpath,
                                         metric=runtime_metric,
                                         experiment=self.experiment,
-                                        self.current_cost)
+                                        current_cost=self.current_cost)
             
             points = mpa.suggest_points()
 
