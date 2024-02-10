@@ -12,10 +12,9 @@ from tqdm import tqdm
 import numpy as np
 import copy
 from extrap.gpr.util import identify_selection_mode
-
+from extrap.entities.coordinate import Coordinate
 
 class MeasurementPointAdvisor():
-
 
     def __init__(self, budget, processes, callpaths, metric, experiment, current_cost) -> None:
         self.budget = budget
@@ -90,11 +89,109 @@ class MeasurementPointAdvisor():
 
     def suggest_points(self):
 
-        #TODO: how large should the search space be, set via GUI parameter?
+        #TODO: clean up this code and put it in functions in util file
+        # call them here and just put the comments explaining the code
 
         # 1. build a value series for each parameter
-        # 2. continue and complete these series for each parameter
-        # 3. build a 1D, 2D, 3D, ND, ..., search space of potential points (does not contain already measured points!)
+        # get the parameter value series of each parameter that exist from the existing measurement points
+        parameter_value_serieses = []
+        for i in range(len(self.experiment.parameters)):
+            parameter_value_serieses.append([])
+        for i in range(len(self.experiment.coordinates)):
+            parameter_values = self.experiment.coordinates[i].as_tuple()
+            for j in range(len(self.experiment.parameters)):
+                if parameter_values[j] not in parameter_value_serieses[j]:
+                    parameter_value_serieses[j].append(parameter_values[j])
+            #print("DEBUG parameter_values:",parameter_values)
+        #print("DEBUG parameter_value_serieses:",parameter_value_serieses)
+
+        # 2. identify the step factor size for each parameter
+        # get the step value factor for each parameter value series
+        mean_step_size_factors = []
+        for i in range(len(parameter_value_serieses)):
+            if len(parameter_value_serieses[i]) == 1:
+                mean_step_size_factors.append(("*",2.0))
+            elif len(parameter_value_serieses[i]) == 0:
+                return 1
+            else:
+                factors = []
+                for j in range(len(parameter_value_serieses[i])-1):
+                    factors.append(parameter_value_serieses[i][j+1]/parameter_value_serieses[i][j])
+                #print("DEBUG factors:",factors)
+                steps = []
+                for j in range(len(parameter_value_serieses[i])-1):
+                    steps.append(parameter_value_serieses[i][j+1]-parameter_value_serieses[i][j])
+                #print("DEBUG steps:",steps)
+                res = factors.count(factors[0]) == len(factors)
+                if res:
+                    mean_step_size_factors.append(("*",np.mean(factors)))
+                else:
+                    res = steps.count(steps[0]) == len(steps)
+                    if res:
+                        mean_step_size_factors.append(("+",np.mean(steps)))
+                    else:
+                        return 1
+        #print("DEBUG mean_step_size_factors:",mean_step_size_factors)
+
+        # 3. continue and complete these series for each parameter
+        #TODO: how large should the search space be, set via GUI parameter?
+        additional_values = 5
+        for i in range(len(parameter_value_serieses)):
+            for j in range(additional_values):
+                if mean_step_size_factors[i][0] == "*":
+                    parameter_value_serieses[i].append(parameter_value_serieses[i][len(parameter_value_serieses[i])-1]*mean_step_size_factors[i][1])
+                elif mean_step_size_factors[i][0] == "+":
+                    parameter_value_serieses[i].append(parameter_value_serieses[i][len(parameter_value_serieses[i])-1]+mean_step_size_factors[i][1])
+        #print("DEBUG parameter_value_serieses:",parameter_value_serieses)
+
+        # build a 1D, 2D, 3D, ND search space of potential points (that does not contain already measured points)
+        # 4. create search space from the series values of each parameters
+        if len(self.experiment.parameters) == 1:
+            search_space_coordinates = []
+            for i in range(len(parameter_value_serieses[0])):
+                search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i]))
+        
+        elif len(self.experiment.parameters) == 2:
+            search_space_coordinates = []
+            for i in range(len(parameter_value_serieses[0])):
+                for j in range(len(parameter_value_serieses[1])):
+                    search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i],parameter_value_serieses[1][j]))
+            #print("DEBUG search_space_coordinates:",search_space_coordinates)
+
+        elif len(self.experiment.parameters) == 3:
+            search_space_coordinates = []
+            for i in range(len(parameter_value_serieses[0])):
+                for j in range(len(parameter_value_serieses[1])):
+                    for g in range(len(parameter_value_serieses[2])):
+                        search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i],parameter_value_serieses[1][j],parameter_value_serieses[2][g]))
+            #print("DEBUG search_space_coordinates:",search_space_coordinates)
+
+        elif len(self.experiment.parameters) == 4:
+            search_space_coordinates = []
+            for i in range(len(parameter_value_serieses[0])):
+                for j in range(len(parameter_value_serieses[1])):
+                    for g in range(len(parameter_value_serieses[2])):
+                        for h in range(len(parameter_value_serieses[3])):
+                            search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i],parameter_value_serieses[1][j],parameter_value_serieses[2][g],parameter_value_serieses[3][h]))
+            #print("DEBUG search_space_coordinates:",search_space_coordinates)
+
+        else:
+            return 1
+
+        # 5. remove existing points from search space to obtain only new possible points
+        possible_points = []
+        for i in range(len(search_space_coordinates)):
+            exists = False
+            for j in range(len(self.experiment.coordinates)):
+                if self.experiment.coordinates[j] == search_space_coordinates[i]:
+                    exists = True
+                    break
+            if exists == False:
+                possible_points.append(search_space_coordinates[i])
+        #print("DEBUG len() search_space_coordinates:",len(search_space_coordinates))
+        #print("DEBUG len() possible_points:",len(possible_points))
+        #print("DEBUG len() self.experiment.coordinates:",len(self.experiment.coordinates))
+        #print("possible_points:",possible_points)
 
         # a. base mode
         # a.1 choose the smallest of the values for each parameter
