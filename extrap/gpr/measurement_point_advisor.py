@@ -195,9 +195,13 @@ class MeasurementPointAdvisor():
 
         # a. base mode
         if self.selection_mode == "base":
+
+            #TODO: need to do this for each parameter...
+            # this example only works for 2 parameters...
         
             # find the cheapest line of 5 points for x
             x_line_lengths = {}
+            x_lines = {}
             for i in range(len(self.experiment.coordinates)):
                 cord_values = self.experiment.coordinates[i].as_tuple()
                 y = cord_values[1]
@@ -208,7 +212,36 @@ class MeasurementPointAdvisor():
                         x.append(cord_values2[0])
                 if y not in x_line_lengths:
                     x_line_lengths[y] = len(x)
-            print("DEBUG x_line_lengths:",x_line_lengths)
+                    x_lines[y] = x
+            #print("DEBUG x_line_lengths:",x_line_lengths)
+            #print("DEBUG x_lines:",x_lines)
+
+            max_value = 0
+            best_line_key = None
+            for key, value in x_line_lengths.items():
+                if value > max_value:
+                    best_line_key = key
+                    max_value = value
+            best_line = x_lines[best_line_key]
+            #print("DEBUG best_line_key:",best_line_key)
+            print("DEBUG best_line:",best_line)
+            x = parameter_value_serieses[0]
+            print("DEBUG x:",x)
+
+            points_needed = 5-max_value
+
+            potential_values = []
+            for i in range(len(parameter_value_serieses[0])):
+                if parameter_value_serieses[0][i] not in best_line:
+                    potential_values.append(parameter_value_serieses[0][i])
+            potential_values.sort()
+            print("DEBUG potential_values:",potential_values)
+
+            cords_x = []
+            for i in range(points_needed):
+                cords_x.append(Coordinate(potential_values[i],best_line_key))
+            print("DEBUG cords_x:",cords_x)
+
 
         # a.1 choose the smallest of the values for each parameter
         # a.2 combine these values of each parameter to a coordinate
