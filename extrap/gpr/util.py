@@ -1,4 +1,7 @@
 from extrap.entities.coordinate import Coordinate
+from collections import Counter
+import numpy as np
+
 
 def check_model_requirements(experiment, min_points):
     modeling_reuqirements_satisfied = False
@@ -433,3 +436,135 @@ def check_additional_point(experiment):
             additional_cord_found = True
 
     return additional_cord_found
+
+
+# get the parameter value series of each parameter that exist from the existing measurement points
+def build_parameter_value_series(experiment):
+    parameter_value_serieses = []
+    for i in range(len(experiment.parameters)):
+        parameter_value_serieses.append([])
+    for i in range(len(experiment.coordinates)):
+        parameter_values = experiment.coordinates[i].as_tuple()
+        for j in range(len(experiment.parameters)):
+            if parameter_values[j] not in parameter_value_serieses[j]:
+                parameter_value_serieses[j].append(parameter_values[j])
+        #print("DEBUG parameter_values:",parameter_values)
+    #print("DEBUG parameter_value_serieses:",parameter_value_serieses)
+    return parameter_value_serieses
+
+
+# get the step value factor for each parameter value series
+def identify_step_factor(parameter_value_serieses):
+    mean_step_size_factors = []
+    for i in range(len(parameter_value_serieses)):
+        if len(parameter_value_serieses[i]) == 1:
+            mean_step_size_factors.append(("*",2.0))
+        elif len(parameter_value_serieses[i]) == 0:
+            return 1
+        else:
+            factors = []
+            for j in range(len(parameter_value_serieses[i])-1):
+                factors.append(parameter_value_serieses[i][j+1]/parameter_value_serieses[i][j])
+            steps = []
+            for j in range(len(parameter_value_serieses[i])-1):
+                steps.append(parameter_value_serieses[i][j+1]-parameter_value_serieses[i][j])
+            res = dict(Counter(factors))
+            factor_max = res[max(res)]
+            res = dict(Counter(steps))
+            steps_max = res[max(res)]
+            if factor_max > steps_max:
+                mean_step_size_factors.append(("*",np.median(factors)))
+            else:
+                mean_step_size_factors.append(("+",np.median(steps)))
+    #print("DEBUG mean_step_size_factors:",mean_step_size_factors)
+    return mean_step_size_factors
+
+
+def extend_parameter_value_series(parameter_value_serieses, mean_step_size_factors):
+    #TODO: how large should the search space be, set via GUI parameter?
+    additional_values = 5
+    for i in range(len(parameter_value_serieses)):
+        added_values = 0
+        for j in range(len(parameter_value_serieses[i])):
+            if mean_step_size_factors[i][0] == "*":
+                new_value = parameter_value_serieses[i][j]*mean_step_size_factors[i][1]
+                if new_value not in parameter_value_serieses[i]:
+                    parameter_value_serieses[i].append(new_value)
+                    added_values += 1
+            elif mean_step_size_factors[i][0] == "+":
+                new_value = parameter_value_serieses[i][j]+mean_step_size_factors[i][1]
+                if new_value not in parameter_value_serieses[i]:
+                    parameter_value_serieses[i].append(new_value)
+                    added_values += 1
+        if added_values < additional_values:
+            for j in range(additional_values-added_values+1):
+                if mean_step_size_factors[i][0] == "*":
+                    new_value = parameter_value_serieses[i][len(parameter_value_serieses[i])-1]*mean_step_size_factors[i][1]
+                    if new_value not in parameter_value_serieses[i]:
+                        parameter_value_serieses[i].append(new_value)
+                        added_values += 1
+                elif mean_step_size_factors[i][0] == "+":
+                    new_value = parameter_value_serieses[i][len(parameter_value_serieses[i])-1]+mean_step_size_factors[i][1]
+                    if new_value not in parameter_value_serieses[i]:
+                        parameter_value_serieses[i].append(new_value)
+                        added_values += 1
+        parameter_value_serieses[i].sort()
+    #print("DEBUG parameter_value_serieses:",parameter_value_serieses)
+    return parameter_value_serieses
+
+
+def build_search_space(experiment, parameter_value_serieses):
+    # build a 1D, 2D, 3D, ND search space of potential points (that does not contain already measured points)
+    if len(experiment.parameters) == 1:
+        search_space_coordinates = []
+        for i in range(len(parameter_value_serieses[0])):
+            search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i]))
+        #print("DEBUG search_space_coordinates:",search_space_coordinates)
+        return search_space_coordinates
+    
+    elif len(experiment.parameters) == 2:
+        search_space_coordinates = []
+        for i in range(len(parameter_value_serieses[0])):
+            for j in range(len(parameter_value_serieses[1])):
+                search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i],parameter_value_serieses[1][j]))
+        #print("DEBUG search_space_coordinates:",search_space_coordinates)
+        return search_space_coordinates
+
+    elif len(experiment.parameters) == 3:
+        search_space_coordinates = []
+        for i in range(len(parameter_value_serieses[0])):
+            for j in range(len(parameter_value_serieses[1])):
+                for g in range(len(parameter_value_serieses[2])):
+                    search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i],parameter_value_serieses[1][j],parameter_value_serieses[2][g]))
+        #print("DEBUG search_space_coordinates:",search_space_coordinates)
+        return search_space_coordinates
+
+    elif len(experiment.parameters) == 4:
+        search_space_coordinates = []
+        for i in range(len(parameter_value_serieses[0])):
+            for j in range(len(parameter_value_serieses[1])):
+                for g in range(len(parameter_value_serieses[2])):
+                    for h in range(len(parameter_value_serieses[3])):
+                        search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i],parameter_value_serieses[1][j],parameter_value_serieses[2][g],parameter_value_serieses[3][h]))
+        #print("DEBUG search_space_coordinates:",search_space_coordinates)
+        return search_space_coordinates
+
+    else:
+        return 1
+
+
+def identify_possible_points(search_space_coordinates, experiment):
+    possible_points = []
+    for i in range(len(search_space_coordinates)):
+        exists = False
+        for j in range(len(experiment.coordinates)):
+            if experiment.coordinates[j] == search_space_coordinates[i]:
+                exists = True
+                break
+        if exists == False:
+            possible_points.append(search_space_coordinates[i])
+    #print("DEBUG len() search_space_coordinates:",len(search_space_coordinates))
+    #print("DEBUG len() possible_points:",len(possible_points))
+    #print("DEBUG len() self.experiment.coordinates:",len(self.experiment.coordinates))
+    #print("possible_points:",possible_points)
+    return possible_points
