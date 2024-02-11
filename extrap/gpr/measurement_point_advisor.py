@@ -212,10 +212,122 @@ class MeasurementPointAdvisor():
 
 
             elif len(self.experiment.parameters) == 3:
-                pass
+                
+                #TODO:
+
+                x_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    y = cord_values[1]
+                    x = []
+                    z = cord_values[2]
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[1] == y and cord_values2[2] == z:
+                            x.append(cord_values2[0])
+                    if len(x) >= 5:
+                        if (y,z) not in x_lines:
+                            x_lines[(y,z)] = x
+
+                    
+                y_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    x = cord_values[0]
+                    y = []
+                    z = cord_values[2]
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[0] == x and cord_values2[2] == z:
+                            y.append(cord_values2[1])
+                    if len(y) >= 5:
+                        if (x,z) not in y_lines:
+                            y_lines[(x,z)] = y
+
+
+                z_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    x = cord_values[0]
+                    z = []
+                    y = cord_values[1]
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[0] == x and cord_values2[1] == y:
+                            z.append(cord_values2[2])
+                    if len(z) >= 5:
+                        if (x,y) not in z_lines:
+                            z_lines[(x,y)] = z
+
 
             elif len(self.experiment.parameters) == 4:
-                pass
+                
+                
+                #TODO:
+                
+                x1_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    x1 = []
+                    x2 = cord_values[1]
+                    x3 = cord_values[2]
+                    x4 = cord_values[3]
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[1] == x2 and cord_values2[2] == x3 and cord_values2[3] == x4:
+                            x1.append(cord_values2[0])
+                    if len(x1) >= 5:
+                        if (x2,x3,x4) not in x1_lines:
+                            x1_lines[(x2,x3,x4)] = x1
+
+
+                x2_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    x1 = cord_values[0]
+                    x2 = []
+                    x3 = cord_values[2]
+                    x4 = cord_values[3]
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[0] == x1 and cord_values2[2] == x3 and cord_values2[3] == x4:
+                            x2.append(cord_values2[1])
+                    if len(x2) >= 5:
+                        if (x1,x3,x4) not in x2_lines:
+                            x2_lines[(x1,x3,x4)] = x2
+
+
+                x3_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    x1 = cord_values[0]
+                    x2 = cord_values[1]
+                    x3 = []
+                    x4 = cord_values[3]
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[0] == x1 and cord_values2[1] == x2 and cord_values2[3] == x4:
+                            x3.append(cord_values2[2])
+                    if len(x3) >= 5:
+                        if (x1,x2,x4) not in x3_lines:
+                            x3_lines[(x1,x2,x4)] = x3
+
+
+                x4_lines = {}
+                for i in range(len(self.experiment.coordinates)):
+                    cord_values = self.experiment.coordinates[i].as_tuple()
+                    x1 = cord_values[0]
+                    x2 = cord_values[1]
+                    x3 = cord_values[2]
+                    x4 = []
+                    for j in range(len(self.experiment.coordinates)):
+                        cord_values2 = self.experiment.coordinates[j].as_tuple()
+                        if cord_values2[0] == x1 and cord_values2[1] == x2 and cord_values2[2] == x3:
+                            x4.append(cord_values2[3])
+                    if len(x4) >= 5:
+                        if (x1,x2,x3) not in x4_lines:
+                            x4_lines[(x1,x2,x3)] = x4
+
 
             else:
                 return 1
