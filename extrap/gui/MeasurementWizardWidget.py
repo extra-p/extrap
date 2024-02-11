@@ -327,10 +327,11 @@ class MeasurementWizardWidget(QWidget):
 
 
     def calculate_used_budget(self):
-        self.budget = float(self.modeling_budget.text())
+        budget_text = self.modeling_budget.text()
+        budget_text = budget_text.replace(",",".")
+        self.budget = float(budget_text)
         used_budget_percent = self.current_cost / (self.budget / 100)
         used_budget_percent_str = "{:.2f}".format(used_budget_percent)
-        #print("DEBUG:",self.used_budget_edit)
         self.used_budget_edit.setText(str(used_budget_percent_str))
 
 

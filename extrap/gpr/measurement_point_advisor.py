@@ -13,6 +13,8 @@ import numpy as np
 import copy
 from extrap.gpr.util import identify_selection_mode
 from extrap.entities.coordinate import Coordinate
+from collections import Counter
+
 
 class MeasurementPointAdvisor():
 
@@ -117,20 +119,17 @@ class MeasurementPointAdvisor():
                 factors = []
                 for j in range(len(parameter_value_serieses[i])-1):
                     factors.append(parameter_value_serieses[i][j+1]/parameter_value_serieses[i][j])
-                #print("DEBUG factors:",factors)
                 steps = []
                 for j in range(len(parameter_value_serieses[i])-1):
                     steps.append(parameter_value_serieses[i][j+1]-parameter_value_serieses[i][j])
-                #print("DEBUG steps:",steps)
-                res = factors.count(factors[0]) == len(factors)
-                if res:
-                    mean_step_size_factors.append(("*",np.mean(factors)))
+                res = dict(Counter(factors))
+                factor_max = res[max(res)]
+                res = dict(Counter(steps))
+                steps_max = res[max(res)]
+                if factor_max > steps_max:
+                    mean_step_size_factors.append(("*",np.median(factors)))
                 else:
-                    res = steps.count(steps[0]) == len(steps)
-                    if res:
-                        mean_step_size_factors.append(("+",np.mean(steps)))
-                    else:
-                        return 1
+                    mean_step_size_factors.append(("+",np.median(steps)))
         #print("DEBUG mean_step_size_factors:",mean_step_size_factors)
 
         # 3. continue and complete these series for each parameter
@@ -150,6 +149,7 @@ class MeasurementPointAdvisor():
             search_space_coordinates = []
             for i in range(len(parameter_value_serieses[0])):
                 search_space_coordinates.append(Coordinate(parameter_value_serieses[0][i]))
+            #print("DEBUG search_space_coordinates:",search_space_coordinates)
         
         elif len(self.experiment.parameters) == 2:
             search_space_coordinates = []
@@ -189,11 +189,27 @@ class MeasurementPointAdvisor():
             if exists == False:
                 possible_points.append(search_space_coordinates[i])
         #print("DEBUG len() search_space_coordinates:",len(search_space_coordinates))
-        #print("DEBUG len() possible_points:",len(possible_points))
-        #print("DEBUG len() self.experiment.coordinates:",len(self.experiment.coordinates))
+        print("DEBUG len() possible_points:",len(possible_points))
+        print("DEBUG len() self.experiment.coordinates:",len(self.experiment.coordinates))
         #print("possible_points:",possible_points)
 
         # a. base mode
+        if self.selection_mode == "base":
+        
+            # find the cheapest line of 5 points for x
+            x_line_lengths = {}
+            for i in range(len(self.experiment.coordinates)):
+                cord_values = self.experiment.coordinates[i].as_tuple()
+                y = cord_values[1]
+                x = []
+                for j in range(len(self.experiment.coordinates)):
+                    cord_values2 = self.experiment.coordinates[j].as_tuple()
+                    if cord_values2[1] == y:
+                        x.append(cord_values2[0])
+                if y not in x_line_lengths:
+                    x_line_lengths[y] = len(x)
+            print("DEBUG x_line_lengths:",x_line_lengths)
+
         # a.1 choose the smallest of the values for each parameter
         # a.2 combine these values of each parameter to a coordinate
         # a.3 repeat until enough suggestions for cords to complete a line of 5 points for each parameter
