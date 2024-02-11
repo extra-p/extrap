@@ -534,8 +534,11 @@ class MeasurementWizardWidget(QWidget):
                                         experiment=self.experiment,
                                         current_cost=self.current_cost)
             
-            points = mpa.suggest_points()
+            point_suggestions = mpa.suggest_points()
 
+            #TODO: how to deal with repetitions
+
+            print("DEBUG point_suggestions:",point_suggestions)
 
             """point_suggestions = []
             # (point_parameter_values, repetition no.)
@@ -543,20 +546,22 @@ class MeasurementWizardWidget(QWidget):
             point_suggestions.append(([128.0, 50.0], 3))"""
 
             text = ""
-            """for i in range(len(point_suggestions)):
+            for i in range(len(point_suggestions)):
                 temp = ""
                 temp += str(i+1) + "."
                 temp += " P("
+                parameter_values = point_suggestions[i].as_tuple()
                 for j in range(len(self.experiment.parameters)):
                     if j != 0:
                         temp += ","
                     temp += str(self.experiment.parameters[j])
                     temp += "="
-                    temp += str(point_suggestions[i][0][j])
-                temp += "), repetition no.="
-                temp += str(point_suggestions[i][1])
+                    parameter_value = parameter_values[j]
+                    temp += str(parameter_value)
+                temp += "), repetition no.=1"
+                #temp += str(point_suggestions[i][1])
                 temp += "\n"
-                text += temp"""
+                text += temp
             self.measurement_point_suggestions_label.setPlainText(text)
 
 

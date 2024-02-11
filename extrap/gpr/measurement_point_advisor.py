@@ -209,19 +209,20 @@ class MeasurementPointAdvisor():
             if exists == False:
                 possible_points.append(search_space_coordinates[i])
         #print("DEBUG len() search_space_coordinates:",len(search_space_coordinates))
-        print("DEBUG len() possible_points:",len(possible_points))
-        print("DEBUG len() self.experiment.coordinates:",len(self.experiment.coordinates))
+        #print("DEBUG len() possible_points:",len(possible_points))
+        #print("DEBUG len() self.experiment.coordinates:",len(self.experiment.coordinates))
         #print("possible_points:",possible_points)
 
         # a. base mode
         if self.selection_mode == "base":
 
+            #TODO: need to do this for each parameter...
+
             if len(self.experiment.parameters) == 1:
                 pass
 
             elif len(self.experiment.parameters) == 2:
-                #TODO: need to do this for each parameter...
-            
+                
                 x_line_lengths = {}
                 x_lines = {}
                 for i in range(len(self.experiment.coordinates)):
@@ -246,9 +247,9 @@ class MeasurementPointAdvisor():
                         max_value = value
                 best_line = x_lines[best_line_key]
                 #print("DEBUG best_line_key:",best_line_key)
-                print("DEBUG best_line:",best_line)
+                #print("DEBUG best_line:",best_line)
                 x = parameter_value_serieses[0]
-                print("DEBUG x:",x)
+                #print("DEBUG x:",x)
 
                 points_needed = 5-max_value
 
@@ -257,12 +258,12 @@ class MeasurementPointAdvisor():
                     if parameter_value_serieses[0][i] not in best_line:
                         potential_values.append(parameter_value_serieses[0][i])
                 potential_values.sort()
-                print("DEBUG potential_values:",potential_values)
+                #print("DEBUG potential_values:",potential_values)
 
                 cords_x = []
                 for i in range(points_needed):
                     cords_x.append(Coordinate(potential_values[i],best_line_key))
-                print("DEBUG cords_x:",cords_x)
+                #print("DEBUG cords_x:",cords_x)
 
                 y_line_lengths = {}
                 y_lines = {}
@@ -286,9 +287,9 @@ class MeasurementPointAdvisor():
                         max_value = value
                 best_line = y_lines[best_line_key]
                 #print("DEBUG best_line_key:",best_line_key)
-                print("DEBUG best_line:",best_line)
+                #print("DEBUG best_line:",best_line)
                 x = parameter_value_serieses[0]
-                print("DEBUG x:",x)
+                #print("DEBUG x:",x)
 
                 points_needed = 5-max_value
 
@@ -297,13 +298,22 @@ class MeasurementPointAdvisor():
                     if parameter_value_serieses[1][i] not in best_line:
                         potential_values.append(parameter_value_serieses[1][i])
                 potential_values.sort()
-                print("DEBUG potential_values:",potential_values)
+                #print("DEBUG potential_values:",potential_values)
 
                 cords_y = []
                 for i in range(points_needed):
                     cords_y.append(Coordinate(best_line_key,potential_values[i]))
-                print("DEBUG cords_y:",cords_y)
+                #print("DEBUG cords_y:",cords_y)
+
+                suggested_cords = []
+                for x in cords_x:
+                    suggested_cords.append(x)
+                for x in cords_y:
+                    suggested_cords.append(x)
+
+                print("DEBUG suggested_cords:",suggested_cords)
                 
+                return suggested_cords
 
 
             elif len(self.experiment.parameters) == 3:
