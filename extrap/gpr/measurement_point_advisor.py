@@ -217,6 +217,7 @@ class MeasurementPointAdvisor():
         if self.selection_mode == "base":
 
             #TODO: need to do this for each parameter...
+            #TODO: create test data and test for all number of parameters...
 
             if len(self.experiment.parameters) == 1:
                 pass
@@ -312,7 +313,7 @@ class MeasurementPointAdvisor():
                     suggested_cords.append(x)
 
                 print("DEBUG suggested_cords:",suggested_cords)
-                
+
                 return suggested_cords
 
 
