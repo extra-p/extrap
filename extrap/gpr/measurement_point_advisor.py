@@ -18,7 +18,7 @@ from collections import Counter
 
 class MeasurementPointAdvisor():
 
-    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost) -> None:
+    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost, manual_pms_selection, manual_parameter_value_series) -> None:
         self.budget = budget
         print("budget:",budget)
 
@@ -30,6 +30,10 @@ class MeasurementPointAdvisor():
         self.normalization = True
 
         self.current_cost = current_cost
+
+        self.manual_pms_selection = manual_pms_selection
+
+        self.manual_parameter_value_series = manual_parameter_value_series
 
         self.parameters = []
         for i in range(len(self.experiment.parameters)):
@@ -91,17 +95,28 @@ class MeasurementPointAdvisor():
 
     def suggest_points(self):
 
-        # 1. build a value series for each parameter
-        parameter_value_serieses = build_parameter_value_series(self.experiment)
+        if self.manual_pms_selection:
+            # 1.2.3. build the parameter series from manual entries in GUI
+            parameter_value_series = []
+            for i in range(len(self.experiment.parameters)):
+                value_series = self.manual_parameter_value_series[i].split(",")
+                y = []
+                for x in value_series:
+                    y.append(float(x))
+                parameter_value_series.append(y)
 
-        # 2. identify the step factor size for each parameter
-        mean_step_size_factors = identify_step_factor(parameter_value_serieses)
+        else:
+            # 1. build a value series for each parameter
+            parameter_value_series = build_parameter_value_series(self.experiment)
 
-        # 3. continue and complete these series for each parameter
-        parameter_value_serieses = extend_parameter_value_series(parameter_value_serieses, mean_step_size_factors)
+            # 2. identify the step factor size for each parameter
+            mean_step_size_factors = identify_step_factor(parameter_value_series)
+
+            # 3. continue and complete these series for each parameter
+            parameter_value_series = extend_parameter_value_series(parameter_value_series, mean_step_size_factors)
 
         # 4. create search space (1D, 2D, 3D, ND) from the series values of each parameters
-        search_space_coordinates = build_search_space(self.experiment, parameter_value_serieses)
+        search_space_coordinates = build_search_space(self.experiment, parameter_value_series)
 
         # 5. remove existing points from search space to obtain only new possible points
         possible_points = identify_possible_points(search_space_coordinates, self.experiment)
@@ -114,7 +129,21 @@ class MeasurementPointAdvisor():
             #TODO: create test data and test for all number of parameters...
 
             if len(self.experiment.parameters) == 1:
-                pass
+                possible_points = []
+                for i in range(len(parameter_value_series[0])):
+                    exists = False
+                    for j in range(len(self.experiment.coordinates)):
+                        if parameter_value_series[0][i] == self.experiment.coordinates[j].as_tuple()[0]:
+                            exists = True
+                            break
+                    if exists == False:
+                        possible_points.append(parameter_value_series[0][i])
+                possible_points.sort()
+                points_needed = 5-len(self.experiment.coordinates)
+                cords = []
+                for i in range(points_needed):
+                    cords.append(Coordinate(possible_points[i]))
+                return cords
 
             elif len(self.experiment.parameters) == 2:
                 
@@ -143,15 +172,15 @@ class MeasurementPointAdvisor():
                 best_line = x_lines[best_line_key]
                 #print("DEBUG best_line_key:",best_line_key)
                 #print("DEBUG best_line:",best_line)
-                x = parameter_value_serieses[0]
+                x = parameter_value_series[0]
                 #print("DEBUG x:",x)
 
                 points_needed = 5-max_value
 
                 potential_values = []
-                for i in range(len(parameter_value_serieses[0])):
-                    if parameter_value_serieses[0][i] not in best_line:
-                        potential_values.append(parameter_value_serieses[0][i])
+                for i in range(len(parameter_value_series[0])):
+                    if parameter_value_series[0][i] not in best_line:
+                        potential_values.append(parameter_value_series[0][i])
                 potential_values.sort()
                 #print("DEBUG potential_values:",potential_values)
 
@@ -183,15 +212,15 @@ class MeasurementPointAdvisor():
                 best_line = y_lines[best_line_key]
                 #print("DEBUG best_line_key:",best_line_key)
                 #print("DEBUG best_line:",best_line)
-                x = parameter_value_serieses[0]
+                x = parameter_value_series[0]
                 #print("DEBUG x:",x)
 
                 points_needed = 5-max_value
 
                 potential_values = []
-                for i in range(len(parameter_value_serieses[1])):
-                    if parameter_value_serieses[1][i] not in best_line:
-                        potential_values.append(parameter_value_serieses[1][i])
+                for i in range(len(parameter_value_series[1])):
+                    if parameter_value_series[1][i] not in best_line:
+                        potential_values.append(parameter_value_series[1][i])
                 potential_values.sort()
                 #print("DEBUG potential_values:",potential_values)
 
