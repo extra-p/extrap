@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             "extrap = extrap.extrap.extrapcmd:main",
+            "extrap-comparison=extrap.extrap.extrapcomparison:main"
         ],
 
         "gui_scripts": [
