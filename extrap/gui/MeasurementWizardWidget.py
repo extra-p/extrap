@@ -32,6 +32,8 @@ class MeasurementWizardWidget(QWidget):
         self.no_model_parameters = 0
         self.budget = 0.0
         self.current_cost = 0.0
+        self.manual_pms_selection = False
+        self.parameter_value_series = []
 
 
     def init_empty(self):
@@ -136,15 +138,26 @@ class MeasurementWizardWidget(QWidget):
         self.noise_level_edit.setText(noise_level_str)
         self.layout.addWidget(self.noise_level_edit, 7, 1)
 
+        self.parameter_value_checkbox = QCheckBox("Enter parameter-value series manually", self)
+        self.parameter_value_checkbox.setChecked(False)
+        self.parameter_value_checkbox.toggled.connect(self.clickParameterValueCheckbox)
+        self.layout.addWidget(self.parameter_value_checkbox, 8, 0)
+
+        self.param_value_layout = QGridLayout(self)
+        self.param_value_layout.setRowStretch(99, 1)
+        self.param_value_layout.setColumnStretch(0, 0)
+        self.param_value_layout.setColumnStretch(1, 1)
+        self.layout.addLayout(self.param_value_layout, 9, 0)
+
         self.advise_button = QPushButton(self)
-        self.layout.addWidget(self.advise_button, 8, 0)
+        self.layout.addWidget(self.advise_button, 10, 0)
         self.advise_button.setText("Suggest Additional Measurement Points")
         self.advise_button.clicked.connect(self.advice_button_clicked)
 
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setEnabled(False)
-        self.layout.addWidget(self.measurement_point_suggestions_label, 9, 0)
+        self.layout.addWidget(self.measurement_point_suggestions_label, 11, 0)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
@@ -230,15 +243,26 @@ class MeasurementWizardWidget(QWidget):
         self.noise_level_edit.setText(noise_level_str)
         self.layout.addWidget(self.noise_level_edit, 6, 1)
 
+        self.parameter_value_checkbox = QCheckBox("Enter parameter-value series manually", self)
+        self.parameter_value_checkbox.setChecked(False)
+        self.parameter_value_checkbox.toggled.connect(self.clickParameterValueCheckbox)
+        self.layout.addWidget(self.parameter_value_checkbox, 7, 0)
+
+        self.param_value_layout = QGridLayout(self)
+        self.param_value_layout.setRowStretch(99, 1)
+        self.param_value_layout.setColumnStretch(0, 0)
+        self.param_value_layout.setColumnStretch(1, 1)
+        self.layout.addLayout(self.param_value_layout, 8, 0)
+
         self.advise_button= QPushButton(self)
         self.advise_button.setText("Suggest Additional Measurement Points")
-        self.layout.addWidget(self.advise_button, 7, 0)
+        self.layout.addWidget(self.advise_button, 9, 0)
         self.advise_button.clicked.connect(self.advice_button_clicked)
 
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setEnabled(False)
-        self.layout.addWidget(self.measurement_point_suggestions_label, 8, 0)
+        self.layout.addWidget(self.measurement_point_suggestions_label, 10, 0)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
@@ -525,6 +549,11 @@ class MeasurementWizardWidget(QWidget):
                 
             # get the selected callpath(s) in the tree
             selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+
+            # get parameter value series if manual selection
+            if self.manual_pms_selection:
+                for i in range(len(self.experiment.parameters)):
+                    self.parameter_value_series.append(self.line_edits[i].text())
             
             # initialize a new measurement point advisor object
             mpa = MeasurementPointAdvisor(budget=self.budget, 
@@ -532,7 +561,9 @@ class MeasurementWizardWidget(QWidget):
                                         callpaths=selected_callpath,
                                         metric=runtime_metric,
                                         experiment=self.experiment,
-                                        current_cost=self.current_cost)
+                                        current_cost=self.current_cost,
+                                        manual_pms_selection=self.manual_pms_selection,
+                                        manual_parameter_value_series=self.parameter_value_series)
             
             point_suggestions = mpa.suggest_points()
 
@@ -613,6 +644,24 @@ class MeasurementWizardWidget(QWidget):
             self.calculate_used_budget()
         
 
+    def clickParameterValueCheckbox(self):
+        cbutton = self.sender()
+        if cbutton.isChecked():
+            self.manual_pms_selection = True
+            self.line_edits = []
+            self.labels = []
+            for i in range(len(self.experiment.parameters)):
+                line_edit = QLineEdit(self)
+                self.param_value_layout.addWidget(line_edit, i, 1)
+                self.line_edits.append(line_edit)
+                label = QLabel(self)
+                label.setText("Value series for parameter "+str(str(self.experiment.parameters[i]))+":")
+                self.param_value_layout.addWidget(label, i, 0)
+        else:
+            self.manual_pms_selection = False
+            for i in range(len(self.line_edits)):
+                self.line_edits[i].setVisible(False)
+                self.labels.setVisible(False)
   
 
     def reset(self, model_parameters=1):
