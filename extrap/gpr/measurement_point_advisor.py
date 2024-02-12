@@ -160,8 +160,6 @@ class MeasurementPointAdvisor():
                     if y not in x_line_lengths:
                         x_line_lengths[y] = len(x)
                         x_lines[y] = x
-                #print("DEBUG x_line_lengths:",x_line_lengths)
-                #print("DEBUG x_lines:",x_lines)
 
                 max_value = 0
                 best_line_key = None
@@ -170,11 +168,6 @@ class MeasurementPointAdvisor():
                         best_line_key = key
                         max_value = value
                 best_line = x_lines[best_line_key]
-                #print("DEBUG best_line_key:",best_line_key)
-                #print("DEBUG best_line:",best_line)
-                x = parameter_value_series[0]
-                #print("DEBUG x:",x)
-
                 points_needed = 5-max_value
 
                 potential_values = []
@@ -182,12 +175,9 @@ class MeasurementPointAdvisor():
                     if parameter_value_series[0][i] not in best_line:
                         potential_values.append(parameter_value_series[0][i])
                 potential_values.sort()
-                #print("DEBUG potential_values:",potential_values)
-
                 cords_x = []
                 for i in range(points_needed):
                     cords_x.append(Coordinate(potential_values[i],best_line_key))
-                #print("DEBUG cords_x:",cords_x)
 
                 y_line_lengths = {}
                 y_lines = {}
@@ -210,11 +200,7 @@ class MeasurementPointAdvisor():
                         best_line_key = key
                         max_value = value
                 best_line = y_lines[best_line_key]
-                #print("DEBUG best_line_key:",best_line_key)
-                #print("DEBUG best_line:",best_line)
                 x = parameter_value_series[0]
-                #print("DEBUG x:",x)
-
                 points_needed = 5-max_value
 
                 potential_values = []
@@ -222,12 +208,9 @@ class MeasurementPointAdvisor():
                     if parameter_value_series[1][i] not in best_line:
                         potential_values.append(parameter_value_series[1][i])
                 potential_values.sort()
-                #print("DEBUG potential_values:",potential_values)
-
                 cords_y = []
                 for i in range(points_needed):
                     cords_y.append(Coordinate(best_line_key,potential_values[i]))
-                #print("DEBUG cords_y:",cords_y)
 
                 suggested_cords = []
                 for x in cords_x:
@@ -235,16 +218,14 @@ class MeasurementPointAdvisor():
                 for x in cords_y:
                     suggested_cords.append(x)
 
-                print("DEBUG suggested_cords:",suggested_cords)
-
                 return suggested_cords
-
 
             elif len(self.experiment.parameters) == 3:
                 
                 #TODO:
 
                 x_lines = {}
+                x_line_lengths = {}
                 for i in range(len(self.experiment.coordinates)):
                     cord_values = self.experiment.coordinates[i].as_tuple()
                     y = cord_values[1]
@@ -254,12 +235,34 @@ class MeasurementPointAdvisor():
                         cord_values2 = self.experiment.coordinates[j].as_tuple()
                         if cord_values2[1] == y and cord_values2[2] == z:
                             x.append(cord_values2[0])
-                    if len(x) >= 5:
-                        if (y,z) not in x_lines:
-                            x_lines[(y,z)] = x
+                    if (y,z) not in x_lines:
+                        x_lines[(y,z)] = x
+                        x_line_lengths[(y,z)] = len(x)
+
+                print("DEBUG x_lines:",x_lines)
+                print("DEBUG x_line_lengths:",x_line_lengths)
+
+                max_value = 0
+                best_line_key = None
+                for key, value in x_line_lengths.items():
+                    if value > max_value:
+                        best_line_key = key
+                        max_value = value
+                best_line = x_lines[best_line_key]
+                points_needed = 5-max_value
+
+                potential_values = []
+                for i in range(len(parameter_value_series[0])):
+                    if parameter_value_series[0][i] not in best_line:
+                        potential_values.append(parameter_value_series[0][i])
+                potential_values.sort()
+                cords_x = []
+                for i in range(points_needed):
+                    cords_x.append(Coordinate(potential_values[i],best_line_key))
 
                     
                 y_lines = {}
+                y_line_lengths = {}
                 for i in range(len(self.experiment.coordinates)):
                     cord_values = self.experiment.coordinates[i].as_tuple()
                     x = cord_values[0]
@@ -273,8 +276,27 @@ class MeasurementPointAdvisor():
                         if (x,z) not in y_lines:
                             y_lines[(x,z)] = y
 
+                max_value = 0
+                best_line_key = None
+                for key, value in y_line_lengths.items():
+                    if value > max_value:
+                        best_line_key = key
+                        max_value = value
+                best_line = y_lines[best_line_key]
+                points_needed = 5-max_value
+
+                potential_values = []
+                for i in range(len(parameter_value_series[0])):
+                    if parameter_value_series[0][i] not in best_line:
+                        potential_values.append(parameter_value_series[0][i])
+                potential_values.sort()
+                cords_x = []
+                for i in range(points_needed):
+                    cords_x.append(Coordinate(potential_values[i],best_line_key))
+
 
                 z_lines = {}
+                z_line_lengths = {}
                 for i in range(len(self.experiment.coordinates)):
                     cord_values = self.experiment.coordinates[i].as_tuple()
                     x = cord_values[0]
@@ -287,6 +309,34 @@ class MeasurementPointAdvisor():
                     if len(z) >= 5:
                         if (x,y) not in z_lines:
                             z_lines[(x,y)] = z
+
+                max_value = 0
+                best_line_key = None
+                for key, value in z_line_lengths.items():
+                    if value > max_value:
+                        best_line_key = key
+                        max_value = value
+                best_line = z_lines[best_line_key]
+                points_needed = 5-max_value
+
+                potential_values = []
+                for i in range(len(parameter_value_series[0])):
+                    if parameter_value_series[0][i] not in best_line:
+                        potential_values.append(parameter_value_series[0][i])
+                potential_values.sort()
+                cords_x = []
+                for i in range(points_needed):
+                    cords_x.append(Coordinate(potential_values[i],best_line_key))
+
+                suggested_cords = []
+                for x in cords_x:
+                    suggested_cords.append(x)
+                for x in cords_y:
+                    suggested_cords.append(x)
+
+                print("DEBUG suggested_cords:",suggested_cords)
+
+                return suggested_cords
 
 
             elif len(self.experiment.parameters) == 4:
