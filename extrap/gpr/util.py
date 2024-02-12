@@ -468,14 +468,52 @@ def identify_step_factor(parameter_value_serieses):
             steps = []
             for j in range(len(parameter_value_serieses[i])-1):
                 steps.append(parameter_value_serieses[i][j+1]-parameter_value_serieses[i][j])
-            res = dict(Counter(factors))
-            factor_max = res[max(res)]
-            res = dict(Counter(steps))
-            steps_max = res[max(res)]
+            max_value = 0
+            max_key = None
+            factors_dict = dict(Counter(factors))
+            for key, value in factors_dict.items():
+                if value > max_value:
+                    max_value = value
+                    max_key = key
+            factor_max = factors_dict[max_key]
+            max_value = 0
+            max_key = None
+            steps_dict = dict(Counter(steps))
+            for key, value in steps_dict.items():
+                if value > max_value:
+                    max_value = value
+                    max_key = key
+            steps_max = steps_dict[max_key]
+            #print("DEBUG steps_dict:",steps_dict,steps_max)
+            #print("DEBUG factor_max:",factors_dict,factor_max)
             if factor_max > steps_max:
                 mean_step_size_factors.append(("*",np.median(factors)))
-            else:
+            elif steps_max > factor_max:
                 mean_step_size_factors.append(("+",np.median(steps)))
+            else:
+                all_same = True
+                for i in range(len(steps)-1):
+                    if steps[0] != steps[i+1]:
+                        all_same = False
+                        break
+                if all_same:
+                    mean_step_size_factors.append(("+",np.median(steps)))
+                else:
+                    facts = []
+                    for i in range(len(factors)-1):
+                        if factors[i+1] % factors[0] == 0:
+                            facts.append(factors[0])
+                        else:
+                            facts.append(factors[i+1])
+                    all_same = True
+                    for i in range(len(facts)-1):
+                        if facts[0] != facts[i+1]:
+                            all_same = False
+                            break
+                    if all_same == False:
+                        mean_step_size_factors.append(("+",np.median(steps)))
+                    else:
+                        mean_step_size_factors.append(("*",np.median(facts)))
     #print("DEBUG mean_step_size_factors:",mean_step_size_factors)
     return mean_step_size_factors
 
