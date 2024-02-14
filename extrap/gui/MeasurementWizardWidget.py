@@ -567,32 +567,37 @@ class MeasurementWizardWidget(QWidget):
             
             point_suggestions = mpa.suggest_points()
 
-            #TODO: how to deal with repetitions
+            if len(point_suggestions) == 0:
+                text = "There was an error during the point suggestion process."
 
-            print("DEBUG point_suggestions:",point_suggestions)
+            else:
+                #TODO: how to deal with repetitions:
+                # only take a look at repetitions when in GPR mode and self.values is available in measurements!
+                print("DEBUG point_suggestions:",point_suggestions)
 
-            """point_suggestions = []
-            # (point_parameter_values, repetition no.)
-            point_suggestions.append(([32.0, 10.0], 1))
-            point_suggestions.append(([128.0, 50.0], 3))"""
+                """point_suggestions = []
+                # (point_parameter_values, repetition no.)
+                point_suggestions.append(([32.0, 10.0], 1))
+                point_suggestions.append(([128.0, 50.0], 3))"""
 
-            text = ""
-            for i in range(len(point_suggestions)):
-                temp = ""
-                temp += str(i+1) + "."
-                temp += " P("
-                parameter_values = point_suggestions[i].as_tuple()
-                for j in range(len(self.experiment.parameters)):
-                    if j != 0:
-                        temp += ","
-                    temp += str(self.experiment.parameters[j])
-                    temp += "="
-                    parameter_value = parameter_values[j]
-                    temp += str(parameter_value)
-                temp += "), repetition no.=1"
-                #temp += str(point_suggestions[i][1])
-                temp += "\n"
-                text += temp
+                text = ""
+                for i in range(len(point_suggestions)):
+                    temp = ""
+                    temp += str(i+1) + "."
+                    temp += " P("
+                    parameter_values = point_suggestions[i].as_tuple()
+                    for j in range(len(self.experiment.parameters)):
+                        if j != 0:
+                            temp += ","
+                        temp += str(self.experiment.parameters[j])
+                        temp += "="
+                        parameter_value = parameter_values[j]
+                        temp += str(parameter_value)
+                    temp += "), repetition no.=1"
+                    #temp += str(point_suggestions[i][1])
+                    temp += "\n"
+                    text += temp
+
             self.measurement_point_suggestions_label.setPlainText(text)
 
 
