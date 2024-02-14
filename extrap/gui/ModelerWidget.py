@@ -34,6 +34,7 @@ class ModelerWidget(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
+        grid.setContentsMargins(4, 4, 4, 4)
         self.setLayout(grid)
 
         self.model_name_edit = QLineEdit(self)

@@ -23,9 +23,9 @@ class ColorWidget(QWidget):
 
     def initUI(self):
 
-        self.setMinimumHeight(40)
+        self.setMinimumHeight(30)
         self.setMinimumWidth(200)
-        self.setContentsMargins(10, 10, 10, 10)
+        self.setContentsMargins(4, 4, 4, 4)
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         grid = QGridLayout(self)

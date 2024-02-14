@@ -275,6 +275,7 @@ class DataDisplayManager(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
+        grid.setContentsMargins(4, 4, 4, 4)
 
         self.display_widget = QTabWidget(self)
         self.display_widget.setMovable(True)
@@ -414,6 +415,7 @@ class GraphLimitsWidget(QWidget):
         self.data_display.limits_widget = self
 
         self.grid = QGridLayout(self)
+        self.grid.setContentsMargins(4, 4, 4, 4)
         self.grid.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
 
         self._placeholder = AxisSelection(data_display, self, 0, [])

@@ -25,8 +25,9 @@ class LogWidget(QWidget):
 
     def initUI(self):
         layout = QGridLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
         # layout.setContentsMargins(10, 5, 10, 5)
-        #layout.setMargin(0, 0, 0, 0)
+        # layout.setMargin(0, 0, 0, 0)
         self.setLayout(layout)
         layout.addWidget(self.log_box)
         self.log_box.setAcceptRichText(True)

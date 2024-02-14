@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import ctypes
 import math
 
 from PySide6.QtCore import *  # @UnusedWildImport
@@ -13,9 +13,10 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 
 class ParameterValueSlider(QWidget):
-    def __init__(self, selectorWidget, parameter, parent):
+    valueChanged = Signal(int, name="valueChanged")
+
+    def __init__(self, parameter, parent):
         super(ParameterValueSlider, self).__init__(parent)
-        self.selector_widget = selectorWidget
         self.parameter = parameter
         self.slider_update = True
         self.initUI()
@@ -30,7 +31,9 @@ class ParameterValueSlider(QWidget):
 
         self.spinbox = QSpinBox()
         self.spinbox.setMinimum(1)
-        spinbox_max_val = 1073741824
+
+        max_int = 2 ** (ctypes.sizeof(ctypes.c_int) * 8 - 1) - 1
+        spinbox_max_val = max_int
         self.spinbox.setMaximum(spinbox_max_val)
         self.spinbox.setValue(0)
         self.spinbox.valueChanged.connect(self.spinboxValueChanged)
@@ -53,8 +56,7 @@ class ParameterValueSlider(QWidget):
         slider_value = int(math.log(value, 2) * 1000)
         self.slider_update = False
         self.slider.setValue(slider_value)
-        self.selector_widget.main_widget.updateMinMaxValue()
-        self.selector_widget.tree_model.valuesChanged()
+        self.valueChanged.emit(value)
 
     def sliderValueChanged(self, value):
         if self.slider_update:

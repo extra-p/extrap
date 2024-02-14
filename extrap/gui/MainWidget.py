@@ -73,9 +73,7 @@ class MainWidget(QMainWindow):
 
         self.settings = QSettings(QSettings.Scope.UserScope, "Extra-P", "Extra-P GUI")
 
-        self.max_value = 0
         self.min_value = 0
-        self.old_x_pos = 0
         self.developer_mode = False
         self._experiment = None
         self.model_color_map = ModelColorMap()

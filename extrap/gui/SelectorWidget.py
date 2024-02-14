@@ -11,6 +11,7 @@ import math
 from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.calltree import Node
@@ -30,7 +31,7 @@ class SelectorWidget(QWidget):
         super(SelectorWidget, self).__init__(parent)
         self.main_widget = main_widget
         self.tree_model = TreeModel(self)
-        self.parameter_sliders = list()
+        self.parameter_sliders: list[ParameterValueSlider] = []
         self.initUI()
         self._sections_switched = False
         self.min_value = 0
@@ -39,6 +40,7 @@ class SelectorWidget(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         self.grid = QGridLayout(self)
+        self.grid.setContentsMargins(4, 4, 4, 4)
         self.setLayout(self.grid)
 
         # Model selection
@@ -124,9 +126,16 @@ class SelectorWidget(QWidget):
         experiment = self.main_widget.getExperiment()
         parameters = experiment.parameters
         for i, param in enumerate(parameters):
-            new_widget = ParameterValueSlider(self, param, self)
+            new_widget = ParameterValueSlider(param, self)
+            new_widget.valueChanged.connect(self._on_parameter_value_changed)
             self.parameter_sliders.append(new_widget)
             self.grid.addWidget(new_widget, i + 4, 0, 1, 2)
+
+    @Slot(int)
+    def _on_parameter_value_changed(self, value):
+        self.main_widget.updateMinMaxValue()
+        self.tree_model.valuesChanged()
+        self.parameter_values_changed(self.getParameterValues())
 
     def fillCalltree(self):
         self.tree_model = TreeModel(self)
