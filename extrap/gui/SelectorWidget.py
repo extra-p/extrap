@@ -135,7 +135,6 @@ class SelectorWidget(QWidget):
     def _on_parameter_value_changed(self, value):
         self.main_widget.updateMinMaxValue()
         self.tree_model.valuesChanged()
-        self.parameter_values_changed(self.getParameterValues())
 
     def fillCalltree(self):
         self.tree_model = TreeModel(self)
