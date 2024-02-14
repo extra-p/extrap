@@ -39,6 +39,7 @@ from extrap.gui.LogWidget import LogWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
 from extrap.gui.PostProcessingWidget import PostProcessingWidget
+from extrap.gui.RankingWidget import RankingWidget
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
 from extrap.gui.comparison.comparison_wizard import ComparisonWizard
@@ -142,6 +143,12 @@ class MainWidget(QMainWindow):
         dock2 = QDockWidget("Log", self)
         self.log_widget = LogWidget(self)
         dock2.setWidget(self.log_widget)
+        self.tabifyDockWidget(dock, dock2)
+        dock2.hide()
+
+        dock2 = QDockWidget("Ranking", self)
+        self.ranking_widget = RankingWidget(self)
+        dock2.setWidget(self.ranking_widget)
         self.tabifyDockWidget(dock, dock2)
         dock2.hide()
         # Menu creation
@@ -638,7 +645,8 @@ class MainWidget(QMainWindow):
                 ns_window.setTitlebarAppearsTransparent_(True)
                 ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
                 c = self.palette().window().color()
-                ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
+                ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(),
+                                                                               c.alphaF())
                 ns_window.setBackgroundColor_(ns_window_color)
         except ImportError:
             pass
