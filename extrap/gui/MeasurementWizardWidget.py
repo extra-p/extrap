@@ -105,6 +105,7 @@ class MeasurementWizardWidget(QWidget):
         budget_label.setText("Modeling Budget [core hours]:")
         self.layout.addWidget(budget_label, 4, 0)
 
+        #TODO: enter budget does not work correctly, conversion when using . is very strange!
         self.modeling_budget = QLineEdit(self)
         self.modeling_budget.setValidator(QDoubleValidator())
         self.layout.addWidget(self.modeling_budget, 4, 1)
@@ -156,7 +157,7 @@ class MeasurementWizardWidget(QWidget):
 
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
-        self.measurement_point_suggestions_label.setEnabled(False)
+        self.measurement_point_suggestions_label.setEnabled(True)
         self.layout.addWidget(self.measurement_point_suggestions_label, 11, 0)
 
         self.calculate_current_measurement_cost()
@@ -261,7 +262,7 @@ class MeasurementWizardWidget(QWidget):
 
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
-        self.measurement_point_suggestions_label.setEnabled(False)
+        self.measurement_point_suggestions_label.setEnabled(True)
         self.layout.addWidget(self.measurement_point_suggestions_label, 10, 0)
 
         self.calculate_current_measurement_cost()
@@ -353,7 +354,10 @@ class MeasurementWizardWidget(QWidget):
     def calculate_used_budget(self):
         budget_text = self.modeling_budget.text()
         budget_text = budget_text.replace(",",".")
-        self.budget = float(budget_text)
+        try:
+            self.budget = float(budget_text)
+        except ValueError:
+            self.budget = self.current_cost
         used_budget_percent = self.current_cost / (self.budget / 100)
         used_budget_percent_str = "{:.2f}".format(used_budget_percent)
         self.used_budget_edit.setText(str(used_budget_percent_str))
@@ -535,7 +539,7 @@ class MeasurementWizardWidget(QWidget):
     def advice_button_clicked(self):
 
         # get the modeling budget from the GUI
-        if self.budget == self.current_cost:
+        if self.budget <= self.current_cost:
             self.measurement_point_suggestions_label.setPlainText("Not enough budget available to suggest further measurement points!")
         
         else:
@@ -583,7 +587,7 @@ class MeasurementWizardWidget(QWidget):
             else:
                 #TODO: how to deal with repetitions:
                 # only take a look at repetitions when in GPR mode and self.values is available in measurements!
-                print("DEBUG point_suggestions:",point_suggestions)
+                #print("DEBUG point_suggestions:",point_suggestions)
 
                 """point_suggestions = []
                 # (point_parameter_values, repetition no.)

@@ -991,8 +991,8 @@ def suggest_points_base_mode(experiment, parameter_value_series):
         return []
 
 
-#TODO: finish this code!
-def suggest_points_add_mode(experiment, parameter_value_series, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes):
+#TODO: what to do when several callpaths or the entire tree is selected???
+def suggest_points_add_mode(experiment, parameter_value_series, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes, budget, current_cost):
     
     #print("DEBUG possible_points:",possible_points)
 
@@ -1003,7 +1003,7 @@ def suggest_points_add_mode(experiment, parameter_value_series, possible_points,
         model = modeler.models[callpath, metric]
         hypothesis = model.hypothesis
         function = hypothesis.function
-        print("DEBUG function:",function)
+        #print("DEBUG function:",function)
 
         runtimes = {}
         costs = {}
@@ -1029,27 +1029,24 @@ def suggest_points_add_mode(experiment, parameter_value_series, possible_points,
         #print("DEBUG runtimes:",runtimes)
         #print("DEBUG costs:",costs)
 
-        # b.3 choose the point from the seach space with the lowest cost
-        lowest = None
-        lowest_key = -1
-        for key, value in costs.items():
-            if lowest is None:
-                lowest = value
-                lowest_key = key
+        # b.3 choose n points from the seach space with the lowest cost and check if they fit in the available budget
+
+        costs_sorted = dict(sorted(costs.items(), key=lambda item: item[1]))
+        #print("DEBUG costs_sorted:",costs_sorted)
+
+        available_budget = budget-current_cost
+
+        suggested_points = []
+
+        # suggest the coordinate if it fits into budget
+        for key, value in costs_sorted.items():
+            if value <= available_budget:
+                suggested_points.append(key)
+                available_budget -= value
             else:
-                if value < lowest:
-                    lowest = value
-                    lowest_key = key
-        print("DEBUG lowest_key:",lowest_key)
-        lowest_cost = costs[lowest_key]
-        print("DEBUG lowest_cost:",lowest_cost)
+                break
 
-
-
-    # b.4 check if that point fits into the available budget
-    # b.41 create a coordinate from it and suggest it if fits into budget
-    # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
-
+    return suggested_points
 
 
 #TODO: finish this code!

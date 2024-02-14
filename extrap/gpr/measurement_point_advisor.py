@@ -136,7 +136,8 @@ class MeasurementPointAdvisor():
         # b.41 create a coordinate from it and suggest it if fits into budget
         # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
         elif self.selection_mode == "add":
-            suggested_cords = suggest_points_add_mode(self.experiment, parameter_value_series, possible_points, self.selected_callpaths, self.metric, self.calculate_cost_manual, self.processes, self.number_processes)
+            #TODO: test with 1, 3, 4 parameter data
+            suggested_cords = suggest_points_add_mode(self.experiment, parameter_value_series, possible_points, self.selected_callpaths, self.metric, self.calculate_cost_manual, self.processes, self.number_processes, self.budget, self.current_cost)
             return suggested_cords
 
         
