@@ -554,6 +554,14 @@ class MeasurementWizardWidget(QWidget):
             if self.manual_pms_selection:
                 for i in range(len(self.experiment.parameters)):
                     self.parameter_value_series.append(self.line_edits[i].text())
+
+            if self.calculate_cost_manual:
+                try:
+                    number_processes = int(self.processes.text())
+                except ValueError:
+                    number_processes = 1
+            else:
+                number_processes = 0
             
             # initialize a new measurement point advisor object
             mpa = MeasurementPointAdvisor(budget=self.budget, 
@@ -563,7 +571,9 @@ class MeasurementWizardWidget(QWidget):
                                         experiment=self.experiment,
                                         current_cost=self.current_cost,
                                         manual_pms_selection=self.manual_pms_selection,
-                                        manual_parameter_value_series=self.parameter_value_series)
+                                        manual_parameter_value_series=self.parameter_value_series,
+                                        calculate_cost_manual=self.calculate_cost_manual,
+                                        number_processes=number_processes)
             
             point_suggestions = mpa.suggest_points()
 

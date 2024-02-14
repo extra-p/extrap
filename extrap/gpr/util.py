@@ -609,7 +609,7 @@ def identify_possible_points(search_space_coordinates, experiment):
 
 
 def suggest_points_base_mode(experiment, parameter_value_series):
-    
+
     if len(experiment.parameters) == 1:
         possible_points = []
         for i in range(len(parameter_value_series[0])):
@@ -991,5 +991,74 @@ def suggest_points_base_mode(experiment, parameter_value_series):
         return []
 
 
+#TODO: finish this code!
+def suggest_points_add_mode(experiment, parameter_value_series, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes):
+    
+    #print("DEBUG possible_points:",possible_points)
 
+    for i in range(len(selected_callpaths)):
+        callpath = selected_callpaths[i]
+
+        modeler = experiment.modelers[0]
+        model = modeler.models[callpath, metric]
+        hypothesis = model.hypothesis
+        function = hypothesis.function
+        print("DEBUG function:",function)
+
+        runtimes = {}
+        costs = {}
+        
+        for j in range(len(possible_points)):
+            point = possible_points[j]
+
+            #print("DEBUG point:",point)
+
+            # b.1 predict the runtime of the possible_points using the existing performance models
+            runtime = function.evaluate(point.as_tuple())
+            runtimes[point] = runtime
+
+            # b.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
+            if calculate_cost_manual:
+                nr_processes = number_processes
+            else:
+                nr_processes = point[process_parameter_id]
+            #print("DEBUG nr_processes:",nr_processes)
+            cost = runtime * nr_processes
+            costs[point] = cost
+            
+        #print("DEBUG runtimes:",runtimes)
+        #print("DEBUG costs:",costs)
+
+        # b.3 choose the point from the seach space with the lowest cost
+        lowest = None
+        lowest_key = -1
+        for key, value in costs.items():
+            if lowest is None:
+                lowest = value
+                lowest_key = key
+            else:
+                if value < lowest:
+                    lowest = value
+                    lowest_key = key
+        print("DEBUG lowest_key:",lowest_key)
+        lowest_cost = costs[lowest_key]
+        print("DEBUG lowest_cost:",lowest_cost)
+
+
+
+    # b.4 check if that point fits into the available budget
+    # b.41 create a coordinate from it and suggest it if fits into budget
+    # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
+
+
+
+#TODO: finish this code!
+def suggest_points_gpr_mode(experiment, parameter_value_series):
+    pass
+    # c.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
+    # c.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
+    #NOTE: the search space points should have a dict like for the costs of the remaining points for my case study analysis...
+    # c.3 all of the data is used as input to the GPR method
+    # c.4 get the top x points suggested by the GPR method that do fit into the available budget
+    # c.5 create coordinates and suggest them
 

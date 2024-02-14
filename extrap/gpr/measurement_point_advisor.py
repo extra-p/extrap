@@ -11,14 +11,14 @@ from multiprocessing import Pool
 from tqdm import tqdm
 import numpy as np
 import copy
-from extrap.gpr.util import identify_selection_mode, build_parameter_value_series, identify_step_factor, extend_parameter_value_series, build_search_space, identify_possible_points, suggest_points_base_mode
+from extrap.gpr.util import identify_selection_mode, build_parameter_value_series, identify_step_factor, extend_parameter_value_series, build_search_space, identify_possible_points, suggest_points_base_mode, suggest_points_add_mode, suggest_points_gpr_mode
 from extrap.entities.coordinate import Coordinate
 from collections import Counter
 
 
 class MeasurementPointAdvisor():
 
-    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost, manual_pms_selection, manual_parameter_value_series) -> None:
+    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost, manual_pms_selection, manual_parameter_value_series, calculate_cost_manual, number_processes) -> None:
         self.budget = budget
         print("budget:",budget)
 
@@ -35,19 +35,16 @@ class MeasurementPointAdvisor():
 
         self.manual_parameter_value_series = manual_parameter_value_series
 
+        self.calculate_cost_manual = calculate_cost_manual
+
+        self.number_processes = number_processes
+
         self.parameters = []
         for i in range(len(self.experiment.parameters)):
             self.parameters.append(str(self.experiment.parameters[i]))
         print("parameters:",self.parameters)
 
-        self.metric_str = metric
-        self.metric = None
-        self.metric_id = -1
-        for i in range(len(self.experiment.metrics)):
-            if str(self.experiment.metrics[i]) == self.metric_str:
-                self.metric = self.experiment.metrics[i]
-                self.metric_id = i
-                break
+        self.metric = metric
         print("metric:",self.metric)
 
         # these are tree nodes, need to convert them to actual callpaths manually
@@ -129,16 +126,21 @@ class MeasurementPointAdvisor():
         if self.selection_mode == "base":
             suggested_cords = suggest_points_base_mode(self.experiment, parameter_value_series)
             return suggested_cords
-            
-
+        
+        # 6. suggest points using add mode
         # b. add mode
-        # b.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
+        # b.1 predict the runtime of the possible_points using the existing performance models
         # b.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
         # b.3 choose the point from the seach space with the lowest cost
         # b.4 check if that point fits into the available budget
         # b.41 create a coordinate from it and suggest it if fits into budget
         # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
+        elif self.selection_mode == "add":
+            suggested_cords = suggest_points_add_mode(self.experiment, parameter_value_series, possible_points, self.selected_callpaths, self.metric, self.calculate_cost_manual, self.processes, self.number_processes)
+            return suggested_cords
 
+        
+        # 6. suggest points using gpr mode
         # c. gpr mode
         # c.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
         # c.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
@@ -146,6 +148,10 @@ class MeasurementPointAdvisor():
         # c.3 all of the data is used as input to the GPR method
         # c.4 get the top x points suggested by the GPR method that do fit into the available budget
         # c.5 create coordinates and suggest them
+        elif self.selection_mode == "gpr":
+            suggested_cords = suggest_points_gpr_mode(self.experiment, parameter_value_series)
+            return suggested_cords
+        
 
         
         
