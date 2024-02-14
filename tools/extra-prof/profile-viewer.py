@@ -49,7 +49,7 @@ def _children_are_too_big(parent_duration, childs, name):
             continue
         c_duration += max(m_duration)
 
-    if c_duration <= max(parent_duration):
+    if c_duration / (10 ** 9) <= max(parent_duration):
         return False
 
     print(f"WARNING: Children's duration {c_duration} is bigger than "
