@@ -94,13 +94,17 @@ class MeasurementPointAdvisor():
 
         if self.manual_pms_selection:
             # 1.2.3. build the parameter series from manual entries in GUI
-            parameter_value_series = []
-            for i in range(len(self.experiment.parameters)):
-                value_series = self.manual_parameter_value_series[i].split(",")
-                y = []
-                for x in value_series:
-                    y.append(float(x))
-                parameter_value_series.append(y)
+            try:
+                parameter_value_series = []
+                for i in range(len(self.experiment.parameters)):
+                    value_series = self.manual_parameter_value_series[i].split(",")
+                    y = []
+                    for x in value_series:
+                        y.append(float(x))
+                    parameter_value_series.append(y)
+            except ValueError as e:
+                print(e)
+                return []
 
         else:
             # 1. build a value series for each parameter
@@ -136,8 +140,7 @@ class MeasurementPointAdvisor():
         # b.41 create a coordinate from it and suggest it if fits into budget
         # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
         elif self.selection_mode == "add":
-            #TODO: test with 1, 3, 4 parameter data
-            suggested_cords = suggest_points_add_mode(self.experiment, parameter_value_series, possible_points, self.selected_callpaths, self.metric, self.calculate_cost_manual, self.processes, self.number_processes, self.budget, self.current_cost)
+            suggested_cords = suggest_points_add_mode(self.experiment, possible_points, self.selected_callpaths, self.metric, self.calculate_cost_manual, self.processes, self.number_processes, self.budget, self.current_cost)
             return suggested_cords
 
         

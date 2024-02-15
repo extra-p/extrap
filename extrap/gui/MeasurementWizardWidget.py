@@ -60,13 +60,13 @@ class MeasurementWizardWidget(QWidget):
 
         self.main_layout.addLayout(self.layout)
 
-        self.checkbox = QCheckBox("No. of processes (MPI ranks) is one of the model parameters", self)
+        self.checkbox = QCheckBox("No. of processes (MPI ranks)\n is one of the model parameters", self)
         self.checkbox.setChecked(True)
         self.checkbox.toggled.connect(self.clickCheckbox)
         self.layout.addWidget(self.checkbox, 0, 0)
 
         self.parameter_selector_label = QLabel(self)
-        self.parameter_selector_label.setText("Model Paramater resembling the number of processes (MPI ranks):")
+        self.parameter_selector_label.setText("Model Paramater resembling the\n number of processes (MPI ranks):")
         self.layout.addWidget(self.parameter_selector_label, 1, 0)
 
         self.parameter_selector = QComboBox(self)
@@ -105,9 +105,9 @@ class MeasurementWizardWidget(QWidget):
         budget_label.setText("Modeling Budget [core hours]:")
         self.layout.addWidget(budget_label, 4, 0)
 
-        #TODO: enter budget does not work correctly, conversion when using . is very strange!
-        self.modeling_budget = QLineEdit(self)
-        self.modeling_budget.setValidator(QDoubleValidator())
+        self.modeling_budget = QDoubleSpinBox(self)
+        self.modeling_budget.setMaximum(999999999999.0)
+        self.modeling_budget.setMinimum(0.0)
         self.layout.addWidget(self.modeling_budget, 4, 1)
         self.modeling_budget.textChanged.connect(self.budgetChanged)
 
@@ -116,7 +116,7 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(current_cost_label, 5, 0)
 
         self.current_cost_edit = QLineEdit(self)
-        self.current_cost_edit.setEnabled(False)
+        self.current_cost_edit.setReadOnly(True)
         self.current_cost_edit.setText("0.0")
         self.layout.addWidget(self.current_cost_edit, 5, 1)
 
@@ -125,7 +125,7 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(used_budget_label, 6, 0)
 
         self.used_budget_edit = QLineEdit(self)
-        self.used_budget_edit.setEnabled(False)
+        self.used_budget_edit.setReadOnly(True)
         self.used_budget_edit.setText("0.0")
         self.layout.addWidget(self.used_budget_edit, 6, 1)
 
@@ -134,7 +134,7 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(noise_level_label, 7, 0)
 
         self.noise_level_edit = QLineEdit(self)
-        self.noise_level_edit.setEnabled(False)
+        self.noise_level_edit.setReadOnly(True)
         noise_level_str = "{:.2f}".format(self.mean_noise_level)
         self.noise_level_edit.setText(noise_level_str)
         self.layout.addWidget(self.noise_level_edit, 7, 1)
@@ -155,10 +155,14 @@ class MeasurementWizardWidget(QWidget):
         self.advise_button.setText("Suggest Additional Measurement Points")
         self.advise_button.clicked.connect(self.advice_button_clicked)
 
+        suggestion_label = QLabel(self)
+        suggestion_label.setText("Measurement point suggestions:")
+        self.layout.addWidget(suggestion_label, 11, 0)
+
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
-        self.measurement_point_suggestions_label.setEnabled(True)
-        self.layout.addWidget(self.measurement_point_suggestions_label, 11, 0)
+        self.measurement_point_suggestions_label.setReadOnly(True)
+        self.layout.addWidget(self.measurement_point_suggestions_label, 11, 1)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
@@ -179,7 +183,7 @@ class MeasurementWizardWidget(QWidget):
 
         self.main_layout.addLayout(self.layout)
 
-        self.checkbox = QCheckBox("Model parameters is the no. of processes (MPI ranks)", self)
+        self.checkbox = QCheckBox("Model parameters is the no.\n of processes (MPI ranks)", self)
         self.checkbox.setChecked(True)
         self.checkbox.toggled.connect(self.clickCheckbox)
         self.layout.addWidget(self.checkbox, 0, 0)
@@ -211,8 +215,9 @@ class MeasurementWizardWidget(QWidget):
         budget_label.setText("Modeling Budget [core hours]:")
         self.layout.addWidget(budget_label, 3, 0)
 
-        self.modeling_budget = QLineEdit(self)
-        self.modeling_budget.setValidator(QDoubleValidator())
+        self.modeling_budget = QDoubleSpinBox(self)
+        self.modeling_budget.setMaximum(999999999999.0)
+        self.modeling_budget.setMinimum(0.0)
         self.layout.addWidget(self.modeling_budget, 3, 1)
         self.modeling_budget.textChanged.connect(self.budgetChanged)
 
@@ -221,7 +226,7 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(current_cost_label, 4, 0)
 
         self.current_cost_edit = QLineEdit(self)
-        self.current_cost_edit.setEnabled(False)
+        self.current_cost_edit.setReadOnly(True)
         self.current_cost_edit.setText("0.0")
         self.layout.addWidget(self.current_cost_edit, 4, 1)
 
@@ -230,7 +235,7 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(used_budget_label, 5, 0)
 
         self.used_budget_edit = QLineEdit(self)
-        self.used_budget_edit.setEnabled(False)
+        self.used_budget_edit.setReadOnly(True)
         self.used_budget_edit.setText("0.0")
         self.layout.addWidget(self.used_budget_edit, 5, 1)
 
@@ -239,7 +244,7 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(noise_level_label, 6, 0)
 
         self.noise_level_edit = QLineEdit(self)
-        self.noise_level_edit.setEnabled(False)
+        self.noise_level_edit.setReadOnly(True)
         noise_level_str = "{:.2f}".format(self.mean_noise_level)
         self.noise_level_edit.setText(noise_level_str)
         self.layout.addWidget(self.noise_level_edit, 6, 1)
@@ -260,10 +265,14 @@ class MeasurementWizardWidget(QWidget):
         self.layout.addWidget(self.advise_button, 9, 0)
         self.advise_button.clicked.connect(self.advice_button_clicked)
 
+        suggestion_label = QLabel(self)
+        suggestion_label.setText("Measurement point suggestions:")
+        self.layout.addWidget(suggestion_label, 10, 0)
+
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
-        self.measurement_point_suggestions_label.setEnabled(True)
-        self.layout.addWidget(self.measurement_point_suggestions_label, 10, 0)
+        self.measurement_point_suggestions_label.setReadOnly(True)
+        self.layout.addWidget(self.measurement_point_suggestions_label, 10, 1)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
@@ -352,11 +361,8 @@ class MeasurementWizardWidget(QWidget):
 
 
     def calculate_used_budget(self):
-        budget_text = self.modeling_budget.text()
-        budget_text = budget_text.replace(",",".")
-        try:
-            self.budget = float(budget_text)
-        except ValueError:
+        self.budget = self.modeling_budget.value()
+        if self.budget == 0.0:
             self.budget = self.current_cost
         used_budget_percent = self.current_cost / (self.budget / 100)
         used_budget_percent_str = "{:.2f}".format(used_budget_percent)
@@ -531,7 +537,7 @@ class MeasurementWizardWidget(QWidget):
 
         if self.budget == 0.0:
             self.budget = self.current_cost
-            self.modeling_budget.setText(str(current_cost_str))
+            self.modeling_budget.setValue(self.current_cost)
 
         self.current_cost_edit.setText(str(current_cost_str))
 
@@ -539,7 +545,7 @@ class MeasurementWizardWidget(QWidget):
     def advice_button_clicked(self):
 
         # get the modeling budget from the GUI
-        if self.budget <= self.current_cost:
+        if int(self.budget) <= int(self.current_cost):
             self.measurement_point_suggestions_label.setPlainText("Not enough budget available to suggest further measurement points!")
         
         else:
@@ -562,8 +568,9 @@ class MeasurementWizardWidget(QWidget):
             if self.calculate_cost_manual:
                 try:
                     number_processes = int(self.processes.text())
-                except ValueError:
+                except ValueError as e:
                     number_processes = 1
+                    print(e)
             else:
                 number_processes = 0
             
@@ -582,7 +589,7 @@ class MeasurementWizardWidget(QWidget):
             point_suggestions = mpa.suggest_points()
 
             if len(point_suggestions) == 0:
-                text = "There was an error during the point suggestion process."
+                text = "No measurement points could be found that fit into the available budget. Please consider increasing the modeling budget."
 
             else:
                 #TODO: how to deal with repetitions:
@@ -675,12 +682,13 @@ class MeasurementWizardWidget(QWidget):
                 self.line_edits.append(line_edit)
                 label = QLabel(self)
                 label.setText("Value series for parameter "+str(str(self.experiment.parameters[i]))+":")
+                self.labels.append(label)
                 self.param_value_layout.addWidget(label, i, 0)
         else:
             self.manual_pms_selection = False
             for i in range(len(self.line_edits)):
                 self.line_edits[i].setVisible(False)
-                self.labels.setVisible(False)
+                self.labels[i].setVisible(False)
   
 
     def reset(self, model_parameters=1):

@@ -519,7 +519,10 @@ def identify_step_factor(parameter_value_serieses):
 
 
 def extend_parameter_value_series(parameter_value_serieses, mean_step_size_factors):
-    #TODO: how large should the search space be, set via GUI parameter?
+    #NOTE: this search space with 5 additional values is large enough
+    # especially for 4 model paramaters this results in thousands of possible points
+    # as soon as additional points are measured and loaded into extra-p, the search space will be extended
+    # using the new values as a baseline anyway.
     additional_values = 5
     for i in range(len(parameter_value_serieses)):
         added_values = 0
@@ -992,10 +995,8 @@ def suggest_points_base_mode(experiment, parameter_value_series):
 
 
 #TODO: what to do when several callpaths or the entire tree is selected???
-def suggest_points_add_mode(experiment, parameter_value_series, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes, budget, current_cost):
+def suggest_points_add_mode(experiment, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes, budget, current_cost):
     
-    #print("DEBUG possible_points:",possible_points)
-
     for i in range(len(selected_callpaths)):
         callpath = selected_callpaths[i]
 
@@ -1003,39 +1004,25 @@ def suggest_points_add_mode(experiment, parameter_value_series, possible_points,
         model = modeler.models[callpath, metric]
         hypothesis = model.hypothesis
         function = hypothesis.function
-        #print("DEBUG function:",function)
-
         runtimes = {}
         costs = {}
         
         for j in range(len(possible_points)):
             point = possible_points[j]
-
-            #print("DEBUG point:",point)
-
             # b.1 predict the runtime of the possible_points using the existing performance models
             runtime = function.evaluate(point.as_tuple())
             runtimes[point] = runtime
-
             # b.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
             if calculate_cost_manual:
                 nr_processes = number_processes
             else:
                 nr_processes = point[process_parameter_id]
-            #print("DEBUG nr_processes:",nr_processes)
             cost = runtime * nr_processes
             costs[point] = cost
             
-        #print("DEBUG runtimes:",runtimes)
-        #print("DEBUG costs:",costs)
-
         # b.3 choose n points from the seach space with the lowest cost and check if they fit in the available budget
-
         costs_sorted = dict(sorted(costs.items(), key=lambda item: item[1]))
-        #print("DEBUG costs_sorted:",costs_sorted)
-
         available_budget = budget-current_cost
-
         suggested_points = []
 
         # suggest the coordinate if it fits into budget
