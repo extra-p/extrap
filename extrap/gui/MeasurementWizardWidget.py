@@ -578,23 +578,15 @@ class MeasurementWizardWidget(QWidget):
                                         manual_pms_selection=self.manual_pms_selection,
                                         manual_parameter_value_series=self.parameter_value_series,
                                         calculate_cost_manual=self.calculate_cost_manual,
-                                        number_processes=number_processes)
+                                        number_processes=number_processes,
+                                        main_widget=self.main_widget)
             
-            point_suggestions = mpa.suggest_points()
+            point_suggestions, rep_numbers = mpa.suggest_points()
 
             if len(point_suggestions) == 0:
                 text = "No measurement points could be found that fit into the available budget. Please consider increasing the modeling budget."
 
             else:
-                #TODO: how to deal with repetitions:
-                # only take a look at repetitions when in GPR mode and self.values is available in measurements!
-                #print("DEBUG point_suggestions:",point_suggestions)
-
-                """point_suggestions = []
-                # (point_parameter_values, repetition no.)
-                point_suggestions.append(([32.0, 10.0], 1))
-                point_suggestions.append(([128.0, 50.0], 3))"""
-
                 text = ""
                 for i in range(len(point_suggestions)):
                     temp = ""
@@ -608,8 +600,12 @@ class MeasurementWizardWidget(QWidget):
                         temp += "="
                         parameter_value = parameter_values[j]
                         temp += str(parameter_value)
-                    temp += "), repetition no.=1"
-                    #temp += str(point_suggestions[i][1])
+                    if rep_numbers is not None:
+                        rep_number = rep_numbers[i]
+                    else:
+                        rep_number = 1
+                    temp += "), repetition no.="
+                    temp += str(rep_number)
                     temp += "\n"
                     text += temp
 
