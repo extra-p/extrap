@@ -6,14 +6,8 @@
 # See the LICENSE file in the base directory for details.
 
 import numpy as np
-from extrap.entities.callpath import Callpath
-from extrap.entities.metric import Metric
-import sys
-from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import *  # @UnusedWildImport
-from PySide6.QtGui import QDoubleValidator, QIntValidator
-import matplotlib
-
+from PySide6.QtGui import QIntValidator
 from extrap.gpr.measurement_point_advisor import MeasurementPointAdvisor
 
 
