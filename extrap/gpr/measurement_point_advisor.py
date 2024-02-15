@@ -124,7 +124,8 @@ class MeasurementPointAdvisor():
         # a.2 combine these values of each parameter to a coordinate
         # a.3 repeat until enough suggestions for cords to complete a line of 5 points for each parameter
         if self.selection_mode == "base":
-            suggested_cords = suggest_points_base_mode(self.experiment, parameter_value_series)
+            suggested_cords = suggest_points_base_mode(self.experiment, 
+                                                       parameter_value_series)
             return suggested_cords
         
         # 6. suggest points using add mode
@@ -136,7 +137,15 @@ class MeasurementPointAdvisor():
         # b.41 create a coordinate from it and suggest it if fits into budget
         # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
         elif self.selection_mode == "add":
-            suggested_cords = suggest_points_add_mode(self.experiment, possible_points, self.selected_callpaths, self.metric, self.calculate_cost_manual, self.processes, self.number_processes, self.budget, self.current_cost)
+            suggested_cords = suggest_points_add_mode(self.experiment, 
+                                                      possible_points, 
+                                                      self.selected_callpaths, 
+                                                      self.metric, 
+                                                      self.calculate_cost_manual, 
+                                                      self.processes, 
+                                                      self.number_processes, 
+                                                      self.budget, 
+                                                      self.current_cost)
             return suggested_cords
 
         
@@ -149,65 +158,14 @@ class MeasurementPointAdvisor():
         # c.4 get the top x points suggested by the GPR method that do fit into the available budget
         # c.5 create coordinates and suggest them
         elif self.selection_mode == "gpr":
-            suggested_cords = suggest_points_gpr_mode(self.experiment, parameter_value_series)
+            suggested_cords = suggest_points_gpr_mode(self.experiment, 
+                                                      parameter_value_series, 
+                                                      possible_points, 
+                                                      self.selected_callpaths, 
+                                                      self.metric, 
+                                                      self.calculate_cost_manual, 
+                                                      self.processes, 
+                                                      self.number_processes, 
+                                                      self.budget,
+                                                      self.current_cost)
             return suggested_cords
-
-
-    def analyze_callpath(self, inputs):
-        
-        # get the values from the parallel input dict
-        callpath_id = inputs[0]
-        shared_dict = inputs[1]
-        cost = inputs[2]
-        callpath = inputs[3]
-        cost_container = inputs[4]
-        total_costs_container = inputs[5]
-        #grid_search = inputs[6]
-        experiment_measurements = inputs[6]
-        nr_parameters = inputs[7]
-        experiment_coordinates = inputs[8]
-        metric = inputs[9]
-        #base_values = inputs[11]
-        metric_id = inputs[10]
-        #nr_repetitions = inputs[13]
-        parameters = inputs[11]
-        #args = inputs[15]
-        budget = inputs[12]
-        #eval_point = inputs[17]
-        #all_points_functions_strings = inputs[18]
-        #coordinate_evaluation = inputs[19]
-        #measurement_evaluation = inputs[20]
-        normalization = inputs[13]
-        min_points = inputs[14]
-        #hybrid_switch = inputs[23]
-        result_container = {}
-
-        callpath_string = callpath.name
-
-        # get the cost values for this particular callpath
-        cost = cost_container[callpath_string]
-        total_cost = total_costs_container[callpath_string]
-
-        # create copy of the cost dict
-        remaining_points = copy.deepcopy(cost)
-
-        ##########################
-        ## Base point selection ##
-        ##########################
-
-        # create copy of the cost dict
-        remaining_points = copy.deepcopy(cost)
-        
-        # create copy of the cost dict for the minimum experiment with gpr and hybrid strategies
-        remaining_points_min = copy.deepcopy(cost)
-
-        measurements_gpr = copy.deepcopy(experiment_measurements)
-        measurements_hybrid = copy.deepcopy(experiment_measurements)
-
-
-
-        shared_dict[callpath_id] = result_container
-
-
-
-
