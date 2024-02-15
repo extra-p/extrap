@@ -5,16 +5,16 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import copy
 from extrap.gpr.util import identify_selection_mode, build_parameter_value_series, identify_step_factor, extend_parameter_value_series, build_search_space, identify_possible_points
 from extrap.gpr.base_selection_strategy import suggest_points_base_mode
 from extrap.gpr.add_selection_strategy import suggest_points_add_mode
 from extrap.gpr.gpr_selection_strategy import suggest_points_gpr_mode
+from extrap.gui.components.ProgressWindow import ProgressWindow
 
 
 class MeasurementPointAdvisor():
 
-    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost, manual_pms_selection, manual_parameter_value_series, calculate_cost_manual, number_processes) -> None:
+    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost, manual_pms_selection, manual_parameter_value_series, calculate_cost_manual, number_processes, main_widget) -> None:
         self.budget = budget
         print("budget:",budget)
 
@@ -34,6 +34,8 @@ class MeasurementPointAdvisor():
         self.calculate_cost_manual = calculate_cost_manual
 
         self.number_processes = number_processes
+
+        self.main_widget = main_widget
 
         self.parameters = []
         for i in range(len(self.experiment.parameters)):
@@ -126,7 +128,7 @@ class MeasurementPointAdvisor():
         if self.selection_mode == "base":
             suggested_cords = suggest_points_base_mode(self.experiment, 
                                                        parameter_value_series)
-            return suggested_cords
+            return suggested_cords, None
         
         # 6. suggest points using add mode
         # b. add mode
@@ -146,7 +148,7 @@ class MeasurementPointAdvisor():
                                                       self.number_processes, 
                                                       self.budget, 
                                                       self.current_cost)
-            return suggested_cords
+            return suggested_cords, None
 
         
         # 6. suggest points using gpr mode
@@ -158,14 +160,15 @@ class MeasurementPointAdvisor():
         # c.4 get the top x points suggested by the GPR method that do fit into the available budget
         # c.5 create coordinates and suggest them
         elif self.selection_mode == "gpr":
-            suggested_cords = suggest_points_gpr_mode(self.experiment, 
-                                                      parameter_value_series, 
-                                                      possible_points, 
-                                                      self.selected_callpaths, 
-                                                      self.metric, 
-                                                      self.calculate_cost_manual, 
-                                                      self.processes, 
-                                                      self.number_processes, 
-                                                      self.budget,
-                                                      self.current_cost)
-            return suggested_cords
+            with ProgressWindow(self.main_widget, 'Generating models') as pbar:
+                suggested_cords, rep_numbers = suggest_points_gpr_mode(self.experiment,
+                                                        possible_points, 
+                                                        self.selected_callpaths, 
+                                                        self.metric, 
+                                                        self.calculate_cost_manual, 
+                                                        self.processes, 
+                                                        self.number_processes, 
+                                                        self.budget,
+                                                        self.current_cost,
+                                                        pbar)
+                return suggested_cords, rep_numbers

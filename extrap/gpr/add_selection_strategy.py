@@ -55,6 +55,7 @@ def suggest_points_add_mode(experiment, possible_points, selected_callpaths, met
     elif len(selected_callpaths) == 1:
         callpath = selected_callpaths[0]
 
+        #TODO: use modeler selected in gui
         modeler = experiment.modelers[0]
         model = modeler.models[callpath, metric]
         hypothesis = model.hypothesis
