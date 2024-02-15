@@ -33,7 +33,8 @@ class Measurement:
         if values is None:
             return
         values = np.array(values)
-        if keep_values:
+        self.keep_values = keep_values
+        if self.keep_values:
             self.values: Optional[np.typing.NDArray] = values
         else:
             self.values = None
@@ -47,7 +48,7 @@ class Measurement:
         return self.median if use_median else self.mean
 
     def add_value(self, value):
-        if not self.values:
+        if not self.keep_values:
             raise RuntimeError("Cannot add value, because the list of original values does not exist.")
         self.values = np.append(self.values, value)
         self.median = np.median(self.values)
