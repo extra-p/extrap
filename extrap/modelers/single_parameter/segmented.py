@@ -102,8 +102,11 @@ class SegmentedModeler(SingleParameterModeler):
         dataset_segmented = False
         if theta > 0.5:
             dataset_segmented = True
-        if np.nanmax(epsilon_values) > 4:
-            dataset_segmented = True
+        if len(epsilon_values)==1 and math.isnan(epsilon_values[0]):
+            dataset_segmented = False
+        else:
+            if np.nanmax(epsilon_values) > 4:
+                dataset_segmented = True
 
         # print("DEBUG dataset_segmented:",dataset_segmented)
         # print("DEBUG epsilon_values:",epsilon_values)

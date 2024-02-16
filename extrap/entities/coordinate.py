@@ -81,7 +81,7 @@ class Coordinate:
 
     def as_partial_tuple(self, except_param):
         return tuple(c for p, c in enumerate(self._values) if p != except_param)
-
+    
     def is_mostly_lower(self, other: 'Coordinate', except_param):
         return all(a <= b
                    for i, (a, b) in enumerate(zip(self._values, other._values))

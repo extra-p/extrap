@@ -2,6 +2,15 @@
 
 ***
 
+## Released version 4.2
+
+### Measurement point suggestion via GPR
+* The GUI features a view for measurment point suggestion
+* Several suggestion approaches help the user to complete or extend the set of available measurement points
+to further improve model accuracy, improve the noise resilience of the model, while optimizing modeling cost.
+
+***
+
 ## Released version 4.1
 
 ### Improved GUI
