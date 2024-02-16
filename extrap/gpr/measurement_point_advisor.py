@@ -14,7 +14,20 @@ from extrap.gui.components.ProgressWindow import ProgressWindow
 
 class MeasurementPointAdvisor():
 
-    def __init__(self, budget, processes, callpaths, metric, experiment, current_cost, manual_pms_selection, manual_parameter_value_series, calculate_cost_manual, number_processes, main_widget) -> None:
+    def __init__(self, 
+                 budget, 
+                 processes, 
+                 callpaths, 
+                 metric, 
+                 experiment, 
+                 current_cost, 
+                 manual_pms_selection, 
+                 manual_parameter_value_series, 
+                 calculate_cost_manual, 
+                 number_processes, 
+                 main_widget,
+                 model_generator) -> None:
+        
         self.budget = budget
         print("budget:",budget)
 
@@ -36,6 +49,8 @@ class MeasurementPointAdvisor():
         self.number_processes = number_processes
 
         self.main_widget = main_widget
+
+        self.model_generator = model_generator
 
         self.parameters = []
         for i in range(len(self.experiment.parameters)):
@@ -147,7 +162,8 @@ class MeasurementPointAdvisor():
                                                       self.processes, 
                                                       self.number_processes, 
                                                       self.budget, 
-                                                      self.current_cost)
+                                                      self.current_cost,
+                                                      self.model_generator)
             return suggested_cords, None
 
         
@@ -155,7 +171,6 @@ class MeasurementPointAdvisor():
         # c. gpr mode
         # c.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
         # c.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
-        #NOTE: the search space points should have a dict like for the costs of the remaining points for my case study analysis...
         # c.3 all of the data is used as input to the GPR method
         # c.4 get the top x points suggested by the GPR method that do fit into the available budget
         # c.5 create coordinates and suggest them
@@ -170,5 +185,6 @@ class MeasurementPointAdvisor():
                                                         self.number_processes, 
                                                         self.budget,
                                                         self.current_cost,
+                                                        self.model_generator,
                                                         pbar)
                 return suggested_cords, rep_numbers

@@ -5,14 +5,18 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-def suggest_points_add_mode(experiment, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes, budget, current_cost):
+def suggest_points_add_mode(experiment, possible_points, selected_callpaths, metric, calculate_cost_manual, process_parameter_id, number_processes, budget, current_cost, model_generator):
     
     # sum up the values from the selected callpaths
     if len(selected_callpaths) > 1:
         runtimes = {}
         for i in range(len(selected_callpaths)):
             callpath = selected_callpaths[i]
-            modeler = experiment.modelers[0]
+            modeler = None
+            for i in range(len(experiment.modelers)):
+                if experiment.modelers[i] == model_generator:
+                    modeler = experiment.modelers[i]
+                    break
             model = modeler.models[callpath, metric]
             hypothesis = model.hypothesis
             function = hypothesis.function
@@ -54,9 +58,11 @@ def suggest_points_add_mode(experiment, possible_points, selected_callpaths, met
     # use the values from the selected callpath
     elif len(selected_callpaths) == 1:
         callpath = selected_callpaths[0]
-
-        #TODO: use modeler selected in gui
-        modeler = experiment.modelers[0]
+        modeler = None
+        for i in range(len(experiment.modelers)):
+            if experiment.modelers[i] == model_generator:
+                modeler = experiment.modelers[i]
+                break
         model = modeler.models[callpath, metric]
         hypothesis = model.hypothesis
         function = hypothesis.function
@@ -94,7 +100,11 @@ def suggest_points_add_mode(experiment, possible_points, selected_callpaths, met
         runtimes = {}
         for i in range(len(experiment.callpaths)):
             callpath = experiment.callpaths[i]
-            modeler = experiment.modelers[0]
+            modeler = None
+            for i in range(len(experiment.modelers)):
+                if experiment.modelers[i] == model_generator:
+                    modeler = experiment.modelers[i]
+                    break
             model = modeler.models[callpath, metric]
             hypothesis = model.hypothesis
             function = hypothesis.function

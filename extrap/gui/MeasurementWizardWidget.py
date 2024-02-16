@@ -554,6 +554,9 @@ class MeasurementWizardWidget(QWidget):
             # get the selected callpath(s) in the tree
             selected_callpath = self.main_widget.get_selected_call_tree_nodes()
 
+            # get the currently used model from the GUI
+            model_gen = self.main_widget.get_current_model_gen()
+            
             # get parameter value series if manual selection
             if self.manual_pms_selection:
                 for i in range(len(self.experiment.parameters)):
@@ -579,7 +582,8 @@ class MeasurementWizardWidget(QWidget):
                                         manual_parameter_value_series=self.parameter_value_series,
                                         calculate_cost_manual=self.calculate_cost_manual,
                                         number_processes=number_processes,
-                                        main_widget=self.main_widget)
+                                        main_widget=self.main_widget,
+                                        model_generator=model_gen)
             
             point_suggestions, rep_numbers = mpa.suggest_points()
 
