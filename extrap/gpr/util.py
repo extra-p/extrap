@@ -221,7 +221,7 @@ def identify_selection_mode(experiment, min_points):
     if modeling_reuqirements_satisfied:
         if len(experiment.parameters) > 1:
             additional_point_exists = check_additional_point(experiment)
-            print("DEBUG additional_point_exists:",additional_point_exists)
+            #print("DEBUG additional_point_exists:",additional_point_exists)
             # if additional point is available suggest more points using gpr method
             if additional_point_exists:
                 selection_mode = "gpr"
