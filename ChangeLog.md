@@ -5,9 +5,13 @@
 ## Released version 4.2
 
 ### Measurement point suggestion via GPR
-* The GUI features a view for measurment point suggestion
+* The GUI features a view for measurement point suggestions.
 * Several suggestion approaches help the user to complete or extend the set of available measurement points
-to further improve model accuracy, improve the noise resilience of the model, while optimizing modeling cost.
+to improve model accuracy further and enhance the noise resilience of the model while optimizing modeling cost.
+
+### Segmented modeling
+* Support for segmented performance models with a single or multiple model parameters.
+* Extension of the available plotting features to support segmented models.
 
 ***
 
