@@ -29,10 +29,10 @@ class MeasurementPointAdvisor():
                  model_generator) -> None:
         
         self.budget = budget
-        print("budget:",budget)
+        #print("budget:",budget)
 
         self.processes = processes
-        print("processes:",processes)
+        #print("processes:",processes)
 
         self.experiment = experiment
 
@@ -55,10 +55,10 @@ class MeasurementPointAdvisor():
         self.parameters = []
         for i in range(len(self.experiment.parameters)):
             self.parameters.append(str(self.experiment.parameters[i]))
-        print("parameters:",self.parameters)
+        #print("parameters:",self.parameters)
 
         self.metric = metric
-        print("metric:",self.metric)
+        #print("metric:",self.metric)
 
         # these are tree nodes, need to convert them to actual callpaths manually
         self.selected_callpath_ids = []
@@ -69,8 +69,8 @@ class MeasurementPointAdvisor():
                 if str(callpaths[i].path) == str(self.experiment.callpaths[j]):
                     self.selected_callpath_ids.append(j)
                     break
-        print("selected callpaths:",self.selected_callpaths)
-        print("selected callpath ids:",self.selected_callpath_ids)
+        #print("selected callpaths:",self.selected_callpaths)
+        #print("selected callpath ids:",self.selected_callpath_ids)
 
         # set the minimum number of points required for modeling with the sparse modeler
         min_points = 0
@@ -100,7 +100,7 @@ class MeasurementPointAdvisor():
         # base -> suggest points to complete the lines of points for each parameter
         self.selection_mode = identify_selection_mode(self.experiment, min_points)
 
-        print("DEBUG selection_mode:",self.selection_mode)
+        #print("DEBUG selection_mode:",self.selection_mode)
 
 
     def suggest_points(self):
