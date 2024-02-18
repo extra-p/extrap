@@ -6,12 +6,10 @@
 # See the LICENSE file in the base directory for details.
 
 import copy
-import os
 from bisect import bisect_left
 from collections import namedtuple
 from itertools import groupby
 from typing import List, Sequence
-from pathlib import Path
 
 from extrap.entities.functions import SingleParameterFunction, ConstantFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis
@@ -21,16 +19,25 @@ from extrap.entities.terms import CompoundTerm
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
 import numpy as np
-import importlib_resources
 
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from .lazy_tensorflow import load_tensorflow
 
-from extrap.modelers.single_parameter.adaptive.data_generator import TrainingDataGenerator
+from PySide6 import QtGui
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
+
+try:
+    import extrapadaptivemodeler
+    from extrapadaptivemodeler.modeler.load_model import get_model
+    from extrapadaptivemodeler.modeler.lazy_tensorflow import load_tensorflow 
+
+except ImportError:
+    extrapadaptivemodeler = None
+
 from ..basic import SingleParameterModeler
 
 _NOISE_CATEGORIES = [0.0125, 0.025, 0.05, .1, .2, .4, .8]
-_ML_MODEL_NAME = 'normalizedTerms_newPoints'
 
 # The following constants are fixed for the provided ML model
 _BUCKET_COORDINATES = [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64]
@@ -94,10 +101,11 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
             noise = self.get_noise(mean_values, min_values, max_values)
 
             functions = self._predict_functions(positions, values, noise)
-            models = self._create_ml_models(functions, measurement_list)
+            if functions is not None:
+                models = self._create_ml_models(functions, measurement_list)
 
-            self._update_with_additional_basic_models(measurement_list, models, noise)
-            all_models.extend(models)
+                self._update_with_additional_basic_models(measurement_list, models, noise)
+                all_models.extend(models)
         return all_models
 
     def _update_with_additional_basic_models(self, measurement_list, models, noise):
@@ -127,45 +135,35 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
         return (positions * max_sp) / max_p, values / positions
 
     def _predict_functions(self, positions, values, noise_orig):
-        tf = load_tensorflow()
-        transformed_points, transformed_values_list = self._preprocess(positions, values)
-        bucket_indices = self._bucketize([(p, i + 1) for i, p in enumerate(transformed_points)])
-        noise_category_list = self._noise_category(noise_orig)
+        if extrapadaptivemodeler:
+            tf = load_tensorflow()
+            
+            transformed_points, transformed_values_list = self._preprocess(positions, values)
+            bucket_indices = self._bucketize([(p, i + 1) for i, p in enumerate(transformed_points)])
+            noise_category_list = self._noise_category(noise_orig)
 
-        top_k_classes = []
-        for noise_category, groups in groupby(zip(noise_category_list, transformed_values_list),
-                                              key=lambda ms: ms[0]):
-            transformed_values = np.array([v for _, v in groups])
-            ml_model = self._get_model(bucket_indices, noise_category, positions, tf)
+            top_k_classes = []
+            for noise_category, groups in groupby(zip(noise_category_list, transformed_values_list),
+                                                key=lambda ms: ms[0]):
+                transformed_values = np.array([v for _, v in groups])
+                ml_model, self._cached_mlmodels = get_model(bucket_indices, noise_category, positions, tf, self.retrain_epochs, self.retrain_examples_per_class, self._cached_mlmodels)
 
-            bucket_values = np.zeros((len(transformed_values), len(bucket_indices)))
-            for bi, pi in enumerate(bucket_indices):
-                if pi > 0:
-                    bucket_values[:, bi] = transformed_values[:, pi - 1]
+                bucket_values = np.zeros((len(transformed_values), len(bucket_indices)))
+                for bi, pi in enumerate(bucket_indices):
+                    if pi > 0:
+                        bucket_values[:, bi] = transformed_values[:, pi - 1]
 
-            # do not use model.predict() to prevent memory leak
-            prediction = ml_model(bucket_values)
-            top_k_classes.extend([int(c) for c in tf.math.top_k(prediction, 1).indices])
-        terms = (_TERMS[c] for c in top_k_classes)
-        functions = (SingleParameterFunction(copy.copy(t)) for t in terms)
-        return functions
-
-    def _get_model(self, bucket_indices, noise_category, positions, tf):
-        ml_model_key = (noise_category, tuple(positions))
-        if ml_model_key not in self._cached_mlmodels:
-            ml_model_path = os.path.join(os.path.dirname(__file__), _ML_MODEL_NAME+'.h5')
-            with importlib_resources.as_file(Path(ml_model_path)) \
-                    as model_file:
-                ml_model = tf.keras.models.load_model(model_file)
-            data_gen = TrainingDataGenerator(_TERMS, positions, bucket_indices)
-            data_gen.noise = noise_category
-            train_data = data_gen.create_data(self.retrain_examples_per_class)
-            # batch size is tensorflow default value (32)
-            ml_model.fit(train_data[0], train_data[1], batch_size=32, epochs=self.retrain_epochs)
-            self._cached_mlmodels[ml_model_key] = ml_model
+                # do not use model.predict() to prevent memory leak
+                prediction = ml_model(bucket_values)
+                top_k_classes.extend([int(c) for c in tf.math.top_k(prediction, 1).indices])
+            terms = (_TERMS[c] for c in top_k_classes)
+            functions = (SingleParameterFunction(copy.copy(t)) for t in terms)
+        
         else:
-            ml_model = self._cached_mlmodels[ml_model_key]
-        return ml_model
+            print("To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\nYou can do that using 'pip install extrap[adaptive_modeling]'.")
+            functions = None
+            
+        return functions
 
     def get_noise(self, mean_values, min_values, max_values):
         mean_values = mean_values.copy()
