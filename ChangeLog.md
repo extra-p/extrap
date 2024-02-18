@@ -13,6 +13,9 @@ to improve model accuracy further and enhance the noise resilience of the model 
 * Support for segmented performance models with a single or multiple model parameters.
 * Extension of the available plotting features to support segmented models.
 
+### Adaptive performance modeler
+* DNN based modeling approach.
+
 ***
 
 ## Released version 4.1
