@@ -194,6 +194,8 @@ class SmartMatcher(AbstractMatcher):
     def _normalize_name(name):
         result = name
 
+        result = re.sub(r"\[with.*\]", '', result)
+
         braces_idx = result.rfind(')')
         if braces_idx >= 0:
             result = result[:braces_idx + 1]
