@@ -40,7 +40,7 @@ class SelectorWidget(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         self.grid = QGridLayout(self)
-        self.grid.setContentsMargins(4, 4, 4, 4)
+        self.grid.setContentsMargins(6, 6, 6, 6)
         self.setLayout(self.grid)
 
         # Model selection

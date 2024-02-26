@@ -25,7 +25,7 @@ class ColorWidget(QWidget):
 
         self.setMinimumHeight(30)
         self.setMinimumWidth(200)
-        self.setContentsMargins(4, 4, 4, 4)
+        self.setContentsMargins(6, 6, 6, 6)
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         grid = QGridLayout(self)

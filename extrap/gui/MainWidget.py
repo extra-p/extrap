@@ -236,6 +236,7 @@ class MainWidget(QMainWindow):
 
         # Main menu bar
         menubar = self.menuBar()
+        menubar.setContentsMargins(-4, 0, 0, 0)
         menubar.setNativeMenuBar(True)
 
         file_menu = menubar.addMenu('&File')

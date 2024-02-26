@@ -25,7 +25,7 @@ class PostProcessingWidget(QWidget):
         self.main_widget = main_widget
 
         layout = QFormLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(6, 6, 6, 6)
 
         self.setLayout(layout)
 

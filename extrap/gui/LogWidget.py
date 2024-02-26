@@ -25,7 +25,7 @@ class LogWidget(QWidget):
 
     def initUI(self):
         layout = QGridLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(6, 6, 6, 6)
         # layout.setContentsMargins(10, 5, 10, 5)
         # layout.setMargin(0, 0, 0, 0)
         self.setLayout(layout)

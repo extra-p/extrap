@@ -33,7 +33,7 @@ class RankingWidget(QWidget):
 
     def init_ui(self):
         self.setLayout(self._layout)
-        self._layout.setContentsMargins(4, 4, 4, 4)
+        self._layout.setContentsMargins(6, 6, 6, 6)
         self._largest_label = QLabel("")
         self._layout.addWidget(self._largest_label, 0, 0)
         self._smallest_label = QLabel("")
