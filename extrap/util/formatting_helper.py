@@ -6,6 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 import math
+import re
 
 
 def replace_braces_recursively(name, lb, rb, replacement="{lb}…{rb}"):
@@ -31,6 +32,7 @@ def replace_braces_recursively(name, lb, rb, replacement="{lb}…{rb}"):
 
 
 def replace_method_parameters(name, replacement="{lb}…{rb}"):
+    name = re.sub(r"\[with.*\]", replacement.format(lb='[with', rb=']'), name)
     name = replace_braces_recursively(name, '<', '>', replacement)
     name = replace_braces_recursively(name, '(', ')', replacement)
     return name
