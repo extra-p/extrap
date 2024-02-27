@@ -28,6 +28,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install autopep8 pytest pytest-cov
         pip install .
+        sudo apt install libegl1
     - name: autopep8
       id: autopep8
       uses: peter-evans/autopep8@v1
