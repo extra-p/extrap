@@ -9,7 +9,7 @@ import copy
 from bisect import bisect_left
 from collections import namedtuple
 from itertools import groupby
-from typing import List, Sequence
+from typing import Sequence
 
 from extrap.entities.functions import SingleParameterFunction, ConstantFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis
@@ -22,7 +22,6 @@ import numpy as np
 
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
-from PySide6 import QtGui
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
