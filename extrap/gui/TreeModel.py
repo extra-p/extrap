@@ -9,19 +9,26 @@ from __future__ import annotations
 
 import copy
 from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING, List, Callable
+from typing import Optional, TYPE_CHECKING, List, Callable, Any
 
 import numpy
 from PySide6.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
-from extrap.entities.model import Model
+from extrap.entities.model import Model, SegmentedModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
+
+
+def _format_number_segmented_model(segmented_model: SegmentedModel, selector: Callable[[Model], Any]) -> str:
+    val = formatNumber(str(selector(segmented_model))) + "\n"
+    val += "\n".join(f"Model {i + 1}: " + formatNumber(str(selector(m)))
+                     for i, m in enumerate(segmented_model.segment_models))
+    return val
 
 
 class TreeModel(QAbstractItemModel):
@@ -73,7 +80,7 @@ class TreeModel(QAbstractItemModel):
         getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
         get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
+        if role != Qt.DisplayRole and role != Qt.ToolTipRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
         call_tree_node = index.internalPointer().data()
@@ -84,7 +91,7 @@ class TreeModel(QAbstractItemModel):
         if callpath is None:
             return "Invalid"
 
-        model = self.getSelectedModel(callpath)
+        model, _ = self.getSelectedModel(callpath)
         if model is None and index.column() != 0:
             return None
 
@@ -131,9 +138,9 @@ class TreeModel(QAbstractItemModel):
                 return [ann.icon(parameters=parameters,
                                  parameter_values=parameter_values)
                         for ann in model.annotations]
-            return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
+
             formula = model.hypothesis.function
             if self.selector_widget.asymptoticCheckBox.isChecked():
                 parameters = tuple(experiment.parameters)
@@ -141,17 +148,32 @@ class TreeModel(QAbstractItemModel):
             else:
                 parameters = self.selector_widget.getParameterValues()
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
-                res = formatNumber(str(formula.evaluate(parameters)))
+                if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                    res = _format_number_segmented_model(model, lambda m: m.hypothesis.function.evaluate(parameters))
+                else:
+                    res = formatNumber(str(formula.evaluate(parameters)))
                 numpy.seterr(**previous)
                 return res
         elif index.column() == 4:
-            return formatNumber(str(model.hypothesis.RSS))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.RSS)
+            else:
+                return formatNumber(str(model.hypothesis.RSS))
         elif index.column() == 5:
-            return formatNumber(str(model.hypothesis.AR2))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.AR2)
+            else:
+                return formatNumber(str(model.hypothesis.AR2))
         elif index.column() == 6:
-            return formatNumber(str(model.hypothesis.SMAPE))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.SMAPE)
+            else:
+                return formatNumber(str(model.hypothesis.SMAPE))
         elif index.column() == 7:
-            return formatNumber(str(model.hypothesis.RE))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.RE)
+            else:
+                return formatNumber(str(model.hypothesis.RE))
         return None
 
     def get_comparison_value(self, model):
@@ -189,13 +211,14 @@ class TreeModel(QAbstractItemModel):
         return name
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
+        experiment = self.main_widget.getExperiment()
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
         if model is None or metric is None:
             return None
         key = (callpath, metric)
         if key in model.models:
-            return model.models[key]  # might be None
+            return model.models[key], experiment  # might be None
         else:
             return None
 

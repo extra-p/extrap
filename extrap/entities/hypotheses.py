@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import math
 from typing import Sequence
 
 import numpy
@@ -23,6 +24,7 @@ class Hypothesis:
         self.function: Function = function
         self._RSS = 0
         self._rRSS = 0
+        self._nRSS = 0
         self._SMAPE = 0
         self._AR2 = 0
         self._RE = 0
@@ -37,6 +39,15 @@ class Hypothesis:
         if not self._costs_are_calculated:
             raise RuntimeError("Costs are not calculated.")
         return self._RSS
+
+    @property
+    def nRSS(self):
+        """
+        Return the nRSS.
+        """
+        if not self._costs_are_calculated:
+            raise RuntimeError("Costs are not calculated.")
+        return self._nRSS
 
     @property
     def rRSS(self):
@@ -98,6 +109,7 @@ class Hypothesis:
             minimum = min(m.median for m in training_measurements)
         else:
             minimum = min(m.mean for m in training_measurements)
+
         if minimum == 0:
             if abs(self.function.constant_coefficient - minimum) < phi:
                 self.function.constant_coefficient = 0
@@ -138,6 +150,7 @@ class Hypothesis:
 MAX_HYPOTHESIS = Hypothesis(Function(), False)
 MAX_HYPOTHESIS._RSS = float('inf')
 MAX_HYPOTHESIS._rRSS = float('inf')
+MAX_HYPOTHESIS._nRSS = float('inf')
 MAX_HYPOTHESIS._SMAPE = float('inf')
 MAX_HYPOTHESIS._AR2 = float('inf')
 MAX_HYPOTHESIS._RE = float('inf')
@@ -177,12 +190,14 @@ class ConstantHypothesis(Hypothesis):
         """
         self._AR2 = 1  # TODO: should this be calculated?
         smape = 0
+        actuals = []
         for measurement in measurements:
             predicted = self.function.constant_coefficient
             if self._use_median:
                 actual = measurement.median
             else:
                 actual = measurement.mean
+            actuals.append(actual)
 
             difference = predicted - actual
             self._RSS += difference * difference
@@ -199,6 +214,10 @@ class ConstantHypothesis(Hypothesis):
                 smape += abs(difference) / abssum * 2
 
         self._SMAPE = smape / len(measurements) * 100
+        if numpy.mean(actuals) != 0.0:
+            self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
+        else:
+            self._nRSS = math.nan
         self._costs_are_calculated = True
 
 
@@ -226,6 +245,9 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS += difference * difference
+        self._nRSS += math.sqrt(self._RSS) / numpy.mean(
+            numpy.array([m.value(self._use_median) for m in training_measurements])) / (len(training_measurements) + 1)
+
         if actual != 0:
             relative_difference = difference / actual
             self._RE += numpy.abs(relative_difference) / (len(training_measurements) + 1)
@@ -246,6 +268,7 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
+        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actual)
 
         relativeDifference = difference / actual
         self._rRSS = numpy.sum(relativeDifference * relativeDifference)
@@ -279,6 +302,7 @@ class SingleParameterHypothesis(Hypothesis):
             b_list = numpy.array([m.median for m in measurements])
         else:
             b_list = numpy.array([m.mean for m in measurements])
+
         points = numpy.array([m.coordinate[0] for m in measurements])
 
         a_list = [numpy.ones((1, len(points)))]
@@ -404,8 +428,8 @@ class MultiParameterHypothesis(Hypothesis):
         B = numpy.array(b_list)
         try:
             coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
-            if rank < A.shape[1]: # if rcond is to big the rank of A collapses and the coefficients are wrong
-                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1) # retry with rcond = machine precision
+            if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)  # retry with rcond = machine precision
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
             coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
@@ -425,6 +449,7 @@ class HypothesisSchema(BaseSchema):
     function = fields.Nested(FunctionSchema)
     _RSS = NumberField(data_key='RSS')
     _rRSS = NumberField(data_key='rRSS')
+    _nRSS = NumberField(data_key='nRSS')
     _SMAPE = NumberField(data_key='SMAPE')
     _AR2 = NumberField(data_key='AR2')
     _RE = NumberField(data_key='RE')

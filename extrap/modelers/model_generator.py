@@ -19,7 +19,6 @@ from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterModeler, ModelerSchema
 from extrap.modelers.modeler_options import modeler_options
-from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import Schema, TupleKeyDict
 
@@ -85,6 +84,7 @@ class ModelGenerator:
             model.callpath = callpath
             model.metric = metric
             model.measurements = self.experiment.measurements[(callpath, metric)]
+
         # add the modeler with the results to the experiment
         self.experiment.add_modeler(self)
 
@@ -94,10 +94,10 @@ class ModelGenerator:
         elif self is other:
             return True
         else:
-            return self.models == other.models and \
-                   self._modeler.NAME == other._modeler.NAME and \
-                   self._modeler.use_median == other._modeler.use_median and \
-                   modeler_options.equal(self._modeler, other._modeler)
+            return (self.models == other.models and
+                    self._modeler.NAME == other._modeler.NAME and
+                    self._modeler.use_median == other._modeler.use_median and
+                    modeler_options.equal(self._modeler, other._modeler))
 
 
 class ModelGeneratorSchema(Schema):

@@ -57,6 +57,42 @@ class TestOutput(unittest.TestCase):
             extrap.main,
             ['--print', '{metric}, {callpath}: {rss}/{smape} {model}', '--text', 'data/text/two_parameter_3.txt'])
 
+    def test_model_python(self):
+        self.assertOutputRegex(
+            r"time,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"time,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"flops,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"flops,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)",
+            extrap.main,
+            ['--print', '{metric}, {callpath}: {rss}/{smape} {model:python}', '--text',
+             'data/text/two_parameter_3.txt'])
+
+
+    #NOTE: there is no point in test like this, every time we change something in the modeler that leads to slightly different outputs
+    # all of these test will fail, instead we should have a test that checks general conversion capabilities using hardcoded models as strings
+    # that are not produced by the modeler or any data read from file
+    """def test_model_latex(self):
+        self.assertOutputRegex(
+            r"time,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
+            r"time,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
+            r"flops,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
+            r"flops,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$",
+            extrap.main,
+            ['--print', '{metric}, {callpath}: {rss}/{smape} {model:latex}', '--text',
+             'data/text/two_parameter_3.txt'])"""
+
     def test_invalid(self):
         with self.assertRaises(OutputFormatError):
             extrap.main(['--print', '{metric}, {a}', '--text', 'data/text/two_parameter_3.txt'])
@@ -140,6 +176,18 @@ class TestOutput(unittest.TestCase):
                                     "6.00E+01'5.00E+00\n")
         self.assertEqual(truth,
                          output.format_output(self.exp, r"{callpath},{metric}:{points:format:'{point:sep:'\''}'}"))
+
+    def test_point_formatting8(self):
+        truth = self._make_expected(
+            "2.00E+01\t1.00E+00 | 2.00E+01\t2.00E+00 | 2.00E+01\t3.00E+00 | 2.00E+01\t4.00E+00 | "
+            "2.00E+01\t5.00E+00 | 3.00E+01\t1.00E+00 | 3.00E+01\t2.00E+00 | 3.00E+01\t3.00E+00 | "
+            "3.00E+01\t4.00E+00 | 3.00E+01\t5.00E+00 | 4.00E+01\t1.00E+00 | 4.00E+01\t2.00E+00 | "
+            "4.00E+01\t3.00E+00 | 4.00E+01\t4.00E+00 | 4.00E+01\t5.00E+00 | 5.00E+01\t1.00E+00 | "
+            "5.00E+01\t2.00E+00 | 5.00E+01\t3.00E+00 | 5.00E+01\t4.00E+00 | 5.00E+01\t5.00E+00 | "
+            "6.00E+01\t1.00E+00 | 6.00E+01\t2.00E+00 | 6.00E+01\t3.00E+00 | 6.00E+01\t4.00E+00 | "
+            "6.00E+01\t5.00E+00\n")
+        self.assertEqual(truth,
+                         output.format_output(self.exp, r"{callpath},{metric}:{points:format:'{point:sep:'\t'}'}"))
 
     def test_point_formatting6(self):
         truth = self._make_expected(

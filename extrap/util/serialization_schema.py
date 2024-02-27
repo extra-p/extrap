@@ -259,3 +259,76 @@ class ListToMappingField(fields.List):
             return self.list_type(result)
         else:
             return result
+
+
+class VariantSchemaField(fields.Nested):
+    VARIANT_KEY = "$variant"
+
+    def __init__(self, default_schema, *alternatives: typing.Type[Schema], **kwargs):
+        self.alternatives = {type(a().create_object()).__name__: a() for a in alternatives}
+        super().__init__(default_schema, **kwargs)
+
+    def _serialize(self, value: typing.Any, attr: typing.Optional[str], obj: typing.Any, **kwargs):
+        schema = self.alternatives.get(type(value).__name__, None)
+        if schema:
+            result = schema.dump(value)
+            result[self.VARIANT_KEY] = type(value).__name__
+            return result
+        else:
+            return super()._serialize(value, attr, obj, **kwargs)
+
+    def _deserialize(self, value: typing.Any, attr: typing.Optional[str],
+                     data: typing.Optional[typing.Mapping[str, typing.Any]], **kwargs):
+        if self.VARIANT_KEY in value:
+            schema_name = value.pop(self.VARIANT_KEY)
+            return self.alternatives[schema_name].load(value)
+        else:
+            return super()._deserialize(value, attr, data, **kwargs)
+
+
+class NumpyField(fields.List):
+    import numpy
+
+    def __init__(self, **kwargs):
+        super().__init__(fields.Field, **kwargs)
+
+    def _deserialize(self, value, attr, obj, **kwargs):
+        stack = [value]
+
+        while stack:
+            elem = stack.pop()
+            for i, e in enumerate(elem):
+                if type(e) == list:
+                    stack.append(e)
+                elif type(e) == str:
+                    elem[i] = float(math.nan)
+                elif math.isfinite(e):
+                    continue
+                else:
+                    raise NotImplementedError()
+
+        arr = self.numpy.array(value)
+        return arr
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        list_val = value.tolist()
+
+        stack = [list_val]
+
+        while stack:
+            elem = stack.pop()
+            for i, e in enumerate(elem):
+                if type(e) == list:
+                    stack.append(e)
+                elif math.isfinite(e):
+                    continue
+                elif math.isnan(e):
+                    elem[i] = 'nan'
+                elif e == math.inf:
+                    elem[i] = 'inf'
+                elif e == -math.inf:
+                    elem[i] = '-inf'
+                else:
+                    raise NotImplementedError
+
+        return super()._serialize(list_val, attr, obj)

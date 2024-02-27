@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,10 +13,12 @@ import warnings
 from itertools import chain
 
 import extrap
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
 from extrap.fileio.file_reader import all_readers
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.fileio.io_helper import save_output
 from extrap.fileio.output import format_output
 from extrap.modelers import multi_parameter
@@ -33,8 +35,7 @@ def main(args=None, prog=None):
     # argparse
     modelers_list = list(set(k.lower() for k in
                              chain(single_parameter.all_modelers.keys(), multi_parameter.all_modelers.keys())))
-    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False,
-                                     formatter_class=WideHelpFormatter)
+    parser = argparse.ArgumentParser(prog=prog, description=extrap.__description__, add_help=False)
     positional_arguments = parser.add_argument_group("Positional arguments")
     basic_arguments = parser.add_argument_group("Optional arguments")
     basic_arguments.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
@@ -44,7 +45,7 @@ def main(args=None, prog=None):
                                  help="Show program's version number and exit")
     basic_arguments.add_argument("--log", action="store", dest="log_level", type=str.lower, default='warning',
                                  choices=['debug', 'info', 'warning', 'error', 'critical'],
-                                 help="Set program's log level (default: warning)")
+                                 help="Set program's log level (default: %(default)s)")
 
     input_options = parser.add_argument_group("Input options")
     group = input_options.add_mutually_exclusive_group(required=True)
@@ -53,16 +54,24 @@ def main(args=None, prog=None):
                            help=reader.DESCRIPTION)
     group.add_argument(ExperimentReader.CMD_ARGUMENT, action="store_true", default=False, dest=ExperimentReader.NAME,
                        help='Load Extra-P experiment and generate new models')
-    input_options.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
-                               choices=["weak", "strong"],
-                               help="Set weak or strong scaling when loading data from CUBE files (default: weak)")
+
+    names_of_scaling_conversion_readers = ", ".join(reader.NAME + " files" for reader in all_readers.values()
+                                                    if issubclass(reader, AbstractScalingConversionReader))
+
+    input_options.add_argument("--scaling", action="store", dest="scaling_type", default=ScalingType.WEAK,
+                               type=ScalingType, choices=ScalingType,
+                               help="Set scaling type when loading data from per-thread/per-rank files (" +
+                                    names_of_scaling_conversion_readers + ") (default: %(default)s)")
+    input_options.add_argument("--keep-values", action="store_true", default=False, dest='keep_values',
+                               help="Keeps the original values after import")
 
     modeling_options = parser.add_argument_group("Modeling options")
     modeling_options.add_argument("--median", action="store_true", dest="median",
                                   help="Use median values for computation instead of mean values")
     modeling_options.add_argument("--modeler", action="store", dest="modeler", default='default', type=str.lower,
                                   choices=modelers_list,
-                                  help="Selects the modeler for generating the performance models")
+                                  help="Selects the modeler for generating the performance models "
+                                       "(default: %(default)s)")
     modeling_options.add_argument("--options", dest="modeler_options", default={}, nargs='+', metavar="KEY=VALUE",
                                   action=ModelerOptionsAction,
                                   help="Options for the selected modeler")
@@ -74,18 +83,21 @@ def main(args=None, prog=None):
     output_options.add_argument("--out", action="store", metavar="OUTPUT_PATH", dest="out",
                                 help="Specify the output path for Extra-P results")
     output_options.add_argument("--print", action="store", dest="print_type", default="all",
-                                metavar='{all,callpaths,metrics,parameters,functions,FORMAT_STRING}',
+                                metavar='{all,all-python,all-latex,callpaths,metrics,parameters,functions,'
+                                        'functions-python,functions-latex,FORMAT_STRING}',
                                 help="Set which information should be displayed after modeling. Use one of "
-                                     "{all, callpaths, metrics, parameters, functions} or specify a "
-                                     "formatting string using placeholders "
-                                     f"(see {extrap.__documentation_link__}/output-formatting.md).")
+                                     "the presets or specify a formatting string using placeholders "
+                                     f"(see {extrap.__documentation_link__}/output-formatting.md). "
+                                     f"(default: %(default)s)")
     output_options.add_argument("--save-experiment", action="store", metavar="EXPERIMENT_PATH", dest="save_experiment",
                                 help="Saves the experiment including all models as Extra-P experiment "
                                      "(if no extension is specified, '.extra-p' is appended)")
     output_options.add_argument("--model-set-name", action="store", metavar="NAME", default='New model',
                                 dest="model_name", type=str,
-                                help="Sets the name of the generated set of models when outputting an "
-                                     "experiment (default: 'New model')")
+                                help="Sets the name of the generated set of models when outputting an experiment "
+                                     '(default: "%(default)s")')
+    output_options.add_argument("--disable-progress", action="store_true", dest="disable_progress", default=False,
+                                help="Disables the progress bar outputs of Extra-P to stdout and stderr")
 
     positional_arguments.add_argument("path", metavar="FILEPATH", type=str, action="store",
                                       help="Specify a file path for Extra-P to work with")
@@ -128,14 +140,25 @@ def main(args=None, prog=None):
         print_output = False
 
     if arguments.path is not None:
-        with ProgressBar(desc='Loading file') as pbar:
+        with ProgressBar(desc='Loading file', disable=arguments.disable_progress) as pbar:
             for reader in chain(all_readers.values(), [ExperimentReader]):
                 if getattr(arguments, reader.NAME):
                     file_reader = reader()
+
+                    if issubclass(reader, AbstractScalingConversionReader):
+                        file_reader.scaling_type = arguments.scaling_type
+                    elif arguments.scaling_type != ScalingType.WEAK:
+                        warnings.warn(
+                            f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
+
+                    if isinstance(file_reader, TKeepValuesReader):
+                        file_reader.keep_values = arguments.keep_values
+                    elif arguments.keep_values:
+                        warnings.warn(
+                            f"Keeping values is not supported by the {reader.NAME} reader.")
+
                     if reader.LOADS_FROM_DIRECTORY:
                         if os.path.isdir(arguments.path):
-                            if reader is CubeFileReader2:
-                                file_reader.scaling_type = arguments.scaling_type
                             experiment = file_reader.read_experiment(arguments.path, pbar)
                         else:
                             logging.error("The given path is not valid. It must point to a directory.")
@@ -169,13 +192,13 @@ def main(args=None, prog=None):
             if value is not None:
                 setattr(modeler, name, value)
 
-        with ProgressBar(desc='Generating models') as pbar:
+        with ProgressBar(desc='Generating models', disable=arguments.disable_progress) as pbar:
             # create models from data
             model_generator.model_all(pbar)
 
         if arguments.save_experiment:
             try:
-                with ProgressBar(desc='Saving experiment') as pbar:
+                with ProgressBar(desc='Saving experiment', disable=arguments.disable_progress) as pbar:
                     if not os.path.splitext(arguments.save_experiment)[1]:
                         arguments.save_experiment += '.extra-p'
                     experiment_io.write_experiment(experiment, arguments.save_experiment, pbar)
@@ -196,18 +219,6 @@ def main(args=None, prog=None):
     else:
         logging.error("No file path given to load files.")
         sys.exit(1)
-
-
-class WideHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
-
-    def __init__(self, *args, **kwargs):
-        try:
-            kwargs['width'] = 100
-            super().__init__(*args, **kwargs)
-        except TypeError:
-            warnings.warn("Wide argparse help formatter failed, falling back.")
-            del kwargs['width']
-            super().__init__(*args, **kwargs)
 
 
 if __name__ == "__main__":
