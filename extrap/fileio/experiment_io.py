@@ -31,11 +31,11 @@ def read_experiment(path, progress_bar=DUMMY_PROGRESS) -> Experiment:
             data = file.read(EXPERIMENT_DATA_FILE).decode("utf-8")
             progress_bar.update()
             try:
-                value_reader = ValueReader(file)
-                schema.set_value_io(value_reader)
-                experiment = schema.loads(data)
-                progress_bar.update()
-                return experiment
+                with ValueReader(file) as value_reader:
+                    schema.set_value_io(value_reader)
+                    experiment = schema.loads(data)
+                    progress_bar.update()
+                    return experiment
             except ValidationError as v_err:
                 raise FileFormatError(str(v_err)) from v_err
     except (IOError, zipfile.BadZipFile) as err:
