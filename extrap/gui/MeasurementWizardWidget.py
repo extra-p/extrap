@@ -33,7 +33,8 @@ class MeasurementWizardWidget(QWidget):
     def init_empty(self):
         self.setLayout(self.main_layout)
         self.empty_label = QLabel(self)
-        self.empty_label.setText("Please load a performance experiment.")
+        self.empty_label.setText('Please load a performance experiment with values<br>'
+                                 'Enable <b>keep values</b> during the import.')
         self.main_layout.addWidget(self.empty_label)
 
     

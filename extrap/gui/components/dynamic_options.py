@@ -50,6 +50,8 @@ class DynamicOptionsWidget(QWidget):
                 if option.explanation_above:
                     layout.addWidget(QLabel(option.explanation_above))
                 layout.addRow(self._determine_label(option), self._determine_field(option))
+                if option.explanation_below:
+                    layout.addWidget(QLabel(option.explanation_below))
             elif isinstance(option, DynamicOptionsGroup):
                 group = QGroupBox(name)
                 group.setToolTip(option.description)

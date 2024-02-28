@@ -120,7 +120,7 @@ class MainWidget(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         # Right side: Measurement Wizard
-        dock = QDockWidget("Measurement Point Selection Wizard", self)
+        dock = QDockWidget("Measurement Point Suggestion Wizard", self)
         self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
         dock.setWidget(self.measurementWizard_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
