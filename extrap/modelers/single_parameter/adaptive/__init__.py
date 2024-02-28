@@ -6,10 +6,13 @@
 # See the LICENSE file in the base directory for details.
 
 import copy
+import warnings
 from bisect import bisect_left
 from collections import namedtuple
 from itertools import groupby
 from typing import Sequence
+
+import numpy as np
 
 from extrap.entities.functions import SingleParameterFunction, ConstantFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis
@@ -18,18 +21,12 @@ from extrap.entities.model import Model
 from extrap.entities.terms import CompoundTerm
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
-import numpy as np
-
 from extrap.util.progress_bar import DUMMY_PROGRESS
-
-from PySide6.QtCore import *  # @UnusedWildImport
-from PySide6.QtGui import *  # @UnusedWildImport
-from PySide6.QtWidgets import *  # @UnusedWildImport
 
 try:
     import extrapadaptivemodeler
     from extrapadaptivemodeler.modeler.load_model import get_model
-    from extrapadaptivemodeler.modeler.lazy_tensorflow import load_tensorflow 
+    from extrapadaptivemodeler.modeler.lazy_tensorflow import load_tensorflow
 
 except ImportError:
     extrapadaptivemodeler = None
@@ -136,16 +133,18 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
     def _predict_functions(self, positions, values, noise_orig):
         if extrapadaptivemodeler:
             tf = load_tensorflow()
-            
+
             transformed_points, transformed_values_list = self._preprocess(positions, values)
             bucket_indices = self._bucketize([(p, i + 1) for i, p in enumerate(transformed_points)])
             noise_category_list = self._noise_category(noise_orig)
 
             top_k_classes = []
             for noise_category, groups in groupby(zip(noise_category_list, transformed_values_list),
-                                                key=lambda ms: ms[0]):
+                                                  key=lambda ms: ms[0]):
                 transformed_values = np.array([v for _, v in groups])
-                ml_model, self._cached_mlmodels = get_model(bucket_indices, noise_category, positions, tf, self.retrain_epochs, self.retrain_examples_per_class, self._cached_mlmodels)
+                ml_model, self._cached_mlmodels = get_model(bucket_indices, noise_category, positions, tf,
+                                                            self.retrain_epochs, self.retrain_examples_per_class,
+                                                            self._cached_mlmodels)
 
                 bucket_values = np.zeros((len(transformed_values), len(bucket_indices)))
                 for bi, pi in enumerate(bucket_indices):
@@ -157,11 +156,12 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
                 top_k_classes.extend([int(c) for c in tf.math.top_k(prediction, 1).indices])
             terms = (_TERMS[c] for c in top_k_classes)
             functions = (SingleParameterFunction(copy.copy(t)) for t in terms)
-        
+
         else:
-            print("To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\nYou can do that using 'pip install extrap[adaptive_modeling]'.")
+            warnings.warn("To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\n"
+                          "You can do that using 'pip install extrap[adaptive_modeling]'.")
             functions = None
-            
+
         return functions
 
     def get_noise(self, mean_values, min_values, max_values):
