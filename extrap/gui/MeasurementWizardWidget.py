@@ -713,7 +713,11 @@ class MeasurementWizardWidget(QWidget):
         if self.experiment is None:
             self.reset()
             return
-        
+
+        if any(v[0].values is None for v in self.experiment.measurements.values()):
+            self.reset()
+            return
+
         self.reset(len(self.experiment.parameters))
         
 
