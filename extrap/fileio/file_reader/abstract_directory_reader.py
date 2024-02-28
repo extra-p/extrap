@@ -12,6 +12,7 @@ import warnings
 from collections import defaultdict
 from pathlib import Path
 
+import extrap
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader import FileReader
 from extrap.util.dynamic_options import DynamicOptions
@@ -73,8 +74,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
                 warnings.warn(
                     f"Could not detect any parameter names in the name of folder: {folder_name}. "
                     f"Please follow the usage guide under "
-                    f"<a href=https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format>"
-                    f"https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format</a>.")
+                    f"<a href={extrap.__documentation_link__}/file-formats.md#cube-file-format>"
+                    f"{extrap.__documentation_link__}/file-formats.md#cube-file-format</a>.")
 
         # determine and remove non-constant parameters
 
@@ -85,6 +86,12 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
                     del pv[i]
 
         parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
+
+        if not parameter_names:
+            raise FileFormatError(f"Could not detect any parameter names. "
+                                  f"Please follow the usage guide under "
+                                  f"<a href={extrap.__documentation_link__}/file-formats.md#cube-file-format>"
+                                  f"{extrap.__documentation_link__}/file-formats.md#cube-file-format</a>.")
 
         return parameter_names, parameter_values
 
