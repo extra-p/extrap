@@ -11,6 +11,7 @@ import math
 from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.calltree import Node
@@ -30,7 +31,7 @@ class SelectorWidget(QWidget):
         super(SelectorWidget, self).__init__(parent)
         self.main_widget = main_widget
         self.tree_model = TreeModel(self)
-        self.parameter_sliders = list()
+        self.parameter_sliders: list[ParameterValueSlider] = []
         self.initUI()
         self._sections_switched = False
         self.min_value = 0
@@ -85,8 +86,8 @@ class SelectorWidget(QWidget):
 
         self.tree_display_select.currentIndexChanged.connect(select_view_type)
         self.toolbar.addWidget(self.tree_display_select)
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        spacer = QWidget(self.toolbar)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.toolbar.addWidget(spacer)
 
         self.asymptoticCheckBox = QCheckBox('Show model', self.toolbar)
@@ -115,6 +116,7 @@ class SelectorWidget(QWidget):
         for param in self.parameter_sliders:
             param.clearRowLayout()
             self.grid.removeWidget(param)
+            param.deleteLater()
         del self.parameter_sliders[:]
         experiment = self.main_widget.getExperiment()
         parameters = experiment.parameters
@@ -255,9 +257,9 @@ class SelectorWidget(QWidget):
         reply = QMessageBox.question(self,
                                      'Delete Current Model',
                                      "Are you sure to delete the current model?",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
             index = self.getModelIndex()
             experiment = self.main_widget.getExperiment()
             if index < 0:
@@ -270,9 +272,9 @@ class SelectorWidget(QWidget):
         reply = QMessageBox.question(self,
                                      'Delete Current Metric',
                                      "Are you sure to delete the current metric?",
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.No)
-        if reply == QMessageBox.Yes:
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                     QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
             index = self.metric_selector.currentIndex()
             metric = self.getSelectedMetric()
             if index < 0:

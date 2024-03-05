@@ -830,7 +830,7 @@ class GraphWidget(QWidget):
         pen = QPen(self.DATA_RANGE_COLOR)
         pen.setWidth(2)
         paint.setPen(pen)
-        paint.drawLine(x, min_y, x, max_y)
+        paint.drawLine(QPointF(x, min_y), QPointF(x, max_y))
 
         pen = QPen(self.DATA_POINT_COLOR)
         pen.setWidth(2)
@@ -839,15 +839,15 @@ class GraphWidget(QWidget):
             zip(outlier_x_absolute_pos_list, outlier_y_absolute_pos_list))
         for (x_cordinate, y_cordinate) in outlier_on_graph_list:
             # paint.drawPoint(x_cordinate, y_cordinate)
-            paint.drawLine(x_cordinate - 2, y_cordinate,
-                           x_cordinate + 2, y_cordinate)
+            paint.drawLine(QPointF(x_cordinate - 2, y_cordinate),
+                           QPointF(x_cordinate + 2, y_cordinate))
 
     @staticmethod
     def plotPointsOnGraph(paint, dataPoints):
         """ This function plots datapoints on the graph
         """
         for (x_cordinate, y_cordinate), (x_actual_val, y_actual_val) in dataPoints:
-            paint.drawPoint(x_cordinate, y_cordinate)
+            paint.drawPoint(QPointF(x_cordinate, y_cordinate))
             # displayString="(" + str(x_actual_val)+ "," + str(y_actual_val) + ")"
             # paint.drawText((x_cordinate-20), y_cordinate, displayString)
         # paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.name)
