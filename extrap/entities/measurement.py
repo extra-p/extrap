@@ -8,8 +8,9 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import math
-from typing import Optional
+from typing import Optional, Union, Tuple, Type
 
 import numpy as np
 from marshmallow import fields, post_load
@@ -19,6 +20,16 @@ from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.coordinate import Coordinate, CoordinateSchema
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.util.serialization_schema import Schema, NumberField
+
+
+@dataclasses.dataclass
+class ValueCount:
+    count: int = 0
+    repetitions: int = 1
+
+    @property
+    def data(self) -> tuple:
+        return self.count, self.repetitions
 
 
 class Measurement(CalculationElement):
@@ -34,6 +45,7 @@ class Measurement(CalculationElement):
         self.callpath: Callpath = callpath
         self.metric: Metric = metric
         if values is None:
+            self.count: Optional[ValueCount] = None
             return
         values = np.array(values)
         if keep_values:
@@ -45,6 +57,7 @@ class Measurement(CalculationElement):
         self.minimum: float = np.min(values)
         self.maximum: float = np.max(values)
         self.std: float = np.std(values)
+        self.count: Optional[ValueCount] = ValueCount(values.size)
 
     def value(self, use_median):
         return self.median if use_median else self.mean
@@ -58,6 +71,7 @@ class Measurement(CalculationElement):
         self.minimum = np.min(self.values)
         self.maximum = np.max(self.values)
         self.std = np.std(self.values)
+        self.count = ValueCount(len(self.values))
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
@@ -72,6 +86,7 @@ class Measurement(CalculationElement):
             self.values += other.values
         else:
             self.values = None
+        # TODO merge count
 
     def __repr__(self):
         return f"Measurement({self.coordinate}: {self.mean:0.6} median={self.median:0.6})"
@@ -262,7 +277,7 @@ class Measurement(CalculationElement):
             else:
                 variance = (other ** 2 * self.std ** 2) / self.mean ** 4
                 result.std = math.sqrt(variance)
-                
+
             if self.values:
                 result.values = other / self.values
             else:
@@ -287,6 +302,17 @@ class Measurement(CalculationElement):
         return copy.copy(self)
 
 
+class ValueCountSchema(Schema):
+    def create_object(self) -> Union[object, Tuple[type(NotImplemented), Type]]:
+        return ValueCount()
+
+    def dump(self, obj, *, many: bool = None):
+        return obj.data
+
+    def load(self, data, *, many: bool = None, partial=None, unknown: str = None):
+        return ValueCount(*data)
+
+
 class MeasurementSchema(Schema):
     coordinate = fields.Nested(CoordinateSchema)
     metric = fields.Nested(MetricSchema)
@@ -297,6 +323,7 @@ class MeasurementSchema(Schema):
     maximum = NumberField()
     std = NumberField()
     values = fields.Method('_store_values', '_load_values', allow_none=True, load_default=None)
+    count = fields.Nested(ValueCountSchema, allow_none=True)
 
     def _load_values(self, value):
         if value is None:
