@@ -87,7 +87,7 @@ class SelectorWidget(QWidget):
 
         self.tree_display_select.currentIndexChanged.connect(select_view_type)
         self.toolbar.addWidget(self.tree_display_select)
-        spacer = QWidget()
+        spacer = QWidget(self.toolbar)
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.toolbar.addWidget(spacer)
 
@@ -122,6 +122,7 @@ class SelectorWidget(QWidget):
         for param in self.parameter_sliders:
             param.clearRowLayout()
             self.grid.removeWidget(param)
+            param.deleteLater()
         del self.parameter_sliders[:]
         experiment = self.main_widget.getExperiment()
         parameters = experiment.parameters
