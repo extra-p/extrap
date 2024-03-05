@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QWidget, QGridLayout, QToolBar, QAbstractItemView,
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.entities.comparison_model_generator import ComparisonModelGenerator
 from extrap.gui.components.BasicTableModel import BasicTableModel
-from extrap.util.formatting_helper import format_number_plain_text
+from extrap.util.formatting_helper import format_number_plain_text, replace_method_parameters
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -24,7 +24,7 @@ class RankingWidget(QWidget):
         self._largest = []
         self._smallest = []
         self._headers = ['Value', 'Callpath']
-        self.list_length = 5
+        self.list_length = 10
 
         self.init_ui()
         self.main_widget = main_widget
@@ -79,7 +79,8 @@ class RankingWidget(QWidget):
                 if metric != selected_metric:
                     continue
                 res = model.hypothesis.function.evaluate(values)
-                result_list.append((res[1] - res[0], callpath.name))
+                short_name = '->'.join(replace_method_parameters(p) for p in callpath.parts())
+                result_list.append((res[1] - res[0], short_name))
 
             result_list.sort(key=itemgetter(0))
             self._largest_model.beginResetModel()
@@ -100,7 +101,8 @@ class RankingWidget(QWidget):
                 if metric != selected_metric:
                     continue
                 res = model.hypothesis.function.evaluate(values)
-                result_list.append((res, callpath.name))
+                short_name = '->'.join(replace_method_parameters(p) for p in callpath.parts())
+                result_list.append((res, short_name))
 
             result_list.sort(key=itemgetter(0))
             self._largest_model.beginResetModel()

@@ -34,6 +34,9 @@ class Callpath(NamedEntityWithTags):
         cp.tags.update(tags)
         return cp
 
+    def parts(self):
+        return self.name.split('->')
+
 
 class _EmptyCallpath(Callpath):
 
