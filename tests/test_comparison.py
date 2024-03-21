@@ -478,15 +478,16 @@ class TestComparison(TestCase):
         self.assertTrue(set(experiment.metrics) <= set(experiment1.metrics))
 
     def test_name_normalization(self):
-        self.assertEqual("test", SmartMatcher._normalize_name("test"))
-        self.assertEqual("test", SmartMatcher._normalize_name("test()"))
-        self.assertEqual("test", SmartMatcher._normalize_name("test(int, char*, void)"))
-        self.assertEqual("test", SmartMatcher._normalize_name("void test(int, char*, void)"))
-        self.assertEqual("test", SmartMatcher._normalize_name("T<> test(int, char*, void)"))
-        self.assertEqual("test", SmartMatcher._normalize_name("T<int> test(int, char*, void)"))
-        self.assertEqual("test", SmartMatcher._normalize_name("T<int(int)> test(int, char*, void)"))
-        self.assertEqual("test", SmartMatcher._normalize_name("int* test(T<int>, char*, void)"))
-        self.assertEqual("test", SmartMatcher._normalize_name(
+        smart_matcher = SmartMatcher()
+        self.assertEqual("test", smart_matcher._normalize_name("test"))
+        self.assertEqual("test", smart_matcher._normalize_name("test()"))
+        self.assertEqual("test", smart_matcher._normalize_name("test(int, char*, void)"))
+        self.assertEqual("test", smart_matcher._normalize_name("void test(int, char*, void)"))
+        self.assertEqual("test", smart_matcher._normalize_name("T<> test(int, char*, void)"))
+        self.assertEqual("test", smart_matcher._normalize_name("T<int> test(int, char*, void)"))
+        self.assertEqual("test", smart_matcher._normalize_name("T<int(int)> test(int, char*, void)"))
+        self.assertEqual("test", smart_matcher._normalize_name("int* test(T<int>, char*, void)"))
+        self.assertEqual("test", smart_matcher._normalize_name(
             "void test(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
-        self.assertEqual("FluxSpectrumAllVolumes::writeToFile", SmartMatcher._normalize_name(
+        self.assertEqual("FluxSpectrumAllVolumes::writeToFile", smart_matcher._normalize_name(
             " FluxSpectrumAllVolumes::writeToFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
