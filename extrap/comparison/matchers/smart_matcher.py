@@ -47,6 +47,7 @@ class SmartMatcher(AbstractMatcher):
         self._aggregation_strategy = SumAggregation(None)
 
         self.enable_cpu_gpu_comparison = True
+        self.name_normalization_rules = [('_gpu$', '')]
 
     @property
     def enable_cpu_gpu_comparison(self):
@@ -190,8 +191,7 @@ class SmartMatcher(AbstractMatcher):
         mg_map = {m.name: m for m in mg[1]}
         return {m.name: [m, mg_map[m.name]] for m in mg[0] if m.name in mg_map}
 
-    @staticmethod
-    def _normalize_name(name):
+    def _normalize_name(self, name):
         result = name
 
         result = re.sub(r"\[with.*\]", '', result)
@@ -205,6 +205,10 @@ class SmartMatcher(AbstractMatcher):
         space_idx = result.find(' ')
         if space_idx >= 0:
             result = result[space_idx + 1:]
+
+        for regex, replacement in self.name_normalization_rules:
+            result = re.sub(regex, replacement, result)
+
         return result
 
     def _merge_call_trees(self, parent: Node, parent1: Node, parent2: Node, path, matches, progress_bar):

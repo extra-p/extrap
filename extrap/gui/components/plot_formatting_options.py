@@ -11,6 +11,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout, QComboBox
 
 from extrap.gui.components.model_color_map import ModelColorMap
+from extrap.gui.components.switch_widget import SwitchWidget
 
 
 @dataclasses.dataclass
@@ -18,6 +19,7 @@ class PlotFormattingOptions:
     font_family: str = 'Arial'
     font_size: int = 10
     legend_font_size: int = 6
+    shorten_names: bool = True
 
 
 class PlotFormattingDialog(QDialog):
@@ -50,6 +52,9 @@ class PlotFormattingDialog(QDialog):
         self._colormap_selector.setCurrentText(self._model_color_map.name)
         self._colormap_selector.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         layout.addRow("Colormap", self._colormap_selector)
+        self._shorten_names_switch = SwitchWidget()
+        self._shorten_names_switch.setChecked(self._options.shorten_names)
+        layout.addRow("Shorten function names", self._shorten_names_switch)
 
         _dialog_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         _dialog_buttons.accepted.connect(self.accept)
@@ -63,5 +68,6 @@ class PlotFormattingDialog(QDialog):
         self._options.font_size = self._font_size_selector.value()
         self._options.legend_font_size = self._legend_font_size_selector.value()
         self._model_color_map.set_colormap(self._colormap_selector.currentText())
+        self._options.shorten_names = self._shorten_names_switch.isChecked()
 
         super().accept()

@@ -117,4 +117,7 @@ void extra_prof::cpu::energy::EnergyMeasurementSystem::start() {
     sampling.store(true, std::memory_order_relaxed);
     create_pthread_without_instrumentation(&samplingThread, NULL, &samplingThreadFunc, this);
     pthread_setname_np(samplingThread, "EP_Energy");
+    while (energy == 0) {
+        std::this_thread::yield();
+    }
 }

@@ -4,18 +4,22 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pyvista
-from PySide6.QtGui import QResizeEvent, QFont, QFontMetrics
+from PySide6.QtCore import Slot
+from PySide6.QtGui import QResizeEvent, QFont, QFontMetrics, QContextMenuEvent, QImageWriter
+from PySide6.QtWidgets import QMenu, QInputDialog
 from pyvista.plotting import parse_font_family
 from pyvistaqt import QtInteractor
 from vtkmodules.vtkCommonCore import vtkStringArray
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.entities.metric import Metric
+from extrap.gui.components import file_dialog
 from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.util.formatting_helper import format_number_ascii
 
@@ -29,6 +33,7 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
         self.main_widget: MainWidget = main_widget
 
         self.max_values = [2, 2]
+        self.cube_axes_actor = None
         super().__init__(parent)
 
     def setMax(self, axis, maxValue):
@@ -100,48 +105,6 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
 
         max_z = 0
 
-        # for model, callpath in zip(model_list, selected_call_nodes):
-        #     callpath_color = dict_callpath_color[callpath]
-        #     points = model.measurements
-        #     if not points:
-        #         continue
-        #     if parameter_x.id >= 0:
-        #         xs = np.array([m.coordinate[parameter_x.id] for m in points])
-        #     else:
-        #         xs = np.zeros(len(points))
-        #     if parameter_y.id >= 0:
-        #         ys = np.array([m.coordinate[parameter_y.id] for m in points])
-        #     else:
-        #         ys = np.full(len(points), max(min(np.min(xs), 0), 0))
-        #     in_range = (xs <= maxX) & (ys <= maxY)
-        #     xs, ys = xs[in_range], ys[in_range]
-        #
-        #     if not any(in_range):
-        #         continue
-        #
-        #     mean = np.array([m.mean for m in points])[in_range]
-        #     median = np.array([m.median for m in points])[in_range]
-        #     minimum = np.array([m.minimum for m in points])[in_range]
-        #     maximum = np.array([m.maximum for m in points])[in_range]
-        #     if len(maximum) > 0:
-        #         max_z = max(max_z, max(maximum))
-        #
-        #     # Draw points
-        #
-        #     minimum_points = np.array([xs, ys, minimum]).T
-        #     maximum_points = np.array([xs, ys, maximum]).T
-        #
-        #     self.add_points(np.array([xs, ys, mean]).T, color=callpath_color)
-        #     self.add_points(np.array([xs, ys, median]).T, color=callpath_color)
-        #     self.add_points(minimum_points, color=callpath_color)
-        #     self.add_points(maximum_points, color=callpath_color)
-        #
-        #     lines = np.ndarray((2 * minimum_points.shape[0], 3))
-        #     lines[0::2] = minimum_points
-        #     lines[1::2] = maximum_points
-        #
-        #     self.add_lines(lines, color=callpath_color)
-
         # Get the grid of the x and y values
         x = np.linspace(1.0, max(maxX, 2), 50)
         y = np.linspace(1.0, max(maxY, 2), 50)
@@ -168,8 +131,7 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
             for i, model_est in enumerate(model_list_estimation):
                 function = model_est.hypothesis.function
                 zs = self.calculate_z_optimized(X, Y, function)
-                original_zs = z_List[i * 2 + estimation_id][0]
-                zs_delta = np.abs(zs - original_zs) / 10
+                zs_delta = zs * 0.2
                 zs_upper = zs + zs_delta
                 zs_lower = zs - zs_delta
                 z_volumes_upper.append(zs_upper)
@@ -190,31 +152,45 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
             self.theme.font.fmt = '%.3e'
 
         labels = []
+        images = []
+        experiment = self.main_widget.getExperiment()
+        experiment_names = None
+        if isinstance(experiment, ComparisonExperiment):
+            experiment_names = experiment.experiment_names
 
         for i, (z, model_index) in enumerate(z_List):
             mesh = pyvista.StructuredGrid(X / maxX * 1000, Y / maxY * 1000, z.reshape(X.shape) / max_z * 1000)
             node = selected_call_nodes[i]
             color = dict_callpath_color.get_rgb(node)
+            if experiment_names:
+                label = '  ' + f'[{experiment_names[model_index]}] {node.name}'
+            else:
+                label = '  ' + node.name
             if model_index == 0:
-                self.add_mesh(mesh, color=color,
-                              opacity=0.5)
-                labels.append(('  ' + node.name, color))
+                self.add_mesh(mesh, color=color, lighting=True, opacity=1)
+                labels.append((label, color))
+                images.append(None)
             else:
                 mesh.texture_map_to_plane(inplace=True)
                 mesh.active_t_coords *= 50
-                texture = pyvista.Texture(np.array([[[255, 255, 255], color],
-                                                    [color, color]], dtype=np.uint8))
+                texture = pyvista.Texture(np.array([[[255, 255, 255], color], [color, color]], dtype=np.uint8))
+
                 texture.repeat = True
-                self.add_mesh(mesh, opacity=0.5, texture=texture)
+                self.add_mesh(mesh, opacity=1, lighting=True, texture=texture)
+                labels.append((label, color))
+                patch = pyvista.Texture(
+                    np.array([[color, color, color], [color, [255, 255, 255], color], [color, color, color]],
+                             dtype=np.uint8))
+                images.append(patch.to_image())
         for i, (z_upper, z_lower) in enumerate(zip(z_volumes_upper, z_volumes_lower)):
             mesh = pyvista.StructuredGrid(np.stack([X, X], axis=-1) / maxX * 1000,
                                           np.stack([Y, Y], axis=-1) / maxY * 1000,
                                           np.stack([z_upper.reshape(X.shape), z_lower.reshape(X.shape)],
                                                    axis=-1) / max_z * 1000)
-            self.add_mesh(mesh, color='yellow', lighting=True,
-                          opacity=0.3, show_edges=True, edge_color='white')
+            self.add_mesh(mesh, color=(240, 210, 0), lighting=True, opacity=0.4, show_edges=True, edge_color='white')
 
-            labels.append(('  Expectation', 'yellow'))
+            labels.append(('  Expectation', (240, 210, 0)))
+            images.append(None)
 
         self.add_axes_cube(maxX, maxY, max_z, x_label, y_label)
 
@@ -224,12 +200,21 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
         legend_height = fm.height() * 2 * len(labels) / self.height() + 5 * len(labels) / self.window_size[1]
         legend_with = (max(fm.horizontalAdvance(l) for l, _ in labels) + 2 * fm.height()) / self.width()
         legend_size = (legend_with, legend_height)
-        legend = self.add_legend(labels, face='rectangle', border=True, bcolor=(255, 255, 255), size=legend_size)
+        legend = self.add_legend(labels, face=None, border=True, bcolor=(255, 255, 255), size=legend_size)
+        for i, image in enumerate(images):
+            if image is not None:
+                legend.SetEntryIcon(i, image)
+            else:
+                color = labels[i][1]
+                patch = pyvista.Texture(np.array([[color, color, color],
+                                                  [color, color, color],
+                                                  [color, color, color]], dtype=np.uint8))
+                legend.SetEntryIcon(i, patch.to_image())
+            legend.SetEntryColor(i, (0, 0, 0))
+
         legend.SetBackgroundOpacity(0.5)
         legend.SetPadding(5)
         legend.SetPosition(1 - legend_with - 10 / self.height(), 1 - legend_height - 10 / self.height())
-        for i, _ in enumerate(labels):
-            legend.GetEntryTextProperty().SetColor(0.0, 0.0, 0.0)
 
         self.suppress_rendering = False
         self.render()
@@ -253,6 +238,7 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
             n_ylabels=5,
             n_zlabels=5,
         )
+        self.cube_axes_actor = cube_axes_actor
         cube_axes_actor.SetXAxisRange(0.0, maxX)
         cube_axes_actor.SetYAxisRange(0.0, maxY)
         cube_axes_actor.SetZAxisRange(0.0, max_z)
@@ -336,3 +322,43 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
 
         z_value = function.evaluate(points)
         return z_value
+
+    @Slot()
+    def perform_screenshot(self):
+        selected_callpaths = self.main_widget.get_selected_call_tree_nodes()
+        selected_metric = self.main_widget.get_selected_metric()
+
+        name_addition = "-"
+        if selected_metric:
+            name_addition = f"-{selected_metric}-"
+        if selected_callpaths:
+            name_addition += ','.join((c.name for c in selected_callpaths))
+
+        def _save(file_name):
+            self.screenshot(file_name, transparent_background=True, return_img=False)
+
+        initial_path = Path(self.main_widget.windowFilePath()).stem + name_addition
+        file_filter = ';;'.join(
+            [f"{str(f, 'utf-8').upper()} image (*.{str(f, 'utf-8')})" for f in QImageWriter.supportedImageFormats() if
+             str(f, 'utf-8') not in ['icns', 'cur', 'ico']])
+        dialog = file_dialog.showSave(self, _save, "Save Screenshot", initial_path, file_filter)
+        dialog.selectNameFilter("PNG image (*.png)")
+
+    @Slot()
+    def update_position(self):
+        x, ok = QInputDialog.getDouble(self, 'Set position', 'X')
+        if not ok:
+            return
+        y, ok = QInputDialog.getDouble(self, 'Set position', 'Y')
+        if not ok:
+            return
+        z, ok = QInputDialog.getDouble(self, 'Set position', 'Z')
+        if not ok:
+            return
+        self.set_position((x, y, z), render=True)
+
+    def contextMenuEvent(self, event: QContextMenuEvent):
+        menu = QMenu(self)
+        screenshot_action = menu.addAction('Screenshot')
+        screenshot_action.triggered.connect(self.perform_screenshot)
+        menu.exec(event.globalPos())

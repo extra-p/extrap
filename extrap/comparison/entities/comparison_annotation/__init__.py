@@ -18,7 +18,7 @@ from extrap.entities.annotations import Annotation, AnnotationSchema, Annotation
 
 class ComparisonAnnotation(Annotation):
     NAME = 'Comparison'
-    relative_tolerance = 1e-3
+    relative_tolerance = 0.2
 
     def __init__(self):
         self.function_a = None

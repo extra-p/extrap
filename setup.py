@@ -68,6 +68,8 @@ setup(
         "typing-extensions~=4.3.0",
         "msgpack~=1.0.3",
         "scipy~=1.5",
+        "pyvista~=0.42.1",
+        "pyvistaqt~=0.11.0",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'"
     ]
 )

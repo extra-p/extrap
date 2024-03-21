@@ -35,6 +35,8 @@ class Model:
 
     @cached_property
     def predictions(self):
+        if not self.measurements:
+            return []
         coordinates = numpy.array([m.coordinate for m in self.measurements])
         return self.hypothesis.function.evaluate(coordinates.transpose())
 
@@ -55,10 +57,10 @@ class Model:
         elif self is other:
             return True
         else:
-            return self.callpath == other.callpath and \
-                   self.metric == other.metric and \
-                   self.hypothesis == other.hypothesis and \
-                   self.measurements == other.measurements
+            return (self.callpath == other.callpath and
+                    self.metric == other.metric and
+                    self.hypothesis == other.hypothesis and
+                    self.measurements == other.measurements)
 
 
 class ModelSchema(BaseSchema):

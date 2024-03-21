@@ -41,15 +41,15 @@ class ParallelEfficiencyAnalysis(PostProcessAnalysis):
             function = ComputationFunction(v.hypothesis.function)
             res_param = ComputationFunction.get_param(param_idx)
             serial_function = function.sympy_function.subs(res_param, 1)
-            function = serial_function / function / res_param
+            function = serial_function / function
             hypothesis = copy.copy(v.hypothesis)
             hypothesis.function = function
 
             if v.measurements:
                 measurements = [
                     float(serial_function.subs(
-                        [(ComputationFunction.get_param(i), c) for i, c in enumerate(m.coordinate)])) / m /
-                    m.coordinate[param_idx] for m in v.measurements]
+                        [(ComputationFunction.get_param(i), c) for i, c in enumerate(m.coordinate)])) / m for m in
+                    v.measurements]
                 hypothesis.compute_cost(measurements)
             else:
                 measurements = None

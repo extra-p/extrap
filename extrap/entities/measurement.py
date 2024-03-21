@@ -46,6 +46,7 @@ class Measurement(CalculationElement):
         self.metric: Metric = metric
         if values is None:
             self.count: Optional[ValueCount] = None
+            self.values = None
             return
         values = np.array(values)
         if keep_values:

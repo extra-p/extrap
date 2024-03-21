@@ -45,11 +45,14 @@ class ParallelSpeedupAnalysis(PostProcessAnalysis):
             hypothesis = copy.copy(v.hypothesis)
             hypothesis.function = function
 
-            measurements = [
-                float(serial_function.subs(
-                    [(ComputationFunction.get_param(i), c) for i, c in enumerate(m.coordinate)])) / m /
-                m.coordinate[param_idx] for m in v.measurements]
-            hypothesis.compute_cost(measurements)
+            if v.measurements:
+                measurements = [
+                    float(serial_function.subs(
+                        [(ComputationFunction.get_param(i), c) for i, c in enumerate(m.coordinate)])) / m /
+                    m.coordinate[param_idx] for m in v.measurements]
+                hypothesis.compute_cost(measurements)
+            else:
+                measurements = None
 
             model = Model(hypothesis, *k)
             model.measurements = measurements

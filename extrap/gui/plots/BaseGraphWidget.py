@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import copy
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
@@ -19,6 +20,8 @@ from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.experiment_comparison import ComparisonExperiment
+from extrap.util.formatting_helper import replace_method_parameters
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -124,6 +127,8 @@ class GraphDisplayWindow(FigureCanvas):
         patches = list()
         for key, value in dict_callpath_color.items():
             labelName = str(key.name)
+            if self.main_widget.plot_formatting_options.shorten_names:
+                labelName = replace_method_parameters(labelName)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
             patch = mpatches.Patch(color=value, label=labelName)
@@ -153,9 +158,20 @@ class GraphDisplayWindow(FigureCanvas):
         selected_call_nodes = []
         for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
             if isinstance(model, ComparisonModel):
-                for m in model.models:
-                    model_list.append(m)
-                    selected_call_nodes.append(call_node)
+                if len(model_list1) == 1:
+                    comp_exp: ComparisonExperiment = self.main_widget.getExperiment()
+                    comp_call_nodes = []
+                    for m, name in zip(model.models, comp_exp.experiment_names):
+                        model_list.append(m)
+                        comp_call_node = copy.copy(call_node)
+                        comp_call_node.name = f'[{name}] ' + comp_call_node.name
+                        selected_call_nodes.append(comp_call_node)
+                        comp_call_nodes.append(comp_call_node)
+                    self.main_widget.model_color_map.update(comp_call_nodes)
+                else:
+                    for m in model.models:
+                        model_list.append(m)
+                        selected_call_nodes.append(call_node)
             else:
                 model_list.append(model)
                 selected_call_nodes.append(call_node)
