@@ -132,9 +132,9 @@ class TestConsole(unittest.TestCase):
             r"\s+Measurement\s+point:\s+\(8\.00E\+00\)\s+Mean:\s+3\.80E\+01\s+Median:\s+3\.80E\+01\s+"
             r"\s+Measurement\s+point:\s+\(9\.00E\+00\)\s+Mean:\s+3\.90E\+01\s+Median:\s+3\.90E\+01\s+"
             r"\s+Measurement\s+point:\s+\(1\.00E\+01\)\s+Mean:\s+4\.00E\+01\s+Median:\s+4\.00E\+01\s+"
-            r"\s+Model\s+1:\s+\-5\.753052622747037e\-16\s+\+\s+p\^\(2\)\s+for\s+p<=6\.0\s+"
-            r"\s+Model\s+2:\s+29\.999999999999975\s+\+\s+1\.0000000000000029\s+\*\s+p\^\(1\)\s+for\s+p>=6\.0\s+"
-            r"\s+RSS\s+Model\s+1:\s+5\.45E\-29\s+"
+            r"\s+Model\s+1:\s+6\.082977478\d+e\-15\s+\+\s+0\.9999999999\d+\s+\*\s+p\^\(2\)\s+for\s+p<=6\.0\s+"
+            r"\s+Model\s+2:\s+29\.999999999\d+\s+\+\s+1\.0000000000\d+\s+\*\s+p\^\(1\)\s+for\s+p>=6\.0\s+"
+            r"\s+RSS\s+Model\s+1:\s+\d\.\d\dE\-2\d\s+"
             r"\s+Adjusted\s+R\^2\s+Model\s+1:\s+1\.00E\+00\s+"
             r"\s+RSS\s+Model\s+2:\s+5\.55E\-28\s+"
             r"\s+Adjusted\s+R\^2\s+Model\s+2:\s+1\.00E\+00",

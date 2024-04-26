@@ -77,14 +77,37 @@ class TestSegmentedModeler(TestCaseWithFunctionAssertions):
         experiment = create_experiment(g, f, parameter_values, changing_point)
         functions = get_segmented_model(experiment)
 
+        self.assertEqual(len(functions), 2)
+
         term = CompoundTerm.create(2, 0)
         function = SingleParameterFunction(term)
-        function.constant_coefficient = -5.753052622747037e-16
+        function.constant_coefficient = 0
 
         term2 = CompoundTerm.create(1, 0)
         term2.coefficient = 1.0
         function2 = SingleParameterFunction(term2)
-        function2.constant_coefficient = 29.999999999999975
+        function2.constant_coefficient = 30
+
+        self.assertApproxFunction(function, functions[0])
+        self.assertApproxFunction(function2, functions[1])
+
+    def test_segmented_data_one_minimal_number_of_measurements(self):
+        parameter_values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        f = lambda p: p ** 2
+        g = lambda p: 50 + 4 * p
+        changing_point = 5
+
+        experiment = create_experiment(g, f, parameter_values, changing_point)
+        functions = get_segmented_model(experiment)
+
+        term = CompoundTerm.create(2, 0)
+        function = SingleParameterFunction(term)
+        function.constant_coefficient = 0
+
+        term2 = CompoundTerm.create(1, 0)
+        term2.coefficient = 4
+        function2 = SingleParameterFunction(term2)
+        function2.constant_coefficient = 50
 
         self.assertApproxFunction(function, functions[0])
         self.assertApproxFunction(function2, functions[1])
@@ -98,14 +121,16 @@ class TestSegmentedModeler(TestCaseWithFunctionAssertions):
         experiment = create_experiment(g, f, parameter_values, changing_point)
         functions = get_segmented_model(experiment)
 
+        self.assertEqual(len(functions), 2)
+
         term = CompoundTerm.create(0, 1, c=1)
         function = SingleParameterFunction(term)
-        function.constant_coefficient = -1.1467601473192458e-16
+        function.constant_coefficient = 0
 
         term = CompoundTerm.create(2, 0)
         term.coefficient = 1.0
         function2 = SingleParameterFunction(term)
-        function2.constant_coefficient = 4.258612552374011e-13
+        function2.constant_coefficient = 0
 
         self.assertApproxFunction(function, functions[0])
         self.assertApproxFunction(function2, functions[1])
@@ -122,19 +147,80 @@ class TestSegmentedModeler(TestCaseWithFunctionAssertions):
         term = CompoundTerm.create(2, 1, c=1)
         term.coefficient = 1.0
         function = SingleParameterFunction(term)
-        function.constant_coefficient = 1.2179330821573644e-11
+        function.constant_coefficient = 0
 
         self.assertApproxFunction(function, functions[0])
 
+    def test_exmple_two(self):
+        parameter_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        f = lambda p: 67 + 63 * p ** (1 / 4) * log2(p) ** 2
+        g = lambda p: 93 + 64 * p ** (5 / 3)
+        changing_point = 6
+
+        experiment = create_experiment(g, f, parameter_values, changing_point)
+        functions = get_segmented_model(experiment)
+
+        self.assertEqual(len(functions), 2)
+
+        term = CompoundTerm.create(1, 4, c=2)
+        term.coefficient = 63
+        function = SingleParameterFunction(term)
+        function.constant_coefficient = 67
+
+        term = CompoundTerm.create(5, 3, 0)
+        term.coefficient = 64
+        function2 = SingleParameterFunction(term)
+        function2.constant_coefficient = 93
+
+        self.assertApproxFunction(function, functions[0])
+        self.assertApproxFunction(function2, functions[1])
+
     def test_const_square_segmentation(self):
-        measuremnts = [Measurement(Coordinate(500), None, None, [4.1, 3.9, 4.0, 4.0, 4.1]),
-                       Measurement(Coordinate(1000), None, None, [4.1, 3.9, 4.0, 4.0, 4.1]),
-                       Measurement(Coordinate(2000), None, None, [4.1, 3.9, 4.0, 4.0, 4.1]),
-                       Measurement(Coordinate(4000), None, None, [16, 15.999, 16.01, 16.01, 15.99]),
-                       Measurement(Coordinate(8000), None, None, [64, 64, 64, 64.01, 63.99]),
-                       Measurement(Coordinate(16000), None, None, [256.01, 255.99, 256, 256]),
-                       ]
-        SegmentedModeler().model([measuremnts])
+        measurements = [Measurement(Coordinate(500), None, None, [4.1, 3.9, 4.0, 4.0, 4.1]),
+                        Measurement(Coordinate(1000), None, None, [4.1, 3.9, 4.0, 4.0, 4.1]),
+                        Measurement(Coordinate(2000), None, None, [4.1, 3.9, 4.0, 4.0, 4.1]),
+                        Measurement(Coordinate(4000), None, None, [16, 15.999, 16.01, 16.01, 15.99]),
+                        Measurement(Coordinate(8000), None, None, [64, 64, 64, 64.01, 63.99]),
+                        Measurement(Coordinate(16000), None, None, [256.01, 255.99, 256, 256]),
+                        ]
+        model = SegmentedModeler().model([measurements])
+        self.assertEqual(1, len(model))
+        self.assertFalse(isinstance(model[0].hypothesis.function, SegmentedFunction))
+
+        modeler = SegmentedModeler()
+        modeler.min_measurement_points = 3
+
+        model = modeler.model([measurements])
+        self.assertEqual(1, len(model))
+        self.assertTrue(isinstance(model[0].hypothesis.function, SegmentedFunction))
+
+    def test_linear_square_segmentation(self):
+        measurements = [Measurement(Coordinate(c), None, None, [c * 2]) for c in range(7)] + [
+            Measurement(Coordinate(c), None, None, [c ** 2 + 7 * 2]) for c in range(7, 15)]
+
+        modeler = SegmentedModeler()
+
+        model = modeler.model([measurements])
+        self.assertEqual(1, len(model))
+        function = model[0].hypothesis.function
+        self.assertTrue(isinstance(function, SegmentedFunction))
+        for m in measurements:
+            self.assertApprox(m.mean, function.evaluate(m.coordinate))
+
+    def test_unordered_measurements(self):
+        m1 = [Measurement(Coordinate(c), None, None, [c * 2]) for c in range(7)]
+        m2 = [Measurement(Coordinate(c), None, None, [c ** 2 + 7 * 2]) for c in range(7, 15)]
+
+        measurements = [val for pair in zip(m1, m2) for val in pair]
+
+        modeler = SegmentedModeler()
+
+        model = modeler.model([measurements])
+        self.assertEqual(1, len(model))
+        function = model[0].hypothesis.function
+        self.assertTrue(isinstance(function, SegmentedFunction))
+        for m in measurements:
+            self.assertApprox(m.mean, function.evaluate(m.coordinate))
 
     def test_segmented_function(self):
         segments = [SingleParameterFunction(CompoundTerm.create(1, 1, 0)),
