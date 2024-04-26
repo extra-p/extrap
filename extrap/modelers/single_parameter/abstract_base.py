@@ -14,7 +14,6 @@ import numpy
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import Hypothesis, SingleParameterHypothesis, MAX_HYPOTHESIS, ConstantHypothesis
 from extrap.entities.measurement import Measurement
-from extrap.entities.parameter import Parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.modeler_options import modeler_options
 
@@ -59,8 +58,8 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         numpy.seterr(**previous)
 
         # print smapes in debug mode
-        logging.debug("next hypothesis SMAPE: " + str(new.SMAPE) + ' RSS:' + str(new.RSS))
-        logging.debug("best hypothesis SMAPE: " + str(old.SMAPE) + ' RSS:' + str(old.RSS))
+        logging.debug("next hypothesis SMAPE: %g RSS: %g", new.SMAPE, new.RSS)
+        logging.debug("best hypothesis SMAPE: %g RSS: %g", old.SMAPE, old.RSS)
         if self.compare_with_RSS:
             return new.RSS < old.RSS
         return new.SMAPE < old.SMAPE
@@ -91,12 +90,12 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         # currently the constant hypothesis is the best hypothesis
         best_hypothesis = current_best
 
-        # search for the best hypothesis over all functions that can be build with the basic building blocks
+        # search for the best hypothesis over all functions that can be built with the basic building blocks
 
         for i, next_hypothesis in enumerate(candidate_hypotheses):
 
             if self.use_crossvalidation:
-                # use leave one out crossvalidation
+                # use leave one out cross validation
                 # cycle through points and leave one out per iteration
                 for element_id in range(len(measurements)):
                     # copy measurements to create the training sets
@@ -119,7 +118,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
 
                 # compute the model coefficients using all data
                 next_hypothesis.compute_coefficients(measurements)
-                logging.debug(f"single-parameter model {i}: " + next_hypothesis.function.to_string(Parameter('p')))
+                logging.debug("single-parameter model %i: %s", i, next_hypothesis.function)
             else:
                 # compute the model coefficients based on the training data
                 next_hypothesis.compute_coefficients(measurements)
@@ -136,8 +135,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
 
             # check if hypothesis is valid
             if not next_hypothesis.is_valid():
-                logging.info(
-                    "Numeric imprecision found. Model is invalid and will be ignored.")
+                logging.info("Numeric imprecision found. Model is invalid and will be ignored.")
 
             # compare the new hypothesis with the best hypothesis
             elif self.compare_hypotheses(best_hypothesis, next_hypothesis, measurements):

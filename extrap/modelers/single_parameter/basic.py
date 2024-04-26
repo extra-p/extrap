@@ -270,14 +270,14 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn(
-                "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
+            warnings.warn(f"Number of measurements for a parameter needs to be at least "
+                          f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # create a constant model
         constant_hypothesis, constant_cost = self.create_constant_model(measurements)
-        logging.debug("Constant model: " + constant_hypothesis.function.to_string())
-        logging.debug("Constant model cost: " + str(constant_cost))
+        logging.debug("Constant model: %s", constant_hypothesis.function)
+        logging.debug("Constant model cost: %g", constant_cost)
 
         # use constant model when cost is 0
         if constant_cost == 0:
