@@ -127,7 +127,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                     else:
                         groups[coordinate_p_] = [m]
 
-            # remove all measurements from the group which cover not the same range as the inital group
+            # remove all measurements from the group which cover not the same range as the initial group
             cms = iter(groups.values())
             first_list = next(cms)
             common_coords = set(m.coordinate.as_partial_tuple(p) for m in first_list)
@@ -139,9 +139,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             result_groups.append(groups)
 
         if self.single_parameter_point_selection == 'all' and not use_all:
-            warnings.warn(
-                "Could not use all measurement points. At least 25 measurements are needed; one for each "
-                "combination of parameters.")
+            warnings.warn(f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
+                          f"measurements are needed; one for each combination of parameters.")
 
         previous = np.seterr(invalid='ignore')
         combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
@@ -195,10 +194,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
 
-        # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
+        # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn("Number of measurements for each parameter needs to be at least 5"
-                          " in order to create a performance model.")
+            warnings.warn(f"Number of measurements for each parameter needs to be at least "
+                          f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling
@@ -357,9 +356,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         best_hypothesis.compute_cost(measurements)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-        logging.info(f"hypothesis 0: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
-                     f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
-                     f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
+        logging.info("hypothesis 0: %s --- smape: %g --- ar2: %g --- rss: %g --- rrss: %g --- re: %g",
+                     best_hypothesis.function, best_hypothesis.SMAPE, best_hypothesis.AR2, best_hypothesis.RSS,
+                     best_hypothesis.rRSS, best_hypothesis.RE)
 
         # find the best hypothesis
         for i, hypothesis in enumerate(hypotheses):
@@ -367,9 +366,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             hypothesis.compute_cost(measurements)
             hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-            logging.info(f"hypothesis {i}: {hypothesis.function} --- smape: {hypothesis.SMAPE} "
-                         f"--- ar2: {hypothesis.AR2} --- rss: {hypothesis.RSS} "
-                         f"--- rrss: {hypothesis.rRSS} --- re: {hypothesis.RE}")
+            logging.info("hypothesis %i: %s --- smape: %g --- ar2: %g --- rss: %g --- rrss: %g --- re: %g", i,
+                         hypothesis.function, hypothesis.SMAPE, hypothesis.AR2, hypothesis.RSS, hypothesis.rRSS,
+                         hypothesis.RE)
 
             term_contribution_big_enough = True
             # for all compound terms check if they are smaller than minimum allowed contribution
@@ -390,8 +389,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # add the best found hypothesis to the model list
         model = Model(best_hypothesis)
 
-        logging.info(f"best hypothesis: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
-                     f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
-                     f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
+        logging.info("best hypothesis: %s --- smape: %g --- ar2: %g --- rss: %g --- rrss: %g --- re: %g",
+                     best_hypothesis.function, best_hypothesis.SMAPE, best_hypothesis.AR2, best_hypothesis.RSS,
+                     best_hypothesis.rRSS, best_hypothesis.RE)
 
         return model

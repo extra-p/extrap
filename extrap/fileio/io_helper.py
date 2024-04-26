@@ -19,6 +19,7 @@ from extrap.entities.calltree import Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement
 from extrap.entities.metric import Metric
+from extrap.entities.model import SegmentedModel
 from extrap.util.exceptions import InvalidExperimentError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.string_formats import FunctionFormats
@@ -74,10 +75,17 @@ def format_functions(experiment, format: FunctionFormats = None):
     models = modeler.models
     text = ""
     for model in models.values():
-        hypothesis = model.hypothesis
-        function = hypothesis.function
-        function_string = function.to_string(*experiment.parameters, format=format)
-        text += function_string + "\n"
+        if isinstance(model, SegmentedModel):
+            counter = 1
+            for m in model.segment_models:
+                function_string = m.hypothesis.function.to_string(*experiment.parameters, format=format)
+                text += "Model " + str(counter) + ": " + function_string + "\n"
+                counter += 1
+        else:
+            hypothesis = model.hypothesis
+            function = hypothesis.function
+            function_string = function.to_string(*experiment.parameters, format=format)
+            text += function_string + "\n"
     return text
 
 
@@ -109,30 +117,65 @@ def format_all(experiment, format: FunctionFormats = None):
                 coordinate_text = coordinate_text[:-1]
                 coordinate_text += ")"
                 measurement = experiment.get_measurement(coordinate_id, callpath_id, metric_id)
-                if measurement == None:
+                if measurement is None:
                     value_mean = 0
                     value_median = 0
                 else:
                     value_mean = measurement.mean
                     value_median = measurement.median
                 text += f"\t\t{coordinate_text} Mean: {value_mean:.2E} Median: {value_median:.2E}\n"
-            try:
-                model = modeler.models[callpath, metric]
-            except KeyError as e:
-                model = None
+            model = modeler.models.get((callpath, metric))
             if model is not None:
-                hypothesis = model.hypothesis
-                function = hypothesis.function
-                rss = hypothesis.RSS
-                ar2 = hypothesis.AR2
-                function_string = function.to_string(*experiment.parameters, format=format)
+                if isinstance(model, SegmentedModel):
+                    hypotheses = []
+                    function_strings = []
+                    rss_values = []
+                    ar2_values = []
+                    for m in model.segment_models:
+                        hypotheses.append(m.hypothesis)
+                        function_strings.append(
+                            m.hypothesis.function.to_string(*experiment.parameters, format=format))
+                        rss_values.append(m.hypothesis.RSS)
+                        ar2_values.append(m.hypothesis.AR2)
+
+                else:
+                    hypothesis = model.hypothesis
+                    function = hypothesis.function
+                    function_string = function.to_string(*experiment.parameters, format=format)
+                    rss = hypothesis.RSS
+                    ar2 = hypothesis.AR2
             else:
                 rss = 0
                 ar2 = 0
                 function_string = "None"
-            text += "\t\tModel: " + function_string + "\n"
-            text += "\t\tRSS: {:.2E}\n".format(rss)
-            text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
+            if isinstance(model, SegmentedModel):
+                if len(model.changing_points) == 1:
+                    param_value = model.changing_points[0].coordinate[0]
+                    text += "\t\tModel 1: " + function_strings[0] + " for " + str(
+                        experiment.parameters[0]) + "<=" + str(param_value) + "\n"
+                    text += "\t\tModel 2: " + function_strings[1] + " for " + str(
+                        experiment.parameters[0]) + ">=" + str(param_value) + "\n"
+                    text += "\t\tRSS Model 1: {:.2E}\n".format(rss_values[0])
+                    text += "\t\tAdjusted R^2 Model 1: {:.2E}\n".format(ar2_values[0])
+                    text += "\t\tRSS Model 2: {:.2E}\n".format(rss_values[1])
+                    text += "\t\tAdjusted R^2 Model 2: {:.2E}\n".format(ar2_values[1])
+                elif len(model.changing_points) == 2:
+                    param_value_1 = model.changing_points[0].coordinate[0]
+                    param_value_2 = model.changing_points[1].coordinate[0]
+                    text += "\t\tModel 1: " + function_strings[0] + " for " + str(
+                        experiment.parameters[0]) + "<=" + str(param_value_1) + "\n"
+                    text += "\t\tModel 2: " + function_strings[1] + " for " + str(
+                        experiment.parameters[0]) + ">=" + str(param_value_2) + "\n"
+                    text += "\t\tRSS Model 1: {:.2E}\n".format(rss_values[0])
+                    text += "\t\tAdjusted R^2 Model 1: {:.2E}\n".format(ar2_values[0])
+                    text += "\t\tRSS Model 2: {:.2E}\n".format(rss_values[1])
+                    text += "\t\tAdjusted R^2 Model 2: {:.2E}\n".format(ar2_values[1])
+                else:
+                    raise NotImplementedError
+            else:
+                text += "\t\tModel: " + function_string + "\n"
+                text += "\t\tRSS: {:.2E}\n".format(rss)
+                text += "\t\tAdjusted R^2: {:.2E}\n".format(ar2)
     return text
 
 
@@ -146,6 +189,8 @@ def format_output(experiment, printtype):
         text = format_all(experiment)
     elif printtype == "ALL-PYTHON":
         text = format_all(experiment, FunctionFormats.PYTHON)
+    elif printtype == "ALL-LATEX":
+        text = format_all(experiment, FunctionFormats.LATEX)
     elif printtype == "CALLPATHS":
         text = format_callpaths(experiment)
     elif printtype == "METRICS":
@@ -156,6 +201,8 @@ def format_output(experiment, printtype):
         text = format_functions(experiment)
     elif printtype == "FUNCTIONS-PYTHON":
         text = format_functions(experiment, FunctionFormats.PYTHON)
+    elif printtype == "FUNCTIONS-LATEX":
+        text = format_functions(experiment, FunctionFormats.LATEX)
     else:
         return None
     return text
@@ -165,7 +212,7 @@ def save_output(text, path):
     """
     This method saves the output of the modeler, i.e. it's results to a text file at the given path.
     """
-    with open(path, "w+") as out:
+    with open(path, "w+", encoding="utf-8") as out:
         out.write(text)
 
 

@@ -29,6 +29,7 @@ class DynamicOption(Generic[T]):
     field: str = None
     on_change: Callable[[Any, T], None] = d_field(default=None, compare=False, hash=False)
     explanation_above: str = None
+    explanation_below: str = None
 
 
 @dataclass
@@ -92,7 +93,7 @@ def convert_dynamic_options(object_with_options):
     names = UniqueList()
     for base in object_with_options.__bases__:
         names.extend(base.__dict__)
-        
+
     names.extend(object_with_options.__dict__)
 
     for name in names:

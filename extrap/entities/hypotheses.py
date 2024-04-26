@@ -5,8 +5,8 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import math
 import warnings
-
 from typing import Sequence
 
 import numpy
@@ -25,6 +25,7 @@ class Hypothesis:
         self.function: Function = function
         self._RSS = 0
         self._rRSS = 0
+        self._nRSS = 0
         self._SMAPE = 0
         self._AR2 = 0
         self._RE = 0
@@ -44,6 +45,15 @@ class Hypothesis:
         if not self._costs_are_calculated:
             raise RuntimeError("Costs are not calculated.")
         return self._RSS
+
+    @property
+    def nRSS(self):
+        """
+        Return the nRSS.
+        """
+        if not self._costs_are_calculated:
+            raise RuntimeError("Costs are not calculated.")
+        return self._nRSS
 
     @property
     def rRSS(self):
@@ -140,6 +150,7 @@ class Hypothesis:
 MAX_HYPOTHESIS = Hypothesis(Function(), Measure.UNKNOWN)
 MAX_HYPOTHESIS._RSS = float('inf')
 MAX_HYPOTHESIS._rRSS = float('inf')
+MAX_HYPOTHESIS._nRSS = float('inf')
 MAX_HYPOTHESIS._SMAPE = float('inf')
 MAX_HYPOTHESIS._AR2 = float('inf')
 MAX_HYPOTHESIS._RE = float('inf')
@@ -177,8 +188,10 @@ class ConstantHypothesis(Hypothesis):
         """
         self._AR2 = 1  # TODO: should this be calculated?
         smape = 0
+        actuals = []
         for actual in Measurement.select_measure(measurements, self._use_measure):
             predicted = self.function.constant_coefficient
+            actuals.append(actual)
 
             difference = predicted - actual
             self._RSS += difference * difference
@@ -195,6 +208,10 @@ class ConstantHypothesis(Hypothesis):
                 smape += abs(difference) / abssum * 2
 
         self._SMAPE = smape / len(measurements) * 100
+        if numpy.mean(actuals) != 0.0:
+            self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
+        else:
+            self._nRSS = math.nan
         self._costs_are_calculated = True
 
 
@@ -222,6 +239,9 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS += difference * difference
+        self._nRSS += math.sqrt(self._RSS) / numpy.mean(
+            numpy.array([m.value(self._use_measure) for m in training_measurements])) / (len(training_measurements) + 1)
+
         if actual != 0:
             relative_difference = difference / actual
             self._RE += numpy.abs(relative_difference) / (len(training_measurements) + 1)
@@ -239,6 +259,7 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
+        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actual)
 
         relativeDifference = difference / actual
         self._rRSS = numpy.sum(relativeDifference * relativeDifference)
@@ -391,8 +412,8 @@ class MultiParameterHypothesis(Hypothesis):
         B = numpy.fromiter(Measurement.select_measure(measurements, self._use_measure), float, len(measurements))
         try:
             coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
-            if rank < A.shape[1]: # if rcond is to big the rank of A collapses and the coefficients are wrong
-                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1) # retry with rcond = machine precision
+            if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
+                coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)  # retry with rcond = machine precision
         except numpy.linalg.LinAlgError as e:
             # sometimes first try does not work
             coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)
@@ -412,6 +433,7 @@ class HypothesisSchema(BaseSchema):
     function = fields.Nested(FunctionSchema)
     _RSS = NumberField(data_key='RSS')
     _rRSS = NumberField(data_key='rRSS')
+    _nRSS = NumberField(data_key='nRSS')
     _SMAPE = NumberField(data_key='SMAPE')
     _AR2 = NumberField(data_key='AR2')
     _RE = NumberField(data_key='RE')

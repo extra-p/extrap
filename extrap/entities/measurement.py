@@ -86,7 +86,7 @@ class Measurement:
             raise ValueError("Unknown measure.")
 
     def add_value(self, value):
-        if not self.values:
+        if self.values is None:
             raise RuntimeError("Cannot add value, because the list of original values does not exist.")
         self.values = np.append(self.values, value)
         self.median = np.median(self.values)
@@ -145,7 +145,7 @@ class Measurement:
             self.mean *= other.mean
             self.minimum *= other.minimum
             self.maximum *= other.maximum
-            # Var(XY) = E(X²Y²) − (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
+            # Var(XY) = E(X²Y²) - (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
             self_var, other_var = self.std ** 2, other.std ** 2
             variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
             self.std = np.sqrt(variance)

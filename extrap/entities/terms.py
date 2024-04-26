@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import math
 from abc import ABC, abstractmethod
 from itertools import chain
 from numbers import Real
@@ -16,7 +17,7 @@ from marshmallow import fields, validate
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
-from extrap.util.serialization_schema import Schema, NumberField
+from extrap.util.serialization_schema import Schema, NumberField, NumpyField, VariantSchemaField
 from extrap.util.string_formats import FunctionFormats
 
 DEFAULT_PARAM_NAMES = (
@@ -97,10 +98,14 @@ class SimpleTerm(SingleParameterTerm):
         if self._term_type == "polynomial":
             if format == FunctionFormats.PYTHON:
                 return f"{parameter}**({self.exponent})"
+            elif format == FunctionFormats.LATEX:
+                return f"{{{parameter}}}^{{{self.exponent}}}"
             return f"{parameter}^({self.exponent})"
         elif self._term_type == "logarithm":
             if format == FunctionFormats.PYTHON:
                 return f"log2({parameter})**({self.exponent})"
+            elif format == FunctionFormats.LATEX:
+                return f"\\log2{{{parameter}}}^{{{self.exponent}}}"
             return f"log2({parameter})^({self.exponent})"
 
     def _evaluate_polynomial(self, parameter_value):
@@ -121,8 +126,8 @@ class SimpleTerm(SingleParameterTerm):
         elif self is other:
             return True
         else:
-            return self.exponent == other.exponent and \
-                self._term_type == other._term_type
+            return (self.exponent == other.exponent and
+                    self._term_type == other._term_type)
 
 
 class CompoundTerm(SingleParameterTerm):
@@ -148,6 +153,8 @@ class CompoundTerm(SingleParameterTerm):
         joiner = ' * '
         if format == FunctionFormats.PYTHON:
             joiner = '*'
+        elif format == FunctionFormats.LATEX:
+            joiner = '\\cdot '
         function_string = joiner.join(term_list)
         return function_string
 
@@ -175,8 +182,78 @@ class CompoundTerm(SingleParameterTerm):
         elif self is other:
             return True
         else:
-            return self.coefficient == other.coefficient and \
-                self.simple_terms == other.simple_terms
+            return (self.coefficient == other.coefficient and
+                    self.simple_terms == other.simple_terms)
+
+
+class SegmentedTerm(CompoundTerm):
+
+    def __init__(self, segments, intervals):
+        super().__init__()
+        self.simple_terms: List[SimpleTerm] = []
+        self.segments = segments
+        self.intervals = intervals
+
+    def reset_coefficients(self):
+        pass
+
+    def evaluate(self, parameter_value):
+        if not self.segments:
+            return super().evaluate(parameter_value)
+
+        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
+            parameter_value = parameter_value[0]
+
+        if isinstance(parameter_value, np.ndarray):
+            function_value = np.ndarray(parameter_value.shape, dtype=float)
+            int_start = self.intervals[:, 0]
+            int_end = self.intervals[:, 1]
+            int_start_mask = int_start.reshape(1, -1) <= parameter_value.reshape(-1, 1)
+            int_end_mask = parameter_value.reshape(-1, 1) <= int_end.reshape(1, -1)
+            mask = int_start_mask & int_end_mask
+            match = np.argmax(mask, axis=1)
+            for i, segment in enumerate(self.segments):
+                function_value[match == i] = segment.evaluate(parameter_value[match == i])
+            function_value[~np.any(mask, axis=1)] = math.nan
+            return function_value
+        else:
+            for (int_start, int_end), segment in zip(self.intervals, self.segments):
+                if int_start <= parameter_value <= int_end:
+                    return segment.evaluate(parameter_value)
+            return math.nan
+
+    def to_string(self, parameter='p', *, format: FunctionFormats = None):
+        """
+        Return a string representation of the function.
+        """
+
+        if format == FunctionFormats.LATEX:
+            return self.to_latex_string(parameter)
+
+        elif format == FunctionFormats.PYTHON:
+            function_string = "(" + self.segments[0].to_string(parameter, format=format)
+            function_string += f" if {parameter}<={self.intervals[0][1]} else"
+            function_string += self.segments[1].to_string(parameter, format=format)
+            if self.intervals[0][1] != self.intervals[1][0]:
+                function_string += f" if {parameter}>={self.intervals[1][0]} else math.nan)"
+
+        else:
+            function_string = "{" + self.segments[0].to_string(parameter, format=format)
+            function_string += f" for {parameter}<={self.intervals[0][1]}; "
+            function_string += self.segments[1].to_string(parameter, format=format)
+            function_string += f" for {parameter}>={self.intervals[1][0]}}}"
+
+        return function_string
+
+    def to_latex_string(self, parameter):
+        """
+        Return a math string (using latex encoding) representation of the function.
+        """
+        function_string = "(" + self.segments[0].to_latex_string(parameter).replace("$", "")
+        function_string += f" for {parameter}<={self.intervals[0][1]}\n"
+        function_string += self.segments[1].to_latex_string(*parameter).replace("$", "")
+        function_string += f" for {parameter}>={self.intervals[1][0]})"
+        return function_string
 
 
 class MultiParameterTerm(Term):
@@ -216,6 +293,8 @@ class MultiParameterTerm(Term):
         joiner = ' * '
         if format == FunctionFormats.PYTHON:
             joiner = '*'
+        if format == FunctionFormats.LATEX:
+            joiner = '\\cdot '
         function_string = joiner.join(term_list)
         return function_string
 
@@ -232,8 +311,8 @@ class MultiParameterTerm(Term):
         elif self is other:
             return True
         else:
-            return self.parameter_term_pairs == other.parameter_term_pairs and \
-                self.coefficient == other.coefficient
+            return (self.parameter_term_pairs == other.parameter_term_pairs and
+                    self.coefficient == other.coefficient)
 
 
 class TermSchema(Schema):
@@ -256,6 +335,15 @@ class CompoundTermSchema(TermSchema):
         return CompoundTerm()
 
 
+class SegmentedTermSchema(TermSchema):
+    simple_terms = fields.Constant([], load_only=True)
+    segments = fields.List(fields.Nested('SingleParameterFunctionSchema'))
+    intervals = NumpyField()
+
+    def create_object(self):
+        return SegmentedTerm([], [])
+
+
 class ListOfPairs(fields.Dict):
     def _serialize(self, value, attr, obj, **kwargs):
         return super(ListOfPairs, self)._serialize(dict(value), attr, obj, **kwargs)
@@ -266,7 +354,8 @@ class ListOfPairs(fields.Dict):
 
 
 class MultiParameterTermSchema(TermSchema):
-    parameter_term_pairs = ListOfPairs(keys=fields.Int(), values=fields.Nested(CompoundTermSchema))
+    parameter_term_pairs = ListOfPairs(keys=fields.Int(),
+                                       values=VariantSchemaField(CompoundTermSchema, SegmentedTermSchema))
 
     def create_object(self):
         return MultiParameterTerm()

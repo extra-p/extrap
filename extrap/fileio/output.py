@@ -220,6 +220,9 @@ def format_output(experiment: Experiment, printtype: str):
 
     placeholder_options, print_str = _parse_outer_brackets(printtype,
                                                            remove_str=True)  # convert from input string to list
+
+    placeholder_options = [option.replace("\\n", "\n").replace("\\t", "\t") for option in placeholder_options]
+
     text = ""
 
     print_coord = True
@@ -250,6 +253,8 @@ def format_output(experiment: Experiment, printtype: str):
                 temp = m.hypothesis.function.to_string(*experiment.parameters)
             elif o == "model:python":
                 temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.PYTHON)
+            elif o == "model:latex":
+                temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.LATEX)
             elif _re_points.fullmatch(o):
                 data = _re_points.fullmatch(o)
                 coordinate_text = format_points(data.group(2), experiment)
@@ -273,8 +278,6 @@ def format_output(experiment: Experiment, printtype: str):
             placeholder_results.append(temp)
 
         text += (print_str.format(*placeholder_results) + "\n")
-
-    text = text.replace("\\n", "\n").replace("\\t", "\t")
 
     return text
 

@@ -47,6 +47,7 @@ from extrap.gui.components.plot_formatting_options import PlotFormattingOptions,
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.deprecation import deprecated
 from extrap.util.dynamic_options import DynamicOptions
+from extrap.gui.MeasurementWizardWidget import MeasurementWizardWidget
 
 _SETTING_CHECK_FOR_UPDATES_ON_STARTUP = 'check_for_updates_on_startup'
 
@@ -117,6 +118,12 @@ class MainWidget(QMainWindow):
         dock = QDockWidget("Modeler", self)
         self.modeler_widget = ModelerWidget(self, dock)
         dock.setWidget(self.modeler_widget)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+
+        # Right side: Measurement Wizard
+        dock = QDockWidget("Measurement Point Suggestion Wizard", self)
+        self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
+        dock.setWidget(self.measurementWizard_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         # bottom widget
@@ -299,6 +306,7 @@ class MainWidget(QMainWindow):
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
+        self.measurementWizard_widget.experimentChanged()
         self.experiment_change = False
         self.updateMinMaxValue()
         self.update()

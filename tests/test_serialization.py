@@ -21,10 +21,11 @@ from extrap.entities.measurement import Measurement
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.abstract_modeler import ModelerSchema
 from extrap.modelers.model_generator import ModelGenerator
+from tests.serialization_testcase import BasicExperimentSerializationTest, BasicMPExperimentSerializationTest
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 
 
-class TestSingleParameter(unittest.TestCase):
+class TestSingleParameter(BasicExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/one_parameter_1.txt")
@@ -33,35 +34,8 @@ class TestSingleParameter(unittest.TestCase):
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
-    def test_setup(self):
-        self.setUpClass()
 
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
-
-
-class TestSingleParameterAfterModeling(unittest.TestCase):
+class TestSingleParameterAfterModeling(BasicExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/one_parameter_1.txt")
@@ -70,34 +44,6 @@ class TestSingleParameterAfterModeling(unittest.TestCase):
         # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
-
-    def test_setup(self):
-        self.setUpClass()
-
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-        pass
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
 
 
 class TestSerialization(unittest.TestCase):
@@ -196,7 +142,7 @@ class TestCompatibilityWithMeanMedianOnlyVersions(unittest.TestCase):
             self.assertEqual(correct_measure, model.hypothesis._use_measure)
 
 
-class TestMultiParameter(unittest.TestCase):
+class TestMultiParameter(BasicMPExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
@@ -205,35 +151,8 @@ class TestMultiParameter(unittest.TestCase):
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
-    def test_setup(self):
-        self.setUpClass()
 
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
-
-
-class TestMultiParameterAfterModeling(unittest.TestCase):
+class TestMultiParameterAfterModeling(BasicMPExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
@@ -242,34 +161,6 @@ class TestMultiParameterAfterModeling(unittest.TestCase):
         # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
-
-    def test_setup(self):
-        self.setUpClass()
-
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-        pass
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
 
 
 if __name__ == '__main__':

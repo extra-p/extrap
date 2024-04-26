@@ -33,7 +33,7 @@ and their matching options are:
 - `{metric}`
 - `{callpath}`
 - `{model}`
-    - formatting options: `default`,`python`
+    - formatting options: _default_ (if nothing is specified),`python`,`latex`
 - `{smape}`
 - `{rrss}`
 - `{rss}`
