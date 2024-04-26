@@ -15,7 +15,7 @@ import numpy as np
 from extrap.entities.functions import SegmentedFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.measurement import Measurement
-from extrap.entities.model import Model, SegmentedModel
+from extrap.entities.model import SegmentedModel
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
 
@@ -31,6 +31,11 @@ class SegmentedModeler(SingleParameterModeler):
     NAME = 'Segmented'
     DESCRIPTION = "Modeler for single-parameter models; traverses the search-space of all defined hypotheses. Able to detect segmented behavior in measurements. When segmented data is found the modeler will return two models."
 
+    theta_threshold = 0.5
+    n_rss_threshold = 0.1
+    epsilon_threshold = 4
+    eta = 10 ** -16  # small value
+
     def __init__(self):
         """
         Initialize SegmentedParameterModeler object.
@@ -43,173 +48,96 @@ class SegmentedModeler(SingleParameterModeler):
         """
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
-        if len(measurements) < self.min_measurement_points:
-            warnings.warn(
-                "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
+        if len(measurements) < self.min_measurement_points * 2 - 1:
+            warnings.warn("Number of measurements for a parameter needs to be at least "
+                          f"{self.min_measurement_points * 2 - 1} in order to create a segmented performance model.")
+
+        measurements = sorted(measurements, key=lambda m: m.coordinate)
 
         # identify subsets
-        subsets = []
         nr_subsets = len(measurements) - (self.min_measurement_points - 1)
-        # print("DEBUG nr_subsets:",nr_subsets)
-        for i in range(nr_subsets):
-            subset = []
-            for j in range(self.min_measurement_points):
-                subset.append(measurements[i + j])
-            # print("subset:",subset)
-            subsets.append(subset)
-        # print("DEBUG subsets:",subsets)
+        logging.debug("Nr. of subsets: %i", nr_subsets)
+        subsets = [measurements[i:i + self.min_measurement_points] for i in range(nr_subsets)]
+        logging.debug("Subsets: %s", subsets)
 
         # create a model for each subset
-        models = []
+        subset_hypotheses = []
         for subset in subsets:
-
             # create a constant model
             constant_hypothesis, constant_cost = self.create_constant_model(subset)
-            logging.debug("Constant model: " + constant_hypothesis.function.to_string())
-            logging.debug("Constant model cost: " + str(constant_cost))
 
             # use constant model when cost is 0
             if constant_cost == 0:
-                logging.debug("Using constant model.")
-                models.append(Model(constant_hypothesis))
+                subset_hypotheses.append(constant_hypothesis)
 
             # otherwise start searching for the best hypothesis based on the PMNF
             else:
-                logging.debug("Searching for a single-parameter model.")
                 # search for the best single parameter hypothesis
                 hypotheses_generator = self.build_hypotheses(subset)
                 best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, subset,
                                                             constant_hypothesis)
-                models.append(best_hypothesis)
+                subset_hypotheses.append(best_hypothesis)
 
-        # print("DEBUG models:",models)
-        nRSS_values = []
-        for m in models:
-            # print("nRSS:",m._nRSS)
-            nRSS_values.append(abs(m._nRSS))
-            # print(str(m.function))
+        logging.debug("Subset hypotheses: %s", subset_hypotheses)
+        n_rss_values = np.array([abs(m.nRSS) for m in subset_hypotheses])
+        theta = np.max(n_rss_values)
+        logging.debug("nRSS values: %s", n_rss_values)
 
-        # print(nRSS_values)
-        theta = max(nRSS_values)
+        epsilon_values = np.ndarray(len(subsets))
+        epsilon_values[0] = -math.inf
+        epsilon_values[1:] = n_rss_values[1:] / (n_rss_values[:-1] + self.eta)
+        logging.debug("Epsilon values: %s", epsilon_values)
 
-        epsilon_values = []
-        for i in range(len(subsets)):
-            if i == 0:
-                epsilon_values.append(-math.inf)
-            else:
-                epsilon_values.append(nRSS_values[i] / (nRSS_values[i - 1] + 0.000000001))
-
-        dataset_segmented = False
-        if theta > 0.5:
-            dataset_segmented = True
-        if len(epsilon_values)==1 and math.isnan(epsilon_values[0]):
+        dataset_segmented = theta > self.theta_threshold or np.nanmax(epsilon_values) > self.epsilon_threshold
+        if len(epsilon_values) == 1 and math.isnan(epsilon_values[0]):
             dataset_segmented = False
+
+        if not dataset_segmented:
+            return super().create_model(measurements)
+
+        logging.debug("Detected segmentation")
+
+        pattern = np.zeros_like(n_rss_values, dtype=bool)
+        pattern[n_rss_values >= self.n_rss_threshold] = 1
+        pattern[epsilon_values > self.epsilon_threshold] = 1
+        logging.debug("Segmentation pattern: %s", pattern)
+
+        num_ones = np.sum(pattern)
+
+        indices = [i for i, m in enumerate(pattern) if m == 1]
+        index = indices[num_ones // 2]
+
+        if num_ones == self.min_measurement_points - 2:
+            subset = subsets[index]
+            change_point = [subset[self.min_measurement_points // 2]]
         else:
-            if np.nanmax(epsilon_values) > 4:
-                dataset_segmented = True
+            subset = subsets[index - 1]
+            change_point = [subset[self.min_measurement_points // 2], subset[self.min_measurement_points // 2 + 1]]
 
-        # print("DEBUG dataset_segmented:",dataset_segmented)
-        # print("DEBUG epsilon_values:",epsilon_values)
+        logging.debug("Change point: %s", change_point)
 
-        if dataset_segmented:
+        # if the change point is a common point in both sets
+        if len(change_point) == 1:
+            index = measurements.index(change_point[0])
+            final_subsets = [measurements[:index + 1], measurements[index:]]
 
-            pattern = ""
-            for i in range(len(nRSS_values)):
-                nRSS = nRSS_values[i]
-                epsilon = epsilon_values[i]
-                if nRSS >= 0.1:
-                    pattern += "1"
-                elif epsilon > 4:
-                    pattern += "1"
-                else:
-                    pattern += "0"
-
-            # print("DEBUG pattern:",pattern)
-
-            import re
-            index = [m.start() for m in re.finditer(r"1", pattern)][2]
-            # print("DEBUG index:",index)
-            ones = 0
-            for c in pattern:
-                if c == "1":
-                    ones += 1
-            # print("DEBUG ones:",ones)
-            change_point = None
-            if ones == 3:
-                subset = subsets[index - 1]
-                change_point = subset[2]
-            else:
-                subset = subsets[index - 1]
-                change_point = [subset[2], subset[3]]
-
-            # print("DEBUG change_point:",change_point)
-            models = []
-            # if the change point is a common point in both sets
-            if isinstance(change_point, Measurement):
-                index = measurements.index(change_point)
-                # print("DEBUG index:",index)
-                subsets = []
-                subsets.append(measurements[:index])
-                subsets.append(measurements[index:])
-
-            # if the change point is a point between to point of the measurements
-            else:
-                index_1 = measurements.index(change_point[0])
-                index_2 = measurements.index(change_point[1])
-                # print("DEBUG index:",index_1, index_2)
-                subsets = []
-                subsets.append(measurements[:index_1])
-                subsets.append(measurements[index_2:])
-                # print("DEBUG subsets:",subsets)
-
-            for subset in subsets:
-                # create a constant model
-                constant_hypothesis, constant_cost = self.create_constant_model(subset)
-                logging.debug("Constant model: " + constant_hypothesis.function.to_string())
-                logging.debug("Constant model cost: " + str(constant_cost))
-
-                # use constant model when cost is 0
-                if constant_cost == 0:
-                    logging.debug("Using constant model.")
-                    models.append(Model(constant_hypothesis))
-
-                # otherwise start searching for the best hypothesis based on the PMNF
-                else:
-                    logging.debug("Searching for a single-parameter model.")
-                    # search for the best single parameter hypothesis
-                    hypotheses_generator = self.build_hypotheses(subset)
-                    best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, subset,
-                                                                constant_hypothesis)
-                    models.append(Model(best_hypothesis))
-
-            if isinstance(change_point, Measurement):
-                intervals = [(-math.inf, change_point.coordinate[0]), (change_point.coordinate[0], math.inf)]
-                change_point = [change_point]
-            else:
-                intervals = [(-math.inf, change_point[0].coordinate[0]), (change_point[1].coordinate[0], math.inf)]
-
-            function = SegmentedFunction([m.hypothesis.function for m in models], intervals)
-            hypothesis = SingleParameterHypothesis(function, self.use_median)
-            hypothesis.compute_cost(measurements)
-            hypothesis.compute_adjusted_rsquared(self.create_constant_model(measurements)[1], measurements)
-            return SegmentedModel(hypothesis, models, change_point)
-
+        # if the change point is a point between two points of the measurements
         else:
-            # create a constant model
-            constant_hypothesis, constant_cost = self.create_constant_model(measurements)
-            logging.debug("Constant model: " + constant_hypothesis.function.to_string())
-            logging.debug("Constant model cost: " + str(constant_cost))
+            index_1 = measurements.index(change_point[0])
+            index_2 = measurements.index(change_point[1])
+            final_subsets = [measurements[:index_1 + 1], measurements[index_2:]]
 
-            # use constant model when cost is 0
-            if constant_cost == 0:
-                logging.debug("Using constant model.")
-                return Model(constant_hypothesis)
+        logging.debug("Final subsets: %s", final_subsets)
 
-            # otherwise start searching for the best hypothesis based on the PMNF
-            else:
-                logging.debug("Searching for a single-parameter model.")
-                # search for the best single parameter hypothesis
-                hypotheses_generator = self.build_hypotheses(measurements)
-                best_hypothesis = self.find_best_hypothesis(hypotheses_generator, constant_cost, measurements,
-                                                            constant_hypothesis)
-                return Model(best_hypothesis)
+        models = [super(SegmentedModeler, self).create_model(subset) for subset in final_subsets]
+
+        if len(change_point) == 1:
+            intervals = [(-math.inf, change_point[0].coordinate[0]), (change_point[0].coordinate[0], math.inf)]
+        else:
+            intervals = [(-math.inf, change_point[0].coordinate[0]), (change_point[1].coordinate[0], math.inf)]
+
+        function = SegmentedFunction([m.hypothesis.function for m in models], intervals)
+        hypothesis = SingleParameterHypothesis(function, self.use_median)
+        hypothesis.compute_cost(measurements)
+        hypothesis.compute_adjusted_rsquared(self.create_constant_model(measurements)[1], measurements)
+        return SegmentedModel(hypothesis, models, change_point)
