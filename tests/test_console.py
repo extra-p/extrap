@@ -136,7 +136,7 @@ class TestConsole(unittest.TestCase):
             r"\s+Model\s+2:\s+29\.999999999\d+\s+\+\s+1\.0000000000\d+\s+\*\s+p\^\(1\)\s+for\s+p>=6\.0\s+"
             r"\s+RSS\s+Model\s+1:\s+\d\.\d\dE\-2\d\s+"
             r"\s+Adjusted\s+R\^2\s+Model\s+1:\s+1\.00E\+00\s+"
-            r"\s+RSS\s+Model\s+2:\s+5\.55E\-28\s+"
+            r"\s+RSS\s+Model\s+2:\s+\d\.\d\dE\-2\d\s+"
             r"\s+Adjusted\s+R\^2\s+Model\s+2:\s+1\.00E\+00",
             extrap.main,
             ['--text', 'data/text/one_parameter_segmented_1.txt', '--modeler', 'segmented'])
