@@ -64,6 +64,12 @@ test-3.11:
     extends: ".test"
     image: "python:3.11"
 
+test-macos:
+    extends: ".test"
+    tags:
+      - macos
+    image: ghcr.io/cirruslabs/macos-sonoma-base:latest
+
 
 run:
   script:    
