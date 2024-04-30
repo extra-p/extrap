@@ -76,6 +76,10 @@ test-macos:
       - source venv/bin/activate
       - python -m pip install --upgrade pip
       - pip install .
+    script:    
+      - pip install pytest pytest-cov
+      - cd tests
+      - pytest . --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
 
 
 run:
