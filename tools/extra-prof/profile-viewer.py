@@ -31,9 +31,10 @@ class CallTreeNodeFlags(Flag):
 
 
 remove_to_big_children = None
+TIME_FACTOR = 10 ** -9
 
 
-def _children_are_too_big(parent_duration, childs, name):
+def _children_are_too_big(parent_duration, childs, parent_name):
     global remove_to_big_children
 
     c_duration = 0
@@ -47,13 +48,19 @@ def _children_are_too_big(parent_duration, childs, name):
                 or (n_type == CallTreeNodeType.MEMCPY and CallTreeNodeFlags.ASYNC in flags) \
                 or (n_type == CallTreeNodeType.MEMSET and CallTreeNodeFlags.ASYNC in flags):
             continue
-        c_duration += max(m_duration)
+        length_without_zero = sum(1 for m in m_duration if m != 0)
+        if length_without_zero == 0:
+            length_without_zero = 1
+        c_duration += sum(m_duration) * TIME_FACTOR / length_without_zero
 
-    if c_duration / (10 ** 9) <= max(parent_duration):
+    length_without_zero = sum(1 for m in parent_duration if m != 0)
+    if length_without_zero == 0:
+        length_without_zero = 1
+    if c_duration <= sum(parent_duration) / length_without_zero:
         return False
 
     print(f"WARNING: Children's duration {c_duration} is bigger than "
-          f"their parent's ({name}) duration {parent_duration}\n")
+          f"their parent's ({parent_name}) duration {parent_duration}\n")
 
     if remove_to_big_children is None:
         selection = input("Do you want to remove children that are bigger than their parent "
@@ -64,8 +71,6 @@ def _children_are_too_big(parent_duration, childs, name):
             remove_to_big_children = False
     if remove_to_big_children is True:
         return True
-
-    return False
 
 
 def _read_calltree(ep_root_node, table, len_row):
@@ -81,9 +86,9 @@ def _read_calltree(ep_root_node, table, len_row):
             name = "GPU " + name
         call_path += "->" + name
         if isinstance(m_duration, list):
-            m_duration = [d / 10 ** 9 for d in m_duration]
+            m_duration = [d * TIME_FACTOR for d in m_duration]
         else:
-            m_duration = m_duration / 10 ** 9
+            m_duration = m_duration * TIME_FACTOR
 
         output_data = [call_path, m_duration, m_visits, m_bytes]
         if len(ep_node) >= 8 and ep_node[7]:

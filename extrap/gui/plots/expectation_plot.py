@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
 
 
-class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
+class ComparisonPlot3D(QtInteractor, AbstractPlotWidget):
 
     def __init__(self, main_widget, parent, width=5, height=4, dpi=100):
         self.main_widget: MainWidget = main_widget
@@ -189,7 +189,7 @@ class ExpectationPlot3D(QtInteractor, AbstractPlotWidget):
                                                    axis=-1) / max_z * 1000)
             self.add_mesh(mesh, color=(240, 210, 0), lighting=True, opacity=0.4, show_edges=True, edge_color='white')
 
-            labels.append(('  Expectation', (240, 210, 0)))
+            labels.append(('  HW-adj. projection', (240, 210, 0)))
             images.append(None)
 
         self.add_axes_cube(maxX, maxY, max_z, x_label, y_label)

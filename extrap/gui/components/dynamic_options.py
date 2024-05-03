@@ -85,39 +85,41 @@ class DynamicOptionsWidget(QWidget):
         def slot(value):
             self._check_and_apply(option, value)
 
+        value = getattr(self.object_with_options, option.field)
+
         if isinstance(option.range, Mapping):
             field = QComboBox()
             for name, item in option.range.items():
                 field.addItem(name, item)
-                if item == option.value:
+                if item == value:
                     field.setCurrentText(name)
             field.currentIndexChanged.connect(lambda: self._check_and_apply(option, field.currentData()))
         elif option.type is str and isinstance(option.range, Collection):
             field = QComboBox()
             for name in option.range:
                 field.addItem(str(name))
-                if name == option.value:
+                if name == value:
                     field.setCurrentText(name)
             field.currentIndexChanged.connect(lambda: self._check_and_apply(option, field.currentText()))
         elif option.type is bool:
             field = SwitchWidget()
-            field.setChecked(option.value)
+            field.setChecked(value)
             field.stateChanged[int].connect(slot)
         elif option.type is float:
             field = QDoubleSpinBox()
-            field.setValue(option.value)
+            field.setValue(value)
             if isinstance(option.range, range):
                 field.setRange(option.range.start, option.range.stop)
             field.valueChanged[float].connect(slot)
         elif option.type is int:
             field = QSpinBox()
-            field.setValue(option.value)
+            field.setValue(value)
             if isinstance(option.range, range):
                 field.setRange(option.range.start, option.range.stop)
                 field.setSingleStep(option.range.step)
             field.valueChanged[int].connect(slot)
         else:
-            field = QLineEdit(str(option.value), self)
+            field = QLineEdit(str(value), self)
             field.textChanged[str].connect(slot)
         field.setToolTip(option.description)
         return field

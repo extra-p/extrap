@@ -27,8 +27,8 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
-from extrap.gui.plots.comparison_plot import ComparisonPlot
-from extrap.gui.plots.expectation_plot import ExpectationPlot3D
+from extrap.gui.plots.difference_plot import DifferencePlot
+from extrap.gui.plots.expectation_plot import ComparisonPlot3D
 from extrap.gui.plots.stacked_area_plot import StackedAreaPlot
 
 MIN_PARAM_VALUE = 0.01
@@ -329,14 +329,14 @@ class DataDisplayManager(QWidget):
             7: ("Interpolated contour", InterpolatedContourDisplay),
             8: ("Measurement points", MeasurementPointsPlot),
             9: ("Stacked area plot", StackedAreaPlot),
-            10: ("Comparison plot", ComparisonPlot)
+            10: ("Difference plot", DifferencePlot)
         }
 
         if 11 in selectedCheckBoxesIndex:
-            labelText = "Expectation plot"
+            labelText = "Comparison plot"
             tabStatus = self.is_tab_already_opened(labelText)
             if tabStatus is False:
-                self.display_widget.addTab(ExpectationPlot3D(self.main_widget, self), labelText)
+                self.display_widget.addTab(ComparisonPlot3D(self.main_widget, self), labelText)
 
         for i in selectedCheckBoxesIndex:
             if i == 0 or i == 11:

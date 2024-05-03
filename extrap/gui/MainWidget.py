@@ -198,7 +198,7 @@ class MainWidget(QMainWindow):
                   'Dominating models in a 3D S&catter plot',
                   'Max &z as a single surface plot', 'Dominating models and max z as &heat map',
                   'Selected models in c&ontour plot', 'Selected models in &interpolated contour plots',
-                  '&Measurement points', 'Stacked &area plot', '&Comparison plot', '&Expectation plot 3D']
+                  '&Measurement points', 'Stacked &area plot', 'Di&fference plot', '&Comparison plot 3D']
         graph_actions = [QAction(g, self) for g in graphs]
         for i, g in enumerate(graph_actions):
             slot = (lambda k: lambda: self.data_display.reloadTabs((k,)))(i)
@@ -215,12 +215,16 @@ class MainWidget(QMainWindow):
         model_rename_action.setStatusTip('Rename the current model')
         model_rename_action.triggered.connect(self.selector_widget.model_rename)
 
+        show_model_options = QAction('Show modeler options', self)
+        show_model_options.triggered.connect(self.selector_widget.show_model_options)
+
         metric_delete_action = QAction('Dele&te metrics', self)
         metric_delete_action.triggered.connect(self.selector_widget.delete_metric)
 
         coordinates_transform_dialog = CoordinateTransformationDialog(self)
-        coordinates_transform = QAction('Transform Coordinates', self)
+        coordinates_transform = QAction('Transform coordinates', self)
         coordinates_transform.triggered.connect(coordinates_transform_dialog.show)
+
         # compare menu
         compare_action = QAction('&Compare with experiment', self)
         compare_action.setStatusTip('Compare the current models with ')
@@ -270,6 +274,7 @@ class MainWidget(QMainWindow):
         model_menu = menubar.addMenu('&Model')
         model_menu.addAction(model_delete_action)
         model_menu.addAction(model_rename_action)
+        model_menu.addAction(show_model_options)
         model_menu.addSeparator()
         model_menu.addAction(metric_delete_action)
         model_menu.addSeparator()

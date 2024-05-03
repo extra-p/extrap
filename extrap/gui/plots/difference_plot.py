@@ -22,19 +22,19 @@ from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.gui.plots.BaseGraphWidget import BaseContourGraph
 
 
-class ComparisonPlotColorbarFormatter(ScalarFormatter):
+class DifferencePlotColorbarFormatter(ScalarFormatter):
     def __call__(self, x, pos=None):
-        result = super(ComparisonPlotColorbarFormatter, self).__call__(x, pos)
+        result = super(DifferencePlotColorbarFormatter, self).__call__(x, pos)
         if result.startswith('_'):
             result = result[1:]
         return result
 
 
-class ComparisonPlot(BaseContourGraph):
+class DifferencePlot(BaseContourGraph):
     colormap = 'RdBu'
 
     def __init__(self, *args, **kwargs):
-        super(ComparisonPlot, self).__init__(*args, **kwargs)
+        super(DifferencePlot, self).__init__(*args, **kwargs)
 
     def _handle_min_max_update(self, *args):
         self._draw_cross_hair()
@@ -42,11 +42,11 @@ class ComparisonPlot(BaseContourGraph):
 
     def hideEvent(self, evt):
         self.main_widget.min_max_value_updated_event -= self._handle_min_max_update
-        return super(ComparisonPlot, self).hideEvent(evt)
+        return super(DifferencePlot, self).hideEvent(evt)
 
     def showEvent(self, evt):
         self.main_widget.min_max_value_updated_event += self._handle_min_max_update
-        return super(ComparisonPlot, self).showEvent(evt)
+        return super(DifferencePlot, self).showEvent(evt)
 
     def _draw_cross_hair(self):
         selected_values = self.main_widget.selector_widget.getParameterValues()
@@ -169,7 +169,7 @@ class ComparisonPlot(BaseContourGraph):
             try:
                 pcm = ax.pcolormesh(X, Y, Z_List[i], cmap=self.colormap, norm=TwoSlopeNorm(0), shading='auto')
                 cb = self.fig.colorbar(pcm, ax=ax, label="Difference " + metric.name,
-                                       format=ComparisonPlotColorbarFormatter())
+                                       format=DifferencePlotColorbarFormatter())
 
                 ax.legend([red_patch, blue_patch], labels,
                           handler_map={tuple: HandlerTuple(ndivide=None, pad=0)})

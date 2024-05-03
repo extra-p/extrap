@@ -20,9 +20,9 @@ from extrap.util.dynamic_options import DynamicOptions
 class ModelerOptionsWidget(DynamicOptionsWidget):
     object_with_options: Union[AbstractModeler, DynamicOptions]
 
-    def __init__(self, parent, modeler: AbstractModeler, has_parent_options=False):
+    def __init__(self, parent, modeler: AbstractModeler, has_parent_options=False, has_reset_button=True):
         self._single_parameter_modeler_widget = None
-        super().__init__(parent, modeler, has_parent_options, has_reset_button=True)
+        super().__init__(parent, modeler, has_parent_options, has_reset_button=has_reset_button)
 
     def init_ui(self):
         super().init_ui()

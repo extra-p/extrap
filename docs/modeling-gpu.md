@@ -38,9 +38,12 @@ You can set the following options as environment variables during compilation.
 | `EXTRA_PROF_WRAPPER`=`on`(default),`off` `                | Enables the compiler wrapper                                                                                                                                             |
 | `EXTRA_PROF_GPU`=`on`(default),`off`                      | Enables GPU measurements                                                                                                                                                 |
 | `EXTRA_PROF_EVENT_TRACE`=`on`,`off`(default)              | Enables recording of event traces in Trace Event Format                                                                                                                  |
-| `EXTRA_PROF_ENERGY`=`on`,`off`(default)                   | Enables energy measurements **Under development**                                                                                                                        |
+| `EXTRA_PROF_ENERGY`=`on`,`off`(default)                   | Enables energy measurements                                                                                                                                              |
 | `EXTRA_PROF_ADVANCED_INSTRUMENTATION`=`on`(default),`off` | Improves instrumentation by not instrumenting standard library functions. *Only works with compilers that support the `-finstrument-functions-exclude-file-list` option* |
-| `EXTRA_PROF_DEBUG_*` =`on`,`off`(default)                 | Debugging and development options. *These might cause issues when profiling.*                                                                                            |
+| `EXTRA_PROF_EXCLUDE_FILES`= *FILE*, *FILE*, ...           | Excludes the listed files from the instrumentation. *Only works with compilers that support the `-finstrument-functions-exclude-file-list` option*                       |
+| `EXTRA_PROF_EXCLUDE_FUNCTIONS`= *SYMBOL*, *SYMBOL*, ...   | Excludes the listed functions from the instrumentation. *Only works with compilers that support the `-finstrument-functions-exclude-function-list` option*               |
+| `EXTRA_PROF_SCOREP_INSTRUMENTATION`= *PATH*               | Set the path to the Score-P compiler plugin to use it for the instrumentation of the CPU code. *Disables all other CPU instrumentation settings.*                        |
+| `EXTRA_PROF_DEBUG_*`=`on`,`off`(default)                  | Debugging and development options. *These might cause issues when profiling.*                                                                                            |
 
 Measurement
 -----------

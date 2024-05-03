@@ -63,7 +63,7 @@ setup(
         "packaging>=20.0",
         "kaitaistruct~=0.9",
         "protobuf~=3.14",
-        "itanium_demangler~=1.0",
+        "itanium-demangler~=1.0",
         "sympy~=1.8",
         "typing-extensions~=4.3.0",
         "msgpack~=1.0.3",

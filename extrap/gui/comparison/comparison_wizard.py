@@ -132,7 +132,7 @@ class MatcherSelectionPage(ScrollAreaPage):
         super().__init__(parent)
         self.setTitle('Select mapping provider')
         layout = self.scroll_layout
-        for matcher in chain(matchers.all_matchers.values(), [InteractiveMatcher]):
+        for matcher in chain(matchers.all_matchers.values()):
             def _(matcher):
                 btn = QCommandLinkButton(matcher.NAME)
                 btn.setDescription(matcher.DESCRIPTION)
@@ -332,7 +332,7 @@ class ParameterMappingPage(QWizardPage):
 class ProjectionConfigurationPage(QWizardPage):
     def __init__(self, parent: ComparisonWizard):
         super().__init__(parent)
-        self.setTitle('Projection')
+        self.setTitle('Hardware-adjusted projection')
         self._layout = QFormLayout(self)
         self.setLayout(self._layout)
         self._init_UI()
@@ -535,7 +535,7 @@ class ProjectionConfigurationPage(QWizardPage):
 class ProjectionProgressPage(ProgressPage):
     def __init__(self, parent):
         super().__init__(parent)
-        self.setTitle('Projecting estimate')
+        self.setTitle('Projecting hardware-adjusted estimate')
 
     def do_process(self, pbar):
         wizard: ComparisonWizard = cast(ComparisonWizard, self.wizard())

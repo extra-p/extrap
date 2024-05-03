@@ -14,6 +14,7 @@ from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
 from extrap.gui.TreeModel import TreeModel, TreeItem
 from extrap.gui.components import developer_tools
@@ -153,6 +154,10 @@ class TreeView(QTreeView):
                 showDataPointsAction.setDisabled(selectedModel is None)
                 showDataPointsAction.triggered.connect(
                     lambda: self.showDataPoints(selectedModel))
+                action = menu.addAction("Calculate complexity comparison")
+                action.setDisabled(selectedModel is None or not isinstance(selectedModel, ComparisonModel))
+                action.triggered.connect(
+                    lambda: developer_tools.calculate_complexity_comparison(model, self.selectedIndexes()))
 
                 copyModel = menu.addAction("Copy model")
                 copyModel.setDisabled(selectedModel is None)
@@ -187,9 +192,6 @@ class TreeView(QTreeView):
         submenu.addSeparator()
         action = submenu.addAction("Delete subtree")
         action.triggered.connect(lambda: developer_tools.delete_subtree(self, treeModel))
-        action = submenu.addAction("Calculate complexity comparison")
-        action.triggered.connect(
-            lambda: developer_tools.calculate_complexity_comparison(treeModel, self.selectedIndexes()))
         action = submenu.addAction("Filter: at least 1% of total time")
         action.setCheckable(True)
         action.setChecked(self._filter_1_percent_time_state)

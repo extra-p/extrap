@@ -17,6 +17,7 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
+from extrap.gui.ModelerOptionsWidget import ModelerOptionsWidget
 from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
 from extrap.gui.components.ParameterValueSlider import ParameterValueSlider
@@ -278,6 +279,21 @@ class SelectorWidget(QWidget):
 
             self.model_selector.removeItem(index)
             del experiment.modelers[index]
+
+    def show_model_options(self):
+        model = self.getCurrentModel()
+        if model is None:
+            return
+        dialog = QDialog(self.main_widget)
+        dialog.setWindowTitle('Modeler Options: ' + model.name)
+        dialog.setLayout(QVBoxLayout(dialog))
+        dialog.layout().addWidget(QLabel('Modeler: ' + model.modeler.NAME))
+        dialog.layout().addWidget(QLabel('Uses: ' + 'Median' if model.modeler.use_median else 'Mean'))
+        options_widget = ModelerOptionsWidget(dialog, model.modeler, has_reset_button=False)
+        dialog.layout().addWidget(options_widget)
+        options_widget.setEnabled(False)
+        dialog.exec()
+        del dialog
 
     def delete_metric(self):
         reply = QMessageBox.question(self,
