@@ -1,9 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
+from __future__ import annotations
 
 import argparse
 import logging
@@ -12,15 +14,17 @@ import threading
 import traceback
 import warnings
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QPalette, QColor
-from PySide2.QtWidgets import QApplication, QMessageBox, QToolTip
+from PySide6.QtCore import Qt, QCoreApplication
+from PySide6.QtGui import QPalette, QColor
+from PySide6.QtWidgets import QApplication, QMessageBox, QToolTip
 from matplotlib import font_manager
 
 import extrap
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader import all_readers
-from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
+from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -43,6 +47,8 @@ def main(*, args=None, test=False):
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level.upper()))
 
+    QCoreApplication.setApplicationName(extrap.__title__)
+    QCoreApplication.setApplicationVersion(extrap.__version__)
     app = QApplication(sys.argv) if not test else QApplication.instance()
     apply_style(app)
 
@@ -58,7 +64,7 @@ def main(*, args=None, test=False):
         pass
 
     if not test:
-        app.exec_()
+        app.exec()
         font_preloader.join()
     else:
         font_preloader.join()
@@ -66,13 +72,16 @@ def main(*, args=None, test=False):
 
 
 def parse_arguments(args=None):
-    parser = argparse.ArgumentParser(description=extrap.__description__)
+    parser = argparse.ArgumentParser(description=extrap.__description__, add_help=False)
+    parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                        help='Show this help message and exit')
     parser.add_argument("--log", action="store", dest="log_level", type=str.lower, default='critical',
                         choices=['traceback', 'debug', 'info', 'warning', 'error', 'critical'],
-                        help="set program's log level (default: critical)")
+                        help="Set program's log level (default: %(default)s)")
     parser.add_argument("--logfile", action="store", dest="log_file",
-                        help="set path of log file")
-    parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__)
+                        help="Set path of log file")
+    parser.add_argument("--version", action="version", version=extrap.__title__ + " " + extrap.__version__,
+                        help="Show program's version number and exit")
 
     group = parser.add_mutually_exclusive_group(required=False)
     for reader in all_readers.values():
@@ -80,11 +89,19 @@ def parse_arguments(args=None):
                            help=reader.DESCRIPTION)
 
     parser.add_argument("path", metavar="FILEPATH", type=str, action="store", nargs='?',
-                        help="specify a file path for Extra-P to work with")
+                        help="Specify a file path for Extra-P to work with")
 
-    parser.add_argument("--scaling", action="store", dest="scaling_type", default="weak", type=str.lower,
-                        choices=["weak", "strong"],
-                        help="set weak or strong scaling when loading data from cube files [weak (default), strong]")
+    names_of_scaling_conversion_readers = ", ".join(reader.NAME + " files" for reader in all_readers.values()
+                                                    if issubclass(reader, AbstractScalingConversionReader))
+
+    parser.add_argument("--scaling", action="store", dest="scaling_type", default=ScalingType.WEAK,
+                        type=ScalingType, choices=ScalingType,
+                        help="Set scaling type when loading data from per-thread/per-rank files (" +
+                             names_of_scaling_conversion_readers + ") (default: %(default)s)")
+
+    parser.add_argument("--keep-values", action="store_true", default=False, dest='keep_values',
+                        help="Keeps the original values after import")
+
     arguments = parser.parse_args(args)
     return arguments
 
@@ -94,10 +111,17 @@ def load_from_command(arguments, window):
         for reader in all_readers.values():
             if getattr(arguments, reader.NAME):
                 file_reader = reader()
-                if file_reader is CubeFileReader2:
+                if issubclass(reader, AbstractScalingConversionReader):
                     file_reader.scaling_type = arguments.scaling_type
+                elif arguments.scaling_type != ScalingType.WEAK:
+                    warnings.warn(
+                        f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
+                if isinstance(file_reader, TKeepValuesReader):
+                    file_reader.keep_values = arguments.keep_values
+                elif arguments.keep_values:
+                    warnings.warn(f"Keeping values is not supported by the {reader.NAME} reader.")
                 window.import_file(file_reader.read_experiment, file_name=arguments.path,
-                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD)
+                                   model=file_reader.GENERATE_MODELS_AFTER_LOAD, reader=file_reader)
                 return
         window.import_file(read_experiment, file_name=arguments.path, model=False)
 
@@ -171,7 +195,7 @@ def _init_warning_system(window, test=False):
             activate_box(msg_box)
         else:
             activate_box(msg_box)
-            msg_box.exec_()  # ensures waiting
+            msg_box.exec()  # ensures waiting
             exit(1)
 
     warnings.showwarning = _warnings_handler
@@ -183,7 +207,7 @@ def apply_style(app):
     app.setStyle('Fusion')
 
     palette = QPalette()
-    palette.setColor(QPalette.Window, QColor(190, 190, 190))
+    palette.setColor(QPalette.Window, QColor(200, 200, 200))
     palette.setColor(QPalette.WindowText, Qt.black)
     palette.setColor(QPalette.Base, QColor(220, 220, 220))
     palette.setColor(QPalette.AlternateBase, QColor(10, 10, 10))
@@ -197,6 +221,7 @@ def apply_style(app):
     palette.setColor(QPalette.Disabled, QPalette.Text, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(80, 80, 80))
     palette.setColor(QPalette.Disabled, QPalette.Button, QColor(150, 150, 150))
+    palette.setColor(QPalette.ColorRole.Link, QColor(21, 83, 123))
     app.setPalette(palette)
     QToolTip.setPalette(palette)
 

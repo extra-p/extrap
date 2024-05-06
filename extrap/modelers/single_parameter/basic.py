@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,7 +13,7 @@ from typing import List, Sequence
 
 from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm
@@ -58,7 +58,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         """
         Initialize SingleParameterModeler object.
         """
-        super().__init__(use_median=False)
+        super().__init__(use_measure=Measure.MEAN)
 
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
@@ -204,27 +204,27 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
                          (8, 3, 0),
                          (11, 4, 0),
                          (3, 1, 0)]
-            # These were used for relearn
-            if allow_negative_exponents:
-                exponents += [(-1, 4, 0),
-                              (-1, 3, 0),
-                              (-1, 2, 0),
-                              (-2, 3, 0),
-                              (-3, 4, 0),
-                              (-4, 5, 0),
-                              (-1, 1, 0),
-                              (-5, 4, 0),
-                              (-4, 3, 0),
-                              (-3, 2, 0),
-                              (-5, 3, 0),
-                              (-7, 4, 0),
-                              (-2, 1, 0),
-                              (-9, 4, 0),
-                              (-7, 3, 0),
-                              (-5, 2, 0),
-                              (-8, 3, 0),
-                              (-11, 4, 0),
-                              (-3, 1, 0)]
+        # These were used for relearn
+        if allow_negative_exponents:
+            exponents += [(-1, 4, 0),
+                          (-1, 3, 0),
+                          (-1, 2, 0),
+                          (-2, 3, 0),
+                          (-3, 4, 0),
+                          (-4, 5, 0),
+                          (-1, 1, 0),
+                          (-5, 4, 0),
+                          (-4, 3, 0),
+                          (-3, 2, 0),
+                          (-5, 3, 0),
+                          (-7, 4, 0),
+                          (-2, 1, 0),
+                          (-9, 4, 0),
+                          (-7, 3, 0),
+                          (-5, 2, 0),
+                          (-8, 3, 0),
+                          (-11, 4, 0),
+                          (-3, 1, 0)]
 
         hypotheses_building_blocks = [CompoundTerm.create(*e) for e in exponents]
         # print the hypothesis building blocks, compound terms in debug mode
@@ -261,7 +261,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             next_function = SingleParameterFunction(copy.copy(compound_term))
 
             # create single parameter hypothesis from function
-            yield SingleParameterHypothesis(next_function, self.use_median)
+            yield SingleParameterHypothesis(next_function, self.use_measure)
 
     def create_model(self, measurements: Sequence[Measurement]):
         """
@@ -270,14 +270,14 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn(
-                "Number of measurements for a parameter needs to be at least 5 in order to create a performance model.")
+            warnings.warn(f"Number of measurements for a parameter needs to be at least "
+                          f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # create a constant model
         constant_hypothesis, constant_cost = self.create_constant_model(measurements)
-        logging.debug("Constant model: " + constant_hypothesis.function.to_string())
-        logging.debug("Constant model cost: " + str(constant_cost))
+        logging.debug("Constant model: %s", constant_hypothesis.function)
+        logging.debug("Constant model cost: %g", constant_cost)
 
         # use constant model when cost is 0
         if constant_cost == 0:

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -18,12 +18,13 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader import FileReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.fileio.io_helper import create_call_tree
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
 
-class TalpasFileReader(FileReader):
+class TalpasFileReader(FileReader, TKeepValuesReader):
     NAME = "talpas"
     GUI_ACTION = "Open Tal&pas input"
     DESCRIPTION = "Load data from Talpas data format"
@@ -63,7 +64,7 @@ class TalpasFileReader(FileReader):
                     raise FileFormatError(f'Missing property in line {ln}: {str(error)}. Line: "{line}"')
 
         # create experiment
-        io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar)
+        io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar, keep_values=self.keep_values)
 
         for p in parameters:
             experiment.add_parameter(p)

@@ -1,15 +1,15 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 import logging
 
-import PySide2
-from PySide2.QtGui import QPaintEvent
-from PySide2.QtWidgets import QWidget, QGridLayout, QTextEdit
+import PySide6
+from PySide6.QtGui import QPaintEvent
+from PySide6.QtWidgets import QWidget, QGridLayout, QTextEdit
 
 
 class LogWidget(QWidget):
@@ -26,7 +26,7 @@ class LogWidget(QWidget):
     def initUI(self):
         layout = QGridLayout(self)
         # layout.setContentsMargins(10, 5, 10, 5)
-        layout.setMargin(0)
+        #layout.setMargin(0, 0, 0, 0)
         self.setLayout(layout)
         layout.addWidget(self.log_box)
         self.log_box.setAcceptRichText(True)
@@ -36,7 +36,7 @@ class LogWidget(QWidget):
                                    "background-color:white;"
                                    "}")
 
-    def showEvent(self, event: PySide2.QtGui.QShowEvent):
+    def showEvent(self, event: PySide6.QtGui.QShowEvent):
         self._reset_scrollbars()
         super().showEvent(event)
 

@@ -181,3 +181,24 @@ def formatFormula(formula):
                 mode = 0
         i = i + 1
     return formula
+
+from typing import Union
+
+def tryCastTupelToInt(numbers :tuple) -> tuple:
+    roundedNumbers = list(numbers).copy()
+    for i, num in enumerate(numbers):
+        if not bool(int(num)-num):
+            roundedNumbers[i] = int(num)
+    return tuple(roundedNumbers)
+    
+def tryCastListToInt(numbers :list) -> list:
+    roundedNumbers = numbers.copy()
+    for i, num in enumerate(numbers):
+        if not bool(int(num)-num):
+            roundedNumbers[i] = int(num)
+    return roundedNumbers
+    
+def tryCastNumToInt(number :Union[int,float]) -> Union[int,float]:
+    if not bool(int(number)-number):
+        return int(number)
+    return number

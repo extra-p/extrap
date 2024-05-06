@@ -1,39 +1,19 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from dataclasses import dataclass
-from dataclasses import field as d_field
-from typing import TypeVar, Generic, Sequence, Type, AnyStr, Mapping, Union, Callable, Any
+from typing import TypeVar, Type, AnyStr, Mapping, Union, Callable, Any
 
 from extrap.modelers.abstract_modeler import AbstractModeler
+from extrap.util.dynamic_options import DynamicOption, DynamicOptionsGroup, convert_dynamic_options
 
 T = TypeVar('T')
 
-
-@dataclass
-class ModelerOption(Generic[T]):
-    value: T
-    type: Type
-    description: str
-    name: str = None
-    range: Union[Mapping[AnyStr, T], range] = None
-    group = None
-    field: str = None
-    on_change: Callable[[Any, T], None] = d_field(default=None, compare=False, hash=False)
-
-
-@dataclass
-class ModelerOptionsGroup:
-    name: str
-    options: Sequence[ModelerOption]
-    description: str
-
-    def items(self):
-        return ((o.field, o) for o in self.options)
+ModelerOption = DynamicOption
+ModelerOptionsGroup = DynamicOptionsGroup
 
 
 class _ModelerOptionsClass:
@@ -43,33 +23,9 @@ class _ModelerOptionsClass:
         else:
             original_class.OPTIONS = {}
 
-        option_storage = []
-        for name in original_class.__dict__:
-            option: ModelerOption = original_class.__dict__[name]
-            if isinstance(option, ModelerOption):
-                if option.group is not None:
-                    original_class.OPTIONS[option.group.name] = option.group
-                else:
-                    original_class.OPTIONS[name] = option
-                option.field = name
-                if option.on_change is not None:
-                    def make_property(opt):
-                        # required for closure
-                        def getter(m_self):
-                            return getattr(m_self, '__OPTION_' + opt.field)
-
-                        def setter(m_self, v):
-                            setattr(m_self, '__OPTION_' + opt.field, v)
-                            opt.on_change(m_self, v)
-
-                        return property(getter, setter)
-
-                    setattr(original_class, name, make_property(option))
-                    option_storage.append(('__OPTION_' + option.field, option.value))
-                else:
-                    setattr(original_class, name, option.value)
-        for n, v in option_storage:
-            setattr(original_class, n, v)
+        convert_dynamic_options(original_class)
+        original_class.options_iter = self.iter
+        original_class.options_equal = self.equal
 
         return original_class
 

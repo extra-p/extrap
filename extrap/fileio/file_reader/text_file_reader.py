@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -17,6 +17,7 @@ from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
 from extrap.fileio import io_helper
 from extrap.fileio.file_reader import FileReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.fileio.io_helper import create_call_tree
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
@@ -24,7 +25,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 re_whitespace = re.compile(r'\s+')
 
 
-class TextFileReader(FileReader):
+class TextFileReader(FileReader, TKeepValuesReader):
     NAME = "text"
     GUI_ACTION = "Open &text input"
     DESCRIPTION = "Load data from text input file"
@@ -105,8 +106,8 @@ class TextFileReader(FileReader):
                         raise FileFormatError(
                             f'To many DATA lines ({coordinate_id}) for the number of POINTS '
                             f'({len(experiment.coordinates)}) in line {i}.')
-                    measurement = Measurement(
-                        experiment.coordinates[coordinate_id], last_callpath, last_metric, values)
+                    measurement = Measurement(experiment.coordinates[coordinate_id], last_callpath, last_metric, values,
+                                              keep_values=self.keep_values)
                     experiment.add_measurement(measurement)
                     coordinate_id += 1
                 elif number_parameters >= 5:

@@ -6,26 +6,26 @@
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
+
 import copy
-from abc import ABC, abstractmethod
 import logging
-from typing import Sequence, Collection
 import warnings
+from abc import ABC, abstractmethod
+from typing import Sequence
+
 import numpy
 
-from extrap.entities.callpath import Callpath
 from extrap.entities.functions import SingleParameterFunction, Function
 from extrap.entities.hypotheses import SingleParameterHypothesis, ConstantHypothesis, Hypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.terms import Term
 from extrap.modelers.abstract_modeler import AbstractModeler
-from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
+from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.basic import SingleParameterModeler
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
-from extrap.modelers.modeler_options import modeler_options
 
 
 @modeler_options
@@ -39,13 +39,13 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
 
     source_modeler: AbstractModeler
 
-    def __init__(self, use_median, source_modeler, **kwargs):
+    def __init__(self, use_measure, source_modeler, **kwargs):
         """
         Initialize HardwareCounterModeler object.
         """
 
         self.source_modeler = source_modeler
-        super().__init__(use_median=use_median, **kwargs)
+        super().__init__(use_measure=use_measure, **kwargs)
 
         self.min_measurement_points = 5
         self.counter_list = [
@@ -128,7 +128,7 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
         pass
 
     @abstractmethod
-    def make_hypothesis(self, function: Function, use_median: bool) -> Hypothesis:
+    def make_hypothesis(self, function: Function, use_measure: Measure) -> Hypothesis:
         pass
 
     def model(self, measurements: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
@@ -178,7 +178,7 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
 
                 runtime_function = self._make_runtime_function(desired_counters)
 
-                hypothesis = self.make_hypothesis(runtime_function, self.use_median)
+                hypothesis = self.make_hypothesis(runtime_function, self.use_measure)
                 hypothesis.function.reset_coefficients()
                 hypothesis.compute_coefficients(measurement_sequence,
                                                 negative_coefficients=self.negative_coefficients)
@@ -254,7 +254,7 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
                         if isinstance(model.hypothesis, ConstantHypothesis):
                             weighted_measurements = []
                             for m, w in zip(measurements_time, counter_weights[model.metric]):
-                                weighted_measurements.append(m.value(self.use_median) * w)
+                                weighted_measurements.append(m.value(self.use_measure) * w)
                             runtime_function.constant_coefficient += numpy.mean(weighted_measurements)
                         else:
                             hypothesis: Hypothesis = copy.deepcopy(model.hypothesis)
@@ -267,7 +267,7 @@ class AbstractHardwareCounterModeler(AbstractModeler, ABC):
                                 runtime_function += compound_term
                             runtime_function.constant_coefficient += hypothesis.function.constant_coefficient
 
-                hypothesis = self.make_hypothesis(runtime_function, self.use_median)
+                hypothesis = self.make_hypothesis(runtime_function, self.use_measure)
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
 
                 # for all compound terms check if they are smaller than minimum allowed contribution
@@ -310,7 +310,7 @@ class HardwareCounterModeler(AbstractHardwareCounterModeler):
         """
         Initialize HardwareCounterModeler object.
         """
-        super().__init__(use_median=False, source_modeler=SingleParameterModeler())
+        super().__init__(use_measure=Measure.MEAN, source_modeler=SingleParameterModeler())
 
     make_function = SingleParameterFunction
     make_hypothesis = SingleParameterHypothesis

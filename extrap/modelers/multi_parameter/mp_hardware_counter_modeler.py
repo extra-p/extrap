@@ -5,26 +5,13 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import copy
-import logging
-import warnings
-from itertools import accumulate
-from typing import Sequence
-
-from extrap.entities.functions import ConstantFunction
 from extrap.entities.functions import MultiParameterFunction
-from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import MultiParameterHypothesis
-from extrap.entities.measurement import Measurement
-from extrap.entities.model import Model
-from extrap.entities.terms import MultiParameterTerm
+from extrap.entities.measurement import Measure
+from extrap.modelers.abstract_modeler import MultiParameterModeler as AbstractMultiParameterModeler
 from extrap.modelers.modeler_options import modeler_options
-from extrap.modelers.abstract_modeler import AbstractMultiParameterModeler
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
-from extrap.modelers.single_parameter.basic import SingleParameterModeler
 from extrap.modelers.single_parameter.hardware_counter_modeler import AbstractHardwareCounterModeler
-from extrap.util.itertools import pairwise
-from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
 @modeler_options
@@ -45,7 +32,7 @@ class MpHardwareCounterModeler(AbstractHardwareCounterModeler, AbstractMultiPara
         Initialize SingleParameterModeler object.
         """
         source_modeler = MultiParameterModeler()
-        super().__init__(use_median=False, source_modeler=source_modeler,
+        super().__init__(use_measure=Measure.MEAN, source_modeler=source_modeler,
                          single_parameter_modeler=source_modeler.single_parameter_modeler)
 
     make_function = MultiParameterFunction

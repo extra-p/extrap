@@ -1,15 +1,17 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import math
 
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.model import SegmentedModel
 from extrap.gui.TreeModel import TreeModel
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
 
@@ -33,8 +35,11 @@ class TreeView(QTreeView):
 
         child_count = index.model().rowCount(parent=index)
         for i in range(0, child_count):
-            child = index.child(i, 0)
-            self.collapseRecursively(child)
+            try:
+                child = index.child(i, 0)
+                self.collapseRecursively(child)
+            except AttributeError:
+                pass
 
     def expand_largest(self, model, index):
         root = index.internalPointer()
@@ -70,7 +75,7 @@ class TreeView(QTreeView):
     def get_value_from_node(self, tree_model, node, parent_index):
         index = tree_model.index(node.row(), 0, parent_index)
         callpath = tree_model.getValue(index).path
-        node_model = tree_model.getSelectedModel(callpath)
+        node_model, _ = tree_model.getSelectedModel(callpath)
         if node_model:
             return tree_model.get_comparison_value(node_model)
         else:
@@ -86,7 +91,7 @@ class TreeView(QTreeView):
                     self.selectedIndexes()[0])
                 if selectedCallpath is None:
                     return
-                selectedModel = model.getSelectedModel(selectedCallpath.path)
+                selectedModel, experiment = model.getSelectedModel(selectedCallpath.path)
 
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
@@ -107,7 +112,7 @@ class TreeView(QTreeView):
                 copyModel.triggered.connect(
                     lambda: self.copy_model_to_clipboard(selectedModel)
                 )
-                menu.exec_(self.mapToGlobal(event.pos()))
+                menu.exec(self.mapToGlobal(event.pos()))
 
     def _create_expand_collapse_menu(self, model):
         expand_collapse_submenu = QMenu("Expand / Collapse")
@@ -143,7 +148,7 @@ class TreeView(QTreeView):
         msg.setWindowTitle("Model Comments")
         # msg.setDetailedText("The details are as follows:")
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msg.exec()
 
     # print the data points used in compute cost
     @staticmethod
@@ -174,10 +179,21 @@ class TreeView(QTreeView):
         else:
             msg_txt += "No data available."
 
+        if isinstance(model, SegmentedModel):
+            for i, segment_model in enumerate(model.segment_models):
+                if segment_model.predictions is not None and segment_model.measurements is not None:
+                    msg_txt += "\nModel " + str(i + 1) + ":\n\n"
+                    row_format = "{:20} {:>15} {:>15} {:>15}\n"
+                    msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
+                    row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
+                    for pred, m in zip(segment_model.predictions, segment_model.measurements):
+                        msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
+                        # print(str(ps[i])+","+str(actual_points[i]))
+
         print(msg_txt)
         print("")
         msg.setText(msg_txt)
-        msgBox.exec_()
+        msgBox.exec()
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         self._handle_drop_event(event)

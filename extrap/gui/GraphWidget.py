@@ -1,22 +1,25 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
 
+import importlib.resources
+import itertools
 import math
 import typing
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
-from PySide2.QtGui import *  # @UnusedWildImport
-from PySide2.QtWidgets import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
+from PySide6.QtGui import *  # @UnusedWildImport
+from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
+from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -134,17 +137,12 @@ class GraphWidget(QWidget):
     def combine_all_callpath(self):
         return self.aggregate_callpath and len(self.main_widget.get_selected_call_tree_nodes()) > 1
 
-    @Slot(QPoint)
-    def showContextMenu(self, point):
-        """
-          This function takes care of different options and their visibility in the context menu.
-        """
-
+    def create_context_menu(self) -> typing.Optional[QMenu]:
         # selected_metric = self.main_widget.get_selected_metric()
         selected_callpaths = self.main_widget.get_selected_call_tree_nodes()
 
         if not selected_callpaths:
-            return
+            return None
 
         menu = QMenu(self)
         points_group = QActionGroup(self)
@@ -199,7 +197,19 @@ class GraphWidget(QWidget):
         screenshotAction = menu.addAction("Screenshot")
         screenshotAction.triggered.connect(self.screenshot)
 
-        menu.exec_(self.mapToGlobal(point))
+        return menu
+
+    @Slot(QPoint)
+    def showContextMenu(self, point):
+        """
+          This function takes care of different options and their visibility in the context menu.
+        """
+
+        menu = self.create_context_menu()
+        if not menu:
+            return
+
+        menu.exec(self.mapToGlobal(point))
 
     @Slot()
     def selectDataPoints(self):
@@ -253,23 +263,30 @@ class GraphWidget(QWidget):
             callpath_name = model.callpath.name
             data_points = [p for (_, p) in self.calculateDataPoints(model, True)]
             parameters = self.main_widget.getExperiment().parameters
-            model_function_text = 'Model: ' + \
-                                  formatFormula(
-                                      model.hypothesis.function.to_string(*parameters))
+            model_function_text = 'Model: ' + formatFormula(model.hypothesis.function.to_string(*parameters))
 
             data_points_text = '\n'.join(
                 ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)
             text += callpath_name + '\n' + data_points_text + '\n' + model_function_text + '\n\n'
 
-        msg = QMessageBox(self)
-        msg.setIcon(QMessageBox.Information)
-        msg.setText(
-            "Exported data (text can be copied to the clipboard using the context menu):")
-        msg.setInformativeText(text)
+        msg = QDialog()
         msg.setWindowTitle("Export Data")
-        # msg.setDetailedText("The details are as follows:")
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msg.setFixedSize(600, 400)
+        layout = QGridLayout()
+        layout.addWidget(QLabel("Exported data (text can be copied to the clipboard using the context menu):"))
+
+        info_text = QTextEdit()
+        info_text.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextSelectableByKeyboard)
+        info_text.setText(text)
+        layout.addWidget(info_text)
+
+        btn = QPushButton('OK', msg)
+        btn.setDefault(True)
+        btn.clicked.connect(msg.accept)
+        layout.addWidget(btn)
+        msg.setLayout(layout)
+        msg.exec()
 
     def drawGraph(self, paint):
         """
@@ -280,6 +297,9 @@ class GraphWidget(QWidget):
         model_list, selected_call_nodes = self.main_widget.get_selected_models()
         if not model_list:
             return
+
+        plot_options = self.main_widget.plot_formatting_options
+        paint.setFont(QFont(plot_options.font_family, plot_options.font_size))
 
         # Calculate geometry constraints
         self.graph_width = self.frameGeometry().width() - self.left_margin - self.right_margin
@@ -305,6 +325,7 @@ class GraphWidget(QWidget):
         self.drawDataPoints(paint, model_list)
 
         # Draw legend
+        paint.setFont(QFont(plot_options.font_family, plot_options.legend_font_size))
         self.drawLegend(paint)
 
     def drawDataPoints(self, paint, selected_models):
@@ -323,56 +344,62 @@ class GraphWidget(QWidget):
 
     def drawLegend(self, paint):
         # drawing the graph legend
-        px_between = 15
+
         widget = self.main_widget
         callpath_color_dict = widget.model_color_map
         dict_size = len(callpath_color_dict)
-        font_size = int(self.main_widget.getFontSize())
-        paint.setFont(QFont('Decorative', font_size))
         paint.setBrush(self.BACKGROUND_COLOR)
+        font_metrics = paint.fontMetrics()
         pen = QPen(self.TEXT_COLOR)
         pen.setWidth(1)
         paint.setPen(pen)
-        counter_increment = font_size + 3
+
+        px_between = 2
+        font_height = font_metrics.height()
+        counter_increment = font_height + px_between
+        line_offset = font_height / 2
+        left_margin_text = self.legend_x + 45
 
         if self.combine_all_callpath is False:
             text_len = 0
             for callpath, color in callpath_color_dict.items():
-                text_len = max(text_len, len(callpath.name))
-            self.legend_width = 55 + text_len * (font_size - 1)
-            self.legend_height = counter_increment * dict_size + px_between
+                text_len = max(text_len, font_metrics.horizontalAdvance(callpath.name))
+            self.legend_width = 55 + text_len
+            self.legend_height = counter_increment * dict_size + 3 * px_between
 
             paint.drawRect(self.legend_x,
                            self.legend_y,
                            self.legend_width,
                            self.legend_height)
-            counter = 0
+            counter = 2 * px_between
             for callpath, color in callpath_color_dict.items():
                 pen = QPen(QColor(color))
                 pen.setWidth(2)
                 paint.setPen(pen)
-                paint.drawLine(self.legend_x + 5,
-                               self.legend_y + px_between + counter,
-                               self.legend_x + 35,
-                               self.legend_y + px_between + counter)
+                paint.drawLine(QPoint(self.legend_x + 5,
+                                      self.legend_y + counter + line_offset),
+                               QPoint(self.legend_x + 35,
+                                      self.legend_y + counter + line_offset))
                 paint.setPen(self.TEXT_COLOR)
-                paint.drawText(self.legend_x + 45,
-                               self.legend_y + px_between + counter,
-                               callpath.name)
+                paint.drawText(QRect(left_margin_text, self.legend_y + counter,
+                                     text_len, font_height),
+                               Qt.TextFlag.TextDontClip, callpath.name)
+
                 counter = counter + counter_increment
 
         else:
-            text_len = 0
-            callpath_list = list()
 
-            for callpath, color in callpath_color_dict.items():
-                callpath_list.append(callpath.name)
-                text_len = max(text_len, text_len +
-                               len(callpath.name))
+            aggregated_callpath_name = ' + '.join(callpath.name for callpath, color in callpath_color_dict.items())
 
-            aggregated_callpath_name = str.join('+', callpath_list)
-            self.legend_width = 55 + text_len * (font_size - 1)
-            self.legend_height = counter_increment * 1 + px_between
+            bounding_rect_text = font_metrics.boundingRect(
+                QRect(left_margin_text, self.legend_y + 2 * px_between, self.graph_width - left_margin_text,
+                      self.graph_height - self.legend_y + 2 * px_between),
+                Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
+
+            text_len = bounding_rect_text.width()
+            self.legend_width = 55 + text_len
+
+            self.legend_height = bounding_rect_text.height() + 4 * px_between
 
             paint.drawRect(self.legend_x,
                            self.legend_y,
@@ -382,42 +409,43 @@ class GraphWidget(QWidget):
             pen.setWidth(2)
             paint.setPen(pen)
             paint.drawLine(self.legend_x + 5,
-                           self.legend_y + px_between,
+                           self.legend_y + 2 * px_between + line_offset,
                            self.legend_x + 35,
-                           self.legend_y + px_between)
+                           self.legend_y + 2 * px_between + line_offset)
             paint.setPen(self.TEXT_COLOR)
-            paint.drawText(self.legend_x + 45,
-                           self.legend_y + px_between,
-                           aggregated_callpath_name)
+            paint.drawText(bounding_rect_text,
+                           Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
 
     def drawModel(self, paint, model, color):
         function = model.hypothesis.function
 
-        cord_list = self.calculate_function(function, self.graph_width)
+        cord_lists = self.calculate_function(function, self.graph_width)
 
         pen = QPen(QColor(color))
         pen.setWidth(2)
         paint.setPen(pen)
 
-        points = [
-            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
-        ]
-        paint.drawPolyline(points)
+        for cord_list in cord_lists:
+            points = [
+                QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+            ]
+            paint.drawPolyline(points)
 
     def drawAggregratedModel(self, paint, model_list):
         functions = list()
         for model in model_list:
             function = model.hypothesis.function
             functions.append(function)
-        cord_list = self.calculate_aggregate_callpath_function(
+        cord_lists = self.calculate_aggregate_callpath_function(
             functions, self.graph_width)
         pen = QPen(self.AGGREGATE_MODEL_COLOR)
         pen.setWidth(2)
         paint.setPen(pen)
-        points = [
-            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
-        ]
-        paint.drawPolyline(points)
+        for cord_list in cord_lists:
+            points = [
+                QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+            ]
+            paint.drawPolyline(points)
 
     def drawAxis(self, paint, selectedMetric):
         # Determing the number of divisions to be marked on x axis such that there is a minimum distance of 100 pixels
@@ -527,7 +555,7 @@ class GraphWidget(QWidget):
             for x_value in range((x_origin + 7), x_other_end, +3):
                 paint.drawPoint(x_value, y)
 
-    def calculate_function(self, function, length_x_axis):
+    def calculate_function(self, function, length_x_axis, x_min=None, x_max=None):
         """
          This function calculates the x values,
          based on the range that were provided &
@@ -535,7 +563,10 @@ class GraphWidget(QWidget):
         """
 
         # m_x_lower_bound = 1
-        number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
+        if x_min != None and x_max != None:
+            number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis, x_min, x_max)
+        else:
+            number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
         previous = numpy.seterr(invalid='ignore', divide='ignore')
         y_list = function.evaluate(x_list).reshape(-1)
         numpy.seterr(**previous)
@@ -564,15 +595,18 @@ class GraphWidget(QWidget):
     def _create_drawing_iterator(self, x_values, y_list):
         y_list[y_list == math.inf] = numpy.max(y_list[y_list != math.inf])
         y_list[y_list == -math.inf] = numpy.min(y_list[y_list != -math.inf])
+
         cord_list_before_filtering = zip(x_values, y_list)
-        cord_list = ((x, y)
-                     for x, y in cord_list_before_filtering
-                     if not math.isnan(y) and 0 <= y)
+        cord_groups = itertools.groupby(cord_list_before_filtering, key=lambda k: not math.isnan(k[1]) and 0 <= k[1])
+        cord_list = (v for k, v in cord_groups if k)
         return cord_list
 
-    def _calculate_evaluation_points(self, length_x_axis):
+    def _calculate_evaluation_points(self, length_x_axis, x_min=None, x_max=None):
         number_of_x_points = int(length_x_axis / 2)
-        x_values = numpy.linspace(0, self.max_x, number_of_x_points)
+        if x_min != None and x_max != None:
+            x_values = numpy.linspace(x_min, x_max, number_of_x_points)
+        else:
+            x_values = numpy.linspace(0, self.max_x, number_of_x_points)
         x_list = numpy.ndarray((len(self.main_widget.getExperiment().parameters), number_of_x_points))
         param = self.main_widget.data_display.getAxisParameter(0).id
         parameter_value_list = self.main_widget.data_display.getValues()
@@ -644,8 +678,8 @@ class GraphWidget(QWidget):
     def calculateDataPoints(self, model, ignore_limit=False):
         """ This function calculates datapoints to be marked on the graph
         """
-
         datapoints = model.measurements
+
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         datapoint_x_absolute_pos_list = list()
         datapoint_y_absolute_pos_list = list()
@@ -749,17 +783,32 @@ class GraphWidget(QWidget):
         return y_max
 
     def showOutlierPoints(self, paint, selected_model):
-        datapoints = selected_model.measurements
-        parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
-        for datapoint in datapoints:
-            x_value = datapoint.coordinate[parameter_datapoint]
-            if x_value <= self.max_x:
-                y_min_value = datapoint.minimum
-                y_max_value = datapoint.maximum
-                y_mean_value = datapoint.mean
-                y_median_value = datapoint.median
-                self.plotOutliers(paint, x_value, y_min_value,
-                                  y_mean_value, y_median_value, y_max_value)
+        if isinstance(selected_model, list):
+            parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
+            for i in range(len(selected_model)):
+                datapoints = selected_model[i].measurements
+                for datapoint in datapoints:
+                    x_value = datapoint.coordinate[parameter_datapoint]
+                    if x_value <= self.max_x:
+                        y_min_value = datapoint.minimum
+                        y_max_value = datapoint.maximum
+                        y_mean_value = datapoint.mean
+                        y_median_value = datapoint.median
+                        self.plotOutliers(paint, x_value, y_min_value,
+                                          y_mean_value, y_median_value, y_max_value)
+
+        else:
+            datapoints = selected_model.measurements
+            parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
+            for datapoint in datapoints:
+                x_value = datapoint.coordinate[parameter_datapoint]
+                if x_value <= self.max_x:
+                    y_min_value = datapoint.minimum
+                    y_max_value = datapoint.maximum
+                    y_mean_value = datapoint.mean
+                    y_median_value = datapoint.median
+                    self.plotOutliers(paint, x_value, y_min_value,
+                                      y_mean_value, y_median_value, y_max_value)
 
     def plotOutliers(self, paint, x_value, y_min_value, y_mean_value, y_median_value, y_max_value):
         # create cordinates and merge them to list
@@ -846,3 +895,60 @@ class GraphWidget(QWidget):
     @staticmethod
     def getNumAxis():
         return 1
+
+
+class GraphWrapperWidget(AbstractPlotWidget):
+    _menu_icon_path = importlib.resources.path("extrap.gui.resources", "menu.svg").__enter__()
+
+    def setMax(self, axis, maxValue):
+        raise NotImplementedError("The assignment should happen in __init__")
+
+    def set_initial_value(self):
+        raise NotImplementedError("The assignment should happen in __init__")
+
+    @staticmethod
+    def getNumAxis():
+        return GraphWidget.getNumAxis()
+
+    def __init__(self, main_widget: MainWidget, parent):
+        super().__init__(parent)
+        grid = QGridLayout(self)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(0)
+
+        self._main_widget = main_widget
+        self._graph_widget = GraphWidget(main_widget, self)
+        grid.addWidget(self._graph_widget, 0, 0)
+
+        self.setMax = self._graph_widget.setMax
+        self.set_initial_value = self._graph_widget.set_initial_value
+
+        self.context_menu_button = QToolButton(self)
+
+        self.context_menu_button.setIcon(QIcon(str(GraphWrapperWidget._menu_icon_path)))
+        self.context_menu_button.setText("Graph options")
+        self.context_menu_button.setEnabled(False)
+        self.context_menu_button.clicked.connect(self._context_menu_button_clicked)
+        button_layout = QVBoxLayout()
+        button_layout.setContentsMargins(15, 15, 15, 15)
+        button_layout.addWidget(self.context_menu_button)
+
+        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignLeft | Qt.AlignBottom)
+
+    def _context_menu_button_clicked(self):
+        if self._graph_widget:
+            menu = self._graph_widget.create_context_menu()
+            self.context_menu_button.setMenu(menu)
+            self.context_menu_button.showMenu()
+            self.context_menu_button.setMenu(None)
+            # button_pos = self.context_menu_button.pos()
+            # button_pos -= QPoint(0, self.context_menu_button.height())
+            # graph_widget.showContextMenu(button_pos)
+
+    def drawGraph(self):
+        model_list, selected_call_nodes = self._main_widget.get_selected_models()
+        if model_list:
+            self.context_menu_button.setEnabled(True)
+        else:
+            self.context_menu_button.setEnabled(False)
+        self._graph_widget.update()

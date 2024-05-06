@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -16,6 +16,8 @@ class ProgressBar(tqdm):
             kwargs['total'] = 0
         if 'bar_format' not in kwargs:
             kwargs['bar_format'] = '{l_bar}{bar}| [{elapsed}<{remaining}{postfix}]'
+        if 'disable' not in kwargs:
+            kwargs['disable'] = False
         super().__init__(**kwargs)
 
     def step(self, s='', refresh=True):

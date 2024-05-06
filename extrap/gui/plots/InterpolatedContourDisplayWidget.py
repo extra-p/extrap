@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -36,7 +36,7 @@ class InterpolatedContourDisplay(BaseContourGraph):
             return
 
         # Get font size for legend
-        fontSize = self.graphWidget.getFontSize()
+        font_size_legend = self.main_widget.plot_formatting_options.legend_font_size
 
         # Get max x and max y value as a initial default value or a value provided by user
         maxX, maxY = self.get_max()
@@ -89,7 +89,8 @@ class InterpolatedContourDisplay(BaseContourGraph):
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore', 'No contour levels were found within the data range.')
                     CS = ax.contour(X, Y, Z_List[i], colors="white", levels=levels)
-                    ax.clabel(CS, CS.levels[::1], inline=True, fontsize=8)
+                    ax.clabel(CS, CS.levels[::1], inline=True,
+                              fontsize=self.main_widget.plot_formatting_options.font_size * 0.8)
             except ValueError:  # raised if function selected is constant
                 pass
             ax.set_xlabel('\n' + x_label)
@@ -99,10 +100,8 @@ class InterpolatedContourDisplay(BaseContourGraph):
             if titleName.startswith("_"):
                 titleName = titleName[1:]
             ax.set_title(titleName)
-            for item in ([ax.xaxis.label, ax.yaxis.label]):
-                item.set_fontsize(10)
             for item in ([ax.title]):
-                item.set_fontsize(fontSize)
+                item.set_fontsize(font_size_legend)
 
     @staticmethod
     def getColorMap():

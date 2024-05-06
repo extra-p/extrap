@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -9,19 +9,26 @@ from __future__ import annotations
 
 import copy
 from enum import Enum, auto
-from typing import Optional, TYPE_CHECKING, List, Callable
+from typing import Optional, TYPE_CHECKING, List, Callable, Any
 
 import numpy
-from PySide2.QtCore import *  # @UnusedWildImport
+from PySide6.QtCore import *  # @UnusedWildImport
 
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
-from extrap.entities.model import Model
+from extrap.entities.model import Model, SegmentedModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
+
+
+def _format_number_segmented_model(segmented_model: SegmentedModel, selector: Callable[[Model], Any]) -> str:
+    val = formatNumber(str(selector(segmented_model))) + "\n"
+    val += "\n".join(f"Model {i + 1}: " + formatNumber(str(selector(m)))
+                     for i, m in enumerate(segmented_model.segment_models))
+    return val
 
 
 class TreeModel(QAbstractItemModel):
@@ -44,6 +51,9 @@ class TreeModel(QAbstractItemModel):
         self.endRemoveRows()
 
     def _node_from_index(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
+
         if index.isValid():
             return index.internalPointer()
         else:
@@ -51,19 +61,26 @@ class TreeModel(QAbstractItemModel):
 
     # noinspection PyMethodMayBeStatic
     def getValue(self, index) -> Optional[calltree.Node]:
+        if not self.checkIndex(index):
+            raise IndexError()
+
         item = index.internalPointer()
         if item is None:
             return None
         return item.data()
 
     def data(self, index, role=None):
+
+        if not self.checkIndex(index, QAbstractItemModel.CheckIndexOption.IndexIsValid):
+            raise IndexError()
+
         if not index.isValid():
             return None
 
         getDecorationBoxes = (role == Qt.DecorationRole and index.column() == 1)
         get_tooltip_annotations = (role == Qt.ToolTipRole and index.column() == 2)
 
-        if role != Qt.DisplayRole and not (getDecorationBoxes or get_tooltip_annotations):
+        if role != Qt.DisplayRole and role != Qt.ToolTipRole and not (getDecorationBoxes or get_tooltip_annotations):
             return None
 
         call_tree_node = index.internalPointer().data()
@@ -74,7 +91,7 @@ class TreeModel(QAbstractItemModel):
         if callpath is None:
             return "Invalid"
 
-        model = self.getSelectedModel(callpath)
+        model, _ = self.getSelectedModel(callpath)
         if model is None and index.column() != 0:
             return None
 
@@ -121,9 +138,9 @@ class TreeModel(QAbstractItemModel):
                 return [ann.icon(parameters=parameters,
                                  parameter_values=parameter_values)
                         for ann in model.annotations]
-            return None
         elif index.column() == 3:
             experiment = self.main_widget.getExperiment()
+
             formula = model.hypothesis.function
             if self.selector_widget.asymptoticCheckBox.isChecked():
                 parameters = tuple(experiment.parameters)
@@ -131,17 +148,32 @@ class TreeModel(QAbstractItemModel):
             else:
                 parameters = self.selector_widget.getParameterValues()
                 previous = numpy.seterr(divide='ignore', invalid='ignore')
-                res = formatNumber(str(formula.evaluate(parameters)))
+                if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                    res = _format_number_segmented_model(model, lambda m: m.hypothesis.function.evaluate(parameters))
+                else:
+                    res = formatNumber(str(formula.evaluate(parameters)))
                 numpy.seterr(**previous)
                 return res
         elif index.column() == 4:
-            return formatNumber(str(model.hypothesis.RSS))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.RSS)
+            else:
+                return formatNumber(str(model.hypothesis.RSS))
         elif index.column() == 5:
-            return formatNumber(str(model.hypothesis.AR2))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.AR2)
+            else:
+                return formatNumber(str(model.hypothesis.AR2))
         elif index.column() == 6:
-            return formatNumber(str(model.hypothesis.SMAPE))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.SMAPE)
+            else:
+                return formatNumber(str(model.hypothesis.SMAPE))
         elif index.column() == 7:
-            return formatNumber(str(model.hypothesis.RE))
+            if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                return _format_number_segmented_model(model, lambda m: m.hypothesis.RE)
+            else:
+                return formatNumber(str(model.hypothesis.RE))
         return None
 
     def get_comparison_value(self, model):
@@ -179,13 +211,14 @@ class TreeModel(QAbstractItemModel):
         return name
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
+        experiment = self.main_widget.getExperiment()
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
         if model is None or metric is None:
             return None
         key = (callpath, metric)
         if key in model.models:
-            return model.models[key]  # might be None
+            return model.models[key], experiment  # might be None
         else:
             return None
 
@@ -210,6 +243,8 @@ class TreeModel(QAbstractItemModel):
         #     self.valuesChanged()
 
     def flags(self, index):
+        if not self.checkIndex(index):
+            raise IndexError()
         if not index.isValid():
             return Qt.NoItemFlags
 
@@ -241,16 +276,17 @@ class TreeModel(QAbstractItemModel):
 
         return None
 
-    def index(self, row, column, parent=None):
-
-        # print("In tree model # of rows",self.rowCount(parent))
-        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
-            return QModelIndex()
-
+    def index(self, row, column, parent=QModelIndex()):
+        if not self.checkIndex(parent):
+            raise IndexError()
         if not parent.isValid():
             parentItem = self.root_item
         else:
             parentItem = parent.internalPointer()
+
+        # print("In tree model # of rows",self.rowCount(parent))
+        if row < 0 or column < 0 or row >= self.rowCount(parent) or column >= self.columnCount(parent):
+            return QModelIndex()
 
         childItem = parentItem.child(row)
         if childItem:
@@ -259,14 +295,16 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def parent(self, index=...):
+        self.checkIndex(index, QAbstractItemModel.CheckIndexOption.DoNotUseParent)
+
         if not index.isValid():
             return QModelIndex()
 
         childItem: TreeItem = index.internalPointer()
-        if childItem is None:
+        if childItem == self.root_item:
             return QModelIndex()
-        parentItem = childItem.parent()
 
+        parentItem = childItem.parent()
         if parentItem == self.root_item:
             return QModelIndex()
         try:
@@ -275,8 +313,13 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def rowCount(self, parent=None):
-        if parent.column() > 0:
-            return 0
+        if parent is None:
+            parent = QModelIndex()
+
+        # if parent.column() > 0:
+        #     return 0
+        if not self.checkIndex(parent):
+            raise IndexError()
 
         if not parent.isValid():
             parentItem = self.root_item
@@ -288,9 +331,8 @@ class TreeModel(QAbstractItemModel):
     def valuesChanged(self):
         if not self.main_widget.getExperiment():
             return
-        self.dataChanged.emit(self.createIndex(0, 0),
-                              self.createIndex(len(self.main_widget.getExperiment().callpaths) - 1,
-                                               self.columnCount(None) - 1))
+
+        self.dataChanged.emit(QModelIndex(), QModelIndex())  # The whole tree changed its values
 
 
 class TreeItem(object):

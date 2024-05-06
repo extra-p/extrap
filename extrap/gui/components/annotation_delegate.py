@@ -1,16 +1,16 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2022-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
 
-from PySide2.QtCore import QXmlStreamReader, QModelIndex, QMargins, QRect, QSize
-from PySide2.QtGui import Qt
-from PySide2.QtSvg import QSvgRenderer
-from PySide2.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
+from PySide6.QtCore import QXmlStreamReader, QModelIndex, QMargins, QRect, QSize
+from PySide6.QtGui import Qt
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 
 from extrap.entities.annotations import AnnotationIconSVG
 

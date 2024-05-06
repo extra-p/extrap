@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -10,8 +10,8 @@ import unittest
 import warnings
 from threading import Thread
 
-from PySide2.QtCore import QRect, QItemSelectionModel
-from PySide2.QtWidgets import QApplication, QCheckBox, QPushButton
+from PySide6.QtCore import QRect, QItemSelectionModel
+from PySide6.QtWidgets import QApplication, QCheckBox, QPushButton
 
 from extrap.extrap import extrapgui
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
@@ -21,7 +21,7 @@ from extrap.gui.MainWidget import MainWidget, QCoreApplication
 try:
     APP = QApplication()
     APP.setStyle('Fusion')
-    app_thread = Thread(target=APP.exec_)
+    app_thread = Thread(target=APP.exec)
 except:
     app_thread = None
     pass
@@ -34,7 +34,7 @@ class TestGuiCommon(unittest.TestCase):
         if not app_thread:
             raise unittest.SkipTest("GUI could not start.")
         if not app_thread.is_alive():
-            app_thread = Thread(target=APP.exec_)
+            app_thread = Thread(target=APP.exec)
             app_thread.start()
         self.window = MainWidget()
         self.window.hide()

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -20,6 +20,7 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.measurement import Measurement, MeasurementSchema
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.parameter import Parameter, ParameterSchema
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
 from extrap.util.deprecation import deprecated
@@ -35,8 +36,7 @@ class Experiment:
         self.metrics: List[Metric] = UniqueList()
         self.parameters: List[Parameter] = UniqueList()
         self.coordinates: List[Coordinate] = UniqueList()
-        self.measurements: Dict[Tuple[Callpath,
-                                      Metric], List[Measurement]] = {}
+        self.measurements: Dict[Tuple[Callpath, Metric], List[Measurement]] = {}
         self.call_tree: CallTree = None
         self.modelers: List[ModelGenerator] = []
         self.scaling = None
@@ -80,6 +80,11 @@ class Experiment:
         else:
             self.measurements[key] = [measurement]
 
+    def delete_measurement(self, callpath: Callpath, metric: Metric):
+        key = (callpath,
+               metric)
+        self.measurements.pop(key)
+
     def clear_measurements(self):
         self.measurements = {}
 
@@ -108,7 +113,7 @@ class Experiment:
 
 class ExperimentSchema(BaseSchema):
     _version_ = fields.Constant(extrap.__version__, data_key=extrap.__title__)
-    scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf(['strong', 'weak']))
+    scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf([str(s) for s in ScalingType]))
     parameters = fields.List(fields.Pluck(ParameterSchema, 'name'))
     callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
     metrics = ListToMappingField(MetricSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
@@ -120,6 +125,9 @@ class ExperimentSchema(BaseSchema):
 
     def set_progress_bar(self, pbar):
         self.context['progress_bar'] = pbar
+
+    def set_value_io(self, value_writer):
+        self.context['value_io'] = value_writer
 
     @pre_load
     def add_progress(self, data, **kwargs):

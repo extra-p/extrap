@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -105,8 +105,11 @@ class TestCubeFileLoader(unittest.TestCase):
         self.assertRaises(FileFormatError, CubeFileReader2().read_cube_file, 'data/cubeset', 'strong')
 
     def test_strong_scaling_warning(self):
-        self.assertWarnsRegex(UserWarning, 'Strong scaling', CubeFileReader2().read_cube_file,
-                              'data/cubeset/multi_parameter', 'strong')
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter('ignore', DeprecationWarning)
+            warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
+            CubeFileReader2().read_cube_file('data/cubeset/multi_parameter', 'strong')
+        self.assertFalse(record)
 
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter('ignore', DeprecationWarning)
