@@ -60,6 +60,8 @@ class Measurement:
             return
         values = np.array(values)
         if keep_values:
+            if values.ndim > 1:
+                values = np.concatenate(values)
             self.values: Optional[np.typing.NDArray] = values
         else:
             self.values = None

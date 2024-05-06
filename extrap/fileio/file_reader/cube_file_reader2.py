@@ -244,7 +244,8 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 non_zero_value_mask = values != 0
                                 if numpy.any(non_zero_value_mask):
                                     values = values[non_zero_value_mask]
-                                aggregated_values[(callpath, metric)].append(values)
+                                aggregated_values[(callpath, metric)] = numpy.concatenate(
+                                    (aggregated_values[(callpath, metric)], values))
                             # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
                                 aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
