@@ -77,3 +77,9 @@ class UniqueList(list, Sequence[T]):
         super(UniqueList, obj).extend(copy.deepcopy(e, memodict) for e in self)
         obj._set = copy.deepcopy(self._set, memodict)
         return obj
+
+    def __copy__(self):
+        obj = UniqueList()
+        super(UniqueList, obj).extend(self)
+        obj._set = copy.copy(self._set)
+        return obj
