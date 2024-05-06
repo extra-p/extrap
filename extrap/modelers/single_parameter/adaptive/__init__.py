@@ -6,7 +6,6 @@
 # See the LICENSE file in the base directory for details.
 
 import copy
-import warnings
 from bisect import bisect_left
 from collections import namedtuple
 from itertools import groupby
@@ -21,6 +20,7 @@ from extrap.entities.model import Model
 from extrap.entities.terms import CompoundTerm
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.single_parameter.abstract_base import AbstractSingleParameterModeler
+from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 try:
@@ -82,6 +82,11 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
         self._basic_modeler: AbstractSingleParameterModeler = SingleParameterModeler()
 
     def model(self, measurement_list_: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
+        if not extrapadaptivemodeler:
+            raise RecoverableError(
+                "To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\n"
+                "You can do that using 'pip install extrap[adaptive_modeling]'.")
+
         all_models = []
         for _, measurement_group in groupby(measurement_list_, key=lambda ms: {m.coordinate[0] for m in ms}):
             measurement_list = list(measurement_group)
@@ -139,37 +144,30 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
         return (positions * max_sp) / max_p, values / positions
 
     def _predict_functions(self, positions, values, noise_orig):
-        if extrapadaptivemodeler:
-            tf = load_tensorflow()
+        tf = load_tensorflow()
 
-            transformed_points, transformed_values_list = self._preprocess(positions, values)
-            bucket_indices = self._bucketize([(p, i + 1) for i, p in enumerate(transformed_points)])
-            noise_category_list = self._noise_category(noise_orig)
+        transformed_points, transformed_values_list = self._preprocess(positions, values)
+        bucket_indices = self._bucketize([(p, i + 1) for i, p in enumerate(transformed_points)])
+        noise_category_list = self._noise_category(noise_orig)
 
-            top_k_classes = []
-            for noise_category, groups in groupby(zip(noise_category_list, transformed_values_list),
-                                                  key=lambda ms: ms[0]):
-                transformed_values = np.array([v for _, v in groups])
-                ml_model, self._cached_mlmodels = get_model(bucket_indices, noise_category, positions, tf,
-                                                            self.retrain_epochs, self.retrain_examples_per_class,
-                                                            self._cached_mlmodels)
+        top_k_classes = []
+        for noise_category, groups in groupby(zip(noise_category_list, transformed_values_list),
+                                              key=lambda ms: ms[0]):
+            transformed_values = np.array([v for _, v in groups])
+            ml_model, self._cached_mlmodels = get_model(bucket_indices, noise_category, positions, tf,
+                                                        self.retrain_epochs, self.retrain_examples_per_class,
+                                                        self._cached_mlmodels)
 
-                bucket_values = np.zeros((len(transformed_values), len(bucket_indices)))
-                for bi, pi in enumerate(bucket_indices):
-                    if pi > 0:
-                        bucket_values[:, bi] = transformed_values[:, pi - 1]
+            bucket_values = np.zeros((len(transformed_values), len(bucket_indices)))
+            for bi, pi in enumerate(bucket_indices):
+                if pi > 0:
+                    bucket_values[:, bi] = transformed_values[:, pi - 1]
 
-                # do not use model.predict() to prevent memory leak
-                prediction = ml_model(bucket_values)
-                top_k_classes.extend([int(c) for c in tf.math.top_k(prediction, 1).indices])
-            terms = (_TERMS[c] for c in top_k_classes)
-            functions = (SingleParameterFunction(copy.copy(t)) for t in terms)
-
-        else:
-            warnings.warn("To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\n"
-                          "You can do that using 'pip install extrap[adaptive_modeling]'.")
-            functions = None
-
+            # do not use model.predict() to prevent memory leak
+            prediction = ml_model(bucket_values)
+            top_k_classes.extend([int(c) for c in tf.math.top_k(prediction, 1).indices])
+        terms = (_TERMS[c] for c in top_k_classes)
+        functions = (SingleParameterFunction(copy.copy(t)) for t in terms)
         return functions
 
     def get_noise(self, mean_values, min_values, max_values):
