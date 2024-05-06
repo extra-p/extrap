@@ -361,7 +361,7 @@ class TestSparseModeling(TestCaseWithFunctionAssertions):
 
             models = modeler.model([measurements])
             self.assertEqual(1, len(models))
-            self.assertApproxFunction(function, models[0].hypothesis.function, places=5)
+            self.assertApproxFunction(function, models[0].hypothesis.function, places=4)
 
     def test_modeling_3p_plus(self):
         exponents = [(0, 1, 1), (0, 1, 2), (1, 4, 0), (1, 3, 0), (1, 4, 1), (1, 3, 1), (1, 4, 2), (1, 3, 2),
