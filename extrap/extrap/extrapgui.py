@@ -24,6 +24,7 @@ from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader import all_readers
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingConversionReader
+from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
 
@@ -97,6 +98,10 @@ def parse_arguments(args=None):
                         type=ScalingType, choices=ScalingType,
                         help="Set scaling type when loading data from per-thread/per-rank files (" +
                              names_of_scaling_conversion_readers + ") (default: %(default)s)")
+
+    parser.add_argument("--keep-values", action="store_true", default=False, dest='keep_values',
+                        help="Keeps the original values after import")
+
     arguments = parser.parse_args(args)
     return arguments
 
@@ -111,6 +116,10 @@ def load_from_command(arguments, window):
                 elif arguments.scaling_type != ScalingType.WEAK:
                     warnings.warn(
                         f"Scaling type {arguments.scaling_type} is not supported by the {reader.NAME} reader.")
+                if isinstance(file_reader, TKeepValuesReader):
+                    file_reader.keep_values = arguments.keep_values
+                elif arguments.keep_values:
+                    warnings.warn(f"Keeping values is not supported by the {reader.NAME} reader.")
                 window.import_file(file_reader.read_experiment, file_name=arguments.path,
                                    model=file_reader.GENERATE_MODELS_AFTER_LOAD, reader=file_reader)
                 return

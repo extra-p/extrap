@@ -122,7 +122,9 @@ class ValueReader:
             magic_number = self.cached_index.read(16)
             if magic_number != b"Extra-P INDEX\0\0\0":
                 raise FileFormatError("Could not read index file to retrieve values.")
-            self.cached_values = self._zipfile.open("values/" + str(chunk_index) + ".vals", 'r')
+            fileinfo = self._zipfile.getinfo("values/" + str(chunk_index) + ".vals")
+            fileinfo.CRC = None
+            self.cached_values = self._zipfile.open(fileinfo, 'r')
             magic_number = self.cached_values.read(16)
             if magic_number != b"Extra-P VALUES\0\0":
                 raise FileFormatError("Could not read value file to retrieve values.")
