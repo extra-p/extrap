@@ -4,7 +4,11 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
+from __future__ import annotations
+
 import math
+from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtGui import QIntValidator
@@ -12,12 +16,15 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.gpr.measurement_point_advisor import MeasurementPointAdvisor
 
+if TYPE_CHECKING:
+    from extrap.gui.MainWidget import MainWidget
+
 
 class MeasurementWizardWidget(QWidget):
 
     def __init__(self, mainWidget, parent):
         super(MeasurementWizardWidget, self).__init__(parent)
-        self.main_widget = mainWidget
+        self.main_widget: MainWidget = mainWidget
         self.main_layout = QHBoxLayout(self)
         self.calculate_cost_manual = False
         self.experiment = None
@@ -33,6 +40,7 @@ class MeasurementWizardWidget(QWidget):
         self.init_empty()
 
     def init_empty(self):
+        self.no_model_parameters = 0
         self.setLayout(self.main_layout)
         if not self.empty_label:
             self.empty_label = QLabel(self)
@@ -55,7 +63,7 @@ class MeasurementWizardWidget(QWidget):
 
         self.main_layout.addLayout(self._layout)
 
-        self.checkbox = QCheckBox("No. of processes (MPI ranks)\n is one of the model parameters", self)
+        self.checkbox = QCheckBox("No. of processes (MPI ranks) is one of the model parameters", self)
         self.checkbox.setChecked(True)
         self.checkbox.toggled.connect(self.clickCheckbox)
         self._layout.addWidget(self.checkbox, 0, 0, 1, 2)
@@ -101,7 +109,7 @@ class MeasurementWizardWidget(QWidget):
         self._layout.addWidget(budget_label, 4, 0)
 
         self.modeling_budget = QDoubleSpinBox(self)
-        self.modeling_budget.setMaximum(999999999999.0)
+        self.modeling_budget.setMaximum(math.inf)
         self.modeling_budget.setMinimum(0.0)
         self._layout.addWidget(self.modeling_budget, 4, 1)
         self.modeling_budget.textChanged.connect(self.budgetChanged)
@@ -137,7 +145,7 @@ class MeasurementWizardWidget(QWidget):
         self.parameter_value_checkbox = QCheckBox("Enter parameter-value series manually", self)
         self.parameter_value_checkbox.setChecked(False)
         self.parameter_value_checkbox.toggled.connect(self.clickParameterValueCheckbox)
-        self._layout.addWidget(self.parameter_value_checkbox, 8, 0)
+        self._layout.addWidget(self.parameter_value_checkbox, 8, 0, 1, 2)
 
         self.param_value_layout = QGridLayout(self)
         self.param_value_layout.setRowStretch(99, 1)
@@ -146,7 +154,7 @@ class MeasurementWizardWidget(QWidget):
         self._layout.addLayout(self.param_value_layout, 9, 0, 1, 2)
 
         self.advise_button = QPushButton(self)
-        self._layout.addWidget(self.advise_button, 10, 0)
+        self._layout.addWidget(self.advise_button, 10, 0, 1, 2)
         self.advise_button.setText("Suggest Additional Measurement Points")
         self.advise_button.clicked.connect(self.advice_button_clicked)
 
@@ -157,7 +165,7 @@ class MeasurementWizardWidget(QWidget):
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setReadOnly(True)
-        self._layout.addWidget(self.measurement_point_suggestions_label, 11, 1)
+        self._layout.addWidget(self.measurement_point_suggestions_label, 12, 0, 1, 2)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
@@ -266,12 +274,14 @@ class MeasurementWizardWidget(QWidget):
         self.measurement_point_suggestions_label = QPlainTextEdit(self)
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setReadOnly(True)
-        self._layout.addWidget(self.measurement_point_suggestions_label, 10, 1)
+        self._layout.addWidget(self.measurement_point_suggestions_label, 11, 0, 1, 2)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
 
     def calculate_noise_level(self):
+        if self.no_model_parameters == 0:
+            return
         # do an noise analysis on the existing measurement points
         mm = self.experiment.measurements
         metric_string = self.metric_selector.currentText()
@@ -335,13 +345,10 @@ class MeasurementWizardWidget(QWidget):
                     nns = []
                     try:
                         for meas in measurements[(callpath, runtime_metric)]:
-                            pps = []
-                            for val in meas.values:
-                                if np.mean(meas.values) == 0.0:
-                                    pp = 0
-                                else:
-                                    pp = abs((val / (np.mean(meas.values) / 100)) - 100)
-                                pps.append(pp)
+                            mean = meas.mean
+                            pps = np.zeros_like(meas.values)
+                            if mean != 0:
+                                pps = np.abs((meas.values / (mean / 100)) - 100)
                             nns.append(np.mean(pps))
                     except KeyError:
                         nns = [0.0]
@@ -353,6 +360,8 @@ class MeasurementWizardWidget(QWidget):
         self.noise_level_edit.setText(noise_level_str)
 
     def calculate_used_budget(self):
+        if self.no_model_parameters == 0:
+            return
         self.budget = self.modeling_budget.value()
         if self.budget == 0.0:
             self.budget = self.current_cost
@@ -361,6 +370,8 @@ class MeasurementWizardWidget(QWidget):
         self.used_budget_edit.setText(str(used_budget_percent_str))
 
     def calculate_current_measurement_cost(self):
+        if self.no_model_parameters == 0:
+            return
         current_cost_str = "0.0"
         metric_string = self.metric_selector.currentText()
         metrics = self.experiment.metrics
