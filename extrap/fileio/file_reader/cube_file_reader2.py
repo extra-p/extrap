@@ -264,7 +264,9 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             for cnode in parent_cnode.get_children():
                 name = cnode.region.name
                 path_name = '->'.join((parent_name, name))
-                callpaths[cnode.id] = Callpath(path_name)
+                callpath = Callpath(path_name)
+                callpath.tags['region__paradigm'] = cnode.region.paradigm
+                callpaths[cnode.id] = callpath
                 walk_tree(cnode, path_name)
 
         for root_cnode in cnodes:
