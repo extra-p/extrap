@@ -5,12 +5,12 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-from extrap.gpr.add_selection_strategy import suggest_points_add_mode
-from extrap.gpr.base_selection_strategy import suggest_points_base_mode
-from extrap.gpr.gpr_selection_strategy import suggest_points_gpr_mode
-from extrap.gpr.util import identify_selection_mode, build_parameter_value_series, identify_step_factor, \
-    extend_parameter_value_series, build_search_space, identify_possible_points
 from extrap.gui.components.ProgressWindow import ProgressWindow
+from extrap.mpa.add_selection_strategy import suggest_points_add_mode
+from extrap.mpa.base_selection_strategy import suggest_points_base_mode
+from extrap.mpa.gpr_selection_strategy import suggest_points_gpr_mode
+from extrap.mpa.util import identify_selection_mode, build_parameter_value_series, identify_step_factor, \
+    extend_parameter_value_series, get_search_space_generator, identify_possible_points
 
 
 class MeasurementPointAdvisor:

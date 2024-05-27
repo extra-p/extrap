@@ -14,7 +14,7 @@ import numpy as np
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gpr.measurement_point_advisor import MeasurementPointAdvisor
+from extrap.mpa.measurement_point_advisor import MeasurementPointAdvisor
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
