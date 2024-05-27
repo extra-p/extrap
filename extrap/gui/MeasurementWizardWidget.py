@@ -582,18 +582,13 @@ class MeasurementWizardWidget(QWidget):
                 number_processes = 0
 
             # initialize a new measurement point advisor object
-            mpa = MeasurementPointAdvisor(budget=self.budget,
-                                          processes=self.processes_parameter_id,
-                                          callpaths=selected_callpath,
-                                          metric=runtime_metric,
-                                          experiment=self.experiment,
-                                          current_cost=self.current_cost,
+            mpa = MeasurementPointAdvisor(budget=self.budget, process_parameter_id=self.processes_parameter_id,
+                                          callpaths=selected_callpath, metric=runtime_metric,
+                                          experiment=self.experiment, current_cost=self.current_cost,
                                           manual_pms_selection=self.manual_pms_selection,
                                           manual_parameter_value_series=self.parameter_value_series,
                                           calculate_cost_manual=self.calculate_cost_manual,
-                                          number_processes=number_processes,
-                                          main_widget=self.main_widget,
-                                          model_generator=model_gen)
+                                          number_processes=number_processes, model_generator=model_gen)
 
             point_suggestions, rep_numbers = mpa.suggest_points()
 

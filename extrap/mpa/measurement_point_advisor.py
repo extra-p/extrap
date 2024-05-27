@@ -4,35 +4,26 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+import numbers
+from collections.abc import Sequence
 
-from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.mpa.add_selection_strategy import suggest_points_add_mode
 from extrap.mpa.base_selection_strategy import suggest_points_base_mode
 from extrap.mpa.gpr_selection_strategy import suggest_points_gpr_mode
 from extrap.mpa.util import identify_selection_mode, build_parameter_value_series, identify_step_factor, \
     extend_parameter_value_series, get_search_space_generator, identify_possible_points
+from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
 class MeasurementPointAdvisor:
 
-    def __init__(self,
-                 budget,
-                 processes,
-                 callpaths,
-                 metric,
-                 experiment,
-                 current_cost,
-                 manual_pms_selection,
-                 manual_parameter_value_series,
-                 calculate_cost_manual,
-                 number_processes,
-                 main_widget,
-                 model_generator) -> None:
+    def __init__(self, budget, process_parameter_id, callpaths, metric, experiment, current_cost, manual_pms_selection,
+                 manual_parameter_value_series, calculate_cost_manual, number_processes, model_generator) -> None:
 
         self.budget = budget
         # print("budget:",budget)
 
-        self.processes = processes
+        self.process_parameter_id = process_parameter_id
         # print("processes:",processes)
 
         self.experiment = experiment
@@ -48,8 +39,6 @@ class MeasurementPointAdvisor:
         self.calculate_cost_manual = calculate_cost_manual
 
         self.number_processes = number_processes
-
-        self.main_widget = main_widget
 
         self.model_generator = model_generator
 
@@ -93,7 +82,15 @@ class MeasurementPointAdvisor:
 
         # print("DEBUG selection_mode:",self.selection_mode)
 
-    def suggest_points(self):
+    def calculate_cost(self, point: Sequence, runtime: numbers.Real) -> numbers.Real:
+        if self.calculate_cost_manual:
+            nr_processes = self.number_processes
+        else:
+            nr_processes = point[self.process_parameter_id]
+        cost = runtime * nr_processes
+        return cost
+
+    def suggest_points(self, pbar=DUMMY_PROGRESS):
 
         if self.manual_pms_selection:
             # 1.2.3. build the parameter series from manual entries in GUI
@@ -111,7 +108,7 @@ class MeasurementPointAdvisor:
 
         else:
             # 1. build a value series for each parameter
-            parameter_value_series = build_parameter_value_series(self.experiment)
+            parameter_value_series = build_parameter_value_series(self.experiment.coordinates)
 
             # 2. identify the step factor size for each parameter
             mean_step_size_factors = identify_step_factor(parameter_value_series)
@@ -119,11 +116,16 @@ class MeasurementPointAdvisor:
             # 3. continue and complete these series for each parameter
             parameter_value_series = extend_parameter_value_series(parameter_value_series, mean_step_size_factors)
 
-        # 4. create search space (1D, 2D, 3D, ND) from the series values of each parameters
-        search_space_coordinates = build_search_space(self.experiment, parameter_value_series)
+        # 4. create search space (1D, 2D, 3D, ND) from the series values of each parameter
+        search_space_generator = get_search_space_generator(parameter_value_series)
 
         # 5. remove existing points from search space to obtain only new possible points
-        possible_points = identify_possible_points(search_space_coordinates, self.experiment)
+        possible_points = identify_possible_points(search_space_generator, self.experiment.coordinates)
+
+        # if no callpath is selected use all call paths
+        selected_callpaths = self.selected_callpaths
+        if len(selected_callpaths) == 0:
+            selected_callpaths = self.experiment.callpaths
 
         # 6. suggest points using selected mode
         # a. base mode
@@ -142,39 +144,35 @@ class MeasurementPointAdvisor:
         # b.3 choose the point from the seach space with the lowest cost
         # b.4 check if that point fits into the available budget
         # b.41 create a coordinate from it and suggest it if fits into budget
-        # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be increased...
+        # b.42 if not fit then need to show message instead that available budget is not sufficient and needs to be
+        #      increased...
         elif self.selection_mode == "add":
             suggested_cords = suggest_points_add_mode(self.experiment,
                                                       possible_points,
-                                                      self.selected_callpaths,
+                                                      selected_callpaths,
                                                       self.metric,
-                                                      self.calculate_cost_manual,
-                                                      self.processes,
-                                                      self.number_processes,
+                                                      self.calculate_cost,
                                                       self.budget,
                                                       self.current_cost,
                                                       self.model_generator)
             return suggested_cords, None
 
-
         # 6. suggest points using gpr mode
         # c. gpr mode
-        # c.1 predict the runtime of these points using the existing performance models (only possible if already enough points existing for modeling)
+        # c.1 predict the runtime of these points using the existing performance models (only possible if already enough
+        #     points existing for modeling)
         # c.2 calculate the cost of these points using the runtime (same calculation as for the current cost in the GUI)
         # c.3 all of the data is used as input to the GPR method
         # c.4 get the top x points suggested by the GPR method that do fit into the available budget
         # c.5 create coordinates and suggest them
         elif self.selection_mode == "gpr":
-            with ProgressWindow(self.main_widget, 'Generating models') as pbar:
-                suggested_cords, rep_numbers = suggest_points_gpr_mode(self.experiment,
-                                                                       possible_points,
-                                                                       self.selected_callpaths,
-                                                                       self.metric,
-                                                                       self.calculate_cost_manual,
-                                                                       self.processes,
-                                                                       self.number_processes,
-                                                                       self.budget,
-                                                                       self.current_cost,
-                                                                       self.model_generator,
-                                                                       pbar)
-                return suggested_cords, rep_numbers
+            suggested_cords, rep_numbers = suggest_points_gpr_mode(self.experiment,
+                                                                   possible_points,
+                                                                   selected_callpaths,
+                                                                   self.metric,
+                                                                   self.calculate_cost,
+                                                                   self.budget,
+                                                                   self.current_cost,
+                                                                   self.model_generator,
+                                                                   pbar)
+            return suggested_cords, rep_numbers
