@@ -47,8 +47,8 @@ class MeasurementWizardWidget(QWidget):
         self.setLayout(self.main_layout)
         if not self.empty_label:
             self.empty_label = QLabel(self)
-            self.empty_label.setText('Please load a performance experiment with values<br>'
-                                     'Enable <b>keep values</b> during the import.')
+            self.empty_label.setText('Please load a performance experiment to get <br>'
+                                     'suggestions for further measurement points.')
             self.main_layout.addWidget(self.empty_label)
 
     def init_multi_parameter(self):
@@ -217,7 +217,7 @@ class MeasurementWizardWidget(QWidget):
         self.metric_selector.currentIndexChanged.connect(self.metricChanged)
 
         budget_label = QLabel(self)
-        budget_label.setText("Modeling Budget [core hours]:")
+        budget_label.setText("Modeling Budget [core time]:")
         self._layout.addWidget(budget_label, 3, 0)
 
         self.modeling_budget = QDoubleSpinBox(self)
@@ -227,7 +227,7 @@ class MeasurementWizardWidget(QWidget):
         self.modeling_budget.textChanged.connect(self.budgetChanged)
 
         current_cost_label = QLabel(self)
-        current_cost_label.setText("Current Measurement Cost [core hours]:")
+        current_cost_label.setText("Current Measurement Cost [core time]:")
         self._layout.addWidget(current_cost_label, 4, 0)
 
         self.current_cost_edit = QLineEdit(self)
@@ -381,7 +381,7 @@ class MeasurementWizardWidget(QWidget):
             self.budget = self.current_cost
             self.modeling_budget.setValue(self.current_cost)
 
-        self.current_cost_edit.setText(str(current_cost_str))
+        self.current_cost_edit.setText(current_cost_str)
 
     def advice_button_clicked(self):
 
@@ -424,7 +424,8 @@ class MeasurementWizardWidget(QWidget):
             point_suggestions, rep_numbers = mpa.suggest_points()
 
             if len(point_suggestions) == 0:
-                text = "No measurement points could be found that fit into the available budget. Please consider increasing the modeling budget."
+                text = ("No measurement points could be found that fit into the available budget. Please consider "
+                        "increasing the modeling budget.")
 
             else:
                 text = ""
