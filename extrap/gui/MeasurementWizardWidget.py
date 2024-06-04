@@ -17,7 +17,6 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 from extrap.entities.metric import Metric
 from extrap.mpa.gpr_selection_strategy import analyze_noise
 from extrap.mpa.measurement_point_advisor import MeasurementPointAdvisor
-from extrap.util.exceptions import RecoverableError
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -51,9 +50,8 @@ class MeasurementWizardWidget(QWidget):
                                      'suggestions for further measurement points.')
             self.main_layout.addWidget(self.empty_label)
 
-    def init_multi_parameter(self):
+    def init_ui(self):
         self.no_model_parameters = len(self.experiment.parameters)
-
         if self.empty_label is not None:
             self.main_layout.removeWidget(self.empty_label)
             self.empty_label.deleteLater()
@@ -66,24 +64,33 @@ class MeasurementWizardWidget(QWidget):
 
         self.main_layout.addLayout(self._layout)
 
-        self.checkbox = QCheckBox("No. of processes (MPI ranks) is one of the model parameters", self)
+        if self.no_model_parameters == 1:
+            label = "Model parameter is the no. of processes (MPI ranks)"
+        else:
+            label = "No. of processes (MPI ranks) is one of the model parameters"
+        self.checkbox = QCheckBox(label, self)
         self.checkbox.setChecked(True)
         self.checkbox.toggled.connect(self.clickCheckbox)
         self._layout.addWidget(self.checkbox, 0, 0, 1, 2)
 
-        self.parameter_selector_label = QLabel(self)
-        self.parameter_selector_label.setText("Model Parameter resembling the\n number of processes (MPI ranks):")
-        self._layout.addWidget(self.parameter_selector_label, 1, 0)
+        if self.no_model_parameters == 1:
+            self.processes_parameter_id = 0
+            self.parameter_selector_label = None
+            self.parameter_selector = None
+        else:
+            self.parameter_selector_label = QLabel(self)
+            self.parameter_selector_label.setText("Model Parameter resembling the\n number of processes (MPI ranks):")
+            self._layout.addWidget(self.parameter_selector_label, 1, 0)
 
-        self.parameter_selector = QComboBox(self)
-        for parameter in self.experiment.parameters:
-            self.parameter_selector.addItem(str(parameter))
-        self._layout.addWidget(self.parameter_selector, 1, 1)
-        for i in range(len(self.experiment.parameters)):
-            if self.parameter_selector.currentText() == str(self.experiment.parameters[i]):
-                self.processes_parameter_id = i
-                break
-        self.parameter_selector.currentIndexChanged.connect(self.parameterChanged)
+            self.parameter_selector = QComboBox(self)
+            for parameter in self.experiment.parameters:
+                self.parameter_selector.addItem(str(parameter))
+            self._layout.addWidget(self.parameter_selector, 1, 1)
+            for i in range(len(self.experiment.parameters)):
+                if self.parameter_selector.currentText() == str(self.experiment.parameters[i]):
+                    self.processes_parameter_id = i
+                    break
+            self.parameter_selector.currentIndexChanged.connect(self.parameterChanged)
 
         self.process_label = QLabel(self)
         self.process_label.setText("No. of processes (MPI ranks):")
@@ -169,115 +176,6 @@ class MeasurementWizardWidget(QWidget):
         self.measurement_point_suggestions_label.setPlainText("")
         self.measurement_point_suggestions_label.setReadOnly(True)
         self._layout.addWidget(self.measurement_point_suggestions_label, 12, 0, 1, 2)
-
-        self.calculate_current_measurement_cost()
-        self.calculate_noise_level()
-
-    def init_single_parameter(self):
-        self.no_model_parameters = 1
-
-        if self.empty_label is not None:
-            self.main_layout.removeWidget(self.empty_label)
-            self.empty_label.deleteLater()
-            self.empty_label = None
-
-        self._layout = QGridLayout(self)
-        self._layout.setRowStretch(99, 1)
-        self._layout.setColumnStretch(0, 0)
-        self._layout.setColumnStretch(1, 1)
-
-        self.main_layout.addLayout(self._layout)
-
-        self.checkbox = QCheckBox("Model parameter is the no. of processes (MPI ranks)", self)
-        self.checkbox.setChecked(True)
-        self.checkbox.toggled.connect(self.clickCheckbox)
-        self._layout.addWidget(self.checkbox, 0, 0, 1, 2)
-        self.processes_parameter_id = 0
-
-        self.process_label = QLabel(self)
-        self.process_label.setText("No. of processes (MPI ranks):")
-        self._layout.addWidget(self.process_label, 1, 0)
-        self.process_label.setVisible(False)
-
-        self.processes = QLineEdit(self)
-        self.processes.setValidator(QIntValidator())
-        self._layout.addWidget(self.processes, 1, 1)
-        self.processes.setVisible(False)
-        self.processes.setText("2")
-        self.processes.textChanged.connect(self.processesChanged)
-
-        metric_label = QLabel(self)
-        metric_label.setText("Metric used for cost calculation:")
-        self._layout.addWidget(metric_label, 2, 0)
-
-        self.metric_selector = QComboBox(self)
-        for metric in self.experiment.metrics:
-            self.metric_selector.addItem(str(metric))
-        self._layout.addWidget(self.metric_selector, 2, 1)
-        self.metric_selector.currentIndexChanged.connect(self.metricChanged)
-
-        budget_label = QLabel(self)
-        budget_label.setText("Modeling Budget [core time]:")
-        self._layout.addWidget(budget_label, 3, 0)
-
-        self.modeling_budget = QDoubleSpinBox(self)
-        self.modeling_budget.setMaximum(math.inf)
-        self.modeling_budget.setMinimum(0.0)
-        self._layout.addWidget(self.modeling_budget, 3, 1)
-        self.modeling_budget.textChanged.connect(self.budgetChanged)
-
-        current_cost_label = QLabel(self)
-        current_cost_label.setText("Current Measurement Cost [core time]:")
-        self._layout.addWidget(current_cost_label, 4, 0)
-
-        self.current_cost_edit = QLineEdit(self)
-        self.current_cost_edit.setReadOnly(True)
-        self.current_cost_edit.setText("0.0")
-        self._layout.addWidget(self.current_cost_edit, 4, 1)
-
-        used_budget_label = QLabel(self)
-        used_budget_label.setText("Used Modeling Budget [%]:")
-        self._layout.addWidget(used_budget_label, 5, 0)
-
-        self.used_budget_edit = QLineEdit(self)
-        self.used_budget_edit.setReadOnly(True)
-        self.used_budget_edit.setText("0.0")
-        self._layout.addWidget(self.used_budget_edit, 5, 1)
-
-        noise_level_label = QLabel(self)
-        noise_level_label.setText("Measurement Noise Level [%]:")
-        self._layout.addWidget(noise_level_label, 6, 0)
-
-        self.noise_level_edit = QLineEdit(self)
-        self.noise_level_edit.setReadOnly(True)
-        noise_level_str = "{:.2f}".format(self.mean_noise_level)
-        self.noise_level_edit.setText(noise_level_str)
-        self._layout.addWidget(self.noise_level_edit, 6, 1)
-
-        self.parameter_value_checkbox = QCheckBox("Enter parameter-value series manually", self)
-        self.parameter_value_checkbox.setChecked(False)
-        self.parameter_value_checkbox.toggled.connect(self.clickParameterValueCheckbox)
-        self._layout.addWidget(self.parameter_value_checkbox, 7, 0, 1, 2)
-
-        self.param_value_layout = QGridLayout(self)
-        self.param_value_layout.setRowStretch(99, 1)
-        self.param_value_layout.setColumnStretch(0, 0)
-        self.param_value_layout.setColumnStretch(1, 1)
-        self._layout.addLayout(self.param_value_layout, 8, 0, 1, 2)
-
-        self.advise_button = QPushButton(self)
-        self.advise_button.setText("Suggest Additional Measurement Points")
-        self._layout.addWidget(self.advise_button, 9, 0, 1, 2)
-        self.advise_button.clicked.connect(self.advice_button_clicked)
-
-        suggestion_label = QLabel(self)
-        suggestion_label.setText("Measurement point suggestions:")
-        self._layout.addWidget(suggestion_label, 10, 0)
-
-        self.measurement_point_suggestions_label = QPlainTextEdit(self)
-        self.measurement_point_suggestions_label.setPlainText("")
-        self.measurement_point_suggestions_label.setReadOnly(True)
-        self._layout.addWidget(self.measurement_point_suggestions_label, 11, 0, 1, 2)
 
         self.calculate_current_measurement_cost()
         self.calculate_noise_level()
@@ -432,7 +330,7 @@ class MeasurementWizardWidget(QWidget):
                 number_processes = int(self.processes.text())
             except ValueError as e:
                 number_processes = 1
-                raise RecoverableError("Number of processes must be a number.") from e
+                # raise RecoverableError("Number of processes must be a number.") from e
         else:
             number_processes = 0
         return number_processes
@@ -461,13 +359,16 @@ class MeasurementWizardWidget(QWidget):
         if cbutton.isChecked():
             self.process_label.setVisible(False)
             self.calculate_cost_manual = False
-            for i in range(len(self.experiment.parameters)):
-                if str(self.experiment.parameters[i]) == self.parameter_selector.currentText():
-                    self.processes_parameter_id = i
-                    break
             self.processes.setVisible(False)
-            self.parameter_selector_label.setVisible(True)
-            self.parameter_selector.setVisible(True)
+            if self.parameter_selector:
+                for i in range(len(self.experiment.parameters)):
+                    if str(self.experiment.parameters[i]) == self.parameter_selector.currentText():
+                        self.processes_parameter_id = i
+                        break
+                self.parameter_selector_label.setVisible(True)
+                self.parameter_selector.setVisible(True)
+            else:
+                self.processes_parameter_id = 0
             self.calculate_current_measurement_cost()
             self.calculate_used_budget()
         else:
@@ -475,8 +376,9 @@ class MeasurementWizardWidget(QWidget):
             self.calculate_cost_manual = True
             self.processes.setVisible(True)
             self.processes_parameter_id = -1
-            self.parameter_selector.setVisible(False)
-            self.parameter_selector_label.setVisible(False)
+            if self.parameter_selector:
+                self.parameter_selector.setVisible(False)
+                self.parameter_selector_label.setVisible(False)
             self.calculate_current_measurement_cost()
             self.calculate_used_budget()
 
@@ -511,12 +413,9 @@ class MeasurementWizardWidget(QWidget):
 
         if model_parameters == 0:
             self.init_empty()
-        # if there is only one model parameter
-        elif model_parameters == 1:
-            self.init_single_parameter()
         # if there are several model parameters
         else:
-            self.init_multi_parameter()
+            self.init_ui()
 
         if model_parameters != 0:
             self.metric_selector.clear()
@@ -529,10 +428,6 @@ class MeasurementWizardWidget(QWidget):
         self.experiment = self.main_widget.getExperiment()
 
         if self.experiment is None:
-            self.reset()
-            return
-
-        if any(v[0].values is None for v in self.experiment.measurements.values()):
             self.reset()
             return
 
