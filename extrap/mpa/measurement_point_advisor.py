@@ -53,17 +53,8 @@ class MeasurementPointAdvisor:
         self.metric = metric
         # print("metric:",self.metric)
 
-        # these are tree nodes, need to convert them to actual callpaths manually
-        self.selected_callpath_ids = []
-        self.selected_callpaths = []
-        for i in range(len(callpaths)):
-            self.selected_callpaths.append(callpaths[i].path)
-            for j in range(len(self.experiment.callpaths)):
-                if str(callpaths[i].path) == str(self.experiment.callpaths[j]):
-                    self.selected_callpath_ids.append(j)
-                    break
+        self.selected_callpaths = callpaths
         # print("selected callpaths:",self.selected_callpaths)
-        # print("selected callpath ids:",self.selected_callpath_ids)
 
         # set the minimum number of points required for modeling with the sparse modeler
         min_points = 4 * len(self.experiment.parameters) + 1

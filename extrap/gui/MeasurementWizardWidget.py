@@ -289,12 +289,7 @@ class MeasurementWizardWidget(QWidget):
         metric_string = self.metric_selector.currentText()
         runtime_metric = Metric(metric_string)
 
-        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
-
-        if len(selected_callpath) == 0:
-            selected_callpath = self.experiment.callpaths
-        else:
-            selected_callpath = [n.path for n in selected_callpath]
+        selected_callpath = self._get_selected_callpaths()
 
         temp_noise = []
         for callpath in selected_callpath:
@@ -324,11 +319,8 @@ class MeasurementWizardWidget(QWidget):
         for metric in metrics:
             if metric_string == str(metric):
                 runtime_metric = metric
-        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
-        if len(selected_callpath) == 0:
-            selected_callpath = self.experiment.callpaths
         else:
-            selected_callpath = [n.path for n in selected_callpath]
+        selected_callpath = self._get_selected_callpaths()
 
         measurements = self.experiment.measurements
         core_hours_total = 0
@@ -408,7 +400,7 @@ class MeasurementWizardWidget(QWidget):
                     runtime_metric = metric
 
             # get the selected callpath(s) in the tree
-            selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+            selected_callpath = self._get_selected_callpaths()
 
             # get the currently used model from the GUI
             model_gen = self.main_widget.get_current_model_gen()
@@ -418,14 +410,7 @@ class MeasurementWizardWidget(QWidget):
                 for i in range(len(self.experiment.parameters)):
                     self.parameter_value_series.append(self.line_edits[i].text())
 
-            if self.calculate_cost_manual:
-                try:
-                    number_processes = int(self.processes.text())
-                except ValueError as e:
-                    number_processes = 1
-                    raise RecoverableError("Number of processes must be a number.") from e
-            else:
-                number_processes = 0
+            number_processes = self._get_number_processes()
 
             # initialize a new measurement point advisor object
             mpa = MeasurementPointAdvisor(budget=self.budget, process_parameter_id=self.processes_parameter_id,
@@ -465,6 +450,25 @@ class MeasurementWizardWidget(QWidget):
                     text += temp
 
             self.measurement_point_suggestions_label.setPlainText(text)
+
+    def _get_selected_callpaths(self):
+        selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+        if len(selected_callpath) == 0:
+            selected_callpath = self.experiment.callpaths
+        else:
+            selected_callpath = [n.path for n in selected_callpath]
+        return selected_callpath
+
+    def _get_number_processes(self):
+        if self.calculate_cost_manual:
+            try:
+                number_processes = int(self.processes.text())
+            except ValueError as e:
+                number_processes = 1
+                raise RecoverableError("Number of processes must be a number.") from e
+        else:
+            number_processes = 0
+        return number_processes
 
     def budgetChanged(self):
         self.calculate_used_budget()
