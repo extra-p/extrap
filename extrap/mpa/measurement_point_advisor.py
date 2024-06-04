@@ -7,6 +7,7 @@
 import numbers
 from collections.abc import Sequence
 
+from extrap.entities.scaling_type import ScalingType
 from extrap.mpa.add_selection_strategy import suggest_points_add_mode
 from extrap.mpa.base_selection_strategy import suggest_points_base_mode
 from extrap.mpa.gpr_selection_strategy import suggest_points_gpr_mode
@@ -83,6 +84,8 @@ class MeasurementPointAdvisor:
         # print("DEBUG selection_mode:",self.selection_mode)
 
     def calculate_cost(self, point: Sequence, runtime: numbers.Real) -> numbers.Real:
+        if self.experiment.scaling == ScalingType.STRONG:
+            return runtime
         if self.calculate_cost_manual:
             nr_processes = self.number_processes
         else:

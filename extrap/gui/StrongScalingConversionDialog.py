@@ -12,17 +12,18 @@ from PySide6.QtWidgets import QDialog, QWidget, QFormLayout, QLabel, QDialogButt
     QStyle, QGridLayout, QSizePolicy, QSpacerItem
 
 from extrap.entities.experiment import Experiment
+from extrap.entities.scaling_type import ScalingType
 from extrap.gui.components.ProgressWindow import ProgressWidget
 
 _TITLE = "Strong-Scaling Experiment Detected"
 
-_MESSAGE = "<h3>Modeling strong-scaling is not supported, <br>do you want to convert to a " \
+_MESSAGE = "<h3>Modeling strong-scaling is not supported directly, <br>do you want to convert to a " \
            "weak-scaling experiment?</h3>" \
            "<p>Extra-P detected that these measurements might describe a strong-scaling experiment, but modeling " \
            "is only supported for weak-scaling experiments. If you continue without conversion, the models " \
            "might not be correct.</p>" \
            "<p>After the conversion Extra-P will model your metrics globally, e.g., the run time will be the sum " \
-           "of the run times of all ranks/threads.</p>"
+           "of the run times of all ranks/threads describing the global effort.</p>"
 
 
 class StrongScalingConversionDialog(QDialog):
@@ -99,6 +100,8 @@ class StrongScalingConversionDialog(QDialog):
             for measurements in pbar(self.experiment.measurements.values(), len(self.experiment.measurements)):
                 for m in measurements:
                     m *= m.coordinate[selected_dimension]
+
+            self.experiment.scaling = ScalingType.STRONG
         super().accept()
 
     @staticmethod
