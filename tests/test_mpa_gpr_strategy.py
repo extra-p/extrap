@@ -6,7 +6,7 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.metric import Metric
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
-from extrap.mpa.gpr_selection_strategy import suggest_points_gpr_mode
+from extrap.mpa.gpr_selection_strategy import suggest_points_gpr_mode, get_cost_of_measurements, MeanRepPair
 
 
 class TestMpaGprStrategy(unittest.TestCase):
@@ -24,7 +24,20 @@ class TestMpaGprStrategy(unittest.TestCase):
             return t
 
         budget = 10 ** 5
-        current_cost = 9075
+        current_cost = 10864.16
+
+        existing_measurements_dict = {}
+        for measurement in experiment.measurements[(Callpath('compute'), metric)]:
+            # prepare dictionary of existing measurements
+            if measurement.coordinate not in existing_measurements_dict:
+                existing_measurements_dict[measurement.coordinate] = MeanRepPair(measurement.mean,
+                                                                                 measurement.repetitions)
+            else:
+                existing_measurements_dict[measurement.coordinate] += MeanRepPair(measurement.mean,
+                                                                                  measurement.repetitions)
+
+        cost = get_cost_of_measurements(calculate_cost, existing_measurements_dict)
+        self.assertAlmostEqual(current_cost, cost, places=2)
 
         possible_points = [Coordinate(70)]
         suggested_points, rep_numbers = suggest_points_gpr_mode(experiment, possible_points, selected_callpath, metric,
@@ -53,7 +66,20 @@ class TestMpaGprStrategy(unittest.TestCase):
             return t
 
         budget = 10 ** 5
-        current_cost = 9075
+        current_cost = 10864.16
+
+        existing_measurements_dict = {}
+        for measurement in experiment.measurements[(Callpath('compute'), metric)]:
+            # prepare dictionary of existing measurements
+            if measurement.coordinate not in existing_measurements_dict:
+                existing_measurements_dict[measurement.coordinate] = MeanRepPair(measurement.mean,
+                                                                                 measurement.repetitions)
+            else:
+                existing_measurements_dict[measurement.coordinate] += MeanRepPair(measurement.mean,
+                                                                                  measurement.repetitions)
+
+        cost = get_cost_of_measurements(calculate_cost, existing_measurements_dict)
+        self.assertAlmostEqual(current_cost, cost, places=2)
 
         possible_points = [Coordinate(70)]
         suggested_points, rep_numbers = suggest_points_gpr_mode(experiment, possible_points, selected_callpath, metric,
@@ -90,7 +116,21 @@ class TestMpaGprStrategy(unittest.TestCase):
             return t
 
         budget = 5 * 10 ** 5
-        current_cost = 36200
+        current_cost = 18099.36
+
+        existing_measurements_dict = {}
+        for callpath in selected_callpath:
+            for measurement in experiment.measurements[(callpath, metric)]:
+                # prepare dictionary of existing measurements
+                if measurement.coordinate not in existing_measurements_dict:
+                    existing_measurements_dict[measurement.coordinate] = MeanRepPair(measurement.mean,
+                                                                                     measurement.repetitions)
+                else:
+                    existing_measurements_dict[measurement.coordinate] += MeanRepPair(measurement.mean,
+                                                                                      measurement.repetitions)
+
+        cost = get_cost_of_measurements(calculate_cost, existing_measurements_dict)
+        self.assertAlmostEqual(current_cost, cost, places=2)
 
         possible_points = [Coordinate(70)]
         suggested_points, rep_numbers = suggest_points_gpr_mode(experiment, possible_points, selected_callpath, metric,
@@ -119,7 +159,20 @@ class TestMpaGprStrategy(unittest.TestCase):
             return t
 
         budget = math.inf
-        current_cost = 62300
+        current_cost = 62299.14
+
+        existing_measurements_dict = {}
+        for measurement in experiment.measurements[(selected_callpath[0], metric)]:
+            # prepare dictionary of existing measurements
+            if measurement.coordinate not in existing_measurements_dict:
+                existing_measurements_dict[measurement.coordinate] = MeanRepPair(measurement.mean,
+                                                                                 measurement.repetitions)
+            else:
+                existing_measurements_dict[measurement.coordinate] += MeanRepPair(measurement.mean,
+                                                                                  measurement.repetitions)
+
+        cost = get_cost_of_measurements(calculate_cost, existing_measurements_dict)
+        self.assertAlmostEqual(current_cost, cost, places=2)
 
         possible_points = [Coordinate(70, 6)]
         suggested_points, rep_numbers = suggest_points_gpr_mode(experiment, possible_points, selected_callpath, metric,
@@ -149,6 +202,19 @@ class TestMpaGprStrategy(unittest.TestCase):
 
         budget = math.inf
         current_cost = 2039
+
+        existing_measurements_dict = {}
+        for measurement in experiment.measurements[(selected_callpath[0], metric)]:
+            # prepare dictionary of existing measurements
+            if measurement.coordinate not in existing_measurements_dict:
+                existing_measurements_dict[measurement.coordinate] = MeanRepPair(measurement.mean,
+                                                                                 measurement.repetitions)
+            else:
+                existing_measurements_dict[measurement.coordinate] += MeanRepPair(measurement.mean,
+                                                                                  measurement.repetitions)
+
+        cost = get_cost_of_measurements(calculate_cost, existing_measurements_dict)
+        self.assertAlmostEqual(current_cost, cost, places=2)
 
         possible_points = [Coordinate(64, 60)]
         suggested_points, rep_numbers = suggest_points_gpr_mode(experiment, possible_points, selected_callpath, metric,

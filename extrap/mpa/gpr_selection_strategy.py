@@ -201,7 +201,7 @@ def search_points_with_gpr(budget, calculate_cost, gaussian_process, max_repetit
     # since performing the GPR is really resource intensive
     while len(suggested_points) < 100:
 
-        current_cost = sum(calculate_cost(coordinate, value) for coordinate, (value, _) in gpr_measurements.items())
+        current_cost = get_cost_of_measurements(calculate_cost, gpr_measurements)
         # identify all possible next points that would
         # still fit into the modeling budget in core time
         fitting_measurements = []
@@ -238,6 +238,12 @@ def search_points_with_gpr(budget, calculate_cost, gaussian_process, max_repetit
         else:
             break
     return rep_numbers, suggested_points
+
+
+def get_cost_of_measurements(calculate_cost, gpr_measurements):
+    current_cost = sum(calculate_cost(coordinate, value) * repetitions for coordinate, (value, repetitions) in
+                       gpr_measurements.items())
+    return current_cost
 
 
 def remove_point_from_remaining_points(cord, predicted_runtimes, remaining_points_gpr):
