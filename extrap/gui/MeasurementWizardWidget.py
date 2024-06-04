@@ -17,6 +17,7 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 from extrap.entities.metric import Metric
 from extrap.mpa.gpr_selection_strategy import analyze_noise
 from extrap.mpa.measurement_point_advisor import MeasurementPointAdvisor
+from extrap.util.exceptions import RecoverableError
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -324,6 +325,13 @@ class MeasurementWizardWidget(QWidget):
             if metric_string == str(metric):
                 runtime_metric = metric
         selected_callpath = self.main_widget.get_selected_call_tree_nodes()
+        if len(selected_callpath) == 0:
+            selected_callpath = self.experiment.callpaths
+        else:
+            selected_callpath = [n.path for n in selected_callpath]
+
+        measurements = self.experiment.measurements
+        core_hours_total = 0
 
         # if the model parameter is not the number of mpi ranks or processes
         if self.calculate_cost_manual:
@@ -331,79 +339,30 @@ class MeasurementWizardWidget(QWidget):
                 number_processes = int(self.processes.text())
             except ValueError:
                 number_processes = 1.0
-
-            # if there is only one callpath selected
-            if len(selected_callpath) == 1:
-                measurements = self.experiment.measurements
-                core_hours_total = 0
+            for callpath in selected_callpath:
+                core_hours_callpath = 0
                 try:
-                    for measurement in measurements[(selected_callpath[0].path, runtime_metric)]:
+                    for measurement in measurements[(callpath, runtime_metric)]:
                         core_hours_per_point = 0
                         try:
                             for value in measurement.values:
                                 core_hours_per_point += value * number_processes
                         except TypeError:
                             core_hours_per_point += measurement.mean * number_processes
-                        core_hours_total += core_hours_per_point
+                        core_hours_callpath += core_hours_per_point
                 except KeyError:
                     pass
+                core_hours_total += core_hours_callpath
 
-                self.current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(self.current_cost)
-
-            # if there is no callpath selected
-            elif len(selected_callpath) == 0:
-                measurements = self.experiment.measurements
-                core_hours_total = 0
-                for callpath in self.experiment.callpaths:
-                    core_hours_callpath = 0
-                    try:
-                        for measurement in measurements[(callpath, runtime_metric)]:
-                            core_hours_per_point = 0
-                            try:
-                                for value in measurement.values:
-                                    core_hours_per_point += value * number_processes
-                            except TypeError:
-                                core_hours_per_point += measurement.mean * number_processes
-                            core_hours_callpath += core_hours_per_point
-                    except KeyError:
-                        pass
-                    core_hours_total += core_hours_callpath
-
-                self.current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(self.current_cost)
-
-            # if there are several callpaths selected
-            elif len(selected_callpath) > 1:
-                measurements = self.experiment.measurements
-                core_hours_total = 0
-                for callpath in selected_callpath:
-                    core_hours_callpath = 0
-                    try:
-                        for measurement in measurements[(callpath.path, runtime_metric)]:
-                            core_hours_per_point = 0
-                            try:
-                                for value in measurement.values:
-                                    core_hours_per_point += value * number_processes
-                            except TypeError:
-                                core_hours_per_point += measurement.mean * number_processes
-                            core_hours_callpath += core_hours_per_point
-                    except KeyError:
-                        pass
-                    core_hours_total += core_hours_callpath
-
-                self.current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(self.current_cost)
+            self.current_cost = core_hours_total
+            current_cost_str = "{:.2f}".format(self.current_cost)
 
         # if the model parameter is the number of processes or mpi ranks
         else:
-
-            # if there is only one callpath selected
-            if len(selected_callpath) == 1:
-                measurements = self.experiment.measurements
-                core_hours_total = 0
+            for callpath in selected_callpath:
+                core_hours_callpath = 0
                 try:
-                    for measurement in measurements[(selected_callpath[0].path, runtime_metric)]:
+                    for measurement in measurements[(callpath, runtime_metric)]:
                         core_hours_per_point = 0
                         parameter_values = measurement.coordinate.as_tuple()
                         try:
@@ -416,69 +375,12 @@ class MeasurementWizardWidget(QWidget):
                             if self.no_model_parameters == 1:
                                 core_hours_per_point += measurement.mean * parameter_values[0]
                             else:
-                                core_hours_per_point += measurement.mean * parameter_values[self.processes_parameter_id]
-                        core_hours_total += core_hours_per_point
+                                core_hours_per_point += measurement.mean * parameter_values[
+                                    self.processes_parameter_id]
+                        core_hours_callpath += core_hours_per_point
                 except KeyError:
                     pass
-                self.current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(self.current_cost)
-
-            # if there is no callpath selected
-            elif len(selected_callpath) == 0:
-                measurements = self.experiment.measurements
-                core_hours_total = 0
-                for callpath in self.experiment.callpaths:
-                    core_hours_callpath = 0
-                    try:
-                        for measurement in measurements[(callpath, runtime_metric)]:
-                            core_hours_per_point = 0
-                            parameter_values = measurement.coordinate.as_tuple()
-                            try:
-                                for value in measurement.values:
-                                    if self.no_model_parameters == 1:
-                                        core_hours_per_point += value * parameter_values[0]
-                                    else:
-                                        core_hours_per_point += value * parameter_values[self.processes_parameter_id]
-                            except TypeError:
-                                if self.no_model_parameters == 1:
-                                    core_hours_per_point += measurement.mean * parameter_values[0]
-                                else:
-                                    core_hours_per_point += measurement.mean * parameter_values[
-                                        self.processes_parameter_id]
-                            core_hours_callpath += core_hours_per_point
-                    except KeyError:
-                        pass
-                    core_hours_total += core_hours_callpath
-
-                self.current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(self.current_cost)
-
-            # if there are several callpaths selected
-            elif len(selected_callpath) > 1:
-                measurements = self.experiment.measurements
-                core_hours_total = 0
-                for callpath in selected_callpath:
-                    core_hours_callpath = 0
-                    try:
-                        for measurement in measurements[(callpath.path, runtime_metric)]:
-                            core_hours_per_point = 0
-                            parameter_values = measurement.coordinate.as_tuple()
-                            try:
-                                for value in measurement.values:
-                                    if self.no_model_parameters == 1:
-                                        core_hours_per_point += value * parameter_values[0]
-                                    else:
-                                        core_hours_per_point += value * parameter_values[self.processes_parameter_id]
-                            except TypeError:
-                                if self.no_model_parameters == 1:
-                                    core_hours_per_point += measurement.mean * parameter_values[0]
-                                else:
-                                    core_hours_per_point += measurement.mean * parameter_values[
-                                        self.processes_parameter_id]
-                            core_hours_callpath += core_hours_per_point
-                    except KeyError:
-                        pass
-                    core_hours_total += core_hours_callpath
+                core_hours_total += core_hours_callpath
 
                 self.current_cost = core_hours_total
                 current_cost_str = "{:.2f}".format(self.current_cost)
@@ -521,7 +423,7 @@ class MeasurementWizardWidget(QWidget):
                     number_processes = int(self.processes.text())
                 except ValueError as e:
                     number_processes = 1
-                    print(e)
+                    raise RecoverableError("Number of processes must be a number.") from e
             else:
                 number_processes = 0
 
