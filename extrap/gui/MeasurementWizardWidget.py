@@ -315,67 +315,33 @@ class MeasurementWizardWidget(QWidget):
         current_cost_str = "0.0"
         metric_string = self.metric_selector.currentText()
         metrics = self.experiment.metrics
-        runtime_metric = None
-        for metric in metrics:
-            if metric_string == str(metric):
-                runtime_metric = metric
+        if Metric(metric_string) not in metrics:
+            return
         else:
+            runtime_metric = Metric(metric_string)
         selected_callpath = self._get_selected_callpaths()
 
         measurements = self.experiment.measurements
-        core_hours_total = 0
+        core_time_total = 0
 
-        # if the model parameter is not the number of mpi ranks or processes
-        if self.calculate_cost_manual:
-            try:
-                number_processes = int(self.processes.text())
-            except ValueError:
-                number_processes = 1.0
-            for callpath in selected_callpath:
-                core_hours_callpath = 0
-                try:
-                    for measurement in measurements[(callpath, runtime_metric)]:
-                        core_hours_per_point = 0
-                        try:
-                            for value in measurement.values:
-                                core_hours_per_point += value * number_processes
-                        except TypeError:
-                            core_hours_per_point += measurement.mean * number_processes
-                        core_hours_callpath += core_hours_per_point
-                except KeyError:
-                    pass
-                core_hours_total += core_hours_callpath
+        mpa = MeasurementPointAdvisor(budget=self.budget, process_parameter_id=self.processes_parameter_id,
+                                      callpaths=selected_callpath, metric=runtime_metric,
+                                      experiment=self.experiment, current_cost=self.current_cost,
+                                      manual_pms_selection=self.manual_pms_selection,
+                                      manual_parameter_value_series=self.parameter_value_series,
+                                      calculate_cost_manual=self.calculate_cost_manual,
+                                      number_processes=self._get_number_processes(), model_generator=None)
 
-            self.current_cost = core_hours_total
-            current_cost_str = "{:.2f}".format(self.current_cost)
+        for callpath in selected_callpath:
+            core_time_callpath = 0
+            for measurement in measurements[(callpath, runtime_metric)]:
+                core_time_per_point = mpa.calculate_cost(measurement.coordinate,
+                                                         measurement.mean) * measurement.repetitions
+                core_time_callpath += core_time_per_point
+            core_time_total += core_time_callpath
 
-        # if the model parameter is the number of processes or mpi ranks
-        else:
-            for callpath in selected_callpath:
-                core_hours_callpath = 0
-                try:
-                    for measurement in measurements[(callpath, runtime_metric)]:
-                        core_hours_per_point = 0
-                        parameter_values = measurement.coordinate.as_tuple()
-                        try:
-                            for value in measurement.values:
-                                if self.no_model_parameters == 1:
-                                    core_hours_per_point += value * parameter_values[0]
-                                else:
-                                    core_hours_per_point += value * parameter_values[self.processes_parameter_id]
-                        except TypeError:
-                            if self.no_model_parameters == 1:
-                                core_hours_per_point += measurement.mean * parameter_values[0]
-                            else:
-                                core_hours_per_point += measurement.mean * parameter_values[
-                                    self.processes_parameter_id]
-                        core_hours_callpath += core_hours_per_point
-                except KeyError:
-                    pass
-                core_hours_total += core_hours_callpath
-
-                self.current_cost = core_hours_total
-                current_cost_str = "{:.2f}".format(self.current_cost)
+        self.current_cost = core_time_total
+        current_cost_str = "{:.2f}".format(self.current_cost)
 
         if self.budget == 0.0:
             self.budget = self.current_cost
