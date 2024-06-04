@@ -8,12 +8,16 @@
 from __future__ import annotations
 
 import enum
+import math
 import numbers
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from itertools import chain, product
 from typing import Union, Generator, Optional
 
 import numpy as np
+import numpy.typing
 from marshmallow import fields, post_load
+from numpy import ma
 
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.coordinate import Coordinate, CoordinateSchema
@@ -49,7 +53,8 @@ class Measurement:
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
 
-    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values, *, keep_values=False):
+    def __init__(self, coordinate: Coordinate, callpath: Callpath, metric: Metric, values, *, keep_values=False,
+                 repetitions=None):
         """
         Initialize the Measurement object.
         """
@@ -58,18 +63,68 @@ class Measurement:
         self.metric: Metric = metric
         if values is None:
             return
-        values = np.array(values)
+        values = self._convert_values_to_ndarray(values)
         if keep_values:
-            if values.ndim > 1:
-                values = np.concatenate(values)
-            self.values: Optional[np.typing.NDArray] = values
+            self.values: Optional[numpy.typing.NDArray] = values
         else:
             self.values = None
-        self.median: float = np.median(values)
-        self.mean: float = np.mean(values)
-        self.minimum: float = np.min(values)
-        self.maximum: float = np.max(values)
-        self.std: float = np.std(values)
+        self.median: float = ma.median(values).item()
+        self.mean: float = ma.mean(values).item()
+        self.minimum: float = ma.min(values).item()
+        self.maximum: float = ma.max(values).item()
+        self.std: float = ma.std(values).item()
+        if repetitions is not None:
+            self.repetitions = repetitions
+        else:
+            try:
+                self.repetitions: int = len(values)
+            except TypeError:
+                self.repetitions = 1
+
+    @staticmethod
+    def _convert_values_to_ndarray(values):
+        if not isinstance(values, Sequence):
+            return values
+        if isinstance(values, np.ndarray):
+            return values
+
+        dim_max_len = [(len(values), len(values))]
+
+        current_dimension = values
+        while current_dimension:
+            max_len, min_len = 0, math.inf
+            for entry in current_dimension:
+                if isinstance(entry, Sequence):
+                    max_len = max(len(entry), max_len)
+                    min_len = min(len(entry), min_len)
+            if min_len < math.inf:
+                dim_max_len.append((min_len, max_len))
+                current_dimension = chain.from_iterable(current_dimension)
+            else:
+                break
+
+        if all(a == b for a, b in dim_max_len):
+            return np.array(values)
+
+        base_array = np.zeros(tuple(l for _, l in dim_max_len), dtype=float)
+        m_array = ma.array(base_array, mask=True)
+
+        if len(dim_max_len) == 2:
+            for index in range(dim_max_len[0][1]):
+                v = values[index]
+                m_array[index, slice(0, len(v))] = v
+        else:
+            main_indices = product(*(range(l) for _, l in dim_max_len[:-1]))
+            for main_index in main_indices:
+                v = values
+                try:
+                    for partial_index in main_index:
+                        v = v[partial_index]
+                except IndexError:
+                    continue
+                sl = slice(0, len(v))
+                m_array[(*main_index, sl)] = v
+        return m_array
 
     def value(self, measure: Union[bool, Measure]):
         if measure == Measure.MEAN:
@@ -87,15 +142,39 @@ class Measurement:
         else:
             raise ValueError("Unknown measure.")
 
-    def add_value(self, value):
+    def add_repetition(self, value):
         if self.values is None:
             raise RuntimeError("Cannot add value, because the list of original values does not exist.")
-        self.values = np.append(self.values, value)
-        self.median = np.median(self.values)
-        self.mean = np.mean(self.values)
-        self.minimum = np.min(self.values)
-        self.maximum = np.max(self.values)
-        self.std = np.std(self.values)
+        if isinstance(value, Sequence):
+            self.values = ma.append(self.values, value)
+        else:
+            axis = tuple(range(1, self.values.ndim))
+            counts = self.values.count(axis=axis)
+            avg_count = int(round(np.mean(counts), 0))
+            small_counts = counts.copy()
+            small_counts[small_counts > avg_count] = 0
+            idx = np.argmax(small_counts)
+            if small_counts[idx] == avg_count:
+                mask = self.values[idx].mask
+            else:
+                needed = avg_count - small_counts[idx]
+                counts[counts <= avg_count] = counts.max() + 1
+                larger_idx = np.argmin(counts)
+                mask = self.values[idx].mask.copy()
+                candidates = self.values[larger_idx].mask ^ mask
+                positions = np.argwhere(candidates)[:needed]
+                for pos in positions:
+                    mask[tuple(pos)] = False
+
+            new_value = ma.array(np.full_like(self.values[0], value), mask=mask)
+            new_value = new_value.reshape(1, *new_value.shape)
+            self.values = ma.append(self.values, new_value, axis=0)
+        self.median = ma.median(self.values).item()
+        self.mean = ma.mean(self.values).item()
+        self.minimum = ma.min(self.values).item()
+        self.maximum = ma.max(self.values).item()
+        self.std = ma.std(self.values).item()
+        self.repetitions += 1
 
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
@@ -170,6 +249,7 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
+    repetitions = fields.Int()
     values = fields.Method('_store_values', '_load_values', allow_none=True, load_default=None)
 
     def _load_values(self, value):
