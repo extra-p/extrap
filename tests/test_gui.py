@@ -153,6 +153,25 @@ class TestGuiLoadExperiment(unittest.TestCase):
             warnings.showwarning = _old_warnings_handler
             sys.excepthook = _old_exception_handler
 
+    def test_load_experiment_keep_values(self):
+        _old_warnings_handler = warnings.showwarning
+        _old_exception_handler = sys.excepthook
+        try:
+            window, app = extrapgui.main(test=True, args=[])
+            tfr = TextFileReader()
+            tfr.keep_values = True
+            exp = tfr.read_experiment('data/text/one_parameter_1.txt')
+            self.assertIsNone(window.getExperiment())
+
+            window.model_experiment(exp)
+            QCoreApplication.processEvents()
+            self.assertIsNotNone(window.getExperiment())
+            window.closeEvent = lambda e: e.accept()
+            window.close()
+        finally:
+            warnings.showwarning = _old_warnings_handler
+            sys.excepthook = _old_exception_handler
+
 
 class TestGuiNoExperiment(TestGuiCommon):
     def test_generator_button(self):

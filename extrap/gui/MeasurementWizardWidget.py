@@ -14,6 +14,8 @@ import numpy as np
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.metric import Metric
+from extrap.mpa.gpr_selection_strategy import analyze_noise
 from extrap.mpa.measurement_point_advisor import MeasurementPointAdvisor
 
 if TYPE_CHECKING:
@@ -283,79 +285,21 @@ class MeasurementWizardWidget(QWidget):
         if self.no_model_parameters == 0:
             return
         # do an noise analysis on the existing measurement points
-        mm = self.experiment.measurements
         metric_string = self.metric_selector.currentText()
-        metrics = self.experiment.metrics
-        runtime_metric = None
-        for metric in metrics:
-            if metric_string == str(metric):
-                runtime_metric = metric
+        runtime_metric = Metric(metric_string)
+
         selected_callpath = self.main_widget.get_selected_call_tree_nodes()
 
-        # if there is one callpath selected in the tree
-        if len(selected_callpath) == 1:
-            try:
-                nns = []
-                try:
-                    for meas in mm[(selected_callpath[0].path, runtime_metric)]:
-                        pps = []
-                        for val in meas.values:
-                            if np.mean(meas.values) == 0.0:
-                                pp = 0
-                            else:
-                                pp = abs((val / (np.mean(meas.values) / 100)) - 100)
-                            pps.append(pp)
-                        nns.append(np.mean(pps))
-                except KeyError:
-                    nns = [0.0]
-                self.mean_noise_level = np.mean(nns)
-            except TypeError:
-                self.mean_noise_level = 0.0
+        if len(selected_callpath) == 0:
+            selected_callpath = self.experiment.callpaths
+        else:
+            selected_callpath = [n.path for n in selected_callpath]
 
-        # if there is more than one callpath selected in the tree
-        elif len(selected_callpath) > 1:
-            measurements = self.experiment.measurements
-            try:
-                callpath_noise_levels = []
-                for callpath in selected_callpath:
-                    nns = []
-                    try:
-                        for meas in measurements[(callpath.path, runtime_metric)]:
-                            pps = []
-                            for val in meas.values:
-                                if np.mean(meas.values) == 0.0:
-                                    pp = 0
-                                else:
-                                    pp = abs((val / (np.mean(meas.values) / 100)) - 100)
-                                pps.append(pp)
-                            nns.append(np.mean(pps))
-                    except KeyError:
-                        nns = [0.0]
-                    callpath_noise_levels.append(np.mean(nns))
-                self.mean_noise_level = np.mean(callpath_noise_levels)
-            except TypeError:
-                self.mean_noise_level = 0.0
+        temp_noise = []
+        for callpath in selected_callpath:
+            temp_noise.append(analyze_noise(self.experiment, callpath, runtime_metric) * 100)
+        self.mean_noise_level = np.mean(temp_noise)
 
-        # if there is no callpath selected in the tree
-        elif len(selected_callpath) == 0:
-            measurements = self.experiment.measurements
-            try:
-                callpath_noise_levels = []
-                for callpath in self.experiment.callpaths:
-                    nns = []
-                    try:
-                        for meas in measurements[(callpath, runtime_metric)]:
-                            mean = meas.mean
-                            pps = np.zeros_like(meas.values)
-                            if mean != 0:
-                                pps = np.abs((meas.values / (mean / 100)) - 100)
-                            nns.append(np.mean(pps))
-                    except KeyError:
-                        nns = [0.0]
-                    callpath_noise_levels.append(np.mean(nns))
-                self.mean_noise_level = np.mean(callpath_noise_levels)
-            except TypeError:
-                self.mean_noise_level = 0.0
         noise_level_str = "{:.2f}".format(self.mean_noise_level)
         self.noise_level_edit.setText(noise_level_str)
 
