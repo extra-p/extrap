@@ -6,7 +6,9 @@
 # See the LICENSE file in the base directory for details.
 import numbers
 from collections.abc import Sequence
+from typing import Union
 
+from extrap.entities.coordinate import Coordinate
 from extrap.entities.scaling_type import ScalingType
 from extrap.mpa.add_selection_strategy import suggest_points_add_mode
 from extrap.mpa.base_selection_strategy import suggest_points_base_mode
@@ -83,7 +85,7 @@ class MeasurementPointAdvisor:
 
         # print("DEBUG selection_mode:",self.selection_mode)
 
-    def calculate_cost(self, point: Sequence, runtime: numbers.Real) -> numbers.Real:
+    def calculate_cost(self, point: Union[Sequence, Coordinate], runtime: numbers.Real) -> numbers.Real:
         if self.experiment.scaling == ScalingType.STRONG:
             return runtime
         if self.calculate_cost_manual:
@@ -179,3 +181,5 @@ class MeasurementPointAdvisor:
                                                                    self.model_generator,
                                                                    pbar)
             return suggested_cords, rep_numbers
+        else:
+            raise ValueError("Invalid selection mode")
