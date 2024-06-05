@@ -62,6 +62,7 @@ class Measurement:
         self.callpath: Callpath = callpath
         self.metric: Metric = metric
         if values is None:
+            self.repetitions = None
             return
         values = self._convert_values_to_ndarray(values)
         if keep_values:

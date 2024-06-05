@@ -46,9 +46,11 @@ class MeasurementWizardWidget(QWidget):
         self.setLayout(self.main_layout)
         if not self.empty_label:
             self.empty_label = QLabel(self)
-            self.empty_label.setText('Please load a performance experiment to get <br>'
-                                     'suggestions for further measurement points.')
+            self.empty_label.setWordWrap(True)
             self.main_layout.addWidget(self.empty_label)
+        if msg is None:
+            msg = 'Please load a performance experiment to get suggestions for further measurement points.'
+        self.empty_label.setText(msg)
 
     def init_ui(self):
         self.no_model_parameters = len(self.experiment.parameters)
@@ -413,6 +415,14 @@ class MeasurementWizardWidget(QWidget):
 
         if model_parameters == 0:
             self.init_empty()
+        elif not experiment_has_repetitions(self.experiment):
+            self.init_empty('<p><b>Please load a performance experiment that contains '
+                            'repetition information to get suggestions '
+                            'for further measurement points.</b></p>'
+                            '<p>Your current experiment does not contain repetition information. '
+                            'It was likely created with an older version of Extra-P '
+                            'which did not store the necessary data.</p>'
+                            )
         # if there are several model parameters
         else:
             self.init_ui()

@@ -228,3 +228,12 @@ def identify_possible_points(search_space_coordinates: Iterable[Coordinate], coo
     # print("DEBUG len() experiment.coordinates:",len(experiment.coordinates))
     # print("possible_points:",possible_points)
     return possible_points
+
+
+def experiment_has_repetitions(experiment):
+    if not experiment.measurements:
+        return False
+    first_measurements = next(iter(experiment.measurements.values()))
+    if not first_measurements:
+        return False
+    return first_measurements[0].repetitions is not None

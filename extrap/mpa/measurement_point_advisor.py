@@ -88,6 +88,8 @@ class MeasurementPointAdvisor:
 
     def suggest_points(self, pbar=DUMMY_PROGRESS):
 
+        if not experiment_has_repetitions(self.experiment):
+            raise ValueError(f'Experiment has no measurements with repetitions.')
         if self.manual_pms_selection:
             # 1.2.3. build the parameter series from manual entries in GUI
             try:
