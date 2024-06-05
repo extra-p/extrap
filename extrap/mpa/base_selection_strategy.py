@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from extrap.entities.coordinate import Coordinate
+from extrap.mpa.util import find_lines
 
 
 def suggest_points_base_mode(experiment, parameter_value_series, total_num_points_needed=5) -> list[Coordinate]:
@@ -21,25 +22,15 @@ def suggest_points_base_mode(experiment, parameter_value_series, total_num_point
     coordinates = sorted(experiment.coordinates)
     suggested_cords = []
     for p, _ in enumerate(experiment.parameters):
-        lines = {}
-        line_lengths = {}
-
-        for coordinate in coordinates:
-            other_values = coordinate.as_partial_tuple(p)
-            param_values = []
-            for coordinate2 in coordinates:
-                if coordinate.is_mostly_equal(coordinate2, p):
-                    param_values.append(coordinate2[p])
-            if other_values not in lines:
-                lines[other_values] = param_values
-                line_lengths[other_values] = len(param_values)
+        lines = find_lines(coordinates, p)
 
         max_value = 0
         best_line_key = None
-        for key, value in line_lengths.items():
-            if value > max_value:
+        for key, value in lines.items():
+            line_length = len(value)
+            if line_length > max_value:
                 best_line_key = key
-                max_value = value
+                max_value = line_length
         best_line = lines[best_line_key]
         points_needed = total_num_points_needed - max_value
 
