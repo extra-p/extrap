@@ -69,11 +69,11 @@ class Measurement:
             self.values: Optional[numpy.typing.NDArray] = values
         else:
             self.values = None
-        self.median: float = ma.median(values).item()
-        self.mean: float = ma.mean(values).item()
-        self.minimum: float = ma.min(values).item()
-        self.maximum: float = ma.max(values).item()
-        self.std: float = ma.std(values).item()
+        self.median: float = ma.median(values)
+        self.mean: float = ma.mean(values)
+        self.minimum: float = ma.min(values)
+        self.maximum: float = ma.max(values)
+        self.std: float = ma.std(values)
         if repetitions is not None:
             self.repetitions = repetitions
         else:
