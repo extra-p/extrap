@@ -8,7 +8,6 @@
 import sys
 import unittest
 import warnings
-from threading import Thread
 
 from PySide6.QtCore import QRect, QItemSelectionModel
 from PySide6.QtWidgets import QApplication, QCheckBox, QPushButton
@@ -18,30 +17,35 @@ from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
 from extrap.gui.MainWidget import MainWidget, QCoreApplication
 
-try:
-    APP = QApplication()
-    APP.setStyle('Fusion')
-    app_thread = Thread(target=APP.exec)
-except:
-    app_thread = None
-    pass
+_qapp_instance = None
 
 
-class TestGuiCommon(unittest.TestCase):
+class GuiTestCase(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        global _qapp_instance
+        if _qapp_instance is None:
+            _qapp_instance = QApplication([])
+            _qapp_instance.setStyle('Fusion')
+
+        self.app_instance = _qapp_instance
+
+    def tearDown(self):
+        del self.app_instance
+        super(GuiTestCase, self).tearDown()
+
+
+class TestGuiCommon(GuiTestCase):
 
     def setUp(self) -> None:
-        global app_thread
-        if not app_thread:
-            raise unittest.SkipTest("GUI could not start.")
-        if not app_thread.is_alive():
-            app_thread = Thread(target=APP.exec)
-            app_thread.start()
+        super().setUp()
         self.window = MainWidget()
         self.window.hide()
 
     def tearDown(self):
-        if not app_thread:
-            raise unittest.SkipTest("GUI could not start.")
+        # if not app_thread:
+        #     raise unittest.SkipTest("GUI could not start.")
         self.window.closeEvent = lambda e: e.accept()
         self.window.close()
 
@@ -135,7 +139,7 @@ class TestGuiExperimentLoaded(TestGuiCommon):
             self.assertEqual(old_state, checkbox.isChecked())
 
 
-class TestGuiLoadExperiment(unittest.TestCase):
+class TestGuiLoadExperiment(GuiTestCase):
     def test_load_experiment(self):
         _old_warnings_handler = warnings.showwarning
         _old_exception_handler = sys.excepthook
