@@ -11,5 +11,5 @@ from extrap.util.dynamic_options import DynamicOptions
 
 class TKeepValuesReader(DynamicOptions):
     keep_values: ScalingType = DynamicOptions.add(False, bool)
-    keep_values.explanation_below = ("Keeps the individual measurement values.\n"
-                                     "Required for measurement point suggestions.")
+    keep_values.explanation_below = ("Keeps the individual measurement values of each repetition.<br>"
+                                     "<i>Can significantly slow down modeling and processing.</i>")
