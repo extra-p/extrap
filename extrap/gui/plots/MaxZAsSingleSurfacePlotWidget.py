@@ -7,7 +7,7 @@
 
 import matplotlib.ticker as ticker
 import numpy as np
-from matplotlib import cm
+from matplotlib import colormaps
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
@@ -17,11 +17,7 @@ from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 class MaxZAsSingleSurfacePlot(GraphDisplayWindow):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
-        try:
-            self.colormap = cm.get_cmap('viridis')
-        except ValueError:
-            self.colormap = cm.get_cmap('spectral')
-
+        self.colormap = colormaps['viridis']
         super().__init__(graphWidget, main_widget, width, height, dpi)
 
     def draw_figure(self):

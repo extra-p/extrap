@@ -15,7 +15,6 @@ from itertools import chain, product
 from typing import Union, Generator, Optional
 
 import numpy as np
-import numpy.typing
 from marshmallow import fields, post_load
 from numpy import ma
 
@@ -66,7 +65,7 @@ class Measurement:
             return
         values = self._convert_values_to_ndarray(values)
         if keep_values:
-            self.values: Optional[numpy.typing.NDArray] = values
+            self.values: Optional[np.ndarray] = values
         else:
             self.values = None
         self.median: float = ma.median(values)
