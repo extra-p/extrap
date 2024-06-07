@@ -28,7 +28,7 @@ class TestAdaptiveModeling(unittest.TestCase):
 
     def setUp(self):
         try:
-            import extrapadaptivemodeler
+            import extrap_adaptive_modeler
         except ImportError:
             self.skipTest("Adaptive modeling plugin is not installed.")
 

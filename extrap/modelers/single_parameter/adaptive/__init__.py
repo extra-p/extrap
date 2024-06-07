@@ -24,12 +24,12 @@ from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 try:
-    import extrapadaptivemodeler
-    from extrapadaptivemodeler.modeler.load_model import get_model
-    from extrapadaptivemodeler.modeler.lazy_tensorflow import load_tensorflow
+    import extrap_adaptive_modeler
+    from extrap_adaptive_modeler.load_model import get_model
+    from extrap_adaptive_modeler.lazy_tensorflow import load_tensorflow
 
 except ImportError:
-    extrapadaptivemodeler = None
+    extrap_adaptive_modeler = None
 
 from ..basic import SingleParameterModeler
 
@@ -82,7 +82,7 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
         self._basic_modeler: AbstractSingleParameterModeler = SingleParameterModeler()
 
     def model(self, measurement_list_: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
-        if not extrapadaptivemodeler:
+        if not extrap_adaptive_modeler:
             raise RecoverableError(
                 "To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\n"
                 "You can do that using 'pip install extrap[adaptive_modeling]'.")
