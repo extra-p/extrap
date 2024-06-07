@@ -16,6 +16,8 @@ class ProgressBar(tqdm):
             kwargs['total'] = 0
         if 'bar_format' not in kwargs:
             kwargs['bar_format'] = '{l_bar}{bar}| [{elapsed}<{remaining}{postfix}]'
+        if 'disable' not in kwargs:
+            kwargs['disable'] = False
         super().__init__(**kwargs)
 
     def step(self, s='', refresh=True):

@@ -95,7 +95,7 @@ The graphical user interface can be started by executing the `extrap-gui` comman
 
 The command line interface is available under the `extrap` command:
 
-`extrap` _OPTIONS_ (`--cube` | `--text` | `--talpas` | `--json` | `--extra-p-3` | `--expereiment`) _FILEPATH_
+`extrap` _OPTIONS_ (`--cube` | `--text` | `--talpas` | `--json` | `--extra-p-3` | `--experiment`) _FILEPATH_
 
 You can use different input formats as shown in the examples below:
 

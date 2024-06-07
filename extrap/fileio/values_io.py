@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2023-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -122,7 +122,9 @@ class ValueReader:
             magic_number = self.cached_index.read(16)
             if magic_number != b"Extra-P INDEX\0\0\0":
                 raise FileFormatError("Could not read index file to retrieve values.")
-            self.cached_values = self._zipfile.open("values/" + str(chunk_index) + ".vals", 'r')
+            fileinfo = self._zipfile.getinfo("values/" + str(chunk_index) + ".vals")
+            fileinfo.CRC = None
+            self.cached_values = self._zipfile.open(fileinfo, 'r')
             magic_number = self.cached_values.read(16)
             if magic_number != b"Extra-P VALUES\0\0":
                 raise FileFormatError("Could not read value file to retrieve values.")

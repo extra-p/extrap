@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,11 +12,17 @@ from marshmallow import ValidationError
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import ExperimentSchema, Experiment
 from extrap.entities.functions import ConstantFunction
+from extrap.entities.hypotheses import HypothesisSchema, ConstantHypothesis
+from extrap.entities.measurement import Measure, Measurement
+from extrap.fileio.experiment_io import read_experiment
+from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import ConstantHypothesisSchema, ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
+from extrap.modelers.abstract_modeler import ModelerSchema
 from extrap.modelers.model_generator import ModelGenerator
 from tests.serialization_testcase import BasicExperimentSerializationTest, BasicMPExperimentSerializationTest
+from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 
 
 class TestSingleParameter(BasicExperimentSerializationTest, unittest.TestCase):
@@ -83,6 +89,57 @@ class TestSerialization(unittest.TestCase):
         hyp_data = schema.dump(hyp)
         reconstructed: ConstantHypothesis = schema.load(hyp_data)
         self.assertEqual(hyp, reconstructed)
+
+
+class TestCompatibilityWithMeanMedianOnlyVersions(unittest.TestCase):
+
+    def test_hypothesis(self):
+        print()
+        schema = HypothesisSchema()
+        for test_measure in Measure:
+            print(test_measure)
+            hyp = ConstantHypothesis(ConstantFunction(12.0), test_measure)
+            if test_measure != Measure.UNKNOWN:
+                hyp.compute_cost(
+                    [Measurement(Coordinate(1), None, None, [11.9]), Measurement(Coordinate(2), None, None, [11.9])])
+            hyp_data = schema.dump(hyp)
+            self.assertEqual(test_measure.name, hyp_data['_use_measure'])
+            if test_measure == Measure.MEDIAN:
+                self.assertTrue(hyp_data['_use_median'])
+            else:
+                self.assertFalse(hyp_data['_use_median'])
+            if test_measure == Measure.MEAN or test_measure == Measure.MEDIAN:
+                del hyp_data['_use_measure']
+            reconstructed: ConstantHypothesis = schema.load(hyp_data)
+            self.assertEqual(test_measure, reconstructed._use_measure)
+
+    def test_modeler(self):
+        print()
+        schema = ModelerSchema()
+        modeler = MultiParameterModeler()
+        for test_measure in Measure:
+            print(test_measure)
+            modeler.use_measure = test_measure
+            modeler_data = schema.dump(modeler)
+            self.assertEqual(test_measure.name, modeler_data['use_measure'])
+            if test_measure == Measure.MEDIAN:
+                self.assertTrue(modeler_data['use_median'])
+            else:
+                self.assertFalse(modeler_data['use_median'])
+            if test_measure == Measure.MEAN or test_measure == Measure.MEDIAN:
+                del modeler_data['use_measure']
+            reconstructed = schema.load(modeler_data)
+            self.assertEqual(test_measure, reconstructed.use_measure)
+
+    def test_loading_experiment(self):
+        experiment = read_experiment("data/input/exp_only_mean_median.extra-p")
+        self.assertEqual(4, len(experiment.modelers))
+        correct_measures = [Measure.MEAN, Measure.MEDIAN, Measure.MEAN, Measure.MEDIAN]
+        for i, correct_measure in zip(range(4), correct_measures):
+            self.assertEqual(correct_measure, experiment.modelers[i].modeler.use_measure)
+            self.assertEqual(4, len(experiment.modelers[i].models))
+            model = next(iter(experiment.modelers[i].models.values()))
+            self.assertEqual(correct_measure, model.hypothesis._use_measure)
 
 
 class TestMultiParameter(BasicMPExperimentSerializationTest, unittest.TestCase):

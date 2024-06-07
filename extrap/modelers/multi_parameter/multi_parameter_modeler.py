@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -17,7 +17,7 @@ from extrap.entities.functions import ConstantFunction
 from extrap.entities.functions import MultiParameterFunction
 from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import MultiParameterHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.model import Model
 from extrap.entities.terms import MultiParameterTerm
 from extrap.modelers import single_parameter
@@ -51,7 +51,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         """
         Initialize SingleParameterModeler object.
         """
-        super().__init__(use_median=False, single_parameter_modeler=single_parameter.Default())
+        super().__init__(use_measure=Measure.MEAN, single_parameter_modeler=single_parameter.Default())
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
         self.epsilon = 0.0005  # value for the minimum term contribution
@@ -68,11 +68,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                 return measurement
 
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, None)
-
-            if self.use_median:
-                value = np.mean([m.median for m in ms])
-            else:
-                value = np.mean([m.mean for m in ms])
+            value = np.mean(np.fromiter(Measurement.select_measure(ms, self.use_measure), float, len(ms)))
 
             measurement.mean = value
             measurement.median = value
@@ -208,13 +204,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
         # use all available additional points for modeling the multi-parameter models
-        constantCost = 0
-        meanModel = 0
-
-        for m in measurements:
-            meanModel += m.value(self.use_median) / float(len(measurements))
-        for m in measurements:
-            constantCost += (m.value(self.use_median) - meanModel) * (m.value(self.use_median) - meanModel)
+        values = np.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements))
+        meanModel = np.mean(values)
+        constantCost = np.sum((values - meanModel) * (values - meanModel))
 
         # find out which parameters should be kept
         compound_term_pairs = []
@@ -229,7 +221,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         if len(compound_term_pairs) == 0:
             constant_function = ConstantFunction()
             constant_function.constant_coefficient = meanModel
-            constant_hypothesis = ConstantHypothesis(constant_function, self.use_median)
+            constant_hypothesis = ConstantHypothesis(constant_function, self.use_measure)
             constant_hypothesis.compute_cost(measurements)
             return Model(constant_hypothesis)
 
@@ -246,12 +238,12 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             compound_term.reset_coefficients()
             multi_parameter_function = MultiParameterFunction(multi_parameter_term)
             multi_parameter_function.constant_coefficient = functions[param].constant_coefficient
-            multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_median)
+            multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_measure)
             multi_parameter_hypothesis.compute_cost(measurements)
 
             # multi parameter function with newly calculated coefficients using all values
             recomputed_coeffficients_hypothesis = MultiParameterHypothesis(
-                MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_median)
+                MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_measure)
             recomputed_coeffficients_hypothesis.compute_coefficients(measurements)
             recomputed_coeffficients_hypothesis.compute_cost(measurements)
 
@@ -355,7 +347,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             ]
 
         # create the hypotheses from the functions
-        hypotheses = [MultiParameterHypothesis(f, self.use_median)
+        hypotheses = [MultiParameterHypothesis(f, self.use_measure)
                       for f in mp_functions]
 
         # select one function as the bestHypothesis for the start

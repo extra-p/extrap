@@ -53,9 +53,9 @@ setup(
     python_requires='>=3.8',
     include_package_data=True,
     install_requires=[
-        "pyside6~=6.4",
+        "PySide6-Essentials~=6.4",
         "numpy~=1.18",
-        "matplotlib~=3.5",
+        "matplotlib~=3.6",
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",

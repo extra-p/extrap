@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -76,4 +76,10 @@ class UniqueList(list, Sequence[T]):
         obj = UniqueList()
         super(UniqueList, obj).extend(copy.deepcopy(e, memodict) for e in self)
         obj._set = copy.deepcopy(self._set, memodict)
+        return obj
+
+    def __copy__(self):
+        obj = UniqueList()
+        super(UniqueList, obj).extend(self)
+        obj._set = copy.copy(self._set)
         return obj

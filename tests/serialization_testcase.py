@@ -1,3 +1,10 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2024, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
 import unittest
 from typing import TYPE_CHECKING
 
@@ -42,7 +49,7 @@ class BasicExperimentSerializationTest(TestCaseProtocol):
             self.assertEqual(len(self.experiment.modelers), len(self.reconstructed.modelers))
             for (e_mg, r_mg) in zip(self.experiment.modelers, self.reconstructed.modelers):
                 self.assertEqual(e_mg._modeler.NAME, r_mg._modeler.NAME)
-                self.assertEqual(e_mg._modeler.use_median, r_mg._modeler.use_median)
+                self.assertEqual(e_mg._modeler.use_measure, r_mg._modeler.use_measure)
                 self.assertTrue(modeler_options.equal(e_mg, r_mg))
                 self.assertEqual(len(e_mg.models), len(r_mg.models))
 

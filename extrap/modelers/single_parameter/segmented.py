@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -137,7 +137,7 @@ class SegmentedModeler(SingleParameterModeler):
             intervals = [(-math.inf, change_point[0].coordinate[0]), (change_point[1].coordinate[0], math.inf)]
 
         function = SegmentedFunction([m.hypothesis.function for m in models], intervals)
-        hypothesis = SingleParameterHypothesis(function, self.use_median)
+        hypothesis = SingleParameterHypothesis(function, self.use_measure)
         hypothesis.compute_cost(measurements)
         hypothesis.compute_adjusted_rsquared(self.create_constant_model(measurements)[1], measurements)
         return SegmentedModel(hypothesis, models, change_point)

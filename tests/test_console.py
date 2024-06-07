@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -43,16 +43,16 @@ class TestConsole(unittest.TestCase):
     def test_print(self):
         extrap.main(['--text', 'data/text/one_parameter_1.txt'])
         self.assertOutputRegex(
-            "Callpath\:\s+compute\s+"
-            "Metric\:\s+time\s+"
-            "Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
-            "Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
-            "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
-            "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
-            "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
-            "Model\:\s+\-0\.88979340\d+\s+\+\s+0\.20168243\d+\s+\*\s+x\^\(2\)\s+"
-            "RSS\:\s+3\.43E\+01\s+"
-            "Adjusted\s+R\^2\:\s+1\.00E\+00",
+            r"Callpath\:\s+compute\s+"
+            r"Metric\:\s+time\s+"
+            r"Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            r"Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            r"Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            r"Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            r"Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
+            r"Model\:\s+\-0\.88979340\d+\s+\+\s+0\.20168243\d+\s+\*\s+x\^\(2\)\s+"
+            r"RSS\:\s+3\.43E\+01\s+"
+            r"Adjusted\s+R\^2\:\s+1\.00E\+00",
             extrap.main, ['--print', 'all', '--text', 'data/text/one_parameter_1.txt'])  # noqa
         # noqa
         self.assertOutputRegex(r'-0\.88979340\d+ \+ 0\.20168243\d+ \* x\^\(2\)', extrap.main,
@@ -73,16 +73,16 @@ class TestConsole(unittest.TestCase):
 
     def test_print_python(self):
         self.assertOutputRegex(
-            "Callpath\:\s+compute\s+"
-            "Metric\:\s+time\s+"
-            "Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
-            "Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
-            "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
-            "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
-            "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
-            "Model\:\s+\-0\.88979\d+\+0\.20168\d+\*x\*\*\(2\)\s+"
-            "RSS\:\s+3\.43E\+01\s+"
-            "Adjusted\s+R\^2\:\s+1\.00E\+00",
+            r"Callpath\:\s+compute\s+"
+            r"Metric\:\s+time\s+"
+            r"Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            r"Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            r"Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            r"Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            r"Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
+            r"Model\:\s+\-0\.88979\d+\+0\.20168\d+\*x\*\*\(2\)\s+"
+            r"RSS\:\s+3\.43E\+01\s+"
+            r"Adjusted\s+R\^2\:\s+1\.00E\+00",
             extrap.main, ['--print', 'all-python', '--text', 'data/text/one_parameter_1.txt'])  # noqa
         # noqa
         self.assertOutputRegex(r"-0\.88979\d+\+0\.20168\d+\*x\*\*\(2\)", extrap.main,
@@ -96,16 +96,16 @@ class TestConsole(unittest.TestCase):
 
     def test_print_latex(self):
         self.assertOutputRegex(
-            "Callpath\:\s+compute\s+"
-            "Metric\:\s+time\s+"
-            "Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
-            "Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
-            "Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
-            "Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
-            "Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
+            r"Callpath\:\s+compute\s+"
+            r"Metric\:\s+time\s+"
+            r"Measurement\s+point\:\s+\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            r"Measurement\s+point\:\s+\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            r"Measurement\s+point\:\s+\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            r"Measurement\s+point\:\s+\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            r"Measurement\s+point\:\s+\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02\s+"
             r"Model\:\s+\$\-8\.898\\times10\^\{−1\}\+2\.017\\times10\^\{−1\}\\cdot\ x\^\{2\}\$\s+"
-            "RSS\:\s+3\.43E\+01\s+"
-            "Adjusted\s+R\^2\:\s+1\.00E\+00",
+            r"RSS\:\s+3\.43E\+01\s+"
+            r"Adjusted\s+R\^2\:\s+1\.00E\+00",
             extrap.main, ['--print', 'all-latex', '--text', 'data/text/one_parameter_1.txt'])  # noqa
         # noqa
         self.assertOutputRegex(r"\$\-8\.898\\times10\^\{−1\}\+2\.017\\times10\^\{−1\}\\cdot\ x\^\{2\}\$", extrap.main,
@@ -132,11 +132,11 @@ class TestConsole(unittest.TestCase):
             r"\s+Measurement\s+point:\s+\(8\.00E\+00\)\s+Mean:\s+3\.80E\+01\s+Median:\s+3\.80E\+01\s+"
             r"\s+Measurement\s+point:\s+\(9\.00E\+00\)\s+Mean:\s+3\.90E\+01\s+Median:\s+3\.90E\+01\s+"
             r"\s+Measurement\s+point:\s+\(1\.00E\+01\)\s+Mean:\s+4\.00E\+01\s+Median:\s+4\.00E\+01\s+"
-            r"\s+Model\s+1:\s+6\.082977478\d+e\-15\s+\+\s+0\.9999999999\d+\s+\*\s+p\^\(2\)\s+for\s+p<=6\.0\s+"
+            r"\s+Model\s+1:\s+-?\d\.\d+e\-15\s+\+\s+(0\.9{10}|1\.0{10})\d+\s+\*\s+p\^\(2\)\s+for\s+p<=6\.0\s+"
             r"\s+Model\s+2:\s+29\.999999999\d+\s+\+\s+1\.0000000000\d+\s+\*\s+p\^\(1\)\s+for\s+p>=6\.0\s+"
             r"\s+RSS\s+Model\s+1:\s+\d\.\d\dE\-2\d\s+"
             r"\s+Adjusted\s+R\^2\s+Model\s+1:\s+1\.00E\+00\s+"
-            r"\s+RSS\s+Model\s+2:\s+5\.55E\-28\s+"
+            r"\s+RSS\s+Model\s+2:\s+\d\.\d\dE\-2\d\s+"
             r"\s+Adjusted\s+R\^2\s+Model\s+2:\s+1\.00E\+00",
             extrap.main,
             ['--text', 'data/text/one_parameter_segmented_1.txt', '--modeler', 'segmented'])

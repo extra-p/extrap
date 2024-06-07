@@ -8,13 +8,15 @@
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gui.components.ExpanderWidget import ExpanderWidget
+from extrap.entities.measurement import Measure
 from extrap.gui.ModelerOptionsWidget import ModelerOptionsWidget
+from extrap.gui.components.ExpanderWidget import ExpanderWidget
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.modelers import multi_parameter
 from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.util.exceptions import RecoverableError
 
 
 class ModelerWidget(QWidget):
@@ -45,16 +47,31 @@ class ModelerWidget(QWidget):
         grid.addWidget(label, 0, 0)
         grid.addWidget(self.model_name_edit, 0, 1)
 
+        _measure_select_layout = QGridLayout()
+        _measure_select_layout.setColumnStretch(3, 1)
+        _measure_select_layout.setHorizontalSpacing(0)
+        grid.addLayout(_measure_select_layout, 1, 0, 1, 2)
+
         self.model_mean_radio = QRadioButton("Model mean")
         self.model_mean_radio.setChecked(True)
-        grid.addWidget(self.model_mean_radio, 1, 0)
+        _measure_select_layout.addWidget(self.model_mean_radio, 1, 0)
 
-        self.model_median_radio = QRadioButton("Model median")
-        grid.addWidget(self.model_median_radio, 1, 1)
+        # self.model_median_radio = QRadioButton("Model median")
+        # _measure_select_layout.addWidget(self.model_median_radio, 1, 1)
 
-        self.model_mean_median_radio_group = QButtonGroup(grid)
-        self.model_mean_median_radio_group.addButton(self.model_mean_radio)
-        self.model_mean_median_radio_group.addButton(self.model_median_radio)
+        self._model_other_radio = QRadioButton("Model")
+        _measure_select_layout.addWidget(self._model_other_radio, 1, 2)
+
+        self._model_other_select = QComboBox()
+        self._model_other_select.addItems(
+            [m.name.title() for m in Measure.choices() if m != Measure.MEAN])
+        self._model_other_select.activated.connect(lambda _: self._model_other_radio.setChecked(True))
+        _measure_select_layout.addWidget(self._model_other_select, 1, 3)
+
+        self._model_measure_radio_group = QButtonGroup(grid)
+        self._model_measure_radio_group.addButton(self.model_mean_radio)
+        # self._model_measure_radio_group.addButton(self.model_median_radio)
+        self._model_measure_radio_group.addButton(self._model_other_radio)
 
         self._model_selector.currentIndexChanged.connect(self._modeler_selected)
         self._model_selector.setEnabled(False)
@@ -115,16 +132,20 @@ class ModelerWidget(QWidget):
     def remodel(self):
         # set the modeler options
         if self.model_mean_radio.isChecked():
-            use_median = False
+            measure = Measure.MEAN
         elif self.model_median_radio.isChecked():
-            use_median = True
+            measure = Measure.MEDIAN
+        elif self._model_other_radio.isChecked():
+            measure = Measure.from_str(self._model_other_select.currentText())
+        else:
+            raise RecoverableError('No measure selected.')
 
         # initialize model generator
         experiment = self.main_widget.getExperiment()
         if experiment is None:
             return
 
-        model_generator = ModelGenerator(experiment, use_median=use_median, modeler=self._modeler)
+        model_generator = ModelGenerator(experiment, use_measure=measure, modeler=self._modeler)
 
         model_generator.name = self.model_name_edit.text()
         # print(QCoreApplication.hasPendingEvents())

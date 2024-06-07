@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2021-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2021-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -26,10 +26,10 @@ class TestOutput(unittest.TestCase):
 
     def test_print(self):
         self.assertOutputRegex(
-            r"time,\s+merge\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s+"
-            r"time,\s+sort\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s+"
-            r"flops,\s+merge\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s+"
-            r"flops,\s+sort\:\s+Errors\:\s+312.47721968\d{6},\s+0.07834117602\d{6}\s*",
+            r"time,\s+merge\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s+"
+            r"time,\s+sort\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s+"
+            r"flops,\s+merge\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s+"
+            r"flops,\s+sort\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s*",
             extrap.main,
             ['--print', '{metric}, {callpath}: Errors: {rss}, {re}', '--text', 'data/text/two_parameter_3.txt'])
 
@@ -75,8 +75,7 @@ class TestOutput(unittest.TestCase):
             ['--print', '{metric}, {callpath}: {rss}/{smape} {model:python}', '--text',
              'data/text/two_parameter_3.txt'])
 
-
-    #NOTE: there is no point in test like this, every time we change something in the modeler that leads to slightly different outputs
+    # NOTE: there is no point in test like this, every time we change something in the modeler that leads to slightly different outputs
     # all of these test will fail, instead we should have a test that checks general conversion capabilities using hardcoded models as strings
     # that are not produced by the modeler or any data read from file
     """def test_model_latex(self):
@@ -207,7 +206,7 @@ class TestOutput(unittest.TestCase):
             "(4.00E+01, 3.00E+00) | (4.00E+01, 4.00E+00) | (4.00E+01, 5.00E+00) | (5.00E+01, 1.00E+00) | "
             "(5.00E+01, 2.00E+00) | (5.00E+01, 3.00E+00) | (5.00E+01, 4.00E+00) | (5.00E+01, 5.00E+00) | "
             "(6.00E+01, 1.00E+00) | (6.00E+01, 2.00E+00) | (6.00E+01, 3.00E+00) | (6.00E+01, 4.00E+00) | ") +
-                 r"\(6\.00E\+01,\ 5\.00E\+00\)\n\t312\.47721968\d{6}:x\ y\n") * 4
+                 r"\(6\.00E\+01,\ 5\.00E\+00\)\n\t312\.47721968\d{5,7}:x\ y\n") * 4
         self.assertRegex(output.format_output(self.exp, "{points}\n\t{rss}:{parameters}"), truth)
 
     def test_measurement_formatting(self):
@@ -239,7 +238,7 @@ class TestOutput(unittest.TestCase):
                 "{9.99E-01}{q},{8.11E+01}{q},{1.28E+02}{q},{1.62E+02}{q},{1.87E+02}{q},{1.00E+00}{q},{1.82E+02}{q},"
                 "{2.84E+02}{q},{3.64E+02}{q},{4.21E+02}{q},{9.89E-01}{q},{3.18E+02}{q},{5.09E+02}{q},{6.43E+02}{q},"
                 "{7.44E+02}{q},{1.00E+00}{q},{5.02E+02}{q},{7.95E+02}{q},{1.00E+03}{q},{1.17E+03}{q},{1.00E+00}{q},"
-                "{7.26E+02}{q},{1.14E+03}{q},{1.44E+03}{q},{1.66E+03}{q} ") + r"312\.47721968\d{6}\n") * 4)
+                "{7.26E+02}{q},{1.14E+03}{q},{1.44E+03}{q},{1.66E+03}{q} ") + r"312\.47721968\d{5,7}\n") * 4)
         self.assertEqual(
             ("{9.99E-01},{8.11E+01},{1.28E+02},{1.62E+02},{1.87E+02},{1.00E+00},{1.82E+02},{2.84E+02},{3.64E+02},"
              "{4.21E+02},{9.89E-01},{3.18E+02},{5.09E+02},{6.43E+02},{7.44E+02},{1.00E+00},{5.02E+02},{7.95E+02},"

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -8,7 +8,6 @@
 import sys
 import unittest
 import warnings
-from threading import Thread
 
 from PySide6.QtCore import QRect, QItemSelectionModel
 from PySide6.QtWidgets import QApplication, QCheckBox, QPushButton
@@ -18,30 +17,35 @@ from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
 from extrap.gui.MainWidget import MainWidget, QCoreApplication
 
-try:
-    APP = QApplication()
-    APP.setStyle('Fusion')
-    app_thread = Thread(target=APP.exec)
-except:
-    app_thread = None
-    pass
+_qapp_instance = None
 
 
-class TestGuiCommon(unittest.TestCase):
+class GuiTestCase(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        global _qapp_instance
+        if _qapp_instance is None:
+            _qapp_instance = QApplication([])
+            _qapp_instance.setStyle('Fusion')
+
+        self.app_instance = _qapp_instance
+
+    def tearDown(self):
+        del self.app_instance
+        super(GuiTestCase, self).tearDown()
+
+
+class TestGuiCommon(GuiTestCase):
 
     def setUp(self) -> None:
-        global app_thread
-        if not app_thread:
-            raise unittest.SkipTest("GUI could not start.")
-        if not app_thread.is_alive():
-            app_thread = Thread(target=APP.exec)
-            app_thread.start()
+        super().setUp()
         self.window = MainWidget()
         self.window.hide()
 
     def tearDown(self):
-        if not app_thread:
-            raise unittest.SkipTest("GUI could not start.")
+        # if not app_thread:
+        #     raise unittest.SkipTest("GUI could not start.")
         self.window.closeEvent = lambda e: e.accept()
         self.window.close()
 
@@ -135,13 +139,32 @@ class TestGuiExperimentLoaded(TestGuiCommon):
             self.assertEqual(old_state, checkbox.isChecked())
 
 
-class TestGuiLoadExperiment(unittest.TestCase):
+class TestGuiLoadExperiment(GuiTestCase):
     def test_load_experiment(self):
         _old_warnings_handler = warnings.showwarning
         _old_exception_handler = sys.excepthook
         try:
             window, app = extrapgui.main(test=True, args=[])
             exp = TextFileReader().read_experiment('data/text/one_parameter_1.txt')
+            self.assertIsNone(window.getExperiment())
+
+            window.model_experiment(exp)
+            QCoreApplication.processEvents()
+            self.assertIsNotNone(window.getExperiment())
+            window.closeEvent = lambda e: e.accept()
+            window.close()
+        finally:
+            warnings.showwarning = _old_warnings_handler
+            sys.excepthook = _old_exception_handler
+
+    def test_load_experiment_keep_values(self):
+        _old_warnings_handler = warnings.showwarning
+        _old_exception_handler = sys.excepthook
+        try:
+            window, app = extrapgui.main(test=True, args=[])
+            tfr = TextFileReader()
+            tfr.keep_values = True
+            exp = tfr.read_experiment('data/text/one_parameter_1.txt')
             self.assertIsNone(window.getExperiment())
 
             window.model_experiment(exp)

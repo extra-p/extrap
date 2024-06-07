@@ -13,6 +13,7 @@ import warnings
 from itertools import chain
 
 import extrap
+from extrap.entities.measurement import Measure
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import experiment_io
 from extrap.fileio.experiment_io import ExperimentReader
@@ -66,8 +67,14 @@ def main(args=None, prog=None):
                                help="Keeps the original values after import")
 
     modeling_options = parser.add_argument_group("Modeling options")
-    modeling_options.add_argument("--median", action="store_true", dest="median",
-                                  help="Use median values for computation instead of mean values")
+    measure_group = modeling_options.add_mutually_exclusive_group(required=False)
+    measure_group.add_argument("--median", action="store_true", dest="median",
+                               help="Use median values for computation instead of mean values "
+                                    "(deprecated: use --measure)")
+    measure_group.add_argument("--measure", action="store", dest="measure",
+                               default=Measure.MEAN.name.lower(),
+                               choices=[m.name.lower() for m in Measure.choices()],
+                               help="Select measure of values used for computation")
     modeling_options.add_argument("--modeler", action="store", dest="modeler", default='default', type=str.lower,
                                   choices=modelers_list,
                                   help="Selects the modeler for generating the performance models "
@@ -129,7 +136,10 @@ def main(args=None, prog=None):
     scaling_type = arguments.scaling_type
 
     # set use mean or median for computation
-    use_median = arguments.median
+    if arguments.median:
+        use_measure = arguments.median
+    else:
+        use_measure = Measure.from_str(arguments.measure)
 
     # save modeler output to file?
     print_path = None
@@ -173,7 +183,7 @@ def main(args=None, prog=None):
 
         # initialize model generator
         model_generator = ModelGenerator(
-            experiment, modeler=arguments.modeler, name=arguments.model_name, use_median=use_median)
+            experiment, modeler=arguments.modeler, name=arguments.model_name, use_measure=use_measure)
 
         # apply modeler options
         modeler = model_generator.modeler
