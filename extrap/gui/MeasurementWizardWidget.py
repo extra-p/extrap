@@ -14,7 +14,6 @@ import numpy as np
 from PySide6.QtGui import QIntValidator, QPalette, QColor
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.entities.metric import Metric
 from extrap.gui.Utils import clear_layout
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.mpa.gpr_selection_strategy import analyze_noise
@@ -118,7 +117,8 @@ class MeasurementWizardWidget(QWidget):
 
         self.metric_selector_cb = QComboBox(self)
         for metric in self.experiment.metrics:
-            self.metric_selector_cb.addItem(str(metric))
+            name = metric.name if metric.name != '' else '<default>'
+            self.metric_selector_cb.addItem(name, metric)
         self._layout.addWidget(self.metric_selector_cb, 3, 1)
         self.metric_selector_cb.currentIndexChanged.connect(self.update_cost_info)
 
@@ -190,8 +190,7 @@ class MeasurementWizardWidget(QWidget):
         if self.no_model_parameters == 0:
             return
         # do an noise analysis on the existing measurement points
-        metric_string = self.metric_selector_cb.currentText()
-        runtime_metric = Metric(metric_string)
+        runtime_metric = self.metric_selector_cb.currentData()
 
         selected_callpath = self._get_selected_callpaths()
 
@@ -218,12 +217,7 @@ class MeasurementWizardWidget(QWidget):
     def calculate_current_measurement_cost(self):
         if self.no_model_parameters == 0:
             return
-        metric_string = self.metric_selector_cb.currentText()
-        metrics = self.experiment.metrics
-        if Metric(metric_string) not in metrics:
-            return
-        else:
-            runtime_metric = Metric(metric_string)
+        runtime_metric = self.metric_selector_cb.currentData()
         selected_callpath = self._get_selected_callpaths()
 
         if self.processes_le.text():
@@ -249,12 +243,7 @@ class MeasurementWizardWidget(QWidget):
 
         else:
             # get the performance metric that should be used for the analysis
-            metric_string = self.metric_selector_cb.currentText()
-            metrics = self.experiment.metrics
-            runtime_metric = None
-            for metric in metrics:
-                if metric_string == str(metric):
-                    runtime_metric = metric
+            runtime_metric = self.metric_selector_cb.currentData()
 
             # get the selected callpath(s) in the tree
             selected_callpath = self._get_selected_callpaths()
@@ -394,12 +383,6 @@ class MeasurementWizardWidget(QWidget):
         # if there are several model parameters
         else:
             self.init_ui()
-
-        if model_parameters != 0:
-            self.metric_selector_cb.clear()
-            for metric in self.experiment.metrics:
-                name = metric.name if metric.name != '' else '<default>'
-                self.metric_selector_cb.addItem(name)
 
     def experimentChanged(self):
         self.mpa.experiment = self.main_widget.getExperiment()
