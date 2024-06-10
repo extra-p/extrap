@@ -10,7 +10,7 @@ from enum import Enum
 
 class ScalingType(Enum):
     WEAK = "weak"
-    WEAK_PARALLEL = "weak_parallel"
+    WEAK_THREADED = "weak_threaded"
     STRONG = "strong"
 
     def __str__(self):

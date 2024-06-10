@@ -153,7 +153,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
                                 if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].extend(map(float, cnode_values))
-                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = [v for v in map(float, cnode_values) if v != 0]
                                     if not values:
                                         values = map(float, cnode_values)
@@ -175,7 +175,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                             if self.scaling_type == ScalingType.WEAK:
                                 # do NOT use generator it is slower
                                 aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
-                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                            elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = [v for v in map(float, cnode_values) if v != 0]
                                 if not values:
                                     values = map(float, cnode_values)
@@ -218,7 +218,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
                                 if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
-                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = cnode_values.astype(float)
                                     non_zero_value_mask = values != 0
                                     masked_array = ma.array(values, mask=non_zero_value_mask)
@@ -239,7 +239,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                             # in case of weak scaling calculate mean and median over all mpi process values
                             if self.scaling_type == ScalingType.WEAK:
                                 aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
-                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                            elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = cnode_values.astype(float)
                                 non_zero_value_mask = values != 0
                                 aggregated_values[(callpath, metric)].append(ma.array(values, mask=non_zero_value_mask))
