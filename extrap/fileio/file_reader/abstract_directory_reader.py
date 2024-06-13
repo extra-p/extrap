@@ -51,6 +51,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             # parameters = folder_name.split(".")
 
             param_list = re.split('([0-9.,]+)', parameters)
+            if len(param_list) <= 1:
+                raise FileFormatError(f"Could not detect parameter in {folder_name}")
             param_list.remove("")
 
             parameter_names = [n for i, n in enumerate(param_list) if i % 2 == 0]

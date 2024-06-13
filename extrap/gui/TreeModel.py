@@ -220,7 +220,7 @@ class TreeModel(QAbstractItemModel):
         if key in model.models:
             return model.models[key], experiment  # might be None
         else:
-            return None
+            return None, experiment
 
     def on_metric_changed(self):
 
