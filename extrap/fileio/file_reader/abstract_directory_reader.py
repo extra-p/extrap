@@ -92,8 +92,7 @@ class AbstractScalingConversionReader(FileReader, DynamicOptions, abc.ABC):
                                                    range={i.name.lower(): i.value for i in ScalingType})
     scaling_type.explanation_below = ("Select the type of scaling analysis.<br>"
                                       "Use <b>strong</b> scaling if the problem size remains unchanged while adding "
-                                      "more computational resources (e.g., nodes, processes, cores, threads) are "
-                                      "added.<br>"
+                                      "more computational resources (e.g., nodes, processes, cores, threads).<br>"
                                       "If the problem size was scaled alongside the computational resources,"
                                       "choose either <b>weak</b> scaling or <b>weak_threaded</b> scaling when your "
                                       "application uses multithreading.")
