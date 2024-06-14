@@ -130,7 +130,7 @@ class TreeModel(QAbstractItemModel):
             if self.selector_widget.show_parameters.isChecked():
                 return call_tree_node.name
             else:
-                return self.remove_method_parameters(call_tree_node.name)
+                return replace_method_parameters(call_tree_node.name)
         elif index.column() == 2:
             if model.annotations:
                 parameters = self.main_widget.getExperiment().parameters
@@ -183,32 +183,6 @@ class TreeModel(QAbstractItemModel):
         value = formula.evaluate(parameters)
         numpy.seterr(**previous)
         return value
-
-    def remove_method_parameters(self, name):
-        def _replace_braces(name, lb, rb):
-            depth = 0
-            start = -1
-            replacement = lb + '…' + rb
-            i = 0
-            while i < len(name):
-                elem = name[i]
-                if elem == lb:
-                    depth += 1
-                    if start == -1:
-                        start = i
-                elif elem == rb:
-                    depth -= 1
-                    if start != -1 and depth == 0:
-                        if start + 1 != i:
-                            name = name[0:start:] + replacement + name[i + 1:len(name):]
-                            i = start + len(replacement) - 1
-                        start = -1
-                i += 1
-            return name
-
-        name = _replace_braces(name, '<', '>')
-        name = _replace_braces(name, '(', ')')
-        return name
 
     def getSelectedModel(self, callpath) -> Optional[Model]:
         experiment = self.main_widget.getExperiment()

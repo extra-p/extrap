@@ -7,9 +7,7 @@
 
 from __future__ import annotations
 
-import warnings
 from abc import abstractmethod
-from itertools import chain
 from typing import TYPE_CHECKING
 
 import matplotlib
@@ -19,6 +17,8 @@ from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
+
+from extrap.util.formatting_helper import replace_method_parameters
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -126,7 +126,7 @@ class GraphDisplayWindow(FigureCanvas):
             labelName = str(key.name)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
-            patch = mpatches.Patch(color=value, label=labelName)
+            patch = mpatches.Patch(color=value, label=replace_method_parameters(labelName))
             patches.append(patch)
         leg = ax_all.legend(handles=patches, fontsize=self.main_widget.plot_formatting_options.legend_font_size,
                             loc="upper right", bbox_to_anchor=(1, 1))
