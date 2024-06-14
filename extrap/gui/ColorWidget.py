@@ -14,8 +14,8 @@ from extrap.gui.Utils import formatNumber
 
 class ColorWidget(QWidget):
 
-    def __init__(self):
-        super(ColorWidget, self).__init__()
+    def __init__(self, parent):
+        super(ColorWidget, self).__init__(parent)
 
         self.max_label = QLabel()
         self.min_label = QLabel()

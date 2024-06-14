@@ -16,10 +16,6 @@ from dataclasses import dataclass
 
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.exceptions import ConvergenceWarning
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import Matern
-from sklearn.gaussian_process.kernels import WhiteKernel
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -63,6 +59,7 @@ def suggest_points_gpr_mode(experiment: Experiment,
     max_repetitions = 5
 
     with warnings.catch_warnings():
+        from sklearn.exceptions import ConvergenceWarning
         # disable warnings from sk
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -142,6 +139,9 @@ def suggest_points_gpr_mode(experiment: Experiment,
 
 def generate_gaussian_process(existing_measurements: dict[Coordinate, MeanRepPair], mean_noise, normalization_factors,
                               random_state=None):
+    from sklearn.gaussian_process import GaussianProcessRegressor
+    from sklearn.gaussian_process.kernels import Matern, WhiteKernel
+
     # add all of the selected measurement points to the gaussian process
     # as training data and train it for these points
     xs = []
@@ -162,6 +162,7 @@ def generate_gaussian_process(existing_measurements: dict[Coordinate, MeanRepPai
 
     # nu should be [0.5, 1.5, 2.5, inf], everything else has 10x overhead
     # matern kernel + white kernel to simulate actual noise found in the measurements
+
     kernel = 1 * Matern(length_scale=1, length_scale_bounds=(1e-5, 1e5), nu=1.5) + WhiteKernel(
         noise_level=mean_noise * mean_noise, noise_level_bounds=(1e-5, 1e5))
 

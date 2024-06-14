@@ -126,7 +126,7 @@ class MainWidget(QMainWindow):
 
         # bottom widget
         dock = QDockWidget("Color Info", self)
-        self.color_widget = ColorWidget()
+        self.color_widget = ColorWidget(self)
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
