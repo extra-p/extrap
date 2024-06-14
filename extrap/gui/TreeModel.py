@@ -19,6 +19,7 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.model import Model, SegmentedModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
+from extrap.util.formatting_helper import replace_method_parameters
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
