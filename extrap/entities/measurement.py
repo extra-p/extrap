@@ -62,6 +62,7 @@ class Measurement:
         self.metric: Metric = metric
         if values is None:
             self.repetitions = None
+            self.values = None
             return
         values = self._convert_values_to_ndarray(values)
         if keep_values:
