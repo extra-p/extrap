@@ -12,85 +12,69 @@ from io import StringIO
 
 from extrap.extrap import extrapcmd as extrap
 from extrap.fileio import output
-from extrap.fileio.file_reader.text_file_reader import TextFileReader
+from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.output import OutputFormatError
-from extrap.modelers.model_generator import ModelGenerator
 
 
 class TestOutput(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.exp = TextFileReader().read_experiment('data/text/two_parameter_3.txt')
-        ModelGenerator(cls.exp).model_all()
+        cls.exp = read_experiment('data/experiments/two_parameter3.txt.extra-p')
 
-    def test_print(self):
-        self.assertOutputRegex(
+    def test_error_output(self):
+        regex = (
             r"time,\s+merge\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s+"
             r"time,\s+sort\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s+"
             r"flops,\s+merge\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s+"
-            r"flops,\s+sort\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s*",
-            extrap.main,
-            ['--print', '{metric}, {callpath}: Errors: {rss}, {re}', '--text', 'data/text/two_parameter_3.txt'])
+            r"flops,\s+sort\:\s+Errors\:\s+312.47721968\d{5,7},\s+0.07834117602\d{5,7}\s*")
+        self.assertRegex(output.format_output(self.exp, '{metric}, {callpath}: Errors: {rss}, {re}'), regex)
 
-        self.assertOutputRegex(
-            r"\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
-            r"\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
-            r"\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
-            r"\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
-            r"\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02",
-            extrap.main, ['--print', '{measurements}', '--text', 'data/text/one_parameter_1.txt'])
-
-        self.assertOutputRegex(
+    def test_model_output(self):
+        regex = (
             r"time,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
-            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
-            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\.0\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\.0\)\s+\*\s+log2\(y\)\^\(1\.0\)\s+"
             r"time,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
-            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
-            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\.0\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\.0\)\s+\*\s+log2\(y\)\^\(1\.0\)\s+"
             r"flops,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
-            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
-            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)\s+"
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\.0\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\.0\)\s+\*\s+log2\(y\)\^\(1\.0\)\s+"
             r"flops,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\s+\+\s+"
-            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
-            r"log2\(x\)\^\(2\)\s+\*\s+log2\(y\)\^\(1\)",
-            extrap.main,
-            ['--print', '{metric}, {callpath}: {rss}/{smape} {model}', '--text', 'data/text/two_parameter_3.txt'])
+            r"6\.698080399\d{5,7}\s+\*\s+log2\(y\)\^\(1\.0\)\s+\+\s+0\.043841655290\d{5,7}\s+\*\s+x\^\(3\/2\)\s+\*\s+"
+            r"log2\(x\)\^\(2\.0\)\s+\*\s+log2\(y\)\^\(1\.0\)")
+        self.assertRegex(output.format_output(self.exp, '{metric}, {callpath}: {rss}/{smape} {model}'), regex)
 
     def test_model_python(self):
-        self.assertOutputRegex(
+        regex = (
             r"time,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
-            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
-            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\.?0?\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\.?0?\)\*log2\(y\)\*\*\(1\.?0?\)\s+"
             r"time,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
-            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
-            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\.?0?\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\.?0?\)\*log2\(y\)\*\*\(1\.?0?\)\s+"
             r"flops,\s+merge\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
-            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
-            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)\s+"
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\.?0?\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\.?0?\)\*log2\(y\)\*\*\(1\.?0?\)\s+"
             r"flops,\s+sort\:\s+312.47721968\d{5,7}\/6.644640850\d{5,7}\s+1\.3742083125\d{5,7}\+"
-            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
-            r"log2\(x\)\*\*\(2\)\*log2\(y\)\*\*\(1\)",
-            extrap.main,
-            ['--print', '{metric}, {callpath}: {rss}/{smape} {model:python}', '--text',
-             'data/text/two_parameter_3.txt'])
+            r"6\.698080399\d{5,7}\*log2\(y\)\*\*\(1\.?0?\)\+0\.043841655290\d{5,7}\*x\*\*\(3\/2\)\*"
+            r"log2\(x\)\*\*\(2\.?0?\)\*log2\(y\)\*\*\(1\.?0?\)")
+        self.assertRegex(output.format_output(self.exp, '{metric}, {callpath}: {rss}/{smape} {model:python}'),
+                         regex)
 
-    # NOTE: there is no point in test like this, every time we change something in the modeler that leads to slightly different outputs
-    # all of these test will fail, instead we should have a test that checks general conversion capabilities using hardcoded models as strings
-    # that are not produced by the modeler or any data read from file
-    """def test_model_latex(self):
-        self.assertOutputRegex(
-            r"time,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
-            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
-            r"time,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
-            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
-            r"flops,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
-            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$\s+"
-            r"flops,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\}\+"
-            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\}\\cdot\ \\log_2\{y\}\^\{1\}\$",
-            extrap.main,
-            ['--print', '{metric}, {callpath}: {rss}/{smape} {model:latex}', '--text',
-             'data/text/two_parameter_3.txt'])"""
+    def test_model_latex(self):
+        regex = (
+            r"time,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\.0\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\.0\}\\cdot\ \\log_2\{y\}\^\{1\.0\}\$\s+"
+            r"time,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\.0\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\.0\}\\cdot\ \\log_2\{y\}\^\{1\.0\}\$\s+"
+            r"flops,\ merge:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\.0\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\.0\}\\cdot\ \\log_2\{y\}\^\{1\.0\}\$\s+"
+            r"flops,\ sort:\ 312\.47721968273464/6\.6446408501203775\ \$1\.374\+6\.698\\cdot\ \\log_2\{y\}\^\{1\.0\}\+"
+            r"4\.384\\times10\^\{−2\}\\cdot\ x\^\{3/2\}\\cdot\ \\log_2\{x\}\^\{2\.0\}\\cdot\ \\log_2\{y\}\^\{1\.0\}\$")
+        self.assertRegex(output.format_output(self.exp, '{metric}, {callpath}: {rss}/{smape} {model:latex}'),
+                         regex)
 
     def test_invalid(self):
         with self.assertRaises(OutputFormatError):
@@ -105,6 +89,13 @@ class TestOutput(unittest.TestCase):
             r"merge\s+sort",
             extrap.main,
             ['--print', '{callpath}', '--text', 'data/text/two_parameter_3.txt'])
+        self.assertOutputRegex(
+            r"\(2\.00E\+01\)\s+Mean\:\s+8\.19E\+01\s+Median\:\s+8\.20E\+01\s+"
+            r"\(3\.00E\+01\)\s+Mean\:\s+1\.79E\+02\s+Median\:\s+1\.78E\+02\s+"
+            r"\(4\.00E\+01\)\s+Mean\:\s+3\.19E\+02\s+Median\:\s+3\.19E\+02\s+"
+            r"\(5\.00E\+01\)\s+Mean\:\s+5\.05E\+02\s+Median\:\s+5\.06E\+02\s+"
+            r"\(6\.00E\+01\)\s+Mean\:\s+7\.25E\+02\s+Median\:\s+7\.26E\+02",
+            extrap.main, ['--print', '{measurements}', '--text', 'data/text/one_parameter_1.txt'])
 
     @staticmethod
     def _make_expected(point_string):
@@ -276,8 +267,9 @@ class TestOutput(unittest.TestCase):
             "{{x{40.0}},{y{3.0}}}p | {{x{40.0}},{y{4.0}}}p | {{x{40.0}},{y{5.0}}}p | {{x{50.0}},{y{1.0}}}p | "
             "{{x{50.0}},{y{2.0}}}p | {{x{50.0}},{y{3.0}}}p | {{x{50.0}},{y{4.0}}}p | {{x{50.0}},{y{5.0}}}p | "
             "{{x{60.0}},{y{1.0}}}p | {{x{60.0}},{y{2.0}}}p | {{x{60.0}},{y{3.0}}}p | {{x{60.0}},{y{4.0}}}p | "
-            "{{x{60.0}},{y{5.0}}}p\n" * 4, output.format_output(self.exp,
-                                                                "{points: format: '{{{point:sep:',' ; format:'{{{parameter}{{{coordinate}}}}}'}}}p'}"))
+            "{{x{60.0}},{y{5.0}}}p\n" * 4,
+            output.format_output(self.exp,
+                                 "{points: format: '{{{point:sep:',' ; format:'{{{parameter}{{{coordinate}}}}}'}}}p'}"))
 
     def test_error_message(self):
         self.assertRaises(OutputFormatError,

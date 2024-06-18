@@ -230,56 +230,70 @@ def format_output(experiment: Experiment, printtype: str):
     callpath_list = []
     metric_list = []
 
-    for m in models.values():
-        placeholder_results = []
-        for o in placeholder_options:
-            if o == "callpath":
-                temp = m.callpath.name
-            elif o == "?callpath":
-                if not callpath_list or callpath_list[-1] != m.callpath.name:
-                    temp = m.callpath.name
-                else:
-                    temp = " " * len(m.callpath.name)
-                callpath_list.append(m.callpath.name)
-            elif o == "metric":
-                temp = m.metric.name
-            elif o == "?metric":
-                if not metric_list or metric_list[-1] != m.metric.name:
-                    temp = m.metric.name
-                else:
-                    temp = " " * len(m.metric.name)
-                metric_list.append(m.metric.name)
-            elif o == "model":
-                temp = m.hypothesis.function.to_string(*experiment.parameters)
-            elif o == "model:python":
-                temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.PYTHON)
-            elif o == "model:latex":
-                temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.LATEX)
-            elif _re_points.fullmatch(o):
-                data = _re_points.fullmatch(o)
-                coordinate_text = format_points(data.group(2), experiment)
-                temp, print_coord = _remove_duplicates_with_leading_question_mark(o, coordinate_text, print_coord)
+    for modeler in experiment.modelers:
+        if len(experiment.modelers) > 1:
+            text += f"Modeler: {modeler.name}\n"
 
-            elif _re_measurements.fullmatch(o):
-                data = _re_measurements.fullmatch(o)
-                temp = format_measurements(data.group(2), experiment, m)
-
-            elif _re_parameters.fullmatch(o):
-                data = _re_parameters.fullmatch(o)
-                param_text = format_parameters(data.group(2), experiment)
-                temp, print_param = _remove_duplicates_with_leading_question_mark(o, param_text, print_param)
-
-            elif any(k in o for k in ("smape", "rrss", "rss", "ar2", "re")):
-                braced_o = f"{{{o}}}"
-                temp = braced_o.format(smape=m.hypothesis.SMAPE, rrss=m.hypothesis.rRSS, rss=m.hypothesis.RSS,
-                                       ar2=m.hypothesis.AR2, re=m.hypothesis.RE)
-            else:
-                raise OutputFormatError(f"Invalid placeholder: {o}")
-            placeholder_results.append(temp)
-
-        text += (print_str.format(*placeholder_results) + "\n")
+        models = modeler.models
+        
+        for metric in experiment.metrics:
+            for callpath in experiment.callpaths:
+                if (callpath, metric) not in models:
+                    continue
+                m = models[callpath, metric]
+                text += format_model(callpath_list, experiment, m, metric_list, placeholder_options, print_coord,
+                                     print_param, print_str)
 
     return text
+
+
+def format_model(callpath_list, experiment, m, metric_list, placeholder_options, print_coord, print_param, print_str):
+    placeholder_results = []
+    for o in placeholder_options:
+        if o == "callpath":
+            temp = m.callpath.name
+        elif o == "?callpath":
+            if not callpath_list or callpath_list[-1] != m.callpath.name:
+                temp = m.callpath.name
+            else:
+                temp = " " * len(m.callpath.name)
+            callpath_list.append(m.callpath.name)
+        elif o == "metric":
+            temp = m.metric.name
+        elif o == "?metric":
+            if not metric_list or metric_list[-1] != m.metric.name:
+                temp = m.metric.name
+            else:
+                temp = " " * len(m.metric.name)
+            metric_list.append(m.metric.name)
+        elif o == "model":
+            temp = m.hypothesis.function.to_string(*experiment.parameters)
+        elif o == "model:python":
+            temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.PYTHON)
+        elif o == "model:latex":
+            temp = m.hypothesis.function.to_string(*experiment.parameters, format=FunctionFormats.LATEX)
+        elif _re_points.fullmatch(o):
+            data = _re_points.fullmatch(o)
+            coordinate_text = format_points(data.group(2), experiment)
+            temp, print_coord = _remove_duplicates_with_leading_question_mark(o, coordinate_text, print_coord)
+
+        elif _re_measurements.fullmatch(o):
+            data = _re_measurements.fullmatch(o)
+            temp = format_measurements(data.group(2), experiment, m)
+
+        elif _re_parameters.fullmatch(o):
+            data = _re_parameters.fullmatch(o)
+            param_text = format_parameters(data.group(2), experiment)
+            temp, print_param = _remove_duplicates_with_leading_question_mark(o, param_text, print_param)
+
+        elif any(k in o for k in ("smape", "rrss", "rss", "ar2", "re")):
+            braced_o = f"{{{o}}}"
+            temp = braced_o.format(smape=m.hypothesis.SMAPE, rrss=m.hypothesis.rRSS, rss=m.hypothesis.RSS,
+                                   ar2=m.hypothesis.AR2, re=m.hypothesis.RE)
+        else:
+            raise OutputFormatError(f"Invalid placeholder: {o}")
+        placeholder_results.append(temp)
+    return print_str.format(*placeholder_results) + "\n"
 
 
 def _remove_duplicates_with_leading_question_mark(o, text, is_print_enabled):
