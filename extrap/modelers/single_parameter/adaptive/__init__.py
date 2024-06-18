@@ -6,6 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 import copy
+import importlib.util
 from bisect import bisect_left
 from collections import namedtuple
 from itertools import groupby
@@ -23,13 +24,10 @@ from extrap.modelers.single_parameter.abstract_base import AbstractSingleParamet
 from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
-try:
-    import extrap_adaptive_modeler
+_adaptive_modeler_package = importlib.util.find_spec('extrap_adaptive_modeler')
+if _adaptive_modeler_package is not None:
     from extrap_adaptive_modeler.load_model import get_model
     from extrap_adaptive_modeler.lazy_tensorflow import load_tensorflow
-
-except ImportError:
-    extrap_adaptive_modeler = None
 
 from ..basic import SingleParameterModeler
 
@@ -82,7 +80,7 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
         self._basic_modeler: AbstractSingleParameterModeler = SingleParameterModeler()
 
     def model(self, measurement_list_: Sequence[Sequence[Measurement]], progress_bar=DUMMY_PROGRESS) -> Sequence[Model]:
-        if not extrap_adaptive_modeler:
+        if _adaptive_modeler_package is None:
             raise RecoverableError(
                 "To use the adaptive modeler, please install Extra-P with the adaptive modeler extension.\n"
                 "You can do that using 'pip install extrap[adaptive_modeling]'.")

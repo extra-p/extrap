@@ -4,7 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import importlib.util
 import unittest
 
 import numpy as np
@@ -27,9 +27,8 @@ from extrap.modelers.single_parameter.adaptive import AdaptiveModeler
 class TestAdaptiveModeling(unittest.TestCase):
 
     def setUp(self):
-        try:
-            import extrap_adaptive_modeler
-        except ImportError:
+        adaptive_modeler_package = importlib.util.find_spec('extrap_adaptive_modeler')
+        if adaptive_modeler_package is None:
             self.skipTest("Adaptive modeling plugin is not installed.")
 
     def test_single_parameter_modeling(self):
