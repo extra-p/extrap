@@ -32,9 +32,9 @@ before_script:
 
 
 .test:
-  script:    
+  script:
     - pip install pytest pytest-cov # flake8
-#    - flake8 --max-line-length=120 extrap tests setup.py
+    #    - flake8 --max-line-length=120 extrap tests setup.py
     - cd tests
     - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
   artifacts:
@@ -49,41 +49,45 @@ before_script:
         path: tests/junit/coverage.xml
 
 test-3.8:
-    extends: ".test"
-    image: "python:3.8"
+  extends: ".test"
+  image: "python:3.8"
 
 test-3.9:
-    extends: ".test"
-    image: "python:3.9"
+  extends: ".test"
+  image: "python:3.9"
 
 test-3.10:
-    extends: ".test"
-    image: "python:3.10"
+  extends: ".test"
+  image: "python:3.10"
 
 test-3.11:
-    extends: ".test"
-    image: "python:3.11"
+  extends: ".test"
+  image: "python:3.11"
+
+test-3.12:
+  extends: ".test"
+  image: "python:3.12"
 
 test-macos:
-    extends: ".test"
-    tags:
-      - macos
-    image: ghcr.io/cirruslabs/macos-sonoma-base:latest
-    before_script:
-      - brew install python@3.9
-      - python3.9 --version  # For debugging
-      - python3.9 -m venv venv
-      - source venv/bin/activate
-      - python -m pip install --upgrade pip
-      - pip install .
-    script:    
-      - pip install pytest pytest-cov
-      - cd tests
-      - pytest . --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
+  extends: ".test"
+  tags:
+    - macos
+  image: ghcr.io/cirruslabs/macos-sonoma-base:latest
+  before_script:
+    - brew install python@3.9
+    - python3.9 --version  # For debugging
+    - python3.9 -m venv venv
+    - source venv/bin/activate
+    - python -m pip install --upgrade pip
+    - pip install .
+  script:
+    - pip install pytest pytest-cov
+    - cd tests
+    - pytest . --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
 
 
 run:
-  script:    
+  script:
     - extrap --version
 
 release_job:
@@ -92,10 +96,10 @@ release_job:
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*/'                 # Run this job when a tag is created
   before_script:
-    - echo "running release_job" 
+    - echo "running release_job"
   script:
     - echo "running release_job"
-  release:                               # See https://docs.gitlab.com/ee/ci/yaml/#release for available properties
+  release: # See https://docs.gitlab.com/ee/ci/yaml/#release for available properties
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
 
@@ -103,13 +107,13 @@ release_job:
 upload_release_job:
   stage: release
   tags: [ deep-sea, jacamar, shell ]
-  cache: {}
+  cache: { }
   rules:
     - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
       when: never
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*/'
   before_script:
-    - echo "Project located at $CI_PROJECT_DIR" 
+    - echo "Project located at $CI_PROJECT_DIR"
   script:
     - mkdir -p /p/project/deepsea/wp2/install_packages/extrap/
     - rm -rf .git
