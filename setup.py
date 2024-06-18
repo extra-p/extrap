@@ -64,6 +64,6 @@ setup(
         "scikit-learn>=1.2.2"
     ],
     extras_require={
-        "adaptive_modeling": ["extrap-adaptive-modeler~=1.0"],
+        "adaptive_modeling": ["extrap-adaptive-modeler>=1.0.1,<3"],
     },
 )
