@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import logging
 import warnings
 from collections import defaultdict
@@ -17,7 +18,6 @@ from pathlib import Path
 from typing import Dict, Union, Sequence, Tuple, Optional
 
 import numpy
-import pkg_resources
 from numpy import ma
 from packaging.version import Version
 
@@ -362,6 +362,6 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             del experiment.measurements[key]
 
 
-_pycubexr_version = Version(pkg_resources.get_distribution("pycubexr").version)
+_pycubexr_version = Version(importlib.metadata.version("pycubexr"))
 if _pycubexr_version.major == 1:
     CubeFileReader2._aggregate_repetitions = CubeFileReader2._aggregate_repetitions_legacy
