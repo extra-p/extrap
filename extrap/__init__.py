@@ -6,7 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 __title__ = "Extra-P"
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 __description__ = "Extra-P, automated performance modeling for HPC applications"
 __copyright__ = "Copyright (c) 2020-2023 Technical University of Darmstadt, Darmstadt, Germany"
 __documentation_link__ = f"https://github.com/extra-p/extrap/tree/v{__version__}/docs"

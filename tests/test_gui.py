@@ -57,6 +57,15 @@ class TestGuiCommon(GuiTestCase):
         data_display.reloadTabs([0])
         self.assertTrue(data_display.is_tab_already_opened("Line graph"))
 
+    def test_start_modeling(self):
+        modeler_widget = self.window.modeler_widget
+        modeler_widget.model_mean_radio.click()
+        modeler_widget._model_button.click()
+        modeler_widget.remodel()
+        modeler_widget._model_other_radio.click()
+        modeler_widget._model_button.click()
+        modeler_widget.remodel()
+
 
 class TestGuiExperimentLoaded(TestGuiCommon):
 
@@ -137,6 +146,9 @@ class TestGuiExperimentLoaded(TestGuiCommon):
                     break
 
             self.assertEqual(old_state, checkbox.isChecked())
+
+    def test_start_modeling(self):
+        super().test_start_modeling()
 
 
 class TestGuiLoadExperiment(GuiTestCase):

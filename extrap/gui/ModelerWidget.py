@@ -133,8 +133,6 @@ class ModelerWidget(QWidget):
         # set the modeler options
         if self.model_mean_radio.isChecked():
             measure = Measure.MEAN
-        elif self.model_median_radio.isChecked():
-            measure = Measure.MEDIAN
         elif self._model_other_radio.isChecked():
             measure = Measure.from_str(self._model_other_select.currentText())
         else:
