@@ -22,15 +22,28 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
             diff_scaled = diff / (10 ** nondecimal_places)
         else:
             diff_scaled = diff
-        diff_rounded = round(diff_scaled, places)
+        diff_rounded = float(round(diff_scaled, places))
         self.assertTrue(diff_rounded == 0, msg=f"{other} != {function} in {places} places {ctxt}")
 
     # def test_assertApprox(self):
-    #     self.assertApprox(200, 200.001)
-    #     self.assertApprox(200.002, 200.001)
-    #     self.assertApprox(200.0049, 200.000)
-    #     self.assertApprox(200.000, 199.9951)
+    #     self.assertApprox(200.0000, 200.0001)
+    #     self.assertApprox(200.0002, 200.0001)
+    #     self.assertApprox(200.00049, 200.0000)
+    #     self.assertApprox(200.0000, 199.99951)
     #     self.assertApprox(200, 200.4999, places=3)
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(200, 200.001)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(200.002, 200.001)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
 
     def assertApproxFunction(self, function, other, **kwargs):
         if 'places' not in kwargs:
