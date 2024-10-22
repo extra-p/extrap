@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -48,10 +48,16 @@ class DynamicOptionsWidget(QWidget):
         for name, option in options:
             if isinstance(option, DynamicOption):
                 if option.explanation_above:
-                    layout.addWidget(QLabel(option.explanation_above))
+                    explanation_label = QLabel(option.explanation_above)
+                    explanation_label.setWordWrap(True)
+                    explanation_label.setMinimumWidth(350)
+                    layout.addWidget(explanation_label)
                 layout.addRow(self._determine_label(option), self._determine_field(option))
                 if option.explanation_below:
-                    layout.addWidget(QLabel(option.explanation_below))
+                    explanation_label = QLabel(option.explanation_below)
+                    explanation_label.setWordWrap(True)
+                    explanation_label.setMinimumWidth(350)
+                    layout.addWidget(explanation_label)
             elif isinstance(option, DynamicOptionsGroup):
                 group = QGroupBox(name)
                 group.setToolTip(option.description)

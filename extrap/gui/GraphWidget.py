@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -20,6 +20,7 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
+from extrap.util.formatting_helper import replace_method_parameters
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -363,7 +364,7 @@ class GraphWidget(QWidget):
         if self.combine_all_callpath is False:
             text_len = 0
             for callpath, color in callpath_color_dict.items():
-                text_len = max(text_len, font_metrics.horizontalAdvance(callpath.name))
+                text_len = max(text_len, font_metrics.horizontalAdvance(replace_method_parameters(callpath.name)))
             self.legend_width = 55 + text_len
             self.legend_height = counter_increment * dict_size + 3 * px_between
 
@@ -383,13 +384,14 @@ class GraphWidget(QWidget):
                 paint.setPen(self.TEXT_COLOR)
                 paint.drawText(QRect(left_margin_text, self.legend_y + counter,
                                      text_len, font_height),
-                               Qt.TextFlag.TextDontClip, callpath.name)
+                               Qt.TextFlag.TextDontClip, replace_method_parameters(callpath.name))
 
                 counter = counter + counter_increment
 
         else:
 
-            aggregated_callpath_name = ' + '.join(callpath.name for callpath, color in callpath_color_dict.items())
+            aggregated_callpath_name = ' + '.join(replace_method_parameters(callpath.name)
+                                                  for callpath, color in callpath_color_dict.items())
 
             bounding_rect_text = font_metrics.boundingRect(
                 QRect(left_margin_text, self.legend_y + 2 * px_between, self.graph_width - left_margin_text,
@@ -828,7 +830,7 @@ class GraphWidget(QWidget):
         pen = QPen(self.DATA_RANGE_COLOR)
         pen.setWidth(2)
         paint.setPen(pen)
-        paint.drawLine(x, min_y, x, max_y)
+        paint.drawLine(QPointF(x, min_y), QPointF(x, max_y))
 
         pen = QPen(self.DATA_POINT_COLOR)
         pen.setWidth(2)
@@ -837,15 +839,15 @@ class GraphWidget(QWidget):
             zip(outlier_x_absolute_pos_list, outlier_y_absolute_pos_list))
         for (x_cordinate, y_cordinate) in outlier_on_graph_list:
             # paint.drawPoint(x_cordinate, y_cordinate)
-            paint.drawLine(x_cordinate - 2, y_cordinate,
-                           x_cordinate + 2, y_cordinate)
+            paint.drawLine(QPointF(x_cordinate - 2, y_cordinate),
+                           QPointF(x_cordinate + 2, y_cordinate))
 
     @staticmethod
     def plotPointsOnGraph(paint, dataPoints):
         """ This function plots datapoints on the graph
         """
         for (x_cordinate, y_cordinate), (x_actual_val, y_actual_val) in dataPoints:
-            paint.drawPoint(x_cordinate, y_cordinate)
+            paint.drawPoint(QPointF(x_cordinate, y_cordinate))
             # displayString="(" + str(x_actual_val)+ "," + str(y_actual_val) + ")"
             # paint.drawText((x_cordinate-20), y_cordinate, displayString)
         # paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.name)

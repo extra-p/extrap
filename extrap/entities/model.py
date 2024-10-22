@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -32,6 +32,8 @@ class Model:
 
     @cached_property
     def predictions(self):
+        if not self.measurements:
+            return []
         coordinates = numpy.array([m.coordinate for m in self.measurements])
         return self.hypothesis.function.evaluate(coordinates.transpose())
 
@@ -41,10 +43,10 @@ class Model:
         elif self is other:
             return True
         else:
-            return self.callpath == other.callpath and \
-                self.metric == other.metric and \
-                self.hypothesis == other.hypothesis and \
-                self.measurements == other.measurements
+            return (self.callpath == other.callpath and
+                    self.metric == other.metric and
+                    self.hypothesis == other.hypothesis and
+                    self.measurements == other.measurements)
 
     def __repr__(self):
         return f'Model({str(self.callpath)}, {str(self.metric)}: {self.hypothesis})'

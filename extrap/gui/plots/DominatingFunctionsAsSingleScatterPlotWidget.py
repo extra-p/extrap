@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -43,12 +43,13 @@ class DominatingFunctionsAsSingleScatterPlot(GraphDisplayWindow):
         dict_callpath_color = widget.model_color_map
 
         # calculate max_z value
-        color_for_max_z = dict_callpath_color[selected_callpaths[0]]
+
         max_z_list = list()
         max_color_list = list()
 
         for i in range(len(z_List[0])):
             max_z_val = z_List[0][i]
+            color_for_max_z = dict_callpath_color[selected_callpaths[0]]
             for j in range(len(model_list)):
                 if z_List[j][i] > max_z_val:
                     max_z_val = z_List[j][i]

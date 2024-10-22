@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,6 +12,7 @@ import warnings
 from collections import defaultdict
 from pathlib import Path
 
+import extrap
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader import FileReader
 from extrap.util.dynamic_options import DynamicOptions
@@ -51,6 +52,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             # parameters = folder_name.split(".")
 
             param_list = re.split('([0-9.,]+)', parameters)
+            if len(param_list) <= 1:
+                raise FileFormatError(f"Could not detect parameter in {folder_name}")
             param_list.remove("")
 
             parameter_names = [n for i, n in enumerate(param_list) if i % 2 == 0]
@@ -71,8 +74,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
                 warnings.warn(
                     f"Could not detect any parameter names in the name of folder: {folder_name}. "
                     f"Please follow the usage guide under "
-                    f"<a href=https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format>"
-                    f"https://github.com/extra-p/extrap/blob/master/docs/file-formats.md#cube-file-format</a>.")
+                    f"<a href={extrap.__documentation_link__}/file-formats.md#cube-file-format>"
+                    f"{extrap.__documentation_link__}/file-formats.md#cube-file-format</a>.")
 
         # determine and remove non-constant parameters
 
@@ -84,9 +87,21 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
 
         parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
 
+        if not parameter_names:
+            raise FileFormatError(f"Could not detect any parameter names. "
+                                  f"Please follow the usage guide under "
+                                  f"<a href={extrap.__documentation_link__}/file-formats.md#cube-file-format>"
+                                  f"{extrap.__documentation_link__}/file-formats.md#cube-file-format</a>.")
+
         return parameter_names, parameter_values
 
 
 class AbstractScalingConversionReader(FileReader, DynamicOptions, abc.ABC):
     scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK, ScalingType,
                                                    range={i.name.lower(): i.value for i in ScalingType})
+    scaling_type.explanation_below = ("Select the type of scaling analysis.<br>"
+                                      "Use <b>strong</b> scaling if the problem size remains unchanged while adding "
+                                      "more computational resources (e.g., nodes, processes, cores, threads).<br>"
+                                      "If the problem size was scaled alongside the computational resources,"
+                                      "choose either <b>weak</b> scaling or <b>weak_threaded</b> scaling when your "
+                                      "application uses multithreading.")

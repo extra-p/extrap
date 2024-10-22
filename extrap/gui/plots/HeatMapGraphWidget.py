@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -10,7 +10,7 @@ import sys
 
 import matplotlib.ticker as ticker
 import numpy as np
-from matplotlib import cm
+from matplotlib import colormaps
 
 from extrap.gui.plots.BaseGraphWidget import BaseContourGraph
 
@@ -20,10 +20,7 @@ from extrap.gui.plots.BaseGraphWidget import BaseContourGraph
 
 class HeatMapGraph(BaseContourGraph):
     def __init__(self, graphWidget, main_widget, width=5, height=4, dpi=100):
-        try:
-            self.colormap = cm.get_cmap('viridis')
-        except ValueError:
-            self.colormap = cm.get_cmap('spectral')
+        self.colormap = colormaps['viridis']
 
         # initializing value to be used later in finding boundary points
         self.isLeft = 1

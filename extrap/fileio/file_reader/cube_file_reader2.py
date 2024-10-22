@@ -1,12 +1,13 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
 
+import importlib.metadata
 import logging
 import warnings
 from collections import defaultdict
@@ -17,7 +18,7 @@ from pathlib import Path
 from typing import Dict, Union, Sequence, Tuple, Optional
 
 import numpy
-import pkg_resources
+from numpy import ma
 from packaging.version import Version
 
 from extrap.entities.callpath import Callpath
@@ -152,7 +153,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
                                 if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].extend(map(float, cnode_values))
-                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = [v for v in map(float, cnode_values) if v != 0]
                                     if not values:
                                         values = map(float, cnode_values)
@@ -174,11 +175,11 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                             if self.scaling_type == ScalingType.WEAK:
                                 # do NOT use generator it is slower
                                 aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
-                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                            elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = [v for v in map(float, cnode_values) if v != 0]
                                 if not values:
                                     values = map(float, cnode_values)
-                                aggregated_values[(callpath, metric)].extend(values)
+                                aggregated_values[(callpath, metric)].append(values)
                                 # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
                                 aggregated_values[(callpath, metric)].append(float(sum(cnode_values)))
@@ -216,13 +217,12 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                     continue
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
                                 if self.scaling_type == ScalingType.WEAK:
-                                    total_values[callpaths[r_cnode.id]].extend(cnode_values.astype(float))
-                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                    total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
+                                elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = cnode_values.astype(float)
                                     non_zero_value_mask = values != 0
-                                    if numpy.any(non_zero_value_mask):
-                                        values = values[non_zero_value_mask]
-                                    total_values[callpaths[r_cnode.id]].extend(values)
+                                    masked_array = ma.array(values, mask=non_zero_value_mask)
+                                    total_values[callpaths[r_cnode.id]].append(masked_array)
                                 elif self.scaling_type == ScalingType.STRONG:
                                     total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
 
@@ -239,13 +239,10 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                             # in case of weak scaling calculate mean and median over all mpi process values
                             if self.scaling_type == ScalingType.WEAK:
                                 aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
-                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                            elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = cnode_values.astype(float)
                                 non_zero_value_mask = values != 0
-                                if numpy.any(non_zero_value_mask):
-                                    values = values[non_zero_value_mask]
-                                aggregated_values[(callpath, metric)] = numpy.concatenate(
-                                    (aggregated_values[(callpath, metric)], values))
+                                aggregated_values[(callpath, metric)].append(ma.array(values, mask=non_zero_value_mask))
                             # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
                                 aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
@@ -367,6 +364,6 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             del experiment.measurements[key]
 
 
-_pycubexr_version = Version(pkg_resources.get_distribution("pycubexr").version)
+_pycubexr_version = Version(importlib.metadata.version("pycubexr"))
 if _pycubexr_version.major == 1:
     CubeFileReader2._aggregate_repetitions = CubeFileReader2._aggregate_repetitions_legacy

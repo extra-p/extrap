@@ -4,42 +4,65 @@
 
 ## Released version 4.2
 
-### Measurement point suggestion via GPR
+### Scaling analysis support
+
+* Automatic detection and conversion of strong scaling
+* Improved strong scaling support for CUBE files
+* Enhanced weak scaling modeling for CUBE profiles of multi-threaded applications
+
+### More options for selecting the measure of aggregation
+
+* Modeling the minimum and maximum of the measured point is now possible
+
+### New modelers
+
+* __Segmented modeling__: modeling of two behaviors in one model
+    * Support for segmented performance models with a single or multiple model parameters.
+    * Extension of the available plotting features to support segmented models.
+* __Adaptive modeling__: optionally uses a neural network to improve the noise resiliency of the models
+
+### Measurement point suggestions based on Gaussian Process Regression
+
 * The GUI features a view for measurement point suggestions.
 * Several suggestion approaches help the user to complete or extend the set of available measurement points
-to improve model accuracy further and enhance the noise resilience of the model while optimizing modeling cost.
+  to improve model accuracy further and enhance the noise resilience of the model while optimizing modeling cost.
 
-### Segmented modeling
-* Support for segmented performance models with a single or multiple model parameters.
-* Extension of the available plotting features to support segmented models.
+### Enhancements
 
-### Adaptive performance modeler
-* DNN based modeling approach.
+* Functions can be formatted in Python and Latex format
+* Function names are shortened in plots
+* Keeps track of number of repetitions
+* Optionally keeps all measured values in the experiment
 
 ***
 
 ## Released version 4.1
 
 ### Improved GUI
+
 * Different views for the call-tree
 * Function parameters can be shortened
 * Automatic update check
 
 ### New formatting options
-* Format for text output can be specified by the user 
+
+* Format for text output can be specified by the user
   (see [docs/output-formatting.md](docs/output-formatting.md))
 * Plots have formatting options for font family and font size
 
 ### Extended features
+
 * New extendable File Reader API
 * Unified extension loader
 * Unified entities with names
 * Added support for tags on entities
 
 ### Improved OS support
+
 * Added support for macOS Ventura
 
 ### Upgraded dependencies
+
 * Upgrade from PySide2 to PySide6
 * Upgrade from Matplotlib 3.2 to Matplotlib 3.5
 * Upgrade from PyObjC 6.2 to PyObjC 9.0
@@ -48,34 +71,40 @@ to improve model accuracy further and enhance the noise resilience of the model 
 ***
 
 ## Released version 4.0
+
 ### Sparse modeling support
-* Added support for sparse modeling for multi-parameter models. This allows the 
-model generator to be run to use fewer measurement points.
-* Added several strategies for the sparse modeler that specify how the 
-measurement points will be used for modeling. Advanced users can use this option
-to exactly specify which, and how many points should be used for modeling.
+
+* Added support for sparse modeling for multi-parameter models. This allows the
+  model generator to be run to use fewer measurement points.
+* Added several strategies for the sparse modeler that specify how the
+  measurement points will be used for modeling. Advanced users can use this option
+  to exactly specify which, and how many points should be used for modeling.
 
 ### Support for more input files
-* Added two new input formats. Besides a text and the cubex-based file 
-format Extra-P now also supports a JSON lines style format and a JSON
-format. With the JSON lines style format experiment results can be written
-consecutively into one file, that can then be used for modeling, allowing 
-for more flexibility in case it is not clear how many or with which configuration
-the experiments will be done.
+
+* Added two new input formats. Besides a text and the cubex-based file
+  format Extra-P now also supports a JSON lines style format and a JSON
+  format. With the JSON lines style format experiment results can be written
+  consecutively into one file, that can then be used for modeling, allowing
+  for more flexibility in case it is not clear how many or with which configuration
+  the experiments will be done.
 
 ### A python-based version of Extra-P
+
 * The new version of Extra-P is completely Python-based and can be installed
-more easily using the pip package manager. Besides some standard python packages,
-there are no further dependencies anymore.
+  more easily using the pip package manager. Besides some standard python packages,
+  there are no further dependencies anymore.
 
 ### Improved Python-based command-line tool
+
 * Added a new Python-based command-line tool that allows accessing all of the
-the functionality of Extra-P (besides the graphical plots).
+  the functionality of Extra-P (besides the graphical plots).
 
 ### Minor improvements and fixes
+
 * Fixed some GUI bugs
 * Improved the readability of the GUI, introducing loading indicators for time
-intensive operations
+  intensive operations
 * Added new save file format for Extra-P
 
 ***

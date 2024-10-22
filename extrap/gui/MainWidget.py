@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,12 +11,10 @@ import signal
 import sys
 from enum import Enum
 from functools import partial
-from numbers import Number
 from pathlib import Path
 from typing import Optional, Sequence, Tuple, Type
 from urllib.error import URLError, HTTPError
 
-from PySide6 import QtGui
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
@@ -36,6 +34,7 @@ from extrap.gui.ColorWidget import ColorWidget
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
+from extrap.gui.MeasurementWizardWidget import MeasurementWizardWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
 from extrap.gui.SelectorWidget import SelectorWidget
@@ -47,7 +46,6 @@ from extrap.gui.components.plot_formatting_options import PlotFormattingOptions,
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.deprecation import deprecated
 from extrap.util.dynamic_options import DynamicOptions
-from extrap.gui.MeasurementWizardWidget import MeasurementWizardWidget
 
 _SETTING_CHECK_FOR_UPDATES_ON_STARTUP = 'check_for_updates_on_startup'
 
@@ -121,14 +119,14 @@ class MainWidget(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         # Right side: Measurement Wizard
-        dock = QDockWidget("Measurement Point Suggestion Wizard", self)
+        dock = QDockWidget("Measurement Point Suggestion", self)
         self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
         dock.setWidget(self.measurementWizard_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         # bottom widget
         dock = QDockWidget("Color Info", self)
-        self.color_widget = ColorWidget()
+        self.color_widget = ColorWidget(self)
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
@@ -204,8 +202,6 @@ class MainWidget(QMainWindow):
 
         metric_delete_action = QAction('Dele&te metrics', self)
         metric_delete_action.triggered.connect(self.selector_widget.delete_metric)
-
-
 
         # Filter menu
         # filter_callpath_action = QAction('Filter Callpaths', self)
@@ -350,7 +346,7 @@ class MainWidget(QMainWindow):
         return self.selector_widget.get_selected_models()
 
     def open_plot_format_dialog_box(self):
-        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.WindowType.Sheet)
+        dialog = PlotFormattingDialog(self.plot_formatting_options, self, Qt.WindowType.Sheet, self.model_color_map)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.data_display.updateWidget()
             self.update()
@@ -602,7 +598,8 @@ class MainWidget(QMainWindow):
                 ns_window.setTitlebarAppearsTransparent_(True)
                 ns_window.setColorSpace_(NSColorSpace.sRGBColorSpace())
                 c = self.palette().window().color()
-                ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(), c.alphaF())
+                ns_window_color = NSColor.colorWithDeviceRed_green_blue_alpha_(c.redF(), c.greenF(), c.blueF(),
+                                                                               c.alphaF())
                 ns_window.setBackgroundColor_(ns_window_color)
         except ImportError:
             pass

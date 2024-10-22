@@ -43,6 +43,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
@@ -53,9 +54,9 @@ setup(
     python_requires='>=3.8',
     include_package_data=True,
     install_requires=[
-        "pyside6~=6.4",
+        "PySide6-Essentials~=6.4",
         "numpy~=1.18",
-        "matplotlib~=3.5",
+        "matplotlib~=3.6",
         "tqdm~=4.47",
         "pycubexr>=1.1,<3",
         "marshmallow~=3.7",
@@ -65,6 +66,6 @@ setup(
         "scikit-learn>=1.2.2"
     ],
     extras_require={
-        "adaptive_modeling": ["extrapadaptivemodeler>=1.0.0"],
+        "adaptive_modeling": ["extrap-adaptive-modeler>=1.0.1,<3"],
     },
 )

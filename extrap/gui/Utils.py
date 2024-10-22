@@ -1,9 +1,12 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
+from PySide6.QtWidgets import QLayout
+
 
 def makeExponent(exponent):
     exponent = exponent.replace('0', '⁰')
@@ -182,23 +185,40 @@ def formatFormula(formula):
         i = i + 1
     return formula
 
+
 from typing import Union
 
-def tryCastTupelToInt(numbers :tuple) -> tuple:
+
+def tryCastTupelToInt(numbers: tuple) -> tuple:
     roundedNumbers = list(numbers).copy()
     for i, num in enumerate(numbers):
-        if not bool(int(num)-num):
+        if not bool(int(num) - num):
             roundedNumbers[i] = int(num)
     return tuple(roundedNumbers)
-    
-def tryCastListToInt(numbers :list) -> list:
+
+
+def tryCastListToInt(numbers: list) -> list:
     roundedNumbers = numbers.copy()
     for i, num in enumerate(numbers):
-        if not bool(int(num)-num):
+        if not bool(int(num) - num):
             roundedNumbers[i] = int(num)
     return roundedNumbers
-    
-def tryCastNumToInt(number :Union[int,float]) -> Union[int,float]:
-    if not bool(int(number)-number):
+
+
+def tryCastNumToInt(number: Union[int, float]) -> Union[int, float]:
+    if not bool(int(number) - number):
         return int(number)
     return number
+
+
+def clear_layout(layout: QLayout):
+    if not layout:
+        return
+
+    while (child := layout.takeAt(0)) is not None:
+        if child_layout := child.layout():
+            clear_layout(child_layout)
+            del child_layout
+        if widget := child.widget():
+            widget.deleteLater()
+        del child
