@@ -473,6 +473,8 @@ class ComputationFunction(TermlessFunction, CalculationElement):
         dummy_params = {p: sympy.Dummy(str(p)[1:], real=True, positive=True) for p in params}
         comp_func = comp_func0.subs((o, n + 1) for o, n in dummy_params.items())
 
+        dummy_infinity = sympy.Dummy('inf', real=True, positive=True, nonzero=True)
+
         if comp_func.is_number:
             res = comp_func
         else:
@@ -485,17 +487,21 @@ class ComputationFunction(TermlessFunction, CalculationElement):
             for i, r in enumerate(all_res):
                 while not r.is_number and r.free_symbols:
                     d = sympy.Dummy(real=True, positive=True, nonzero=True)
-                    r = r.subs(next(iter(r.free_symbols)), d + 1)
-                    r = sympy.limit(r, d, sympy.oo)
+                    r1 = r.subs(sympy.oo, dummy_infinity).subs(next(iter(r.free_symbols)), d + 1)
+                    r2 = sympy.limit(r1, d, sympy.oo)
+                    r = r2.subs(dummy_infinity, sympy.oo)
                 all_res[i] = r
 
             if all(r == all_res[0] for r in all_res):
                 res = all_res[0]
             else:
-                try:
-                    return tuple(1 if r > 0 else (0 if r == 0 else -1) for r in all_res)
-                except TypeError:
-                    return tuple("Cannot evaluate: " + str(r) for r in all_res)
+                result = []
+                for r in all_res:
+                    try:
+                        result.append(1 if r > 0 else (0 if r == 0 else -1))
+                    except TypeError:
+                        result.append("Cannot evaluate: " + str(r))
+                return tuple(result)
 
         if res > 0:
             return 1

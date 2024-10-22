@@ -9,6 +9,7 @@ import copy
 from unittest import TestCase
 
 import numpy as np
+import sympy
 
 from extrap.comparison.entities.comparison_function import ComparisonFunction
 from extrap.comparison.entities.comparison_model import ComparisonModel
@@ -28,6 +29,7 @@ from extrap.fileio.experiment_io import read_experiment
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
+from extrap.entities.function_computation import ComputationFunction
 
 
 class TestComparison(TestCase):
@@ -491,3 +493,5 @@ class TestComparison(TestCase):
             "void test(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
         self.assertEqual("FluxSpectrumAllVolumes::writeToFile", smart_matcher._normalize_name(
             " FluxSpectrumAllVolumes::writeToFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
+
+
