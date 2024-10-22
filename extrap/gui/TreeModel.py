@@ -23,6 +23,7 @@ from extrap.util.formatting_helper import replace_method_parameters
 
 if TYPE_CHECKING:
     from extrap.gui.SelectorWidget import SelectorWidget
+    from extrap.entities.experiment import Experiment
 
 
 def _format_number_segmented_model(segmented_model: SegmentedModel, selector: Callable[[Model], Any]) -> str:
@@ -185,12 +186,12 @@ class TreeModel(QAbstractItemModel):
         numpy.seterr(**previous)
         return value
 
-    def getSelectedModel(self, callpath) -> Optional[Model]:
+    def getSelectedModel(self, callpath) -> [Optional[Model], Experiment]:
         experiment = self.main_widget.getExperiment()
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
         if model is None or metric is None:
-            return None
+            return None, experiment
         key = (callpath, metric)
         if key in model.models:
             return model.models[key], experiment  # might be None
