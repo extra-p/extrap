@@ -7,7 +7,8 @@
 
 from __future__ import annotations
 
-from matplotlib.axes import Axes, np
+from matplotlib.axes import Axes
+import numpy as np
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 

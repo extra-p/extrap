@@ -334,7 +334,8 @@ class GraphWidget(QWidget):
         self.max_y = y
 
         if math.isnan(self.max_y):
-            raise RecoverableError("Cannot draw graph, because NaN was set as maximum.")
+            paint.drawText(QPointF(10, 10),"Cannot draw graph, because NaN was set as maximum.")
+            return
 
         try:
             # Draw coordinate system
