@@ -345,7 +345,11 @@ class SingleParameterHypothesis(Hypothesis):
         B = b_list
 
         if not negative_coefficients:
-            X, _ = scipy.optimize.nnls(A, B)
+            try:
+                X, _ = scipy.optimize.nnls(A, B)
+            except RuntimeError:
+                relaxed_tolerance=max(max(A.shape), max(B.shape)) * numpy.linalg.norm(A, 1) * numpy.spacing(1.)
+                X, _ = scipy.optimize.nnls(A, B,atol=relaxed_tolerance)
         else:
             X, _, _, _ = numpy.linalg.lstsq(A, B, None)
         # logging.debug("Coefficients:"+str(X))

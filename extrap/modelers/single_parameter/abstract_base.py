@@ -71,7 +71,10 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         Creates a constant model that fits the data using a ConstantFunction.
         """
         # compute the constant coefficient
-        mean_model = sum(m.value(self.use_median) / len(measurements) for m in measurements)
+        if len(measurements) == 0:
+            mean_model = 0
+        else:
+            mean_model = sum(m.value(self.use_median) for m in measurements) / len(measurements)
 
         # create a constant function
         constant_function = ConstantFunction(mean_model)
