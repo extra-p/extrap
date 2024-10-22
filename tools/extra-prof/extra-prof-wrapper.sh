@@ -157,18 +157,36 @@ else
         echo "EXTRA PROF: Finished unpacking msgpack. Continuing..."
     fi
 
-    # no exec otherwise this script will end here
-    combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_injection.o" "$extra_prof_root/extra_prof/injection/injection.cpp")
-    echo "EXTRA PROF COMPILE INJECTION: " $EXTRA_PROF_COMPILER ${combined[*]}
-    $EXTRA_PROF_COMPILER ${combined[*]}
-    [ $? -eq 0 ] || exit $?
+    create_extra_prof_components=true
+    if { [ "${EXTRA_PROF_REUSE_COMPONENTS}" = on ] || [ "${EXTRA_PROF_REUSE_COMPONENTS}" = ON ]; } && [ -f "extra_prof_components_created.done" ]; then
+        create_extra_prof_components=false
+    fi
 
-    # compile library
-    combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fopenmp" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
+    if [ "$create_extra_prof_components" = true ]; then
+        exec {lock_fd}>extra_prof_components_create.lock || exit 1
+        flock "$lock_fd"
+        # check again within lock
+        if { [ "${EXTRA_PROF_REUSE_COMPONENTS}" = on ] || [ "${EXTRA_PROF_REUSE_COMPONENTS}" = ON ]; } && [ -f "extra_prof_components_created.done" ]; then
+            :
+        else
 
-    echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
-    $EXTRA_PROF_COMPILER ${combined[*]}
-    [ $? -eq 0 ] || exit $?
+            # no exec otherwise this script will end here
+            combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_injection.o" "$extra_prof_root/extra_prof/injection/injection.cpp")
+            echo "EXTRA PROF COMPILE INJECTION: " $EXTRA_PROF_COMPILER ${combined[*]}
+            $EXTRA_PROF_COMPILER ${combined[*]}
+            [ $? -eq 0 ] || exit $?
+
+            # compile library
+            combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fopenmp" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
+
+            echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
+            $EXTRA_PROF_COMPILER ${combined[*]}
+            [ $? -eq 0 ] || exit $?
+
+            touch "extra_prof_components_created.done"
+        fi
+        flock -u "$lock_fd"
+    fi
 
     #
     combined=("$link_extra_prof_wrap" "extra_prof_injection.o" "${instrumentation_arguments[@]}" "${arguments[@]}")
