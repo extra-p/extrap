@@ -8,14 +8,14 @@
 from __future__ import annotations
 
 import copy
+import numpy
+from PySide6.QtCore import *  # @UnusedWildImport
 from enum import Enum, auto
 from typing import Optional, TYPE_CHECKING, List, Callable, Any
 
-import numpy
-from PySide6.QtCore import *  # @UnusedWildImport
-
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
+from extrap.entities.experiment import Experiment
 from extrap.entities.model import Model, SegmentedModel
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
@@ -185,12 +185,12 @@ class TreeModel(QAbstractItemModel):
         numpy.seterr(**previous)
         return value
 
-    def getSelectedModel(self, callpath) -> Optional[Model]:
+    def getSelectedModel(self, callpath) -> tuple[Optional[Model], Experiment]:
         experiment = self.main_widget.getExperiment()
         model = self.selector_widget.getCurrentModel()
         metric = self.selector_widget.getSelectedMetric()
         if model is None or metric is None:
-            return None
+            return None, experiment
         key = (callpath, metric)
         if key in model.models:
             return model.models[key], experiment  # might be None
