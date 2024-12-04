@@ -58,7 +58,7 @@ setup(
         "numpy~=1.18",
         "matplotlib~=3.6",
         "tqdm~=4.47",
-        "pycubexr>=1.1,<3",
+        "pycubexr>=1.2.3,<3,!=2.0.0",
         "marshmallow~=3.7",
         "packaging>=20.0",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'",
