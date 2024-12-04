@@ -289,6 +289,7 @@ class SingleParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
+        import scipy.optimize
         b_list = numpy.fromiter(Measurement.select_measure(measurements, self._use_measure), float, len(measurements))
         points = numpy.fromiter((m.coordinate[0] for m in measurements), float, len(measurements))
 
@@ -392,6 +393,7 @@ class MultiParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
+        import scipy.optimize
         # creating a numpy matrix representation of the lgs
         a_list = []
 
