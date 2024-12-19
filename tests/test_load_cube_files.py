@@ -13,6 +13,7 @@ from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.metric import Metric
 from extrap.entities.parameter import Parameter
+from extrap.entities.scaling_type import ScalingType
 from extrap.fileio.file_reader.cube_file_reader2 import CubeFileReader2
 from extrap.util.exceptions import FileFormatError
 
@@ -128,6 +129,75 @@ class TestCubeFileLoader(unittest.TestCase):
             warnings.filterwarnings('ignore', r'^((?!Strong scaling).)*$')
             CubeFileReader2().read_cube_file('data/cubeset/multi_parameter', 'weak')
         self.assertFalse(record)
+
+    def test_weak_threaded_loading(self):
+        cfr = CubeFileReader2()
+        cfr.scaling_type = ScalingType.WEAK_THREADED
+        experiment = cfr.read_experiment('data/cubeset/simple_threaded')
+        self.assertListEqual([Parameter('f')], experiment.parameters)
+        expected_coordinates = {Coordinate(1), Coordinate(2), Coordinate(3), Coordinate(4), Coordinate(5)}
+        self.assertSetEqual(expected_coordinates, set(experiment.coordinates))
+        self.assertSetEqual({Callpath('main'), Callpath('main->foo'), Callpath('main->bar'),
+                             Callpath('main->omp parallel'), Callpath('main->zero')}, set(experiment.callpaths))
+        self.assertSetEqual({Metric('visits'), Metric('time')},
+                            set(experiment.metrics))
+
+        for measurements in experiment.measurements.values():
+            self.assertEqual(len(expected_coordinates), len(measurements))
+
+        cp = Callpath('main->foo')
+        met = Metric('time')
+        for measurement in experiment.measurements[cp, met]:
+            self.assertEqual(cp, measurement.callpath)
+            self.assertEqual(met, measurement.metric)
+            expected_value = 4.95 * measurement.coordinate[0]
+            self.assertAlmostEqual(expected_value, measurement.mean)
+            self.assertAlmostEqual(expected_value, measurement.median)
+
+        cp = Callpath('main->bar')
+        met = Metric('time')
+        for measurement in experiment.measurements[cp, met]:
+            self.assertEqual(cp, measurement.callpath)
+            self.assertEqual(met, measurement.metric)
+            expected_value = 4.15 * measurement.coordinate[0]
+            self.assertAlmostEqual(expected_value, measurement.mean)
+            self.assertAlmostEqual(expected_value, measurement.median)
+
+        cp = Callpath('main->omp parallel')
+        met = Metric('time')
+        for measurement in experiment.measurements[cp, met]:
+            self.assertEqual(cp, measurement.callpath)
+            self.assertEqual(met, measurement.metric)
+            expected_value = 3.3 * measurement.coordinate[0]
+            self.assertAlmostEqual(expected_value, measurement.mean)
+            self.assertAlmostEqual(expected_value, measurement.median)
+
+        cp = Callpath('main->foo')
+        met = Metric('visits')
+        for measurement in experiment.measurements[cp, met]:
+            self.assertEqual(cp, measurement.callpath)
+            self.assertEqual(met, measurement.metric)
+            expected_value = 8
+            self.assertAlmostEqual(expected_value, measurement.mean)
+            self.assertAlmostEqual(expected_value, measurement.median)
+
+        cp = Callpath('main->omp parallel')
+        met = Metric('visits')
+        for measurement in experiment.measurements[cp, met]:
+            self.assertEqual(cp, measurement.callpath)
+            self.assertEqual(met, measurement.metric)
+            expected_value = 6 * measurement.coordinate[0]
+            self.assertAlmostEqual(expected_value, measurement.mean)
+            self.assertAlmostEqual(expected_value, measurement.median)
+
+        cp = Callpath('main->zero')
+        met = Metric('visits')
+        for measurement in experiment.measurements[cp, met]:
+            self.assertEqual(cp, measurement.callpath)
+            self.assertEqual(met, measurement.metric)
+            expected_value = 1
+            self.assertAlmostEqual(expected_value, measurement.mean)
+            self.assertAlmostEqual(expected_value, measurement.median)
 
 
 if __name__ == '__main__':

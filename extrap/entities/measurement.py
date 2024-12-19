@@ -88,6 +88,8 @@ class Measurement:
             return values
         if isinstance(values, np.ndarray):
             return values
+        if all(isinstance(v, np.ndarray) for v in values):
+            return np.ma.array(values)
 
         dim_max_len = [(len(values), len(values))]
 

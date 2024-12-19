@@ -220,8 +220,9 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                     total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
                                 elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = cnode_values.astype(float)
-                                    non_zero_value_mask = values != 0
-                                    masked_array = ma.array(values, mask=non_zero_value_mask)
+                                    if values.any():
+                                        zero_value_mask = values == 0
+                                        masked_array = ma.array(values, mask=zero_value_mask)
                                     total_values[callpaths[r_cnode.id]].append(masked_array)
                                 elif self.scaling_type == ScalingType.STRONG:
                                     total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
@@ -241,8 +242,11 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
                             elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = cnode_values.astype(float)
-                                non_zero_value_mask = values != 0
-                                aggregated_values[(callpath, metric)].append(ma.array(values, mask=non_zero_value_mask))
+                                if not values.any():
+                                    aggregated_values[(callpath, metric)].append(ma.array(values))
+                                else:
+                                    zero_value_mask = (values == 0)
+                                    aggregated_values[(callpath, metric)].append(ma.array(values, mask=zero_value_mask))
                             # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
                                 aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
