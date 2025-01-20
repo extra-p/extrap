@@ -17,7 +17,7 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
         import math
         diff = abs(other - function)
         reference = min(abs(function), abs(other))
-        if reference != 0:
+        if reference > 1:
             nondecimal_places = int(math.log10(reference)) + 1
             diff_scaled = diff / (10 ** nondecimal_places)
         else:
@@ -44,6 +44,33 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
     #         was_successful = True
     #     except self.failureException: ...
     #     self.assertFalse(was_successful)
+    #
+    #     self.assertApprox(1, 0.9999, places=3)
+    #     self.assertApprox(0.999, 0.9991, places=3)
+    #     self.assertApprox(0.004, 0.0044, places=3)
+    #     self.assertApprox(1.004, 1.0044, places=3)
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(0.004, 0.0049, places=3)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(1.000, 1.0009, places=3)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(1.000, 0.999, places=3)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+
+
 
     def assertApproxFunction(self, function, other, **kwargs):
         if 'places' not in kwargs:
