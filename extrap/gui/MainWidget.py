@@ -46,6 +46,7 @@ from extrap.gui.comparison.comparison_wizard import ComparisonWizard
 from extrap.gui.components import file_dialog
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.about_dialog import AboutDialog
+from extrap.gui.components.developer_tools import init_developer_menu
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 from extrap.modelers.model_generator import ModelGenerator
@@ -556,3 +557,9 @@ class MainWidget(QMainWindow):
     @Slot(bool)
     def _toggle_developer_mode(self, enabled):
         self.developer_mode = enabled
+
+        if not hasattr(self, '_developer_menu'):
+            self._developer_menu = self.menuBar().addMenu("Developer")
+            init_developer_menu(self, self._developer_menu)
+
+        self._developer_menu.menuAction().setVisible(enabled)

@@ -4,18 +4,29 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+from __future__ import annotations
 import typing
 from collections import defaultdict
 
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import QSize
+from PySide6.QtWidgets import QMessageBox, QMenu, QInputDialog, QSizePolicy
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.metric import Metric
+
 from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
+    from extrap.gui.TreeModel import TreeModel
+
+
+def init_developer_menu(main_widget: MainWidget, menu: QMenu):
+    action = menu.addAction("Resize plot to format")
+    action.triggered.connect(lambda: central_widget_resize(main_widget))
+    action = menu.addAction("Get current plot size")
+    action.triggered.connect(lambda: central_widget_current_size(main_widget))
 
 
 def calculate_complexity_comparison(tree_model, selected_indices):
@@ -101,3 +112,46 @@ def delete_subtree(tree_view, model):
                 for modeler in experiment.modelers:
                     modeler.models.pop(key, None)
     tree_view.model().valuesChanged()
+
+
+def simplify_model_at_pos(tree_model: TreeModel, model):
+    if not model:
+        return
+    parameters = tree_model.selector_widget.getParameterValues()
+    result = []
+    if isinstance(model, ComparisonModel):
+        for model in model.models:
+            if isinstance(model.hypothesis.function, ComputationFunction):
+                func = model.hypothesis.function.sympy_function
+
+                terms = []
+                for sterm in func.args:
+                    term = ComputationFunction.from_sympy(sterm, False, model.hypothesis.function._ftype)
+                    terms.append((term.evaluate(parameters), term))
+                result.extend(str(s[0]) + ', ' + s[1].to_string() for s in sorted(terms, key=lambda t: t[0]))
+            else:
+                result.append(model.hypothesis.function.to_string())
+            result.append("\n")
+        QMessageBox.information(None, "Function", "\n".join(r for r in result))
+
+
+def central_widget_resize(main_widget):
+    widget = main_widget.centralWidget().display_widget.currentWidget()
+    if widget is not None:
+        size_str, res = QInputDialog.getText(main_widget, "Set size", "Size:", text="400, 400")
+        if not res:
+            return
+        split = size_str.split(',')
+        if len(split) != 2:
+            return
+        size = QSize(*[int(s.strip()) for s in split])
+        widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        widget.setMaximumSize(size)
+        widget.setMinimumSize(size)
+        widget.resize(size)
+
+
+def central_widget_current_size(main_widget):
+    widget = main_widget.centralWidget().display_widget.currentWidget()
+    if widget is not None:
+        QMessageBox.information(main_widget, "Current size", str(widget.size()))

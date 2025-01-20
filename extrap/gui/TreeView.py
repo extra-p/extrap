@@ -185,7 +185,7 @@ class TreeView(QTreeView):
             lambda: self.collapseRecursively(self.selectedIndexes()[0]))
         return expand_collapse_submenu
 
-    def _create_developer_menu(self, treeModel, selectedModel, selectedCallpath):
+    def _create_developer_menu(self, treeModel:TreeModel, selectedModel, selectedCallpath):
         submenu = QMenu("Developer tools")
         action = submenu.addAction("Show tags")
         action.triggered.connect(lambda: developer_tools.show_info(treeModel, selectedCallpath.path))
@@ -196,6 +196,9 @@ class TreeView(QTreeView):
         action.setCheckable(True)
         action.setChecked(self._filter_1_percent_time_state)
         action.toggled.connect(lambda on: developer_tools.filter_1_percent_time(self, on, treeModel))
+        action = submenu.addAction("Show simplified model")
+        action.triggered.connect(lambda: developer_tools.simplify_model_at_pos(treeModel, selectedModel))
+        submenu.addSeparator()
         return submenu
 
     def copy_model_to_clipboard(self, selectedModel):
