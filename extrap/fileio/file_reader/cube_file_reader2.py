@@ -17,7 +17,9 @@ from pathlib import Path
 from typing import Dict, Union, Sequence, Tuple, Optional
 
 import numpy
+import numpy as np
 import pkg_resources
+from numpy import ma
 from packaging.version import Version
 from pycubexr import CubexParser
 from pycubexr.utils.exceptions import MissingMetricError
@@ -116,7 +118,6 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             for (callpath, metric), (values, repetition_count) in aggregated_values.items():
                 progress_bar.update(0)
                 measurement = Measurement(coordinate, callpath, metric, values, keep_values=self.keep_values)
-                measurement.count.repetitions = repetition_count
                 experiment.add_measurement(measurement)
 
         progress_bar.step("Unify calltrees")
@@ -308,10 +309,11 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 values_agg.values.append(cnode_values.astype(float))
                             elif self.scaling_type == ScalingType.WEAK_PARALLEL:
                                 values = cnode_values.astype(float)
-                                non_zero_value_mask = values != 0
-                                if numpy.any(non_zero_value_mask):
-                                    values = values[non_zero_value_mask]
-                                values_agg.values.append(values)
+                                if not values.any():
+                                    values_agg.values.append(ma.array(values))
+                                else:
+                                    non_zero_value_mask = (values == 0)
+                                    values_agg.values.append(ma.array(values, mask=non_zero_value_mask))
                             # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
                                 values_agg.values.append(cnode_values.sum().astype(float))
