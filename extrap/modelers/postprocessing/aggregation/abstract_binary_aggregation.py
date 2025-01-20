@@ -23,6 +23,7 @@ from extrap.entities.model import Model
 from extrap.entities.named_entity import TAG_SEPARATOR
 from extrap.modelers.postprocessing.aggregation import Aggregation, AggregatedModel, AggregationSchema
 from extrap.util.classproperty import classproperty
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.progress_bar import DUMMY_PROGRESS
 
 numeric_array_t = Union[Number, numpy.ndarray]
@@ -65,6 +66,7 @@ class BinaryAggregationFunctionSchema(ComputationFunctionSchema):
 
 
 class BinaryAggregation(Aggregation, ABC):
+    ignore_category = DynamicOptions.add(False, bool)
 
     @classproperty
     @abstractmethod
@@ -102,7 +104,10 @@ class BinaryAggregation(Aggregation, ABC):
                    models: Dict[Tuple[Callpath, Metric], Model], metric: Metric, path='', progress_bar=DUMMY_PROGRESS):
         agg_models: Dict[Optional[str], List[Model]] = defaultdict(list)
         callpath = node.path if node.path else Callpath.EMPTY
-        own_category = callpath.lookup_tag(self.TAG_CATEGORY, suffix=self.tag_suffix)
+        if self.ignore_category:
+            own_category = None
+        else:
+            own_category = callpath.lookup_tag(self.TAG_CATEGORY, suffix=self.tag_suffix)
 
         key = (callpath, metric)
         if key in models:

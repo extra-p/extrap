@@ -300,6 +300,101 @@ class TestAggregation(TestCaseWithFunctionAssertions):
         self.assertIn((main.path.concat('cat'), metric), experiment1.modelers[1].models)
         self.assertIn((Callpath('cat'), metric), experiment1.modelers[1].models)
 
+    def testSumCategory_simple(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        categoryB = Node("cat", Callpath("main->neA->neB->cat", agg__category='cat'), [])
+        neB = Node("neB", Callpath("main->neA->neB"), [categoryB])
+        neA = Node("neA", Callpath("main->neA"), [neB])
+        main = Node("main", Callpath("main"), [neA])
+        experiment1.callpaths = [main.path, neA.path, neB.path,
+                                 categoryB.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (neB.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
+            (neA.path, metric): [Measurement(Coordinate(c), None, None, 1 * c) for c in range(1, 6)],
+            (categoryB.path, metric): [Measurement(Coordinate(c), None, None, 3 * c ** (3 / 2)) for c in range(1, 6)],
+        }
+
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        mg.aggregate(SumAggregation(experiment1))
+
+        self.check_same(experiment1, metric, [neB.path, categoryB.path])
+        self.check_changed(experiment1, metric, [main.path, neA.path])
+
+        correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(2, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
+
+        self.assertIn((main.path.concat('cat'), metric), experiment1.modelers[1].models)
+        self.assertIn((Callpath('cat'), metric), experiment1.modelers[1].models)
+
+    def testSumCategory_ignore(self):
+        metric = Metric('time')
+        experiment1 = Experiment()
+        experiment1.parameters = [Parameter('n')]
+        experiment1.metrics = [metric]
+        experiment1.coordinates = [Coordinate(c) for c in range(1, 6)]
+        categoryB = Node("cat", Callpath("main->neA->neB->cat", agg__category='cat'), [])
+        neB = Node("neB", Callpath("main->neA->neB"), [categoryB])
+        neA = Node("neA", Callpath("main->neA"), [neB])
+        main = Node("main", Callpath("main"), [neA])
+        experiment1.callpaths = [main.path, neA.path, neB.path,
+                                 categoryB.path]
+        experiment1.call_tree = io_helper.create_call_tree(experiment1.callpaths)
+        experiment1.measurements = {
+            (neB.path, metric): [Measurement(Coordinate(c), None, None, 2 * c) for c in range(1, 6)],
+            (neA.path, metric): [Measurement(Coordinate(c), None, None, 1 * c) for c in range(1, 6)],
+            (categoryB.path, metric): [Measurement(Coordinate(c), None, None, 3 * c ** (3 / 2)) for c in range(1, 6)],
+        }
+
+        mg = ModelGenerator(experiment1)
+        mg.model_all()
+        agg = SumAggregation(experiment1)
+        agg.ignore_category = True
+        mg.aggregate(agg)
+
+        self.check_same(experiment1, metric, [categoryB.path])
+        self.check_changed(experiment1, metric, [main.path, neA.path, neB.path])
+
+        correct = [experiment1.modelers[0].models[neB.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[neA.path, metric].hypothesis.function,
+                   experiment1.modelers[0].models[categoryB.path, metric].hypothesis.function]
+
+        test_value = experiment1.modelers[1].models[main.path, metric].hypothesis.function
+        self.assertIsInstance(test_value, ComputationFunction)
+
+        coeff_sum = 0
+        for x in correct:
+            coeff_sum += x.constant_coefficient
+
+        self.assertApprox(coeff_sum,
+                          test_value.sympy_function.as_coeff_Add()[0],
+                          15)
+        self.assertEqual(3, len(test_value.sympy_function.args))
+        self.assertEqual(0, len(test_value.compound_terms))
+        self.assertEqual(0, test_value.constant_coefficient)
+
+        self.assertNotIn((main.path.concat('cat'), metric), experiment1.modelers[1].models)
+        self.assertNotIn((Callpath('cat'), metric), experiment1.modelers[1].models)
+
     def testSum3(self):
         metric = Metric('time')
         experiment1 = Experiment()
