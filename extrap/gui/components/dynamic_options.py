@@ -27,7 +27,7 @@ class DynamicOptionsWidget(QWidget):
     def init_ui(self):
         self._layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.setLayout(self._layout)
-        if self.object_with_options and self.object_with_options.OPTIONS:
+        if self.object_with_options and hasattr(self.object_with_options, 'OPTIONS'):
             if not self._has_parent_options and self._has_reset_button:
                 reset_button = QPushButton('Reset options to defaults', self)
                 reset_button.clicked.connect(self.reset_options)
