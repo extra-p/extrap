@@ -7,6 +7,7 @@
 from __future__ import annotations
 import typing
 from collections import defaultdict
+from dataclasses import dataclass
 
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QMessageBox, QMenu, QInputDialog, QSizePolicy
@@ -22,11 +23,28 @@ if typing.TYPE_CHECKING:
     from extrap.gui.TreeModel import TreeModel
 
 
+@dataclass
+class DeveloperConfig:
+    reader_allow_one_coordinate = False
+
+
+DEV_CONFIG = DeveloperConfig()
+
+
 def init_developer_menu(main_widget: MainWidget, menu: QMenu):
     action = menu.addAction("Resize plot to format")
     action.triggered.connect(lambda: central_widget_resize(main_widget))
     action = menu.addAction("Get current plot size")
     action.triggered.connect(lambda: central_widget_current_size(main_widget))
+    menu.addSeparator()
+    action = menu.addAction("Allow importing only one coordinate")
+    action.setCheckable(True)
+    action.setChecked(DEV_CONFIG.reader_allow_one_coordinate)
+
+    def allow_one_coordinate_toggled(val):
+        DEV_CONFIG.reader_allow_one_coordinate = val
+
+    action.toggled.connect(allow_one_coordinate_toggled)
 
 
 def calculate_complexity_comparison(tree_model, selected_indices):

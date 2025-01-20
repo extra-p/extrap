@@ -22,6 +22,7 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
 class AbstractDirectoryReader(FileReader, abc.ABC):
+    allow_one_coordinate = False
 
     def _find_files_in_directory(self, path, glob_pattern, progress_bar=DUMMY_PROGRESS) -> List[Path]:
         path = Path(path)
@@ -33,8 +34,9 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
         progress_bar.total += len(files) + 6
         return files
 
-    @staticmethod
-    def _determine_parameters_from_paths(paths, progress_bar=DUMMY_PROGRESS) -> Tuple[List[str], List[List[float]]]:
+    def _determine_parameters_from_paths(self, paths, progress_bar=DUMMY_PROGRESS) -> Tuple[
+        List[str], List[List[float]]]:
+
         parameter_names_initial = []
         parameter_names = []
         parameter_values = []
@@ -88,6 +90,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
         parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
 
         if not parameter_names:
+            if self.allow_one_coordinate:
+                return ['p'], [1] * len(paths)
             raise FileFormatError(f"Could not detect any parameter names. "
                                   f"Please follow the usage guide under "
                                   f"<a href={extrap.__documentation_link__}/file-formats.md#cube-file-format>"

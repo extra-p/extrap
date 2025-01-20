@@ -43,10 +43,10 @@ from extrap.gui.RankingWidget import RankingWidget
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
 from extrap.gui.comparison.comparison_wizard import ComparisonWizard
-from extrap.gui.components import file_dialog
+from extrap.gui.components import file_dialog, developer_tools
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.about_dialog import AboutDialog
-from extrap.gui.components.developer_tools import init_developer_menu
+from extrap.gui.components.developer_tools import init_developer_menu, DEV_CONFIG
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 from extrap.modelers.model_generator import ModelGenerator
@@ -432,6 +432,8 @@ class MainWidget(QMainWindow):
             def _import_function():
                 def _process_with_settings(path):
                     reader: FileReader = reader_class()
+                    if self.developer_mode:
+                        reader.allow_one_coordinate = DEV_CONFIG.reader_allow_one_coordinate
                     dialog = ImportOptionsDialog(self, reader, path)
                     dialog.setWindowFlag(Qt.WindowType.Sheet, True)
                     dialog.setModal(True)
