@@ -11,6 +11,7 @@ from typing import Sequence
 import numpy
 import scipy.optimize
 from marshmallow import fields
+from sympy import factor
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
 from extrap.entities.measurement import Measurement
@@ -347,9 +348,18 @@ class SingleParameterHypothesis(Hypothesis):
         if not negative_coefficients:
             try:
                 X, _ = scipy.optimize.nnls(A, B)
-            except RuntimeError:
-                relaxed_tolerance=max(max(A.shape), max(B.shape)) * numpy.linalg.norm(A, 1) * numpy.spacing(1.)
-                X, _ = scipy.optimize.nnls(A, B,atol=relaxed_tolerance)
+            except (RuntimeError, ValueError) as e:
+                X = None
+                factor: int = 1
+                relaxed_tolerance = max(max(A.shape), max(B.shape)) * numpy.linalg.norm(A, 1.)
+                while X is None:
+                    try:
+                        X, _ = scipy.optimize.nnls(A, B, atol=relaxed_tolerance * factor)
+                        print(factor, X, A, B)
+                    except RuntimeError:
+                        factor *= 10
+                    except ValueError:
+                        breakpoint()
         else:
             X, _, _, _ = numpy.linalg.lstsq(A, B, None)
         # logging.debug("Coefficients:"+str(X))
@@ -473,7 +483,18 @@ class MultiParameterHypothesis(Hypothesis):
         A = numpy.array(a_list)
         B = numpy.array(b_list)
         if not negative_coefficients:
-            coeffs, _ = scipy.optimize.nnls(A, B)
+            try:
+                coeffs, _ = scipy.optimize.nnls(A, B)
+            except (RuntimeError, ValueError) as e:
+                coeffs = None
+                factor: int = 1
+                relaxed_tolerance = max(max(A.shape), max(B.shape)) * numpy.linalg.norm(A, 1.)
+                while coeffs is None:
+                    try:
+                        coeffs, _ = scipy.optimize.nnls(A, B, atol=relaxed_tolerance * factor)
+                        print(factor, coeffs, A, B)
+                    except (RuntimeError, ValueError):
+                        factor *= 10
         else:
             try:
                 coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
