@@ -157,8 +157,8 @@ class DifferencePlot(BaseContourGraph):
         blue_patch = tuple(Patch(color=colormap(p / 100)) for p in range(52, 102, 2))
 
         experiment_names = cast(ComparisonExperiment, self.main_widget.getExperiment()).experiment_names
-        labels = [f'{experiment_names[0]}$\prec${experiment_names[-1]}',
-                  f'{experiment_names[0]}$\succ${experiment_names[-1]}']
+        labels = [rf'{experiment_names[0]}$\prec${experiment_names[-1]}',
+                  rf'{experiment_names[0]}$\succ${experiment_names[-1]}']
 
         for i in range(len(Z_List)):
             ax = self.fig.add_subplot(1, len(Z_List), i + 1)
