@@ -40,7 +40,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
         },
         &offsets);
 
-    // std::ofstream stream(output_dir + "/symbols.txt");
+    //std::ofstream stream(output_dir + "/symbols.txt");
 
     for (auto&& [filepath, offset] : offsets) {
         containers::string filename = filepath;
@@ -48,7 +48,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
             filename = app_filename;
         }
 
-        containers::string result_str = nm_command + filename + " 2>&1";
+        containers::string result_str = nm_command + '"' + filename + "\" 2>&1";
 
         const char* result = result_str.c_str();
 
@@ -67,6 +67,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
         uintptr_t adress = 0;
 
         while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
+            //stream << buffer << '\n';
             int parsed = sscanf(buffer, "%lx %1c %[^\n]", &adress, &modifier, path);
             if (parsed != 3)
                 continue;
@@ -80,7 +81,7 @@ void NameRegistry::create_address_mapping(containers::string output_dir) {
                     main_function_ptr[FUNCTION_PTR_REGION].function_ptr = reinterpret_cast<void*>(translated_adress);
                 }
 
-                // stream << translated_adress << ' ' << path << '\n';
+                //stream << translated_adress << ' ' << path << '\n';
             }
         }
 

@@ -207,7 +207,7 @@ else
             echo "EXTRA PROF: Detected CUDA_HOME via nvcc: $CUDA_HOME"
         fi
 
-        combined+=("-lcupti -lcuda -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
+        combined+=("-lcupti -lcuda -lcudart -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
         if [ "${EXTRA_PROF_ENERGY}" = on ] || [ "${EXTRA_PROF_ENERGY}" = ON ]; then
             combined+=("-lnvidia-ml")
         fi

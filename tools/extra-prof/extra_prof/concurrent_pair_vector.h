@@ -1,5 +1,10 @@
 #pragma once
 
+#include <functional>
+#include <mutex>
+#include <utility>
+#include <vector>
+
 template <typename K, typename V>
 class concurrent_pair_vector {
 private:
