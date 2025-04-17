@@ -14,7 +14,6 @@ import numpy
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import Hypothesis, SingleParameterHypothesis, MAX_HYPOTHESIS, ConstantHypothesis
 from extrap.entities.measurement import Measurement, Measure
-from extrap.entities.parameter import Parameter
 from extrap.modelers.abstract_modeler import AbstractModeler
 from extrap.modelers.modeler_options import modeler_options
 
@@ -33,10 +32,12 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
     compare_with_RSS = modeler_options.add(False, bool,
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
+    minimum_term_contribution = modeler_options.add(0.0005, float,  # value for the minimum term contribution
+                                                    'Minimum contribution of a term to be included in the model')
 
     def __init__(self, use_measure: Union[bool, Measure]):
         super().__init__(use_measure)
-        self.epsilon = 0.0005  # value for the minimum term contribution
+        self.epsilon = 0.0005
 
     def compare_hypotheses(self, old: Hypothesis, new: SingleParameterHypothesis, measurements: Sequence[Measurement]):
         """
