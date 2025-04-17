@@ -13,12 +13,11 @@ from typing import TYPE_CHECKING
 import matplotlib
 import numpy as np
 from PySide6.QtWidgets import QSizePolicy
+from extrap.util.formatting_helper import replace_method_parameters
 from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
-
-from extrap.util.formatting_helper import replace_method_parameters
 
 if TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -105,15 +104,14 @@ class GraphDisplayWindow(FigureCanvas):
         # Get the z value for the x and y value
         z_List = list()
         Z_List = list()
-        previous = np.seterr(invalid='ignore', divide='ignore')
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = self.calculate_z_optimized(X, Y, function)
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
-            max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
-        np.seterr(**previous)
+        with np.errstate(invalid='ignore', divide='ignore'):
+            for model in model_list:
+                function = model.hypothesis.function
+                zs = self.calculate_z_optimized(X, Y, function)
+                Z = zs.reshape(X.shape)
+                z_List.append(zs)
+                Z_List.append(Z)
+                max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
         for z, Z in zip(z_List, Z_List):
             z[np.isinf(z)] = max_z
             Z[np.isinf(Z)] = max_z

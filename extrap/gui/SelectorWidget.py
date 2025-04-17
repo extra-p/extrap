@@ -11,9 +11,7 @@ import math
 from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
-from PySide6.QtCore import Slot
 from PySide6.QtWidgets import *  # @UnusedWildImport
-
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
@@ -346,9 +344,9 @@ class SelectorWidget(QWidget):
                 param_value_list = self.getParameterValues()
                 call_tree = experiment.call_tree
                 nodes = call_tree.get_nodes()
-                previous = numpy.seterr(divide='ignore', invalid='ignore')
-                value_list = self.iterate_children(model_set.models, param_value_list, nodes, selected_metric)
-                numpy.seterr(**previous)
+                with numpy.errstate(divide='ignore', invalid='ignore'):
+                    value_list = self.iterate_children(model_set.models, param_value_list, nodes, selected_metric)
+
                 if len(value_list) > 0:
                     min_max_value = max(0.0, min(value_list)), max(0.0, max(value_list))
         self.min_value, self.max_value = min_max_value

@@ -8,11 +8,11 @@
 from __future__ import annotations
 
 import copy
-import numpy
-from PySide6.QtCore import *  # @UnusedWildImport
 from enum import Enum, auto
 from typing import Optional, TYPE_CHECKING, List, Callable, Any
 
+import numpy
+from PySide6.QtCore import *  # @UnusedWildImport
 from extrap.entities import calltree
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.experiment import Experiment
@@ -148,12 +148,13 @@ class TreeModel(QAbstractItemModel):
                 return formatFormula(formula.to_string(*parameters))
             else:
                 parameters = self.selector_widget.getParameterValues()
-                previous = numpy.seterr(divide='ignore', invalid='ignore')
-                if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
-                    res = _format_number_segmented_model(model, lambda m: m.hypothesis.function.evaluate(parameters))
-                else:
-                    res = formatNumber(str(formula.evaluate(parameters)))
-                numpy.seterr(**previous)
+                with numpy.errstate(divide='ignore', invalid='ignore'):
+                    if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
+                        res = _format_number_segmented_model(model,
+                                                             lambda m: m.hypothesis.function.evaluate(parameters))
+                    else:
+                        res = formatNumber(str(formula.evaluate(parameters)))
+
                 return res
         elif index.column() == 4:
             if role == Qt.ToolTipRole and isinstance(model, SegmentedModel):
@@ -180,9 +181,8 @@ class TreeModel(QAbstractItemModel):
     def get_comparison_value(self, model):
         parameters = self.selector_widget.getParameterValues()
         formula = model.hypothesis.function
-        previous = numpy.seterr(divide='ignore', invalid='ignore')
-        value = formula.evaluate(parameters)
-        numpy.seterr(**previous)
+        with numpy.errstate(divide='ignore', invalid='ignore'):
+            value = formula.evaluate(parameters)
         return value
 
     def getSelectedModel(self, callpath) -> tuple[Optional[Model], Experiment]:

@@ -16,7 +16,6 @@ import numpy
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
-
 from extrap.gui.Utils import formatFormula
 from extrap.gui.Utils import formatNumber
 from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
@@ -569,9 +568,8 @@ class GraphWidget(QWidget):
             number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis, x_min, x_max)
         else:
             number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
-        previous = numpy.seterr(invalid='ignore', divide='ignore')
-        y_list = function.evaluate(x_list).reshape(-1)
-        numpy.seterr(**previous)
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            y_list = function.evaluate(x_list).reshape(-1)
         cord_list = self._create_drawing_iterator(x_values, y_list)
 
         return cord_list
@@ -585,10 +583,9 @@ class GraphWidget(QWidget):
 
         y_list = numpy.zeros(number_of_x_points)
 
-        previous = numpy.seterr(invalid='ignore', divide='ignore')
-        for function in functions:
-            y_list += function.evaluate(x_list).reshape(-1)
-        numpy.seterr(**previous)
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            for function in functions:
+                y_list += function.evaluate(x_list).reshape(-1)
 
         cord_list = self._create_drawing_iterator(x_values, y_list)
 
@@ -741,43 +738,41 @@ class GraphWidget(QWidget):
                 y = max(model.predictions)
                 y_max = max(y, y_max)
 
-        previous = numpy.seterr(invalid='ignore', divide='ignore')
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            if self.combine_all_callpath:
+                y_agg = 0
+                for model in modelList:
+                    function = model.hypothesis.function
+                    y_agg = y_agg + function.evaluate(pv_list)
+                y_max = max(y_agg, y_max)
 
-        if self.combine_all_callpath:
-            y_agg = 0
-            for model in modelList:
-                function = model.hypothesis.function
-                y_agg = y_agg + function.evaluate(pv_list)
-            y_max = max(y_agg, y_max)
+                pv_list[param] = 1
+                y_agg = 0
+                for model in modelList:
+                    function = model.hypothesis.function
+                    y = function.evaluate(pv_list)
+                    if math.isinf(y):
+                        y = max(model.predictions)
+                    y_agg += y
+                y_max = max(y_agg, y_max)
 
-            pv_list[param] = 1
-            y_agg = 0
+            # Check the value at the end of the displayed interval
             for model in modelList:
                 function = model.hypothesis.function
                 y = function.evaluate(pv_list)
                 if math.isinf(y):
                     y = max(model.predictions)
-                y_agg += y
-            y_max = max(y_agg, y_max)
+                y_max = max(y, y_max)
 
-        # Check the value at the end of the displayed interval
-        for model in modelList:
-            function = model.hypothesis.function
-            y = function.evaluate(pv_list)
-            if math.isinf(y):
-                y = max(model.predictions)
-            y_max = max(y, y_max)
+            # Check the value at the beginning of the displayed interval
+            pv_list[param] = 1
+            for model in modelList:
+                function = model.hypothesis.function
+                y = function.evaluate(pv_list)
+                if math.isinf(y):
+                    y = max(model.predictions)
+                y_max = max(y, y_max)
 
-        # Check the value at the beginning of the displayed interval
-        pv_list[param] = 1
-        for model in modelList:
-            function = model.hypothesis.function
-            y = function.evaluate(pv_list)
-            if math.isinf(y):
-                y = max(model.predictions)
-            y_max = max(y, y_max)
-
-        numpy.seterr(**previous)
         # Ensure that the maximum value is never too small
         if y_max < 0.000001:
             y_max = 1

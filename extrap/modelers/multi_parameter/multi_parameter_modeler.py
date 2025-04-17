@@ -11,7 +11,6 @@ import warnings
 from typing import Sequence
 
 import numpy as np
-
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.functions import MultiParameterFunction
@@ -142,10 +141,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             warnings.warn(f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
                           f"measurements are needed; one for each combination of parameters.")
 
-        previous = np.seterr(invalid='ignore')
-        combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
-                                 for p, grp in enumerate(result_groups)]
-        np.seterr(**previous)
+        with np.errstate(invalid='ignore'):
+            combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
+                                     for p, grp in enumerate(result_groups)]
 
         return combined_measurements
 

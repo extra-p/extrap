@@ -50,13 +50,13 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         # get the compound terms of the new hypothesis
         compound_terms = new.function.compound_terms
 
-        previous = numpy.seterr(divide='ignore', invalid='ignore')
-        # for all compound terms check if they are smaller than minimum allowed contribution
-        for term in compound_terms:
-            # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
-            if term.coefficient == 0 or new.calc_term_contribution(term, measurements) < self.epsilon:
-                return False
-        numpy.seterr(**previous)
+        with numpy.errstate(divide='ignore', invalid='ignore'):
+            # for all compound terms check if they are smaller than minimum allowed contribution
+            for term in compound_terms:
+                # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
+                if (term.coefficient == 0
+                        or new.calc_term_contribution(term, measurements) < self.minimum_term_contribution):
+                    return False
 
         # print smapes in debug mode
         logging.debug("next hypothesis SMAPE: %g RSS: %g", new.SMAPE, new.RSS)
