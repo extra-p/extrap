@@ -58,17 +58,33 @@ class ModelGenerator:
 
     def _choose_modeler(self, modeler: Union[AbstractModeler, str], use_measure) -> AbstractModeler:
         if isinstance(modeler, str):
-            try:
-                if len(self.experiment.parameters) == 1:
-                    # single-parameter model generator init here...
+
+            if len(self.experiment.parameters) == 1:
+                # single-parameter model generator init here...
+                try:
                     result_modeler = single_parameter.all_modelers[modeler]()
-                else:
-                    # multi-parameter model generator init here...
+                except KeyError:
+                    raise ValueError(
+                        f'A modeler with name "{modeler}" does not exist. For single-parameter experiments only the '
+                        f'following modelers are available "{", ".join(single_parameter.all_modelers.keys())}".') from None
+            else:
+                # multi-parameter model generator init here...
+                try:
                     result_modeler = multi_parameter.all_modelers[modeler]()
+                except KeyError as e:
+                    if modeler in single_parameter.all_modelers:
+                        raise ValueError(
+                            f'A multi-parameter modeler with name "{modeler}" does not exist. '
+                            f'You selected a modeler only available for single-parameter experiments. '
+                            f'For multi-parameter experiments only the '
+                            f'following modelers are available "{", ".join(multi_parameter.all_modelers.keys())}". '
+                            f'You can change the underlying single-parameter modeler by setting the '
+                            f'single-parameter-modeler option of the multi-parameter modeler.') from e
+                    raise ValueError(
+                        f'A modeler with name "{modeler}" does not exist. For multi-parameter experiments only the '
+                        f'following modelers are available "{", ".join(multi_parameter.all_modelers.keys())}".') from e
                 result_modeler.use_measure = use_measure
-            except KeyError:
-                raise ValueError(
-                    f'Modeler with name "{modeler}" does not exist.')
+
         elif modeler is NotImplemented:
             result_modeler = NotImplemented
         else:
