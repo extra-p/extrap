@@ -86,7 +86,8 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
                 "You can do that using 'pip install extrap[adaptive_modeling]'.")
 
         all_models = []
-        for _, measurement_group in groupby(measurement_list_, key=lambda ms: {m.coordinate[0] for m in ms}):
+        for _, measurement_group in groupby(measurement_list_,
+                                            key=lambda ms: ({m.coordinate[0] for m in ms}, ms[0].metric)):
             measurement_list = list(measurement_group)
 
             positions = np.array([m.coordinate[0] for m in measurement_list[0]])
