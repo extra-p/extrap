@@ -44,7 +44,7 @@ class ExpanderWidget(QGroupBox):
 
     def initUI(self):
         self.setStyleSheet('ExpanderWidget{ '
-                           '    padding:2px -1px -1px 0px; margin-left:-1px; '
+                           '    padding:0px -1px -1px 0px; margin-left:-1px; '
                            f'{" margin-top: -19px; padding-top:19px; " if sys.platform.startswith("darwin") else ""}'
                            '}'
                            'ExpanderWidget::title{ '
@@ -97,7 +97,6 @@ class ExpanderWidget(QGroupBox):
         self._content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._content.setMinimumHeight(0)
         self._content.setMaximumHeight(0)
-        self._content
 
         layout.addWidget(self._toggle)
         layout.addWidget(self._content)
