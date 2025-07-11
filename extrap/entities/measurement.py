@@ -252,7 +252,7 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
-    repetitions = fields.Int()
+    repetitions = fields.Int(allow_none=True)
     values = fields.Method('_store_values', '_load_values', allow_none=True, load_default=None)
 
     def _load_values(self, value):

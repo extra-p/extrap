@@ -8,7 +8,7 @@
 import copy
 import json
 from abc import abstractmethod, ABC
-from typing import Iterator, Mapping, Any
+from typing import Iterator, Any, MutableMapping
 
 from marshmallow import fields
 
@@ -65,7 +65,7 @@ class NamedEntityWithTags(NamedEntity, ABC):
 
     def __init__(self, name, **tags):
         super(NamedEntityWithTags, self).__init__(name)
-        self.tags: Mapping[str, Any] = tags or {}
+        self.tags: MutableMapping[str, Any] = tags or {}
 
     def lookup_tag(self, tag: str, default=None, prefix=1):
         if tag in self.tags:
