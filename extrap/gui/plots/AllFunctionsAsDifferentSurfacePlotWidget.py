@@ -57,6 +57,8 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
+        opacity = widget.plot_formatting_options.surface_opacity
+
         # Draw the graphs in subplots
         for i in range(len(Z_List)):
             ax = self.fig.add_subplot(
@@ -67,7 +69,7 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
             ax.yaxis.major.formatter._useMathText = True
             ax.zaxis.major.formatter._useMathText = True
             ax.plot_surface(
-                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])
+                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]], alpha=opacity)
             ax.set_xlabel('\n' + x_label)
             ax.set_ylabel('\n' + y_label, linespacing=3.1)
             ax.set_zlabel(

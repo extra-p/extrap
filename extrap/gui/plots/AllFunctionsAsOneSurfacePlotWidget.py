@@ -61,9 +61,10 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         ax_all.set_ylabel('\n' + y_label, linespacing=3.1)
         ax_all.set_zlabel(
             '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+        opacity = widget.plot_formatting_options.surface_opacity
         for i in range(len(Z_List)):
             ax_all.plot_surface(
-                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])
+                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]], alpha=opacity)
 
         # draw legend
         self.draw_legend(ax_all, dict_callpath_color)

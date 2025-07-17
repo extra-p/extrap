@@ -107,8 +107,9 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         ax_all.set_title("Measurement Points")
         # ax_all.zaxis.set_major_locator(LinearLocator(10))
         # ax_all.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+        opacity = widget.plot_formatting_options.surface_opacity / 4
         for i in range(len(Z_List)):
             ax_all.plot_surface(X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]],
-                                rstride=1, cstride=1, antialiased=False, alpha=0.1)
+                                rstride=1, cstride=1, antialiased=False, alpha=opacity)
 
         self.draw_legend(ax_all, dict_callpath_color)
