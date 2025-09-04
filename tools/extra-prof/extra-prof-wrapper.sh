@@ -21,6 +21,9 @@ while [ $# -gt 0 ]; do
     --compile)
         compile_only=true
         ;;
+    -E)
+        compile_only=true
+        ;;
     -shared)
         shared_library=true
         ;;
@@ -36,6 +39,10 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+if [ -z "${EXTRA_PROF_INTERNAL_COMPILER+y}" ]; then
+EXTRA_PROF_INTERNAL_COMPILER="$EXTRA_PROF_COMPILER"
+fi
 
 extra_prof_root="$(dirname "${BASH_SOURCE[0]}")"
 msg_pack_root="$extra_prof_root/msgpack"

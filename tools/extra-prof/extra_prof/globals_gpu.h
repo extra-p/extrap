@@ -31,6 +31,7 @@ namespace gpu {
 
         ConcurrentArrayList<Event> event_stream;
         int multiProcessorCount;
+        bool enabled=false;
 
         ConcurrentMap<uint64_t, cupti::CorrelationData> callpath_correlation;
 

@@ -266,6 +266,23 @@ namespace cupti {
             std::cerr << "EXTRA PROF: CUPTI BUFFER SIZE: " << number << '\n';
             GLOBALS.gpu.buffer_pool.initial_buffer_resize(number);
         }
+        int deviceCount;
+        cudaError_t init_status = cudaGetDeviceCount(&deviceCount);
+        if (init_status == cudaSuccess && deviceCount == 0 || init_status == cudaErrorNoDevice) {
+
+            const char* EXTRA_PROF_HANDLE_NO_GPU = getenv("EXTRA_PROF_HANDLE_NO_GPU");
+            if (EXTRA_PROF_HANDLE_NO_GPU != nullptr && strcasecmp(EXTRA_PROF_HANDLE_NO_GPU, "warning") == 0) {
+                std::cerr << "EXTRA PROF: WARNING: No GPUs found! \n";
+                return;
+            } else {
+                std::cerr << "EXTRA PROF: ERROR: No GPUs found! \n";
+                exit(1);
+            }
+        } else {
+            GPU_CALL(init_status);
+        }
+
+        GLOBALS.gpu.enabled=true;
 
         CUPTI_CALL(cuptiSubscribe(&GLOBALS.gpu.subscriber, (CUpti_CallbackFunc)&on_callback, nullptr));
 
@@ -286,6 +303,11 @@ namespace cupti {
         CUPTI_CALL(cuptiEnableDomain(1, GLOBALS.gpu.subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
     }
     void finalize() {
+        if (!GLOBALS.gpu.enabled)
+        {
+            return;
+        }
+        
         cudaDeviceSynchronize();
         if (!GLOBALS.gpu.metricNames.empty()) {
             extra_prof::gpu::hwc::finalize();

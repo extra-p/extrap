@@ -117,7 +117,7 @@ public:
         const_iterator() : chunk(nullptr), ptr(nullptr) {}
         const_iterator(Chunk* chunk_) : chunk(chunk_), chunk_lock(chunk->data_mutex) {
             if (chunk->fill_size == 0) {
-                ptr = nullptr;
+                advance_to_next_chunk();
             } else {
                 ptr = chunk->data;
             }
