@@ -199,6 +199,9 @@ class TreeView(QTreeView):
         action = submenu.addAction("Show simplified model")
         action.triggered.connect(lambda: developer_tools.simplify_model_at_pos(treeModel, selectedModel))
         submenu.addSeparator()
+        action = submenu.addAction("Generate Latex plot code")
+        action.triggered.connect(lambda: developer_tools.generate_pgfplot_latex(selectedModel))
+        submenu.addSeparator()
         return submenu
 
     def copy_model_to_clipboard(self, selectedModel):

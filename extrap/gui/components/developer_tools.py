@@ -10,12 +10,14 @@ import typing
 from collections import defaultdict
 from dataclasses import dataclass
 
+import numpy as np
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QMessageBox, QMenu, QInputDialog, QSizePolicy
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.entities.function_computation import ComputationFunction
 from extrap.entities.metric import Metric
+from extrap.entities.model import Model
 
 from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 
@@ -174,3 +176,23 @@ def central_widget_current_size(main_widget):
     widget = main_widget.centralWidget().display_widget.currentWidget()
     if widget is not None:
         QMessageBox.information(main_widget, "Current size", str(widget.size()))
+
+
+def generate_pgfplot_latex(model: Model):
+    if not model:
+        return
+    coordinates = [m.coordinate[0] for m in model.measurements]
+
+    x_max = max(coordinates)
+    x_min = min(coordinates)
+    x = np.linspace(x_min, 2*x_max, 120)
+    y = model.hypothesis.function.evaluate(x)
+
+    output = r"\addplot[only marks] coordinates {"
+    for m in model.measurements:
+        output += rf"({m.coordinate[0]:.4f},{m.median:.4f}) "
+    output += "};\n"
+    output += r"\addplot[mark=none] coordinates {" + " ".join(f"({x:.4f},{y:.4f})" for x, y in zip(x, y))
+    output += " };"
+
+    QMessageBox.information(None, "Latex PGF Plot", output)
