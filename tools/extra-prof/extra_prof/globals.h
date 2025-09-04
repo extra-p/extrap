@@ -32,7 +32,7 @@
 // #define std::lock_guard ep::lockguard
 
 #ifdef EXTRA_PROF_EVENT_TRACE
-#define EXTRA_PROF_EVENT_TRACE_ENABLED 1
+#define EXTRA_PROF_EVENT_TRACE_ENABLED EXTRA_PROF_EVENT_TRACE
 #else
 #define EXTRA_PROF_EVENT_TRACE_ENABLED 0
 #endif

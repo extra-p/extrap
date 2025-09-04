@@ -69,9 +69,11 @@ EP_INLINE std::tuple<time_point, CallTreeNode*> push_time(RegionType region_type
 #endif
 
 #ifdef EXTRA_PROF_EVENT_TRACE
+#if EXTRA_PROF_EVENT_TRACE==1
     auto& ref = GLOBALS.cpu_event_stream.emplace(time, EventType::START, EventStart{current_node, pthread_self()},
                                                  pthread_self());
     state.event_stack.push_back(&ref);
+#endif
 #endif
     return {time, current_node};
 }
@@ -128,8 +130,10 @@ EP_INLINE time_point pop_time(RegionType region_type, RegionID region,
     }
     current_node = current_node->parent();
 #ifdef EXTRA_PROF_EVENT_TRACE
+#if EXTRA_PROF_EVENT_TRACE==1
     GLOBALS.cpu_event_stream.emplace(time, EventType::END, EventEnd{thread_state.event_stack.back()});
     thread_state.event_stack.pop_back();
+#endif
 #endif
     return time;
 }

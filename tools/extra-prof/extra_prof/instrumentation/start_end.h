@@ -171,8 +171,10 @@ void finalize_on_exit() {
             }
             current_node = current_node->parent();
 #ifdef EXTRA_PROF_EVENT_TRACE
+#if EXTRA_PROF_EVENT_TRACE==1
             GLOBALS.cpu_event_stream.emplace(time, EventType::END, EventEnd{thread_state.event_stack.back()});
             thread_state.event_stack.pop_back();
+#endif
 #endif
             thread_state.depth--;
         }

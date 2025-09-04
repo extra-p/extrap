@@ -6,7 +6,7 @@ if [ -z ${EXTRA_PROF_COMPILER+y} ]; then
     exit 1
 fi
 
-if [ "${EXTRA_PROF_WRAPPER}" = off ] || [ "${EXTRA_PROF_WRAPPER}" = OFF ]; then
+if [ "${EXTRA_PROF_WRAPPER,,}" = off ]; then
     exec $EXTRA_PROF_COMPILER "$@"
 fi
 arguments=("$@")
@@ -58,37 +58,40 @@ if [ $EXTRA_PROF_COMPILER = "nvcc" ]; then
     extra_prof_arguments+=("$compiler_dir")
 fi
 
-if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
+if [ "${EXTRA_PROF_GPU,,}" != "off" ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_GPU=1")
 fi
 
-if [ "${EXTRA_PROF_ENERGY}" = on ] || [ "${EXTRA_PROF_ENERGY}" = ON ]; then
+if [ "${EXTRA_PROF_ENERGY,,}" = on ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_ENERGY=1")
 fi
 
-if [ "${EXTRA_PROF_EVENT_TRACE}" = on ] || [ "${EXTRA_PROF_EVENT_TRACE}" = ON ]; then
+if [ "${EXTRA_PROF_EVENT_TRACE,,}" = on ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=1")
 fi
+if [ "${EXTRA_PROF_EVENT_TRACE,,}" = gpu_only ]; then
+    extra_prof_arguments+=("-DEXTRA_PROF_EVENT_TRACE=2")
+fi
 
-if [ "${EXTRA_PROF_DEBUG_BUILD}" = on ] || [ "${EXTRA_PROF_DEBUG_BUILD}" = ON ]; then
+if [ "${EXTRA_PROF_DEBUG_BUILD,,}" = on ]; then
     extra_prof_arguments+=("-g -O0")
 else
     extra_prof_arguments+=("-O3")
 fi
 
-if [ "${EXTRA_PROF_DEBUG_SANITIZE}" = on ] || [ "${EXTRA_PROF_DEBUG_SANITIZE}" = ON ]; then
+if [ "${EXTRA_PROF_DEBUG_SANITIZE,,}" = on ]; then
     instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
     extra_prof_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fsanitize=address")
 fi
 
-if [ "${EXTRA_PROF_DEBUG_INSTRUMENTATION}" = on ] || [ "${EXTRA_PROF_DEBUG_INSTRUMENTATION}" = ON ]; then
+if [ "${EXTRA_PROF_DEBUG_INSTRUMENTATION,,}" = on ]; then
     extra_prof_arguments+=("-DEXTRA_PROF_DEBUG_INSTRUMENTATION=1")
 fi
 
 if [ -z ${EXTRA_PROF_SCOREP_INSTRUMENTATION+y} ]; then
     instrumentation_arguments+=("$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-finstrument-functions")
 
-    if [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "off" ] && [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION}" != "OFF" ] && [ -z ${EXTRA_PROF_SCOREP_INSTRUMENTATION+y} ]; then
+    if [ "${EXTRA_PROF_ADVANCED_INSTRUMENTATION,,}" != "off" ] && [ -z ${EXTRA_PROF_SCOREP_INSTRUMENTATION+y} ]; then
         #find path to headers that should be excluded
         combined=("$compiler_dir" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -H "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" -E $extra_prof_root/extra_prof/compiler_information/find_libstd_include.cpp)
         echo "EXTRA PROF FIND INCLUDES: " $EXTRA_PROF_COMPILER ${combined[*]}
@@ -165,7 +168,7 @@ else
     fi
 
     create_extra_prof_components=true
-    if { [ "${EXTRA_PROF_REUSE_COMPONENTS}" = on ] || [ "${EXTRA_PROF_REUSE_COMPONENTS}" = ON ]; } && [ -f "extra_prof_components_created.done" ]; then
+    if { [ "${EXTRA_PROF_REUSE_COMPONENTS,,}" = on ]; } && [ -f "extra_prof_components_created.done" ]; then
         create_extra_prof_components=false
     fi
 
@@ -173,21 +176,21 @@ else
         exec {lock_fd}>extra_prof_components_create.lock || exit 1
         flock "$lock_fd"
         # check again within lock
-        if { [ "${EXTRA_PROF_REUSE_COMPONENTS}" = on ] || [ "${EXTRA_PROF_REUSE_COMPONENTS}" = ON ]; } && [ -f "extra_prof_components_created.done" ]; then
+        if { [ "${EXTRA_PROF_REUSE_COMPONENTS},," = on ]; } && [ -f "extra_prof_components_created.done" ]; then
             :
         else
 
             # no exec otherwise this script will end here
             combined=("-c" "${extra_prof_arguments[@]}" "-o" "extra_prof_injection.o" "$extra_prof_root/extra_prof/injection/injection.cpp")
-            echo "EXTRA PROF COMPILE INJECTION: " $EXTRA_PROF_COMPILER ${combined[*]}
-            $EXTRA_PROF_COMPILER ${combined[*]}
+            echo "EXTRA PROF COMPILE INJECTION: " $EXTRA_PROF_INTERNAL_COMPILER ${combined[*]}
+            $EXTRA_PROF_INTERNAL_COMPILER ${combined[*]}
             [ $? -eq 0 ] || exit $?
 
             # compile library
             combined=("--shared" "${extra_prof_arguments[@]}" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fPIC" "$EXTRA_PROF_COMPILER_OPTION_REDIRECT" "-fopenmp" "-o" "lib_extra_prof.so" "$extra_prof_root/extra_prof/instrumentation/instrumentation.cpp" "$extra_prof_root/extra_prof/library/lib_extra_prof.cpp")
 
-            echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_COMPILER ${combined[*]}
-            $EXTRA_PROF_COMPILER ${combined[*]}
+            echo "EXTRA PROF COMPILE LIBRARY: " $EXTRA_PROF_INTERNAL_COMPILER ${combined[*]}
+            $EXTRA_PROF_INTERNAL_COMPILER ${combined[*]}
             [ $? -eq 0 ] || exit $?
 
             touch "extra_prof_components_created.done"
@@ -198,7 +201,7 @@ else
     #
     combined=("$link_extra_prof_wrap" "extra_prof_injection.o" "${instrumentation_arguments[@]}" "${arguments[@]}")
 
-    if [ "${EXTRA_PROF_GPU}" != "off" ] && [ "${EXTRA_PROF_GPU}" != "OFF" ]; then
+    if [ "${EXTRA_PROF_GPU,,}" != "off" ]; then
 
         for cuda_var_name in CUDA_HOME CUDA_ROOT CUDAHOME CUDAROOT CUDA; do
             cuda_var_value="$(eval echo \$$cuda_var_name)"
@@ -215,7 +218,7 @@ else
         fi
 
         combined+=("-lcupti -lcuda -lcudart -lnvperf_host -lnvperf_target -L$CUDA_HOME/extras/CUPTI/lib64")
-        if [ "${EXTRA_PROF_ENERGY}" = on ] || [ "${EXTRA_PROF_ENERGY}" = ON ]; then
+        if [ "${EXTRA_PROF_ENERGY,,}" = on ]; then
             combined+=("-lnvidia-ml")
         fi
     fi
