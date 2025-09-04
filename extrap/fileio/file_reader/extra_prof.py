@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import numbers
+import re
 import warnings
 from collections import defaultdict
 from enum import Enum, Flag
@@ -62,7 +63,7 @@ class CallTreeNodeFlags(Flag):
 
 
 class _ExtraProfInputNode(Node):
-    childs: _ExtraProfInputNode
+    childs: list[_ExtraProfInputNode]
 
     def __init__(self, name: str, path: Callpath, num_values):
         super().__init__(name, path)
@@ -84,6 +85,10 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
     scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK_PARALLEL, ScalingType,
                                                    range={'weak_parallel': ScalingType.WEAK_PARALLEL,
                                                           'strong': ScalingType.STRONG})
+
+    concurrent_threads: bool = DynamicOptions.add(False, bool)
+    inclusive_models: bool = DynamicOptions.add(False, bool)
+    sum_gpu_accross_threads: bool = DynamicOptions.add(False, bool)
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         if isinstance(path, list):
@@ -134,20 +139,24 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.") from e
                     if magic_string != "EXTRA PROF":
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.")
-                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, additional_metrics, i)
+                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, additional_metrics, i,coordinate)
             for node in call_tree.iterate_nodes():
                 node: _ExtraProfInputNode
                 progress_bar.update(0)
 
-                child_durations = np.sum([c.duration for c in node.childs if not c.disable_exclusive_conversion],
-                                         axis=0)
-
-                if np.sum(child_durations) > np.sum(node.duration):
-                    logging.info(f"Extra-Prof overflow {node.path} {(node.duration - child_durations) / 10 ** 9}")
+                if self.inclusive_models:
                     duration = node.duration / 10 ** 9
-                    node.childs = []
                 else:
-                    duration = (node.duration - child_durations) / 10 ** 9
+                    child_durations = np.sum([c.duration for c in node.childs if not c.disable_exclusive_conversion],
+                                             axis=0)
+
+                    if np.sum(child_durations) > np.sum(node.duration):
+                        logging.info(f"Extra-Prof overflow {node.path} {(node.duration - child_durations) / 10 ** 9}")
+                        duration = node.duration / 10 ** 9
+                        if not self.concurrent_threads:
+                            node.childs = []
+                    else:
+                        duration = (node.duration - child_durations) / 10 ** 9
 
                 experiment.add_measurement(
                     Measurement(coordinate, node.path, METRIC_TIME, duration, keep_values=self.keep_values))
@@ -239,7 +248,71 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
             pass
         return name.replace('->', '- >')
 
-    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, additional_metrics, i):
+    @staticmethod
+    def _remove_template_from_function_name2(name: str) -> str:
+        """
+        Removes template parameters from the function name portion of a C++ function signature.
+        Leaves templates in argument types and operators like 'operator<' untouched.
+        """
+        # Find the position of the first '(' to isolate the function name
+        paren_index = name.find('(')
+        if paren_index == -1:
+            return name  # No parameters? Just return as is
+
+        name_part = name[:paren_index]
+        args_part = name[paren_index:]
+
+        # Check if it's an operator overload like operator<, operator<=, etc.
+        if re.search(r'operator\s*<<?=?', name_part):
+            return name  # Don't touch operator< or similar
+
+        # Remove template parameters only from the name part
+        result = []
+        depth = 0
+        i = 0
+        while i < len(name_part):
+            if name_part[i] == '<':
+                depth += 1
+                i += 1
+                while depth > 0 and i < len(name_part):
+                    if name_part[i] == '<':
+                        depth += 1
+                    elif name_part[i] == '>':
+                        depth -= 1
+                    i += 1
+            else:
+                result.append(name_part[i])
+                i += 1
+
+        cleaned_name = ''.join(result)
+        return cleaned_name + args_part
+
+    @staticmethod
+    def _remove_template_from_function_name(func_name: str) -> str:
+        """
+        Removes template parameters (angle brackets and contents) from a C++ function name.
+        Handles nested templates.
+        """
+        result = []
+        depth = 0
+        i = 0
+        while i < len(func_name):
+            if func_name[i] == '<':
+                depth += 1
+                i += 1
+                while depth > 0 and i < len(func_name):
+                    if func_name[i] == '<':
+                        depth += 1
+                    elif func_name[i] == '>':
+                        depth -= 1
+                    i += 1 
+            else:
+                result.append(func_name[i])
+                i += 1
+
+        return ''.join(result)
+
+    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, additional_metrics, i,point):
         def _read_calltree_node(parent_node: _ExtraProfInputNode, ep_node):
             name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
             n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
@@ -249,6 +322,9 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                 name = "GPU " + self._demangle_name(name)
             elif n_type == CallTreeNodeType.MEMSET or n_type == CallTreeNodeType.MEMCPY:
                 name = "GPU " + name
+            if '<' in name and '>' in name:
+                name = self._remove_template_from_function_name(name)
+
             node = parent_node.find_child(name)
             if not node:
                 node = _ExtraProfInputNode(name, parent_node.path.concat(name), num_values)
@@ -277,7 +353,10 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                         raise ValueError(f"Unsupported scaling type: {self.scaling_type}")
             if isinstance(m_duration, list):
                 if self.scaling_type == ScalingType.WEAK_PARALLEL:
-                    node.duration[i] += np.mean(m_duration)
+                    if self.sum_gpu_accross_threads and (n_type == CallTreeNodeType.KERNEL or n_type == CallTreeNodeType.OVERLAP):
+                        node.duration[i] += sum(m_duration)
+                    else:
+                        node.duration[i] += np.mean(m_duration)
                     node.bytes[i] += np.mean(m_bytes)
                     node.visits[i] += np.mean(m_visits)
                 elif self.scaling_type == ScalingType.STRONG:
