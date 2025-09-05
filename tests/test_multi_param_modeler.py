@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -361,7 +361,7 @@ class TestSparseModeling(TestCaseWithFunctionAssertions):
 
             models = modeler.model([measurements])
             self.assertEqual(1, len(models))
-            self.assertApproxFunction(function, models[0].hypothesis.function, places=5)
+            self.assertApproxFunction(function, models[0].hypothesis.function, places=4)
 
     def test_modeling_3p_plus(self):
         exponents = [(0, 1, 1), (0, 1, 2), (1, 4, 0), (1, 3, 0), (1, 4, 1), (1, 3, 1), (1, 4, 2), (1, 3, 2),

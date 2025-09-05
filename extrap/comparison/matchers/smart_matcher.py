@@ -274,7 +274,7 @@ class SmartMatcher(AbstractMatcher):
         # breakpoint()
         from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
         from extrap.comparison.entities.comparison_model import ComparisonModel
-        mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_median)
+        mg = ComparisonModelGenerator(experiment, name, modelers[0].modeler.use_measure)
         mg.models = {}
         self._aggregation_strategy.experiment = experiment
 

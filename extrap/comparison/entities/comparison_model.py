@@ -38,7 +38,7 @@ class ComparisonModel(Model):
     def _make_comparison_hypothesis(models):
         function = ComparisonFunction([m.hypothesis.function for m in models])
         hypothesis_type = type(models[0].hypothesis)
-        hypothesis = hypothesis_type(function, models[0].hypothesis._use_median)
+        hypothesis = hypothesis_type(function, models[0].hypothesis._use_measure)
         hypothesis._RSS = sum(m.hypothesis.RSS for m in models)
         hypothesis._RE = reduce(lambda a, b: abs(a * b), (m.hypothesis.RE for m in models)) ** (1 / len(models))
         hypothesis._rRSS = reduce(lambda a, b: a * b, (m.hypothesis.rRSS for m in models)) ** (1 / len(models))

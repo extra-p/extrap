@@ -1,10 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import math
 from abc import ABC, abstractmethod
 from itertools import chain
 from numbers import Real
@@ -20,6 +21,7 @@ from extrap.entities.parameter import Parameter
 from extrap.util import sympy_functions
 from extrap.util.formatting_helper import format_number_html
 from extrap.util.serialization_schema import Schema, NumberField
+from extrap.util.serialization_schema import Schema, NumberField, NumpyField, VariantSchemaField
 from extrap.util.string_formats import FunctionFormats
 
 DEFAULT_PARAM_NAMES = (
@@ -98,6 +100,10 @@ class SimpleTerm(SingleParameterTerm):
             self.evaluate = self._evaluate_polynomial
         elif self._term_type == "logarithm":
             self.evaluate = self._evaluate_logarithm
+        elif self._term_type == NotImplemented:
+            pass
+        else:
+            raise ValueError(f"Unknown term type: {self._term_type}")
 
     def reset_coefficients(self):
         pass
@@ -115,6 +121,7 @@ class SimpleTerm(SingleParameterTerm):
             elif format == FunctionFormats.LATEX:
                 return f"\\log2{{{parameter}}}^{{{self.exponent}}}"
             return f"log2({parameter})^({self.exponent})"
+        raise ValueError(f"Unknown term type: {self._term_type}")
 
     def to_html(self, parameter='p'):
         if self.exponent == 1:
@@ -132,6 +139,7 @@ class SimpleTerm(SingleParameterTerm):
             return f"{parameter}<sup>{exponent}</sup>"
         elif self._term_type == "logarithm":
             return f"log<sub>2</sub>({parameter})<sup>{exponent}</sup>"
+        raise ValueError(f"Unknown term type: {self._term_type}")
 
     def _evaluate_polynomial(self, parameter_value):
         if isinstance(parameter_value, sympy.Symbol):
@@ -223,6 +231,83 @@ class CompoundTerm(SingleParameterTerm):
                     self.simple_terms == other.simple_terms)
 
 
+class SegmentedTerm(CompoundTerm):
+
+    def __init__(self, segments, intervals):
+        super().__init__()
+        self.simple_terms: List[SimpleTerm] = []
+        self.segments = segments
+        self.intervals = intervals
+
+    def reset_coefficients(self):
+        pass
+
+    def evaluate(self, parameter_value):
+        if not self.segments:
+            return super().evaluate(parameter_value)
+
+        if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
+            parameter_value = parameter_value[0]
+
+        if isinstance(parameter_value, np.ndarray):
+            function_value = np.ndarray(parameter_value.shape, dtype=float)
+            int_start = self.intervals[:, 0]
+            int_end = self.intervals[:, 1]
+            int_start_mask = int_start.reshape(1, -1) <= parameter_value.reshape(-1, 1)
+            int_end_mask = parameter_value.reshape(-1, 1) <= int_end.reshape(1, -1)
+            mask = int_start_mask & int_end_mask
+            match = np.argmax(mask, axis=1)
+            for i, segment in enumerate(self.segments):
+                function_value[match == i] = segment.evaluate(parameter_value[match == i])
+            function_value[~np.any(mask, axis=1)] = math.nan
+            return function_value
+        else:
+            for (int_start, int_end), segment in zip(self.intervals, self.segments):
+                if int_start <= parameter_value <= int_end:
+                    return segment.evaluate(parameter_value)
+            return math.nan
+
+    def to_string(self, parameter='p', *, format: FunctionFormats = None):
+        """
+        Return a string representation of the function.
+        """
+
+        if format == FunctionFormats.LATEX:
+            return self.to_latex_string(parameter)
+
+        elif format == FunctionFormats.PYTHON:
+            function_string = "(" + self.segments[0].to_string(parameter, format=format)
+            function_string += f" if {parameter}<={self.intervals[0][1]} else"
+            function_string += self.segments[1].to_string(parameter, format=format)
+            if self.intervals[0][1] != self.intervals[1][0]:
+                function_string += f" if {parameter}>={self.intervals[1][0]} else math.nan)"
+
+        else:
+            function_string = "{" + self.segments[0].to_string(parameter, format=format)
+            function_string += f" for {parameter}<={self.intervals[0][1]}; "
+            function_string += self.segments[1].to_string(parameter, format=format)
+            function_string += f" for {parameter}>={self.intervals[1][0]}}}"
+
+        return function_string
+
+    def to_html(self, parameter='p'):
+        function_string = "{" + self.segments[0].to_html(parameter)
+        function_string += f" <b>for</b> {parameter}&le;{format_number_html(self.intervals[0][1])}; "
+        function_string += self.segments[1].to_html(parameter)
+        function_string += f" <b>for</b> {parameter}&ge;{format_number_html(self.intervals[1][0])}}}"
+        return function_string
+
+    def to_latex_string(self, parameter):
+        """
+        Return a math string (using latex encoding) representation of the function.
+        """
+        function_string = "(" + self.segments[0].to_latex_string(parameter).replace("$", "")
+        function_string += f" for {parameter}\\leq{self.intervals[0][1]}\n"
+        function_string += self.segments[1].to_latex_string(*parameter).replace("$", "")
+        function_string += f" for {parameter}\\geq{self.intervals[1][0]})"
+        return function_string
+
+
 class MultiParameterTerm(Term):
 
     def __init__(self, *terms: Tuple[int, SingleParameterTerm]):
@@ -302,7 +387,7 @@ class SimpleTermSchema(TermSchema):
     exponent = NumberField()
 
     def create_object(self):
-        return SimpleTerm(None, 0)
+        return SimpleTerm(NotImplemented, 0)
 
 
 class CompoundTermSchema(TermSchema):
@@ -310,6 +395,15 @@ class CompoundTermSchema(TermSchema):
 
     def create_object(self):
         return CompoundTerm()
+
+
+class SegmentedTermSchema(TermSchema):
+    simple_terms = fields.Constant([], load_only=True)
+    segments = fields.List(fields.Nested('SingleParameterFunctionSchema'))
+    intervals = NumpyField()
+
+    def create_object(self):
+        return SegmentedTerm([], [])
 
 
 class ListOfPairs(fields.Dict):
@@ -322,7 +416,8 @@ class ListOfPairs(fields.Dict):
 
 
 class MultiParameterTermSchema(TermSchema):
-    parameter_term_pairs = ListOfPairs(keys=fields.Int(), values=fields.Nested(CompoundTermSchema))
+    parameter_term_pairs = ListOfPairs(keys=fields.Int(),
+                                       values=VariantSchemaField(CompoundTermSchema, SegmentedTermSchema))
 
     def create_object(self):
         return MultiParameterTerm()

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2023-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2023-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -8,6 +8,9 @@
 import dataclasses
 
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout, QComboBox
+
+from extrap.gui.components.model_color_map import ModelColorMap
 from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout, QComboBox
 
 from extrap.gui.components.model_color_map import ModelColorMap
@@ -19,7 +22,9 @@ class PlotFormattingOptions:
     font_family: str = 'Arial'
     font_size: int = 10
     legend_font_size: int = 6
+    surface_opacity: float = 1.0
     shorten_names: bool = True
+
 
 
 class PlotFormattingDialog(QDialog):
@@ -52,6 +57,11 @@ class PlotFormattingDialog(QDialog):
         self._colormap_selector.setCurrentText(self._model_color_map.name)
         self._colormap_selector.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         layout.addRow("Colormap", self._colormap_selector)
+        self._opacity_selector = QSpinBox()
+        self._opacity_selector.setMinimum(0)
+        self._opacity_selector.setMaximum(100)
+        self._opacity_selector.setValue(int(self._options.surface_opacity * 100))
+        layout.addRow("Surface opacity", self._opacity_selector)
         self._shorten_names_switch = SwitchWidget()
         self._shorten_names_switch.setChecked(self._options.shorten_names)
         layout.addRow("Shorten function names", self._shorten_names_switch)
@@ -68,6 +78,7 @@ class PlotFormattingDialog(QDialog):
         self._options.font_size = self._font_size_selector.value()
         self._options.legend_font_size = self._legend_font_size_selector.value()
         self._model_color_map.set_colormap(self._colormap_selector.currentText())
+        self._options.surface_opacity = self._opacity_selector.value() / 100
         self._options.shorten_names = self._shorten_names_switch.isChecked()
 
         super().accept()

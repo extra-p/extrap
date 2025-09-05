@@ -127,10 +127,10 @@ class AbstractMetricConverter(ABC):
             function = function.original_function
         model = next(iter(model_sets))
         hypothesis_class = Hypothesis.infer_best_type([m.hypothesis for m in model_sets])
-        hypothesis = hypothesis_class(function, model.hypothesis.use_median)
+        hypothesis = hypothesis_class(function, model.hypothesis.use_measure)
         hypothesis.compute_cost(measurements)
         if hasattr(hypothesis, 'compute_adjusted_rsquared'):
-            _, constant_cost = Hypothesis.calculate_constant_indicators(measurements, model.hypothesis.use_median)
+            _, constant_cost = Hypothesis.calculate_constant_indicators(measurements, model.hypothesis.use_measure)
             hypothesis.compute_adjusted_rsquared(constant_cost, measurements)
         result = Model(hypothesis, model.callpath, self.new_metric)
         result.measurements = measurements

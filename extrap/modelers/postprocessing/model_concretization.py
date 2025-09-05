@@ -116,7 +116,7 @@ class ModelConcretization(PostProcess):
             hypothesis.function = time_f
             hypothesis.compute_cost(time)
             if hasattr(hypothesis, "compute_adjusted_rsquared"):
-                _, constant_cost = Hypothesis.calculate_constant_indicators(time, hypothesis.use_median)
+                _, constant_cost = Hypothesis.calculate_constant_indicators(time, hypothesis.use_measure)
                 hypothesis.compute_adjusted_rsquared(constant_cost, time)
             model = PostProcessedModel(hypothesis, cp, reference_metric)
             model.measurements = time

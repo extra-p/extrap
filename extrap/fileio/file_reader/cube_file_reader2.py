@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import logging
 import warnings
 from collections import defaultdict
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Dict, Union, Sequence, Tuple, Optional
 
 import numpy
+from numpy import ma
 import numpy as np
 import pkg_resources
 from numpy import ma
@@ -47,15 +49,6 @@ class SmallKernelFilter:
     ratio: float = 0.01
     metric: Metric = Metric('time')
     callpath: Optional[Callpath] = None
-
-
-@dataclass
-class AggInfo:
-    values: list = field(default_factory=list)
-    repetitions: int = 0
-
-    def __iter__(self):
-        return iter((self.values, self.repetitions))
 
 
 class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, TKeepValuesReader):
@@ -115,10 +108,10 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             total_values[coordinate] = total
 
             # add measurements to experiment
-            for (callpath, metric), (values, repetition_count) in aggregated_values.items():
+            for (callpath, metric), values in aggregated_values.items():
                 progress_bar.update(0)
-                measurement = Measurement(coordinate, callpath, metric, values, keep_values=self.keep_values)
-                experiment.add_measurement(measurement)
+                experiment.add_measurement(
+                    Measurement(coordinate, callpath, metric, values, keep_values=self.keep_values))
 
         progress_bar.step("Unify calltrees")
         callpaths_to_merge = self._determine_and_add_common_callpaths(experiment, num_points, progress_bar)
@@ -191,7 +184,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
 
     def _aggregate_repetitions_legacy(self, point_group, progress_bar, show_warning_skipped_metrics):
         total_values = defaultdict(list)
-        aggregated_values = defaultdict(AggInfo)
+        aggregated_values = defaultdict(list)
         for path, _ in point_group:
             progress_bar.update()
             with CubexParser(str(path)) as parsed:
@@ -216,7 +209,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
                                 if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].extend(map(float, cnode_values))
-                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = [v for v in map(float, cnode_values) if v != 0]
                                     if not values:
                                         values = map(float, cnode_values)
@@ -235,19 +228,17 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                                                       convert_to_inclusive=self.use_inclusive_measurements)
 
                             # in case of weak scaling calculate mean and median over all mpi process values
-                            values_agg = aggregated_values[(callpath, metric)]
-                            values_agg.repetitions += 1
                             if self.scaling_type == ScalingType.WEAK:
                                 # do NOT use generator it is slower
-                                values_agg.values.extend(map(float, cnode_values))
-                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                aggregated_values[(callpath, metric)].extend(map(float, cnode_values))
+                            elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = [v for v in map(float, cnode_values) if v != 0]
                                 if not values:
                                     values = map(float, cnode_values)
-                                values_agg.values.extend(values)
+                                aggregated_values[(callpath, metric)].append(values)
                                 # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
-                                values_agg.values.append(float(sum(cnode_values)))
+                                aggregated_values[(callpath, metric)].append(float(sum(cnode_values)))
 
                     # Take care of missing metrics
                     except MissingMetricError as e:  # @UnusedVariable
@@ -258,7 +249,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
 
     def _aggregate_repetitions(self, point_group, progress_bar, show_warning_skipped_metrics):
         total_values = defaultdict(list)
-        aggregated_values = defaultdict(AggInfo)
+        aggregated_values = defaultdict(list)
         for path, _ in point_group:
             progress_bar.update()
             with CubexParser(str(path)) as parsed:
@@ -282,13 +273,13 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                     continue
                                 cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
                                 if self.scaling_type == ScalingType.WEAK:
-                                    total_values[callpaths[r_cnode.id]].extend(cnode_values.astype(float))
-                                elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                    total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
+                                elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = cnode_values.astype(float)
-                                    non_zero_value_mask = values != 0
-                                    if numpy.any(non_zero_value_mask):
-                                        values = values[non_zero_value_mask]
-                                    total_values[callpaths[r_cnode.id]].extend(values)
+                                    if values.any():
+                                        zero_value_mask = values == 0
+                                        masked_array = ma.array(values, mask=zero_value_mask)
+                                    total_values[callpaths[r_cnode.id]].append(masked_array)
                                 elif self.scaling_type == ScalingType.STRONG:
                                     total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
 
@@ -302,21 +293,19 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                                                       convert_to_exclusive=not self.use_inclusive_measurements,
                                                                       convert_to_inclusive=self.use_inclusive_measurements)
 
-                            values_agg = aggregated_values[(callpath, metric)]
-                            values_agg.repetitions += 1
                             # in case of weak scaling calculate mean and median over all mpi process values
                             if self.scaling_type == ScalingType.WEAK:
-                                values_agg.values.append(cnode_values.astype(float))
-                            elif self.scaling_type == ScalingType.WEAK_PARALLEL:
+                                aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
+                            elif self.scaling_type == ScalingType.WEAK_THREADED:
                                 values = cnode_values.astype(float)
                                 if not values.any():
-                                    values_agg.values.append(ma.array(values))
+                                    aggregated_values[(callpath, metric)].append(ma.array(values))
                                 else:
-                                    non_zero_value_mask = (values == 0)
-                                    values_agg.values.append(ma.array(values, mask=non_zero_value_mask))
+                                    zero_value_mask = (values == 0)
+                                    aggregated_values[(callpath, metric)].append(ma.array(values, mask=zero_value_mask))
                             # in case of strong scaling calculate the sum over all mpi process values
                             elif self.scaling_type == ScalingType.STRONG:
-                                values_agg.values.append(cnode_values.sum().astype(float))
+                                aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
 
                     # Take care of missing metrics
                     except MissingMetricError as e:  # @UnusedVariable
@@ -476,6 +465,6 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             del experiment.measurements[key]
 
 
-_pycubexr_version = Version(pkg_resources.get_distribution("pycubexr").version)
+_pycubexr_version = Version(importlib.metadata.version("pycubexr"))
 if _pycubexr_version.major == 1:
     CubeFileReader2._aggregate_repetitions = CubeFileReader2._aggregate_repetitions_legacy

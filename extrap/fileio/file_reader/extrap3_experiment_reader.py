@@ -17,7 +17,7 @@ from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import Experiment
 from extrap.entities.functions import Function, SingleParameterFunction, MultiParameterFunction
 from extrap.entities.hypotheses import Hypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
@@ -249,11 +249,11 @@ def deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper):
     generate_strategy = ioHelper.readString()
     # convert generate model options to enum
     if generate_strategy == "GENERATE_MODEL_MEAN":
-        use_median = False
+        use_measure = Measure.MEAN
     elif generate_strategy == "GENERATE_MODEL_MEDIAN":
-        use_median = True
+        use_measure = Measure.MEDIAN
     else:
-        use_median = False
+        use_measure = Measure.UNKNOWN
         logging.error("Invalid ModelOptions found in File.")
 
     with ioHelper.begin_transaction():
@@ -267,7 +267,7 @@ def deserialize_SingleParameterModelGenerator(exp, supports_sparse, ioHelper):
 
         decode_strategy(multi_strategy, single_strategy, supports_sparse)
 
-    return ModelGenerator(exp, SingleParameterModeler(), userName, use_median)
+    return ModelGenerator(exp, SingleParameterModeler(), userName, use_measure)
 
 
 def decode_strategy(multi_strategy, single_strategy, supports_sparse):
@@ -303,12 +303,12 @@ def deserialize_MultiParameterModelGenerator(exp, supports_sparse, ioHelper):
     # read the options
     generate_strategy = ioHelper.readString()
 
-    use_median = False
+    use_measure = Measure.UNKNOWN
     # convert generate model options to enum
     if generate_strategy == "GENERATE_MODEL_MEAN":
-        use_median = False
+        use_measure = Measure.MEAN
     elif generate_strategy == "GENERATE_MODEL_MEDIAN":
-        use_median = True
+        use_measure = Measure.MEDIAN
     else:
         logging.error("Invalid ModelOptions found in File.")
 
@@ -325,7 +325,7 @@ def deserialize_MultiParameterModelGenerator(exp, supports_sparse, ioHelper):
 
         decode_strategy(multi_strategy, single_strategy, supports_sparse)
 
-    return ModelGenerator(exp, MultiParameterModeler(), userName, use_median)
+    return ModelGenerator(exp, MultiParameterModeler(), userName, use_measure)
 
 
 def deserialize_ExperimentPoint(experiment, id_mappings, ioHelper):
@@ -395,7 +395,7 @@ def deserialize_Model(experiment, id_mappings, supports_sparse, ioHelper):
     for i in range(0, length):
         comment_id = ioHelper.readId()
 
-    hypothesis = Hypothesis(model_function, False)
+    hypothesis = Hypothesis(model_function, Measure.UNKNOWN)
     hypothesis._RSS = RSS
     hypothesis._AR2 = AR2
     hypothesis._SMAPE = SMAPE

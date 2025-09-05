@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,7 +13,7 @@ from typing import List, Sequence
 
 from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import SingleParameterHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm
@@ -58,7 +58,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         """
         Initialize SingleParameterModeler object.
         """
-        super().__init__(use_median=False)
+        super().__init__(use_measure=Measure.MEAN)
 
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
@@ -261,7 +261,7 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
             next_function = SingleParameterFunction(copy.copy(compound_term))
 
             # create single parameter hypothesis from function
-            yield SingleParameterHypothesis(next_function, self.use_median)
+            yield SingleParameterHypothesis(next_function, self.use_measure)
 
     def create_model(self, measurements: Sequence[Measurement]):
         """
@@ -272,14 +272,14 @@ class SingleParameterModeler(AbstractSingleParameterModeler, SingularModeler):
         if len(measurements) < self.min_measurement_points:
             if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
                     'validation__ignore__num_measurements', False)):
-                warnings.warn("Number of measurements for a parameter needs to be at least 5 in order "
-                              "to create a performance model.")
+                warnings.warn(f"Number of measurements for a parameter needs to be at least "
+                              f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # create a constant model
         constant_hypothesis, constant_cost = self.create_constant_model(measurements)
-        logging.debug("Constant model: " + constant_hypothesis.function.to_string())
-        logging.debug("Constant model cost: " + str(constant_cost))
+        logging.debug("Constant model: %s", constant_hypothesis.function)
+        logging.debug("Constant model cost: %g", constant_cost)
 
         # use constant model when cost is 0
         if constant_cost == 0:

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.entities.callpath import Callpath
+from extrap.entities.measurement import Measure
 from extrap.entities.metric import Metric
 from extrap.modelers.abstract_modeler import EMPTY_MODELER
 from extrap.modelers.model_generator import ModelGenerator, ModelGeneratorSchema
@@ -28,8 +29,8 @@ class ComparisonModelGenerator(ModelGenerator):
 
     def __init__(self, experiment: Experiment,
                  name: str = "New Modeler",
-                 use_median: bool = False):
-        super().__init__(experiment, NotImplemented, name, use_median)
+                 use_measure: Measure = Measure.MEAN):
+        super().__init__(experiment, NotImplemented, name, use_measure)
         self._modeler = EMPTY_MODELER
         self.post_processing_history = []
 

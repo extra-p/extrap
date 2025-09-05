@@ -14,9 +14,16 @@ import numbers
 from collections.abc import Iterable, Sequence
 from itertools import chain, product
 from typing import Union, Generator, Optional
+import enum
+import math
+import numbers
+from collections.abc import Iterable, Sequence
+from itertools import chain, product
+from typing import Union, Generator, Optional
 
 import numpy as np
 from marshmallow import fields, post_load
+from numpy import ma
 from numpy import ma
 from numpy.ma.core import MaskedArray
 
@@ -149,6 +156,40 @@ class Measurement(CalculationElement):
         else:
             raise ValueError("Unknown measure.")
 
+    def add_repetition(self, value):
+        if self.values is None:
+            raise RuntimeError("Cannot add value, because the list of original values does not exist.")
+        if isinstance(value, Sequence):
+            self.values = ma.append(self.values, value)
+        else:
+            axis = tuple(range(1, self.values.ndim))
+            counts = self.values.count(axis=axis)
+            avg_count = int(round(np.mean(counts), 0))
+            small_counts = counts.copy()
+            small_counts[small_counts > avg_count] = 0
+            idx = np.argmax(small_counts)
+            if small_counts[idx] == avg_count:
+                mask = self.values[idx].mask
+            else:
+                needed = avg_count - small_counts[idx]
+                counts[counts <= avg_count] = counts.max() + 1
+                larger_idx = np.argmin(counts)
+                mask = self.values[idx].mask.copy()
+                candidates = self.values[larger_idx].mask ^ mask
+                positions = np.argwhere(candidates)[:needed]
+                for pos in positions:
+                    mask[tuple(pos)] = False
+
+            new_value = ma.array(np.full_like(self.values[0], value), mask=mask)
+            new_value = new_value.reshape(1, *new_value.shape)
+            self.values = ma.append(self.values, new_value, axis=0)
+        self.median = ma.median(self.values).item()
+        self.mean = ma.mean(self.values).item()
+        self.minimum = ma.min(self.values).item()
+        self.maximum = ma.max(self.values).item()
+        self.std = ma.std(self.values).item()
+        self.repetitions += 1
+
     def merge(self, other: 'Measurement') -> None:
         """Approximately merges the other measurement into this measurement."""
         if self.coordinate != other.coordinate:
@@ -178,6 +219,23 @@ class Measurement(CalculationElement):
                     self.callpath == other.callpath and
                     self.mean == other.mean and
                     self.median == other.median)
+
+    @staticmethod
+    def select_measure(measurements: Iterable[Measurement], measure: Union[bool, Measure]) -> Generator[numbers.Real]:
+        if measure == Measure.MEAN:
+            return (m.mean for m in measurements)
+        elif measure == Measure.MEDIAN:
+            return (m.median for m in measurements)
+        elif measure == Measure.MINIMUM:
+            return (m.minimum for m in measurements)
+        elif measure == Measure.MAXIMUM:
+            return (m.maximum for m in measurements)
+        elif measure is True:
+            return (m.median for m in measurements)
+        elif measure is False:
+            return (m.mean for m in measurements)
+        else:
+            raise ValueError("Unknown measure.")
 
     def __add__(self, other):
         if isinstance(other, Measurement):
@@ -404,7 +462,7 @@ class MeasurementSchema(Schema):
     minimum = NumberField()
     maximum = NumberField()
     std = NumberField()
-    repetitions = fields.Int(load_default=None)
+    repetitions = fields.Int(allow_none=True)
     values = fields.Method('_store_values', '_load_values', allow_none=True, load_default=None)
 
     def _load_values(self, value):

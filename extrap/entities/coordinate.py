@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -81,7 +81,7 @@ class Coordinate:
 
     def as_partial_tuple(self, except_param):
         return tuple(c for p, c in enumerate(self._values) if p != except_param)
-
+    
     def is_mostly_lower(self, other: 'Coordinate', except_param):
         return all(a <= b
                    for i, (a, b) in enumerate(zip(self._values, other._values))

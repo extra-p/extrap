@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -21,6 +21,7 @@ class ExpanderWidget(QGroupBox):
 
     def setTitle(self, title: str):
         self._title = title
+        self._toggle.setText(self._title)
 
     def title(self) -> str:
         return self._title
@@ -43,7 +44,7 @@ class ExpanderWidget(QGroupBox):
 
     def initUI(self):
         self.setStyleSheet('ExpanderWidget{ '
-                           '    padding:2px -1px -1px 0px; margin-left:-1px; '
+                           '    padding:0px -1px -1px 0px; margin-left:-1px; '
                            f'{" margin-top: -19px; padding-top:19px; " if sys.platform.startswith("darwin") else ""}'
                            '}'
                            'ExpanderWidget::title{ '

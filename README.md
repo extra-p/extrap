@@ -64,6 +64,7 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 * itanium_demangler
 * sympy
 * typing-extensions
+* sklearn
 * PySide6 (for GUI)
 * matplotlib (for GUI)
 * pyvista (for GUI)
@@ -111,8 +112,7 @@ You can use different input formats as shown in the examples below:
 * Create model and save it to text file at the given
   path: `extrap --out test.txt --text test/data/text/one_parameter_1.txt`
 
-  You can find an overview about all command line options
-  under [docs/command-line-options.md](docs/command-line-options.md).
+You can find an overview about all command line options under [docs/command-line-options.md](docs/command-line-options.md).
 
 ### License
 

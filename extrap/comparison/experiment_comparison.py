@@ -170,7 +170,7 @@ class ComparisonExperiment(Experiment):
             self.modelers = [self._make_model_generator(k, match) for k, match in self.modelers_match.items()]
 
     def _make_model_generator(self, name: str, modelers: Sequence[ModelGenerator]) -> ComparisonModelGenerator:
-        mg = ComparisonModelGenerator(self, name, modelers[0].modeler.use_median)
+        mg = ComparisonModelGenerator(self, name, modelers[0].modeler.use_measure)
         mg.models = {}
         for metric, source_metrics in self.metrics_match.items():
             for node, source_nodes in self.call_tree_match.items():

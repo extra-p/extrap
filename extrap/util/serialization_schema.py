@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,6 +12,7 @@ from abc import abstractmethod, ABC
 from collections.abc import Mapping
 from typing import Union, Sequence, Tuple, Type
 
+import marshmallow
 from marshmallow import post_load, fields, ValidationError, EXCLUDE
 from marshmallow.base import SchemaABC
 from marshmallow.fields import Field
@@ -37,8 +38,12 @@ class Schema(_Schema, ABC, metaclass=SchemaMeta):
     def postprocess_object(self, obj: object) -> object:
         return obj
 
+    def preprocess_object_data(self, data):
+        return data
+
     @post_load
     def unpack_to_object(self, data, **kwargs):
+        data = self.preprocess_object_data(data)
         obj = self.create_object()
         try:
             for k, v in data.items():
@@ -273,3 +278,122 @@ class ListToMappingField(fields.List):
             return self.list_type(result)
         else:
             return result
+
+
+class EnumField(fields.Field):
+    def __init__(self, enum, *args, **kwargs):
+        self.enum = enum
+        super(EnumField, self).__init__(*args, **kwargs)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        return value.name
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        try:
+            return self.enum[value]
+        except ValueError as error:
+            raise ValidationError(f"{value} is no correct value of enum {self.enum.__name__}.") from error
+
+
+class CompatibilityField(fields.Field):
+    _CHECK_ATTRIBUTE = False
+
+    def __init__(self, field, serialize=None, deserialize=None, *args, **kwargs):
+        self.field: fields.Field = field
+        self._serialize_func = serialize
+        self._deserialize_func = deserialize
+        super().__init__(*args, **kwargs)
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        serialize_func = self._serialize_func
+        if isinstance(serialize_func, str):
+            serialize_func = marshmallow.utils.callable_or_raise(
+                getattr(self.parent, serialize_func, None)
+            )
+        if serialize_func:
+            value = serialize_func(value, attr, obj, **kwargs)
+        return self.field._serialize(value, attr, obj, **kwargs)
+
+    def _deserialize(self, value, attr, obj, **kwargs):
+        value = self.field._deserialize(value, attr, obj, **kwargs)
+        deserialize_func = self._deserialize_func
+        if isinstance(deserialize_func, str):
+            deserialize_func = marshmallow.utils.callable_or_raise(
+                getattr(self.parent, deserialize_func, None)
+            )
+        if deserialize_func:
+            value = deserialize_func(value, attr, obj, **kwargs)
+        return value
+
+
+class VariantSchemaField(fields.Nested):
+    VARIANT_KEY = "$variant"
+
+    def __init__(self, default_schema, *alternatives: typing.Type[Schema], **kwargs):
+        self.alternatives = {type(a().create_object()).__name__: a() for a in alternatives}
+        super().__init__(default_schema, **kwargs)
+
+    def _serialize(self, value: typing.Any, attr: typing.Optional[str], obj: typing.Any, **kwargs):
+        schema = self.alternatives.get(type(value).__name__, None)
+        if schema:
+            result = schema.dump(value)
+            result[self.VARIANT_KEY] = type(value).__name__
+            return result
+        else:
+            return super()._serialize(value, attr, obj, **kwargs)
+
+    def _deserialize(self, value: typing.Any, attr: typing.Optional[str],
+                     data: typing.Optional[typing.Mapping[str, typing.Any]], **kwargs):
+        if self.VARIANT_KEY in value:
+            schema_name = value.pop(self.VARIANT_KEY)
+            return self.alternatives[schema_name].load(value)
+        else:
+            return super()._deserialize(value, attr, data, **kwargs)
+
+
+class NumpyField(fields.List):
+    import numpy
+
+    def __init__(self, **kwargs):
+        super().__init__(fields.Field, **kwargs)
+
+    def _deserialize(self, value, attr, obj, **kwargs):
+        stack = [value]
+
+        while stack:
+            elem = stack.pop()
+            for i, e in enumerate(elem):
+                if type(e) == list:
+                    stack.append(e)
+                elif type(e) == str:
+                    elem[i] = float(math.nan)
+                elif math.isfinite(e):
+                    continue
+                else:
+                    raise NotImplementedError()
+
+        arr = self.numpy.array(value)
+        return arr
+
+    def _serialize(self, value, attr, obj, **kwargs):
+        list_val = value.tolist()
+
+        stack = [list_val]
+
+        while stack:
+            elem = stack.pop()
+            for i, e in enumerate(elem):
+                if type(e) == list:
+                    stack.append(e)
+                elif math.isfinite(e):
+                    continue
+                elif math.isnan(e):
+                    elem[i] = 'nan'
+                elif e == math.inf:
+                    elem[i] = 'inf'
+                elif e == -math.inf:
+                    elem[i] = '-inf'
+                else:
+                    raise NotImplementedError
+
+        return super()._serialize(list_val, attr, obj)

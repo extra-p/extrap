@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,13 +12,20 @@ from marshmallow import ValidationError
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.experiment import ExperimentSchema, Experiment
 from extrap.entities.functions import ConstantFunction
+from extrap.entities.hypotheses import HypothesisSchema, ConstantHypothesis
+from extrap.entities.measurement import Measure, Measurement
+from extrap.fileio.experiment_io import read_experiment
+from extrap.entities.functions import ConstantFunction
 from extrap.entities.hypotheses import ConstantHypothesisSchema, ConstantHypothesis
 from extrap.entities.measurement import Measurement
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
+from extrap.modelers.abstract_modeler import ModelerSchema
 from extrap.modelers.model_generator import ModelGenerator
+from tests.serialization_testcase import BasicExperimentSerializationTest, BasicMPExperimentSerializationTest
+from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 
 
-class TestSingleParameter(unittest.TestCase):
+class TestSingleParameter(BasicExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/one_parameter_1.txt")
@@ -27,35 +34,8 @@ class TestSingleParameter(unittest.TestCase):
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
-    def test_setup(self):
-        self.setUpClass()
 
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
-
-
-class TestSingleParameterAfterModeling(unittest.TestCase):
+class TestSingleParameterAfterModeling(BasicExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/one_parameter_1.txt")
@@ -64,34 +44,6 @@ class TestSingleParameterAfterModeling(unittest.TestCase):
         # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
-
-    def test_setup(self):
-        self.setUpClass()
-
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-        pass
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
 
 
 class TestSerialization(unittest.TestCase):
@@ -139,7 +91,58 @@ class TestSerialization(unittest.TestCase):
         self.assertEqual(hyp, reconstructed)
 
 
-class TestMultiParameter(unittest.TestCase):
+class TestCompatibilityWithMeanMedianOnlyVersions(unittest.TestCase):
+
+    def test_hypothesis(self):
+        print()
+        schema = HypothesisSchema()
+        for test_measure in Measure:
+            print(test_measure)
+            hyp = ConstantHypothesis(ConstantFunction(12.0), test_measure)
+            if test_measure != Measure.UNKNOWN:
+                hyp.compute_cost(
+                    [Measurement(Coordinate(1), None, None, [11.9]), Measurement(Coordinate(2), None, None, [11.9])])
+            hyp_data = schema.dump(hyp)
+            self.assertEqual(test_measure.name, hyp_data['_use_measure'])
+            if test_measure == Measure.MEDIAN:
+                self.assertTrue(hyp_data['_use_median'])
+            else:
+                self.assertFalse(hyp_data['_use_median'])
+            if test_measure == Measure.MEAN or test_measure == Measure.MEDIAN:
+                del hyp_data['_use_measure']
+            reconstructed: ConstantHypothesis = schema.load(hyp_data)
+            self.assertEqual(test_measure, reconstructed._use_measure)
+
+    def test_modeler(self):
+        print()
+        schema = ModelerSchema()
+        modeler = MultiParameterModeler()
+        for test_measure in Measure:
+            print(test_measure)
+            modeler.use_measure = test_measure
+            modeler_data = schema.dump(modeler)
+            self.assertEqual(test_measure.name, modeler_data['use_measure'])
+            if test_measure == Measure.MEDIAN:
+                self.assertTrue(modeler_data['use_median'])
+            else:
+                self.assertFalse(modeler_data['use_median'])
+            if test_measure == Measure.MEAN or test_measure == Measure.MEDIAN:
+                del modeler_data['use_measure']
+            reconstructed = schema.load(modeler_data)
+            self.assertEqual(test_measure, reconstructed.use_measure)
+
+    def test_loading_experiment(self):
+        experiment = read_experiment("data/input/exp_only_mean_median.extra-p")
+        self.assertEqual(4, len(experiment.modelers))
+        correct_measures = [Measure.MEAN, Measure.MEDIAN, Measure.MEAN, Measure.MEDIAN]
+        for i, correct_measure in zip(range(4), correct_measures):
+            self.assertEqual(correct_measure, experiment.modelers[i].modeler.use_measure)
+            self.assertEqual(4, len(experiment.modelers[i].models))
+            model = next(iter(experiment.modelers[i].models.values()))
+            self.assertEqual(correct_measure, model.hypothesis._use_measure)
+
+
+class TestMultiParameter(BasicMPExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
@@ -148,35 +151,8 @@ class TestMultiParameter(unittest.TestCase):
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
 
-    def test_setup(self):
-        self.setUpClass()
 
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
-
-
-class TestMultiParameterAfterModeling(unittest.TestCase):
+class TestMultiParameterAfterModeling(BasicMPExperimentSerializationTest, unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.experiment = TextFileReader().read_experiment("data/text/two_parameter_3.txt")
@@ -185,34 +161,6 @@ class TestMultiParameterAfterModeling(unittest.TestCase):
         # print(json.dumps(schema.dump(cls.experiment), indent=1))
         exp_str = schema.dumps(cls.experiment)
         cls.reconstructed: Experiment = schema.loads(exp_str)
-
-    def test_setup(self):
-        self.setUpClass()
-
-    def test_parameters(self):
-        self.assertListEqual(self.experiment.parameters, self.reconstructed.parameters)
-        pass
-
-    def test_measurements(self):
-        self.assertDictEqual(self.experiment.measurements, self.reconstructed.measurements)
-
-    def test_coordinates(self):
-        self.assertListEqual(self.experiment.coordinates, self.reconstructed.coordinates)
-
-    def test_callpaths(self):
-        self.assertListEqual(self.experiment.callpaths, self.reconstructed.callpaths)
-
-    def test_metrics(self):
-        self.assertListEqual(self.experiment.metrics, self.reconstructed.metrics)
-
-    def test_call_tree(self):
-        self.assertEqual(self.experiment.call_tree, self.reconstructed.call_tree)
-
-    def test_modelers(self):
-        self.assertListEqual(self.experiment.modelers, self.reconstructed.modelers)
-
-    def test_scaling(self):
-        self.assertEqual(self.experiment.scaling, self.reconstructed.scaling)
 
 
 if __name__ == '__main__':

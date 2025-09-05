@@ -82,8 +82,8 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
     CMD_ARGUMENT = "--extra-prof"
     LOADS_FROM_DIRECTORY = True
 
-    scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK_PARALLEL, ScalingType,
-                                                   range={'weak_parallel': ScalingType.WEAK_PARALLEL,
+    scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK_THREADED, ScalingType,
+                                                   range={'weak_threaded': ScalingType.WEAK_THREADED,
                                                           'strong': ScalingType.STRONG})
 
     concurrent_threads: bool = DynamicOptions.add(False, bool)
@@ -102,9 +102,9 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
         for p in parameter_names:
             experiment.add_parameter(Parameter(p))
 
-        if self.scaling_type not in [ScalingType.WEAK_PARALLEL, ScalingType.STRONG]:
-            warnings.warn(f"Unsupported scaling type: {self.scaling_type}. Using weak_parallel instead.")
-            self.scaling_type = ScalingType.WEAK_PARALLEL
+        if self.scaling_type not in [ScalingType.WEAK_THREADED, ScalingType.STRONG]:
+            warnings.warn(f"Unsupported scaling type: {self.scaling_type}. Using weak_threaded instead.")
+            self.scaling_type = ScalingType.WEAK_THREADED
 
         call_tree = None
 
@@ -345,14 +345,14 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                     node.gpu_metrics[metric].append(value)
             if additional_metrics and len(ep_node) >= 9:
                 for metric, value in zip(additional_metrics, ep_node[8]):
-                    if self.scaling_type == ScalingType.WEAK_PARALLEL:
+                    if self.scaling_type == ScalingType.WEAK_THREADED:
                         node.additional_metrics[metric][i] += np.mean(value)
                     elif self.scaling_type == ScalingType.STRONG:
                         node.additional_metrics[metric][i] += np.sum(value)
                     else:
                         raise ValueError(f"Unsupported scaling type: {self.scaling_type}")
             if isinstance(m_duration, list):
-                if self.scaling_type == ScalingType.WEAK_PARALLEL:
+                if self.scaling_type == ScalingType.WEAK_THREADED:
                     if self.sum_gpu_accross_threads and (n_type == CallTreeNodeType.KERNEL or n_type == CallTreeNodeType.OVERLAP):
                         node.duration[i] += sum(m_duration)
                     else:

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -44,6 +44,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
@@ -54,11 +55,11 @@ setup(
     python_requires='>=3.8',
     include_package_data=True,
     install_requires=[
-        "pyside6~=6.4",
+        "PySide6-Essentials~=6.4",
         "numpy~=1.18",
-        "matplotlib~=3.5",
+        "matplotlib~=3.6",
         "tqdm~=4.47",
-        "pycubexr>=1.1,<3",
+        "pycubexr>=1.2.3,<3,!=2.0.0",
         "marshmallow~=3.7",
         "packaging>=20.0",
         "kaitaistruct~=0.9",
@@ -70,6 +71,10 @@ setup(
         "scipy~=1.5",
         "pyvista~=0.42.1",
         "pyvistaqt~=0.11.0",
-        "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'"
-    ]
+        "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'",
+        "scikit-learn>=1.2.2"
+    ],
+    extras_require={
+        "adaptive_modeling": ["extrap-adaptive-modeler>=1.0.2,<3"],
+    },
 )

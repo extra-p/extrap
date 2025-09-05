@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,6 +13,7 @@ from typing import Dict, Union, Tuple, TYPE_CHECKING
 from marshmallow import fields, post_dump, pre_load
 
 from extrap.entities.callpath import Callpath, CallpathSchema
+from extrap.entities.measurement import Measure
 from extrap.entities.metric import Metric, MetricSchema
 from extrap.entities.model import Model, ModelSchema
 from extrap.modelers import multi_parameter
@@ -22,6 +23,7 @@ from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.postprocessing import PostProcess, PostProcessSchema
 from extrap.modelers.postprocessing.aggregation import Aggregation
 from extrap.util.exceptions import RecoverableError
+from extrap.util import deprecation
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import TupleKeyDict, BaseSchema
 
@@ -37,13 +39,19 @@ class ModelGenerator:
 
     def __init__(self, experiment: Experiment,
                  modeler: Union[AbstractModeler, str] = "Default",
-                 name: str = "New Modeler",
-                 use_median: bool = False):
+                 name: str = "New Modeler", use_measure: Measure = Measure.MEAN, *, use_median: bool = None):
         self.experiment = experiment
         self.name = name
         self.id = next(ModelGenerator.ID_COUNTER)
+
+        if isinstance(use_measure, bool) or use_median is not None:
+            if use_median is not None:
+                use_measure = use_median
+            deprecation.deprecated.code("use_median is deprecated, use use_measure instead.")
+            use_measure = Measure.from_use_median(use_measure)
+
         # choose the modeler based on the input data
-        self._modeler: AbstractModeler = self._choose_modeler(modeler, use_median)
+        self._modeler: AbstractModeler = self._choose_modeler(modeler, use_measure)
         # all models, modeled with this model generator
         self.models: Dict[Tuple[Callpath, Metric], Model] = {}
 
@@ -51,27 +59,43 @@ class ModelGenerator:
     def modeler(self):
         return self._modeler
 
-    def _choose_modeler(self, modeler: Union[AbstractModeler, str], use_median: bool) -> AbstractModeler:
+    def _choose_modeler(self, modeler: Union[AbstractModeler, str], use_measure) -> AbstractModeler:
         if isinstance(modeler, str):
-            try:
-                if len(self.experiment.parameters) == 1:
-                    # single-parameter model generator init here...
+
+            if len(self.experiment.parameters) == 1:
+                # single-parameter model generator init here...
+                try:
                     result_modeler = single_parameter.all_modelers[modeler]()
-                else:
-                    # multi-parameter model generator init here...
+                except KeyError:
+                    raise ValueError(
+                        f'A modeler with name "{modeler}" does not exist. For single-parameter experiments only the '
+                        f'following modelers are available "{", ".join(single_parameter.all_modelers.keys())}".') from None
+            else:
+                # multi-parameter model generator init here...
+                try:
                     result_modeler = multi_parameter.all_modelers[modeler]()
-                result_modeler.use_median = use_median
-            except KeyError:
-                raise ValueError(
-                    f'Modeler with name "{modeler}" does not exist.')
+                except KeyError as e:
+                    if modeler in single_parameter.all_modelers:
+                        raise ValueError(
+                            f'A multi-parameter modeler with name "{modeler}" does not exist. '
+                            f'You selected a modeler only available for single-parameter experiments. '
+                            f'For multi-parameter experiments only the '
+                            f'following modelers are available "{", ".join(multi_parameter.all_modelers.keys())}". '
+                            f'You can change the underlying single-parameter modeler by setting the '
+                            f'single-parameter-modeler option of the multi-parameter modeler.') from e
+                    raise ValueError(
+                        f'A modeler with name "{modeler}" does not exist. For multi-parameter experiments only the '
+                        f'following modelers are available "{", ".join(multi_parameter.all_modelers.keys())}".') from e
+                result_modeler.use_measure = use_measure
+
         elif modeler is NotImplemented:
             result_modeler = NotImplemented
         else:
             if (len(self.experiment.parameters) > 1) == isinstance(modeler, MultiParameterModeler):
                 # single-parameter model generator init here...
                 result_modeler = modeler
-                if use_median is not None:
-                    result_modeler.use_median = use_median
+                if use_measure is not None:
+                    result_modeler.use_measure = use_measure
             elif len(self.experiment.parameters) > 1:
                 raise ValueError("Modeler must use multiple parameters.")
             else:
@@ -93,7 +117,7 @@ class ModelGenerator:
 
     def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS, auto_append=True):
         mg = AggregateModelGenerator(self.experiment, aggregation, self._modeler, aggregation.NAME + ' ' + self.name,
-                                     self._modeler.use_median)
+                                     self._modeler.use_measure)
         aggregation.experiment = self.experiment
         mg.models = aggregation.aggregate(self.models, self.experiment.call_tree, self.experiment.metrics, progress_bar)
         if auto_append:
@@ -102,7 +126,7 @@ class ModelGenerator:
     def post_process(self, post_process: PostProcess, progress_bar=DUMMY_PROGRESS,
                      auto_append=True) -> PostProcessedModelSet:
         mg = PostProcessedModelSet(self.experiment, post_process, self._modeler,
-                                   post_process.NAME + ' ' + self.name, self._modeler.use_median)
+                                   post_process.NAME + ' ' + self.name, self._modeler.use_measure)
         post_process.experiment = self.experiment
         mg.models = post_process.process(self.models, progress_bar)
         if auto_append:
@@ -115,17 +139,10 @@ class ModelGenerator:
         elif self is other:
             return True
         else:
-            for m in self.models:
-                if self.models[m] == other.models[m]:
-                    continue
-                else:
-                    a, b = self.models[m], other.models[m]
-                    print(a == b)
-                    break
-            return self.models == other.models and \
-                self._modeler.NAME == other._modeler.NAME and \
-                self._modeler.use_median == other._modeler.use_median and \
-                modeler_options.equal(self._modeler, other._modeler)
+            return (self.models == other.models and
+                    self._modeler.NAME == other._modeler.NAME and
+                    self._modeler.use_measure == other._modeler.use_measure and
+                    modeler_options.equal(self._modeler, other._modeler))
 
     def restore_from_exp(self, experiment):
         self.experiment = experiment
@@ -138,8 +155,8 @@ class PostProcessedModelSet(ModelGenerator):
     def __init__(self, experiment: Experiment, post_processing: PostProcess,
                  modeler: Union[AbstractModeler, str] = "Default",
                  name: str = "Processed Models",
-                 use_median: bool = False):
-        super().__init__(experiment, modeler, name, use_median)
+                 use_measure: Measure = Measure.MEAN):
+        super().__init__(experiment, modeler, name, use_measure)
         self.post_processing = post_processing
         self.post_processing_history = [post_processing]
 
@@ -166,8 +183,8 @@ class AggregateModelGenerator(PostProcessedModelSet):
     def __init__(self, experiment: Experiment, aggregation: Aggregation,
                  modeler: Union[AbstractModeler, str] = "Default",
                  name: str = "New Modeler",
-                 use_median: bool = False):
-        super().__init__(experiment, aggregation, modeler, name, use_median)
+                 use_measure: Measure = Measure.MEAN):
+        super().__init__(experiment, aggregation, modeler, name, use_measure)
         self.aggregation = aggregation
 
     def aggregate(self, aggregation: Aggregation, progress_bar=DUMMY_PROGRESS, auto_append=True):
@@ -189,9 +206,9 @@ class ModelGeneratorSchema(BaseSchema):
             m.metric = metric
         return obj
 
-    @pre_load
-    def intercept(self, val, **kwargs):
-        return val
+    # @pre_load
+    # def intercept(self, val, **kwargs):
+    #     return val
 
 
 class PostProcessedModelSetSchema(ModelGeneratorSchema):
@@ -200,13 +217,13 @@ class PostProcessedModelSetSchema(ModelGeneratorSchema):
     def create_object(self):
         return PostProcessedModelSet(None, None, NotImplemented)
 
-    @pre_load
-    def intercept(self, data, many, **kwargs):
-        return data
-
-    @post_dump
-    def intercept2(self, val, **kwargs):
-        return val
+    # @pre_load
+    # def intercept(self, data, many, **kwargs):
+    #     return data
+    #
+    # @post_dump
+    # def intercept2(self, val, **kwargs):
+    #     return val
 
 
 class AggregateModelGeneratorSchema(PostProcessedModelSetSchema):

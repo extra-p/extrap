@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2023-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -27,6 +27,7 @@ class DynamicOption(Generic[T]):
     field: str = None
     on_change: Callable[[Any, T], None] = d_field(default=None, compare=False, hash=False)
     explanation_above: str = None
+    explanation_below: str = None
 
 
 @dataclass

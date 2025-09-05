@@ -5,12 +5,10 @@ default:
 stages:
   - test
   - run
-  - prep
-  - staging
   - release
 
 # Change pip's cache directory to be inside the project directory since we can
-# only cache local items. 
+# only cache local items.
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
@@ -35,7 +33,7 @@ before_script:
 .test:
   script:    
     - pip install pytest pytest-cov # flake8
-#    - flake8 --max-line-length=120 extrap tests setup.py
+    #    - flake8 --max-line-length=120 extrap tests setup.py
     - cd tests
     - pytest . --ignore-glob=test_gui*.py --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
   artifacts:
@@ -50,27 +48,45 @@ before_script:
         path: tests/junit/coverage.xml
 
 test-3.8:
-    extends: ".test"
-    image: "python:3.8"
+  extends: ".test"
+  image: "python:3.8"
 
 test-3.9:
-    extends: ".test"
-    image: "python:3.9"
+  extends: ".test"
+  image: "python:3.9"
 
 test-3.10:
-    extends: ".test"
-    image: "python:3.10"
+  extends: ".test"
+  image: "python:3.10"
 
 test-3.11:
-    extends: ".test"
-    image: "python:3.11"
+  extends: ".test"
+  image: "python:3.11"
 
-#test-3.12:
-#    extends: ".test"
-#    image: "python:3.12"
+test-3.12:
+  extends: ".test"
+  image: "python:3.12"
+
+test-macos:
+  extends: ".test"
+  tags:
+    - macos
+  image: ghcr.io/cirruslabs/macos-sonoma-base:latest
+  before_script:
+    - brew install python@3.9
+    - python3.9 --version  # For debugging
+    - python3.9 -m venv venv
+    - source venv/bin/activate
+    - python -m pip install --upgrade pip
+    - pip install .
+  script:
+    - pip install pytest pytest-cov
+    - cd tests
+    - pytest . --doctest-modules --junitxml=junit/test-results.xml --cov --cov-report=xml:junit/coverage.xml --cov-report=html:coverage
+
 
 run:
-  script:    
+  script:
     - extrap --version
 
 release_job:
@@ -79,10 +95,10 @@ release_job:
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*/'                 # Run this job when a tag is created
   before_script:
-    - echo "running release_job" 
+    - echo "running release_job"
   script:
     - echo "running release_job"
-  release:                               # See https://docs.gitlab.com/ee/ci/yaml/#release for available properties
+  release: # See https://docs.gitlab.com/ee/ci/yaml/#release for available properties
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
 
@@ -90,48 +106,16 @@ release_job:
 upload_release_job:
   stage: release
   tags: [ deep-sea, jacamar, shell ]
-  cache: {}
+  cache: { }
   rules:
     - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
       when: never
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+.*/'
   before_script:
-    - echo "Project located at $CI_PROJECT_DIR" 
+    - echo "Project located at $CI_PROJECT_DIR"
   script:
     - mkdir -p /p/project/deepsea/wp2/install_packages/extrap/
     - rm -rf .git
     - cd ..
     - mv "$CI_PROJECT_DIR" "$CI_PROJECT_NAME-$CI_COMMIT_TAG"
     - tar -czf "/p/project/deepsea/wp2/install_packages/extrap/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.gz" "$CI_PROJECT_NAME-$CI_COMMIT_TAG" 
-
-create_tarball:
-  stage: prep
-  tags: [ deep-sea, jacamar, shell ]
-  cache: {}
-  rules:
-    - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
-      when: never
-    - if: '$CI_PIPELINE_SOURCE == "push"' 
-  #    - if: '$CI_COMMIT_TITLE =~ /^CI.*/'
-  before_script:
-    - echo "Project located at $CI_PROJECT_DIR" 
-  script:
-    - echo "Pipeline triggered by and commiting as ${GITLAB_USER_LOGIN}"
-    - echo "Providing tarball on the DEEP system"
-    - mkdir -p -m 777 /p/project/deepsea/ci-stage-sources/e/Extra-P
-    - tar -cvz --exclude=.git* -f /p/project/deepsea/ci-stage-sources/e/Extra-P/extrap.tar.gz .
-
-trigger-downstream:
-  stage: staging
-  rules:
-    - if: '$CI_SERVER_HOST != "gitlab.jsc.fz-juelich.de"'
-      when: never
-    - if: '$CI_PIPELINE_SOURCE == "push"' 
-#    - if: '$CI_COMMIT_TITLE =~ /^CI.*/'
-  variables:
-    BUILD_INVERSE_DEPENDENCIES: 'TRUE'
-    EB_FILE_CURRENT: "Extra-P-4.1.0-GCCcore-11.3.0-Python-3.10.4-current.eb"
-  trigger: 
-    project: deep-sea/wp3/software/easybuild-repository-deep-sea
-    strategy: depend
-    branch: ci-2023-dev

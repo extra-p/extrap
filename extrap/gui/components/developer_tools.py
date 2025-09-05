@@ -81,7 +81,7 @@ def filter_1_percent_time(tree_view, on, tree_model):
     filter_id_percent_time = 'develop__filter_1_percent_time'
     if on:
         model_set = tree_view._selector_widget.getCurrentModel()
-        use_median = model_set.modeler.use_median
+        measure = model_set.modeler.use_measure
         t_metric = Metric('time')
         total_time = defaultdict(int)
         for (callpath,
@@ -91,7 +91,7 @@ def filter_1_percent_time(tree_view, on, tree_model):
             if callpath.lookup_tag(SumAggregation.TAG_CATEGORY) is None and \
                     not callpath.lookup_tag(SumAggregation.TAG_USAGE_DISABLED, False):
                 for measurement in measurements:
-                    total_time[measurement.coordinate] += measurement.value(use_median)
+                    total_time[measurement.coordinate] += measurement.value(measure)
 
         def filter_(node):
             if model_set is None or node.path is None:
@@ -99,7 +99,7 @@ def filter_1_percent_time(tree_view, on, tree_model):
 
             model = model_set.models.get((node.path, t_metric))
             if model:
-                ratios = [measurement.value(use_median) / total_time[measurement.coordinate] for measurement in
+                ratios = [measurement.value(measure) / total_time[measurement.coordinate] for measurement in
                           model.measurements]
                 node.path.tags['devel__filter__ratio'] = ratios
                 return any(r >= 0.01 for r in ratios)
@@ -185,7 +185,7 @@ def generate_pgfplot_latex(model: Model):
 
     x_max = max(coordinates)
     x_min = min(coordinates)
-    x = np.linspace(x_min, 2*x_max, 120)
+    x = np.linspace(x_min, 2 * x_max, 120)
     y = model.hypothesis.function.evaluate(x)
 
     output = r"\addplot[only marks] coordinates {"

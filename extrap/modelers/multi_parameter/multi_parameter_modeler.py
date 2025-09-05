@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,13 +11,12 @@ import warnings
 from typing import Sequence
 
 import numpy as np
-
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.functions import MultiParameterFunction
 from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import MultiParameterHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.measurement import Measurement, Measure
 from extrap.entities.model import Model
 from extrap.entities.terms import MultiParameterTerm
 from extrap.modelers import single_parameter
@@ -52,7 +51,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         """
         Initialize SingleParameterModeler object.
         """
-        super().__init__(use_median=False, single_parameter_modeler=single_parameter.Default())
+        super().__init__(use_measure=Measure.MEAN, single_parameter_modeler=single_parameter.Default())
         # value for the minimum number of measurement points required for modeling
         self.min_measurement_points = 5
         self.epsilon = 0.0005  # value for the minimum term contribution
@@ -69,11 +68,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                 return measurement
 
             measurement = Measurement(Coordinate(c), ms[0].callpath, ms[0].metric, None)
-
-            if self.use_median:
-                value = np.mean([m.median for m in ms])
-            else:
-                value = np.mean([m.mean for m in ms])
+            value = np.mean(np.fromiter(Measurement.select_measure(ms, self.use_measure), float, len(ms)))
 
             measurement.mean = value
             measurement.median = value
@@ -137,7 +132,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                     else:
                         groups[coordinate_p_] = [m]
 
-            # remove all measurements from the group which cover not the same range as the inital group
+            # remove all measurements from the group which cover not the same range as the initial group
             cms = iter(groups.values())
             first_list = next(cms)
             common_coords = set(m.coordinate.as_partial_tuple(p) for m in first_list)
@@ -152,13 +147,12 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
                     'validation__ignore__num_measurements', False)):
                 warnings.warn(
-                    "Could not use all measurement points. At least 25 measurements are needed; one for each "
-                    "combination of parameters.")
+                    f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
+                          f"measurements are needed; one for each combination of parameters.")
 
-        previous = np.seterr(invalid='ignore')
-        combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
-                                 for p, grp in enumerate(result_groups)]
-        np.seterr(**previous)
+        with np.errstate(invalid='ignore'):
+            combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
+                                     for p, grp in enumerate(result_groups)]
 
         return combined_measurements
 
@@ -210,19 +204,19 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
 
-        # check if the number of measurements satisfies the reuqirements of the modeler (>=5)
+        # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
             if not (not (len(measurements) < 1) and measurements[0].callpath and measurements[0].callpath.lookup_tag(
                     'validation__ignore__num_measurements', False)):
-                warnings.warn("Number of measurements for each parameter needs to be at least 5"
-                              " in order to create a performance model.")
+                warnings.warn(f"Number of measurements for each parameter needs to be at least "
+                              f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling
         # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
         # use all available additional points for modeling the multi-parameter models
-        meanModel, constantCost = ConstantHypothesis.calculate_constant_indicators(measurements, self.use_median)
+        meanModel, constantCost = ConstantHypothesis.calculate_constant_indicators(measurements, self.use_measure)
 
         # find out which parameters should be kept
         compound_term_pairs = []
@@ -237,7 +231,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         if len(compound_term_pairs) == 0:
             constant_function = ConstantFunction()
             constant_function.constant_coefficient = meanModel
-            constant_hypothesis = ConstantHypothesis(constant_function, self.use_median)
+            constant_hypothesis = ConstantHypothesis(constant_function, self.use_measure)
             constant_hypothesis.compute_cost(measurements)
             return Model(constant_hypothesis)
 
@@ -254,12 +248,12 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             compound_term.reset_coefficients()
             multi_parameter_function = MultiParameterFunction(multi_parameter_term)
             multi_parameter_function.constant_coefficient = functions[param].constant_coefficient
-            multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_median)
+            multi_parameter_hypothesis = MultiParameterHypothesis(multi_parameter_function, self.use_measure)
             multi_parameter_hypothesis.compute_cost(measurements)
 
             # multi parameter function with newly calculated coefficients using all values
             recomputed_coeffficients_hypothesis = MultiParameterHypothesis(
-                MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_median)
+                MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_measure)
             recomputed_coeffficients_hypothesis.compute_coefficients(measurements,
                                                                      negative_coefficients=self.negative_coefficients)
             recomputed_coeffficients_hypothesis.compute_cost(measurements)
@@ -364,7 +358,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             ]
 
         # create the hypotheses from the functions
-        hypotheses = [MultiParameterHypothesis(f, self.use_median)
+        hypotheses = [MultiParameterHypothesis(f, self.use_measure)
                       for f in mp_functions]
 
         # select one function as the bestHypothesis for the start
@@ -373,9 +367,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         best_hypothesis.compute_cost(measurements)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-        logging.debug(f"hypothesis 0: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
-                      f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
-                      f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
+        logging.info("hypothesis 0: %s --- smape: %g --- ar2: %g --- rss: %g --- rrss: %g --- re: %g",
+                     best_hypothesis.function, best_hypothesis.SMAPE, best_hypothesis.AR2, best_hypothesis.RSS,
+                     best_hypothesis.rRSS, best_hypothesis.RE)
 
         # find the best hypothesis
         for i, hypothesis in enumerate(hypotheses):
@@ -383,9 +377,9 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             hypothesis.compute_cost(measurements)
             hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
-            logging.debug(f"hypothesis {i}: {hypothesis.function} --- smape: {hypothesis.SMAPE} "
-                          f"--- ar2: {hypothesis.AR2} --- rss: {hypothesis.RSS} "
-                          f"--- rrss: {hypothesis.rRSS} --- re: {hypothesis.RE}")
+            logging.info("hypothesis %i: %s --- smape: %g --- ar2: %g --- rss: %g --- rrss: %g --- re: %g", i,
+                         hypothesis.function, hypothesis.SMAPE, hypothesis.AR2, hypothesis.RSS, hypothesis.rRSS,
+                         hypothesis.RE)
 
             term_contribution_big_enough = True
             # for all compound terms check if they are smaller than minimum allowed contribution
@@ -406,8 +400,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # add the best found hypothesis to the model list
         model = Model(best_hypothesis)
 
-        logging.debug(f"best hypothesis: {best_hypothesis.function} --- smape: {best_hypothesis.SMAPE} "
-                      f"--- ar2: {best_hypothesis.AR2} --- rss: {best_hypothesis.RSS} "
-                      f"--- rrss: {best_hypothesis.rRSS} --- re: {best_hypothesis.RE}")
+        logging.info("best hypothesis: %s --- smape: %g --- ar2: %g --- rss: %g --- rrss: %g --- re: %g",
+                     best_hypothesis.function, best_hypothesis.SMAPE, best_hypothesis.AR2, best_hypothesis.RSS,
+                     best_hypothesis.rRSS, best_hypothesis.RE)
 
         return model

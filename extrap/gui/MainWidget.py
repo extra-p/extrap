@@ -5,8 +5,6 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import itertools
-import logging
 import signal
 import sys
 from enum import Enum
@@ -14,7 +12,6 @@ from functools import partial
 from numbers import Number
 from pathlib import Path
 from typing import Optional, Sequence, Tuple, Type
-from urllib.error import URLError, HTTPError
 
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
@@ -24,6 +21,7 @@ import extrap
 from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.entities.calltree import Node
 from extrap.entities.experiment import Experiment
+from extrap.entities.measurement import Measure
 from extrap.entities.model import Model
 from extrap.entities.scaling_type import ScalingType
 from extrap.fileio import io_helper
@@ -36,6 +34,7 @@ from extrap.gui.CoordinateTransformation import CoordinateTransformationDialog
 from extrap.gui.DataDisplay import DataDisplayManager, GraphLimitsWidget
 from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
+from extrap.gui.MeasurementWizardWidget import MeasurementWizardWidget
 from extrap.gui.ModelerWidget import ModelerWidget
 from extrap.gui.PlotTypeSelector import PlotTypeSelector
 from extrap.gui.PostProcessingWidget import PostProcessingWidget
@@ -43,7 +42,7 @@ from extrap.gui.RankingWidget import RankingWidget
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
 from extrap.gui.comparison.comparison_wizard import ComparisonWizard
-from extrap.gui.components import file_dialog, developer_tools
+from extrap.gui.components import file_dialog
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.about_dialog import AboutDialog
 from extrap.gui.components.developer_tools import init_developer_menu, DEV_CONFIG
@@ -85,9 +84,9 @@ class MainWidget(QMainWindow):
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-        # switch for using mean or median measurement values for modeling
+        # switch for selecting measure of measurement values for modeling
         # is used when loading the data from a file and then modeling directly
-        self.median = False
+        self.measure = Measure.MEAN
 
         if sys.platform.startswith('darwin'):
             self._macos_update_title_bar()
@@ -128,9 +127,15 @@ class MainWidget(QMainWindow):
         self.postprocessing_widget = PostProcessingWidget(self, dock)
         dock.setWidget(self.postprocessing_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        # Right side: Measurement Wizard
+        dock = QDockWidget("Measurement Point Suggestion", self)
+        self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
+        dock.setWidget(self.measurementWizard_widget)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+
         # bottom widget
         dock = QDockWidget("Color Info", self)
-        self.color_widget = ColorWidget()
+        self.color_widget = ColorWidget(self)
         self.min_max_value_updated_event += self.color_widget.update_min_max
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
@@ -314,6 +319,7 @@ class MainWidget(QMainWindow):
         self.selector_widget.on_experiment_changed()
         self.data_display.experimentChange()
         self.modeler_widget.experimentChanged()
+        self.measurementWizard_widget.experimentChanged()
         self.postprocessing_widget.on_experiment_changed(experiment)
         self.experiment_change = False
         self.updateMinMaxValue()
@@ -418,7 +424,7 @@ class MainWidget(QMainWindow):
 
     def model_experiment(self, experiment, file_name=""):
         # initialize model generator
-        model_generator = ModelGenerator(experiment, use_median=self.median, name=DEFAULT_MODEL_NAME)
+        model_generator = ModelGenerator(experiment, use_measure=self.measure, name=DEFAULT_MODEL_NAME)
         with ProgressWindow(self, 'Modeling') as pbar:
             # create models from data
             model_generator.model_all(pbar)

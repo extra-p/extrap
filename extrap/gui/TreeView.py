@@ -14,6 +14,8 @@ from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.entities.model import SegmentedModel
+from extrap.gui.TreeModel import TreeModel
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
 from extrap.gui.TreeModel import TreeModel, TreeItem
@@ -49,8 +51,11 @@ class TreeView(QTreeView):
 
         child_count = index.model().rowCount(parent=index)
         for i in range(0, child_count):
-            child = cast(TreeItem, index.internalPointer()).child(i)
-            self.collapseRecursively(child)
+            try:
+                child = cast(TreeItem, index.internalPointer()).child(i)
+                self.collapseRecursively(child)
+            except AttributeError:
+                pass
 
     def expand_largest(self, model, index):
         root = index.internalPointer()
@@ -93,7 +98,7 @@ class TreeView(QTreeView):
     def get_value_from_node(self, tree_model, node, parent_index):
         index = tree_model.index(node.row(), 0, parent_index)
         callpath = tree_model.getValue(index).path
-        node_model = tree_model.getSelectedModel(callpath)
+        node_model, _ = tree_model.getSelectedModel(callpath)
         if node_model:
             return tree_model.get_comparison_value(node_model)
         else:
@@ -135,7 +140,7 @@ class TreeView(QTreeView):
                     self.selectedIndexes()[0])
                 if selectedCallpath is None:
                     return
-                selectedModel = model.getSelectedModel(selectedCallpath.path)
+                selectedModel, experiment = model.getSelectedModel(selectedCallpath.path)
 
                 expandAction = menu.addAction("Expand all")
                 expandAction.triggered.connect(self.expandAll)
@@ -252,6 +257,17 @@ class TreeView(QTreeView):
                 # print(str(ps[i])+","+str(actual_points[i]))
         else:
             msg_txt += "No data available."
+
+        if isinstance(model, SegmentedModel):
+            for i, segment_model in enumerate(model.segment_models):
+                if segment_model.predictions is not None and segment_model.measurements is not None:
+                    msg_txt += "\nModel " + str(i + 1) + ":\n\n"
+                    row_format = "{:20} {:>15} {:>15} {:>15}\n"
+                    msg_txt += row_format.format("Coordinate", "Predicted", "Actual Mean", "Actual Median")
+                    row_format = "{:20} {:>15g} {:>15g} {:>15g}\n"
+                    for pred, m in zip(segment_model.predictions, segment_model.measurements):
+                        msg_txt += row_format.format(str(m.coordinate), pred, m.mean, m.median)
+                        # print(str(ps[i])+","+str(actual_points[i]))
 
         print(msg_txt)
         print("")

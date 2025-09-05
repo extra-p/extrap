@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -31,11 +31,11 @@ def read_experiment(path, progress_bar=DUMMY_PROGRESS) -> Experiment:
             data = file.read(EXPERIMENT_DATA_FILE).decode("utf-8")
             progress_bar.update()
             try:
-                value_reader = ValueReader(file)
-                schema.set_value_io(value_reader)
-                experiment = schema.loads(data)
-                progress_bar.update()
-                return experiment
+                with ValueReader(file) as value_reader:
+                    schema.set_value_io(value_reader)
+                    experiment = schema.loads(data)
+                    progress_bar.update()
+                    return experiment
             except ValidationError as v_err:
                 raise FileFormatError(str(v_err)) from v_err
     except (IOError, zipfile.BadZipFile) as err:

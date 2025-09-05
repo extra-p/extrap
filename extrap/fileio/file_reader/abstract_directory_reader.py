@@ -55,6 +55,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             # parameters = folder_name.split(".")
 
             param_list = re.split('([0-9.,]+)', parameters)
+            if len(param_list) <= 1:
+                raise FileFormatError(f"Could not detect parameter in {folder_name}")
             if "" in param_list:
                 param_list.remove("")
 
@@ -103,3 +105,9 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
 class AbstractScalingConversionReader(FileReader, DynamicOptions, abc.ABC):
     scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK, ScalingType,
                                                    range={i.name.lower(): i.value for i in ScalingType})
+    scaling_type.explanation_below = ("Select the type of scaling analysis.<br>"
+                                      "Use <b>strong</b> scaling if the problem size remains unchanged while adding "
+                                      "more computational resources (e.g., nodes, processes, cores, threads).<br>"
+                                      "If the problem size was scaled alongside the computational resources,"
+                                      "choose either <b>weak</b> scaling or <b>weak_threaded</b> scaling when your "
+                                      "application uses multithreading.")

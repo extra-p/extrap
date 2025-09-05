@@ -45,7 +45,7 @@ class EstimateTimeRelatedMetric(PostProcess):
             measurements = list(measurements_dict.values())
             hypothesis.compute_cost(measurements)
             if hasattr(hypothesis, "compute_adjusted_rsquared"):
-                _, constant_cost = Hypothesis.calculate_constant_indicators(measurements, hypothesis.use_median)
+                _, constant_cost = Hypothesis.calculate_constant_indicators(measurements, hypothesis.use_measure)
                 hypothesis.compute_adjusted_rsquared(constant_cost, measurements)
 
             model = Model(hypothesis, callpath, metric_estimated)

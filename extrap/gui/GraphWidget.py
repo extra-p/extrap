@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import importlib.resources
+import itertools
 import math
 import typing
 from itertools import cycle
@@ -22,6 +23,7 @@ from extrap.entities.model import Model
 from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
 from extrap.util.exceptions import RecoverableError
 from extrap.util.formatting_helper import format_number_plain_text
+from extrap.util.formatting_helper import replace_method_parameters
 
 if typing.TYPE_CHECKING:
     from extrap.gui.MainWidget import MainWidget
@@ -402,7 +404,7 @@ class GraphWidget(QWidget):
         if self.combine_all_callpath is False:
             text_len = 0
             for callpath, color in callpath_color_dict.items():
-                text_len = max(text_len, font_metrics.horizontalAdvance(callpath.name))
+                text_len = max(text_len, font_metrics.horizontalAdvance(replace_method_parameters(callpath.name)))
             self.legend_width = 55 + text_len
             self.legend_height = counter_increment * dict_size + 3 * px_between
 
@@ -422,13 +424,14 @@ class GraphWidget(QWidget):
                 paint.setPen(self.TEXT_COLOR)
                 paint.drawText(QRect(left_margin_text, self.legend_y + counter,
                                      text_len, font_height),
-                               Qt.TextFlag.TextDontClip, callpath.name)
+                               Qt.TextFlag.TextDontClip, replace_method_parameters(callpath.name))
 
                 counter = counter + counter_increment
 
         else:
 
-            aggregated_callpath_name = ' + '.join(callpath.name for callpath, color in callpath_color_dict.items())
+            aggregated_callpath_name = ' + '.join(replace_method_parameters(callpath.name)
+                                                  for callpath, color in callpath_color_dict.items())
 
             bounding_rect_text = font_metrics.boundingRect(
                 QRect(left_margin_text, self.legend_y + 2 * px_between, self.graph_width - left_margin_text,
@@ -458,32 +461,34 @@ class GraphWidget(QWidget):
     def drawModel(self, paint, model, color, style=Qt.PenStyle.SolidLine):
         function = model.hypothesis.function
 
-        cord_list = self.calculate_function(function, self.graph_width)
+        cord_lists = self.calculate_function(function, self.graph_width)
 
         pen = QPen(QColor(color))
         pen.setStyle(style)
         pen.setWidth(2)
         paint.setPen(pen)
 
-        points = [
-            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
-        ]
-        paint.drawPolyline(points)
+        for cord_list in cord_lists:
+            points = [
+                QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+            ]
+            paint.drawPolyline(points)
 
     def drawAggregratedModel(self, paint, model_list):
         functions = list()
         for model in model_list:
             function = model.hypothesis.function
             functions.append(function)
-        cord_list = self.calculate_aggregate_callpath_function(
+        cord_lists = self.calculate_aggregate_callpath_function(
             functions, self.graph_width)
         pen = QPen(self.AGGREGATE_MODEL_COLOR)
         pen.setWidth(2)
         paint.setPen(pen)
-        points = [
-            QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
-        ]
-        paint.drawPolyline(points)
+        for cord_list in cord_lists:
+            points = [
+                QPointF(self.logicalXtoPixel(x), self.logicalYtoPixel(y)) for x, y in cord_list
+            ]
+            paint.drawPolyline(points)
 
     def drawAxis(self, paint, selectedMetric):
         # Determing the number of divisions to be marked on x axis such that there is a minimum distance of 100 pixels
@@ -593,7 +598,7 @@ class GraphWidget(QWidget):
             for x_value in range((x_origin + 7), x_other_end, +3):
                 paint.drawPoint(x_value, y)
 
-    def calculate_function(self, function, length_x_axis):
+    def calculate_function(self, function, length_x_axis, x_min=None, x_max=None):
         """
          This function calculates the x values,
          based on the range that were provided &
@@ -601,10 +606,12 @@ class GraphWidget(QWidget):
         """
 
         # m_x_lower_bound = 1
-        number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
-        previous = numpy.seterr(invalid='ignore', divide='ignore')
-        y_list = function.evaluate(x_list).reshape(-1)
-        numpy.seterr(**previous)
+        if x_min != None and x_max != None:
+            number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis, x_min, x_max)
+        else:
+            number_of_x_points, x_list, x_values = self._calculate_evaluation_points(length_x_axis)
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            y_list = function.evaluate(x_list).reshape(-1)
         cord_list = self._create_drawing_iterator(x_values, y_list)
 
         return cord_list
@@ -618,10 +625,9 @@ class GraphWidget(QWidget):
 
         y_list = numpy.zeros(number_of_x_points)
 
-        previous = numpy.seterr(invalid='ignore', divide='ignore')
-        for function in functions:
-            y_list += function.evaluate(x_list).reshape(-1)
-        numpy.seterr(**previous)
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            for function in functions:
+                y_list += function.evaluate(x_list).reshape(-1)
 
         cord_list = self._create_drawing_iterator(x_values, y_list)
 
@@ -630,15 +636,18 @@ class GraphWidget(QWidget):
     def _create_drawing_iterator(self, x_values, y_list):
         y_list[y_list == math.inf] = numpy.max(y_list[y_list != math.inf])
         y_list[y_list == -math.inf] = numpy.min(y_list[y_list != -math.inf])
+
         cord_list_before_filtering = zip(x_values, y_list)
-        cord_list = ((x, y)
-                     for x, y in cord_list_before_filtering
-                     if not math.isnan(y) and 0 <= y)
+        cord_groups = itertools.groupby(cord_list_before_filtering, key=lambda k: not math.isnan(k[1]) and 0 <= k[1])
+        cord_list = (v for k, v in cord_groups if k)
         return cord_list
 
-    def _calculate_evaluation_points(self, length_x_axis):
+    def _calculate_evaluation_points(self, length_x_axis, x_min=None, x_max=None):
         number_of_x_points = int(length_x_axis / 2)
-        x_values = numpy.linspace(0, self.max_x, number_of_x_points)
+        if x_min != None and x_max != None:
+            x_values = numpy.linspace(x_min, x_max, number_of_x_points)
+        else:
+            x_values = numpy.linspace(0, self.max_x, number_of_x_points)
         x_list = numpy.ndarray((len(self.main_widget.getExperiment().parameters), number_of_x_points))
         param = self.main_widget.data_display.getAxisParameter(0).id
         parameter_value_list = self.main_widget.data_display.getValues()
@@ -713,10 +722,10 @@ class GraphWidget(QWidget):
     def calculateDataPoints(self, model, ignore_limit=False):
         """ This function calculates datapoints to be marked on the graph
         """
-
         datapoints = model.measurements
         if not datapoints:
             return []
+
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         datapoint_x_absolute_pos_list = list()
         datapoint_y_absolute_pos_list = list()
@@ -777,43 +786,41 @@ class GraphWidget(QWidget):
                     y = max(model.predictions)
                     y_max = max(y, y_max)
 
-        previous = numpy.seterr(invalid='ignore', divide='ignore')
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            if self.combine_all_callpath:
+                y_agg = 0
+                for model in modelList:
+                    function = model.hypothesis.function
+                    y_agg = y_agg + function.evaluate(pv_list)
+                y_max = max(y_agg, y_max)
 
-        if self.combine_all_callpath:
-            y_agg = 0
-            for model in modelList:
-                function = model.hypothesis.function
-                y_agg = y_agg + function.evaluate(pv_list)
-            y_max = max(y_agg, y_max)
+                pv_list[param] = 1
+                y_agg = 0
+                for model in modelList:
+                    function = model.hypothesis.function
+                    y = function.evaluate(pv_list)
+                    if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
+                        y = max(model.predictions)
+                    y_agg += y
+                y_max = max(y_agg, y_max)
 
-            pv_list[param] = 1
-            y_agg = 0
+            # Check the value at the end of the displayed interval
             for model in modelList:
                 function = model.hypothesis.function
                 y = function.evaluate(pv_list)
                 if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                     y = max(model.predictions)
-                y_agg += y
-            y_max = max(y_agg, y_max)
+                y_max = max(y, y_max)
 
-        # Check the value at the end of the displayed interval
-        for model in modelList:
-            function = model.hypothesis.function
-            y = function.evaluate(pv_list)
-            if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
-                y = max(model.predictions)
-            y_max = max(y, y_max)
+            # Check the value at the beginning of the displayed interval
+            pv_list[param] = 1
+            for model in modelList:
+                function = model.hypothesis.function
+                y = function.evaluate(pv_list)
+                if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
+                    y = max(model.predictions)
+                y_max = max(y, y_max)
 
-        # Check the value at the beginning of the displayed interval
-        pv_list[param] = 1
-        for model in modelList:
-            function = model.hypothesis.function
-            y = function.evaluate(pv_list)
-            if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
-                y = max(model.predictions)
-            y_max = max(y, y_max)
-
-        numpy.seterr(**previous)
         # Ensure that the maximum value is never too small
         if y_max < 0.000001:
             y_max = 1
@@ -821,19 +828,36 @@ class GraphWidget(QWidget):
         return y_max
 
     def showOutlierPoints(self, paint, selected_model):
-        datapoints = selected_model.measurements
-        if not datapoints:
-            return
-        parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
-        for datapoint in datapoints:
-            x_value = datapoint.coordinate[parameter_datapoint]
-            if x_value <= self.max_x:
-                y_min_value = datapoint.minimum
-                y_max_value = datapoint.maximum
-                y_mean_value = datapoint.mean
-                y_median_value = datapoint.median
-                self.plotOutliers(paint, x_value, y_min_value,
-                                  y_mean_value, y_median_value, y_max_value)
+        if isinstance(selected_model, list):
+            parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
+            for i in range(len(selected_model)):
+                datapoints = selected_model[i].measurements
+                if not datapoints:
+                    continue
+                for datapoint in datapoints:
+                    x_value = datapoint.coordinate[parameter_datapoint]
+                    if x_value <= self.max_x:
+                        y_min_value = datapoint.minimum
+                        y_max_value = datapoint.maximum
+                        y_mean_value = datapoint.mean
+                        y_median_value = datapoint.median
+                        self.plotOutliers(paint, x_value, y_min_value,
+                                          y_mean_value, y_median_value, y_max_value)
+
+        else:
+            datapoints = selected_model.measurements
+            if not datapoints:
+                return
+            parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
+            for datapoint in datapoints:
+                x_value = datapoint.coordinate[parameter_datapoint]
+                if x_value <= self.max_x:
+                    y_min_value = datapoint.minimum
+                    y_max_value = datapoint.maximum
+                    y_mean_value = datapoint.mean
+                    y_median_value = datapoint.median
+                    self.plotOutliers(paint, x_value, y_min_value,
+                                      y_mean_value, y_median_value, y_max_value)
 
     def plotOutliers(self, paint, x_value, y_min_value, y_mean_value, y_median_value, y_max_value):
         # create cordinates and merge them to list
@@ -934,9 +958,6 @@ class GraphWrapperWidget(AbstractPlotWidget):
     @staticmethod
     def getNumAxis():
         return GraphWidget.getNumAxis()
-
-    def getMax(self, axis):
-        raise NotImplementedError("The assignment should happen in __init__")
 
     def __init__(self, main_widget: MainWidget, parent):
         super().__init__(parent)

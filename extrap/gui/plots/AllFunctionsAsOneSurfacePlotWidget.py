@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -61,9 +61,10 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         ax_all.set_ylabel('\n' + y_label, linespacing=3.1)
         ax_all.set_zlabel(
             '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+        opacity = widget.plot_formatting_options.surface_opacity
         for i in range(len(Z_List)):
             ax_all.plot_surface(
-                X, Y, Z_List[i], color=dict_callpath_color[selected_call_nodes[i]])
+                X, Y, Z_List[i], color=dict_callpath_color[selected_call_nodes[i]], alpha=opacity)
 
         # draw legend
         self.draw_legend(ax_all, dict_callpath_color)

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -13,7 +13,6 @@ from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 import numpy
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import *  # @UnusedWildImport
-
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
@@ -162,6 +161,8 @@ class SelectorWidget(QWidget):
                            (c.path, metric) in self.getCurrentModel().models]
         self.main_widget.model_color_map.update(call_tree_nodes)
         self.main_widget.on_selection_changed()
+        #TODO check if necessary:
+        #self.main_widget.measurementWizard_widget.callpath_selection_changed()
 
     def fillMetricList(self):
         self.metric_selector.clear()
@@ -288,7 +289,7 @@ class SelectorWidget(QWidget):
         dialog.setWindowTitle('Modeler Options: ' + model.name)
         dialog.setLayout(QVBoxLayout(dialog))
         dialog.layout().addWidget(QLabel('Modeler: ' + model.modeler.NAME))
-        dialog.layout().addWidget(QLabel('Uses: ' + 'Median' if model.modeler.use_median else 'Mean'))
+        dialog.layout().addWidget(QLabel('Uses: ' + str(model.modeler.use_measure)))
         options_widget = ModelerOptionsWidget(dialog, model.modeler, has_reset_button=False)
         dialog.layout().addWidget(options_widget)
         options_widget.setEnabled(False)
@@ -378,9 +379,9 @@ class SelectorWidget(QWidget):
                 param_value_list = self.getParameterValues()
                 call_tree = experiment.call_tree
                 nodes = call_tree.get_nodes()
-                previous = numpy.seterr(divide='ignore', invalid='ignore')
-                value_list = self.iterate_children(model_set.models, param_value_list, nodes, selected_metric)
-                numpy.seterr(**previous)
+                with numpy.errstate(divide='ignore', invalid='ignore'):
+                    value_list = self.iterate_children(model_set.models, param_value_list, nodes, selected_metric)
+
                 if len(value_list) > 0:
                     min_max_value = max(0.0, min(value_list)), max(0.0, max(value_list))
         self.min_value, self.max_value = min_max_value
