@@ -15,13 +15,6 @@ if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     os.system("kaitai-struct-compiler --python-package \".\" --target python " + " ".join(TARGETS))
 
-    for filename in OUTPUTS:
-        with open(filename, 'r') as file:
-            text = file.read()
-            text = text.replace('self._raw', '_raw')
-        with open(filename, 'w') as file:
-            file.write(text)
-
     if not RETAIN_RAW:
         for filename in OUTPUTS:
             with open(filename, 'r') as file:

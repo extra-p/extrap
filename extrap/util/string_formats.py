@@ -9,7 +9,7 @@ import enum
 
 
 class FunctionFormats(enum.Enum):
-    NONE = None,
     PYTHON = enum.auto()
     LATEX = enum.auto()
     HTML = enum.auto()
+    NONE = None
