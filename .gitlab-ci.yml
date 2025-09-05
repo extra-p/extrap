@@ -24,6 +24,7 @@ cache:
 
 before_script:
   - python --version  # For debugging
+  - ls
   - python -m venv venv
   - source venv/bin/activate
   - python -m pip install --upgrade pip
@@ -65,6 +66,10 @@ test-3.11:
 test-3.12:
   extends: ".test"
   image: "python:3.12"
+
+test-3.13:
+  extends: ".test"
+  image: "python:3.13"
 
 test-macos:
   extends: ".test"
