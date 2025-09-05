@@ -1,18 +1,10 @@
-# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
-#
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
-#
-# This software may be modified and distributed under the terms of a BSD-style license.
-# See the LICENSE file in the base directory for details.
-
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if getattr(kaitaistruct, 'API_VERSION', (0, 9)) < (0, 9):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 from . import file_header
@@ -30,8 +22,8 @@ class NsightCuprofReport(KaitaiStruct):
         self.magic = self._io.read_bytes(4)
         if not self.magic == b"\x4E\x56\x52\x00":
             raise kaitaistruct.ValidationNotEqualError(b"\x4E\x56\x52\x00", self.magic, self._io, u"/seq/0")
-        self.sizeof_header = self._io.read_u4le()
-        _raw_header = self._io.read_bytes(self.sizeof_header)
+        self.len_header = self._io.read_u4le()
+        _raw_header = self._io.read_bytes(self.len_header)
         _io__raw_header = KaitaiStream(BytesIO(_raw_header))
         self.header = file_header.FileHeader(_io__raw_header)
         self.blocks = []
@@ -54,26 +46,26 @@ class NsightCuprofReport(KaitaiStruct):
         @property
         def num_sources(self):
             if hasattr(self, '_m_num_sources'):
-                return self._m_num_sources if hasattr(self, '_m_num_sources') else None
+                return self._m_num_sources
 
             self._m_num_sources = 0
-            return self._m_num_sources if hasattr(self, '_m_num_sources') else None
+            return getattr(self, '_m_num_sources', None)
 
         @property
         def num_results(self):
             if hasattr(self, '_m_num_results'):
-                return self._m_num_results if hasattr(self, '_m_num_results') else None
+                return self._m_num_results
 
             self._m_num_results = 0
-            return self._m_num_results if hasattr(self, '_m_num_results') else None
+            return getattr(self, '_m_num_results', None)
 
         @property
         def payload_size(self):
             if hasattr(self, '_m_payload_size'):
-                return self._m_payload_size if hasattr(self, '_m_payload_size') else None
+                return self._m_payload_size
 
             self._m_payload_size = 0
-            return self._m_payload_size if hasattr(self, '_m_payload_size') else None
+            return getattr(self, '_m_payload_size', None)
 
 
     class PayloadResult(KaitaiStruct):
@@ -84,8 +76,8 @@ class NsightCuprofReport(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.sizeof_payload = self._io.read_u4le()
-            _raw_entry = self._io.read_bytes(self.sizeof_payload)
+            self.len_entry = self._io.read_u4le()
+            _raw_entry = self._io.read_bytes(self.len_entry)
             _io__raw_entry = KaitaiStream(BytesIO(_raw_entry))
             self.entry = profile_result.ProfileResult(_io__raw_entry)
 
@@ -98,8 +90,8 @@ class NsightCuprofReport(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.sizeof_payload = self._io.read_u4le()
-            _raw_entry = self._io.read_bytes(self.sizeof_payload)
+            self.len_entry = self._io.read_u4le()
+            _raw_entry = self._io.read_bytes(self.len_entry)
             _io__raw_entry = KaitaiStream(BytesIO(_raw_entry))
             self.entry = profile_source.ProfileSource(_io__raw_entry)
 
@@ -114,13 +106,13 @@ class NsightCuprofReport(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.sources = [None] * (self.num_sources)
+            self.sources = []
             for i in range(self.num_sources):
-                self.sources[i] = NsightCuprofReport.PayloadSource(self._io, self, self._root)
+                self.sources.append(NsightCuprofReport.PayloadSource(self._io, self, self._root))
 
-            self.results = [None] * (self.num_results)
+            self.results = []
             for i in range(self.num_results):
-                self.results[i] = NsightCuprofReport.PayloadResult(self._io, self, self._root)
+                self.results.append(NsightCuprofReport.PayloadResult(self._io, self, self._root))
 
 
 
@@ -132,8 +124,8 @@ class NsightCuprofReport(KaitaiStruct):
             self._read()
 
         def _read(self):
-            self.sizeof_header = self._io.read_u4le()
-            _raw_header = self._io.read_bytes(self.sizeof_header)
+            self.len_header = self._io.read_u4le()
+            _raw_header = self._io.read_bytes(self.len_header)
             _io__raw_header = KaitaiStream(BytesIO(_raw_header))
             self.header = block_header.BlockHeader(_io__raw_header)
             _raw_payload = self._io.read_bytes(self.header.payload_size)

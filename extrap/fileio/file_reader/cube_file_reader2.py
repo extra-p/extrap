@@ -11,16 +11,13 @@ import importlib.metadata
 import logging
 import warnings
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
 from typing import Dict, Union, Sequence, Tuple, Optional
 
 import numpy
-from numpy import ma
-import numpy as np
-import pkg_resources
 from numpy import ma
 from packaging.version import Version
 from pycubexr import CubexParser

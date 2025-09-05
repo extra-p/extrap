@@ -7,10 +7,10 @@ meta:
 seq:
   - id: magic
     contents: [ "NVR", 0 ]
-  - id: sizeof_header
+  - id: len_header
     type: u4
   - id: header
-    size: sizeof_header
+    size: len_header
     type: file_header
   - id: blocks
     type: block
@@ -18,10 +18,10 @@ seq:
 types:
   block:
     seq:
-      - id: sizeof_header
+      - id: len_header
         type: u4
       - id: header
-        size: sizeof_header
+        size: len_header
         type: block_header
       - id: payload
         type: payload_entries(header.as<i_block_header>.num_sources, header.as<i_block_header>.num_results)
@@ -54,15 +54,15 @@ types:
         repeat-expr: num_results
   payload_source:
     seq:
-      - id: sizeof_payload
+      - id: len_entry
         type: u4
       - id: entry
-        size: sizeof_payload
+        size: len_entry
         type: profile_source
   payload_result:
     seq:
-      - id: sizeof_payload
+      - id: len_entry
         type: u4
       - id: entry
-        size: sizeof_payload
+        size: len_entry
         type: profile_result
