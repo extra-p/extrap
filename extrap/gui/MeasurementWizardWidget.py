@@ -14,6 +14,7 @@ import numpy as np
 from PySide6.QtGui import QIntValidator, QPalette, QColor
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.gui.Utils import clear_layout
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.mpa.gpr_selection_strategy import analyze_noise
@@ -375,6 +376,9 @@ class MeasurementWizardWidget(QWidget):
 
         if model_parameters == 0:
             self.init_empty()
+        elif isinstance(self.experiment, ComparisonExperiment):
+            self.init_empty('<b>You have loaded an experiment comparison.</b>'
+                            ' Suggestions for further measurements are only possible for individual experiments.')
         elif not experiment_has_repetitions(self.experiment):
             self.init_empty('<b>Please load a performance experiment that contains repetition information to get '
                             'suggestions for further measurement points.</b><br>'
