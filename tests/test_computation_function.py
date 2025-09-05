@@ -4,18 +4,21 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
+import math
 import unittest
 
 import numpy
+import numpy as np
 import sympy
 from sympy import sqrt
 
 from extrap.entities.calculation_element import divide_no0
 from extrap.entities.function_computation import ComputationFunction, ComputationFunctionSchema, CFType
-from extrap.entities.functions import MultiParameterFunction, SingleParameterFunction, ConstantFunction
+from extrap.entities.functions import MultiParameterFunction, SingleParameterFunction, ConstantFunction, \
+    SegmentedFunction
 from extrap.entities.terms import MultiParameterTerm, CompoundTerm
 from extrap.util.sympy_functions import log2
+
 
 class TestDivideNo0(unittest.TestCase):
 
@@ -90,6 +93,7 @@ class TestDivideNo0(unittest.TestCase):
         self.assertRaises(ZeroDivisionError, divide_no0, 1, cfunction - cfunction)
         self.assertRaises(ZeroDivisionError, divide_no0, 10, cfunction - cfunction)
         self.assertRaises(ZeroDivisionError, divide_no0, 42, cfunction - cfunction)
+
 
 class TestComputationFunction(unittest.TestCase):
     def test_creation(self):
@@ -384,9 +388,6 @@ class TestComputationFunction(unittest.TestCase):
         self.assertRaises(ValueError, lambda: cfunction + cfunction_sp)
         self.assertRaises(ValueError, lambda: cfunction_sp + cfunction)
 
-
-
-
     def test_comparison(self):
         def _check_comparison(bigger_function, smaller_function):
             self.assertEqual(1, bigger_function.partial_compare(smaller_function))
@@ -514,6 +515,28 @@ class TestComputationFunction(unittest.TestCase):
 
         result = cf1.partial_compare(cf2)
         self.assertEqual(-1, result)
+
+    def test_segmented(self):
+        segments = [SingleParameterFunction(CompoundTerm.create(1, 1, 0)),
+                    SingleParameterFunction(CompoundTerm.create(3, 1, 0))]
+        change_points = [(-math.inf, 5), (6, math.inf)]
+
+        f = SegmentedFunction(segments, change_points)
+        comp_fun = ComputationFunction(f)
+
+        res = comp_fun.evaluate(np.array([0.5, 1, 2, 6, 8]))
+        numpy.testing.assert_array_equal(np.array([0.5, 1, 2, 216, 512]), res)
+
+    def test_segmented2(self):
+        segments = [ConstantFunction(constant_coefficient=5),
+                    SingleParameterFunction(CompoundTerm.create(1, 1, 0))]
+        change_points = [(-math.inf, 5), (5, math.inf)]
+
+        f = SegmentedFunction(segments, change_points)
+        comp_fun = ComputationFunction(f)
+
+        res = comp_fun.evaluate(np.array([0.5, 1, 2, 6, 8]))
+        numpy.testing.assert_array_equal(np.array([5, 5, 5, 6, 8]), res)
 
 
 if __name__ == '__main__':

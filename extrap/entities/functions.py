@@ -20,6 +20,7 @@ import numpy
 import numpy as np
 import sympy
 from marshmallow import fields
+from numpy.lib.function_base import piecewise
 
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema, \
@@ -327,6 +328,15 @@ class SegmentedFunction(SingleParameterFunction):
 
         if hasattr(parameter_value, '__len__') and (len(parameter_value) == 1 or isinstance(parameter_value, Mapping)):
             parameter_value = parameter_value[0]
+
+        if isinstance(parameter_value, sympy.Symbol):
+            if isinstance(parameter_value, Sequence):
+                raise ValueError("Sequences of symbols are not supported.")
+            pieces = []
+            for segment, interval in zip(self.segments, self.intervals):
+                pieces.append((segment.evaluate([parameter_value]), sympy.And(
+                    sympy.LessThan(interval[0], parameter_value), sympy.LessThan(parameter_value, interval[1]))))
+            return sympy.Piecewise(*pieces)
 
         if isinstance(parameter_value, np.ndarray):
             function_value = np.ndarray(parameter_value.shape, dtype=float)
