@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 from typing import Optional, List
+from typing import Sequence
 
 import numpy
 from marshmallow import fields, post_load, pre_dump
@@ -16,8 +17,7 @@ from marshmallow import fields, post_load, pre_dump
 from extrap.entities.annotations import Annotation, AnnotationSchema
 from extrap.entities.callpath import CallpathSchema
 from extrap.entities.functions import ConstantFunction
-from extrap.entities.hypotheses import Hypothesis, HypothesisSchema, ConstantHypothesis
-from extrap.entities.measurement import Measurement
+from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import Hypothesis, HypothesisSchema
 from extrap.entities.measurement import Measurement, MeasurementSchema
 from extrap.entities.metric import MetricSchema
@@ -74,6 +74,47 @@ class SegmentedModel(Model):
         self.segment_models: list[Model] = segment_models
         super().__init__(hypothesis, callpath, metric)
 
+    class MeasurementSegmentView(Sequence[Measurement]):
+        def __init__(self, measurements: Sequence[Measurement], changing_points: Sequence[Measurement], segment_id):
+            self._measurements = measurements
+            self._changing_points = changing_points
+            if segment_id > 1:
+                raise ValueError("Segment ID must be less than 2.")
+            self._segment_id = segment_id
+
+        def __len__(self):
+            if self._segment_id == 0:
+                index = self._measurements.index(self._changing_points[0])
+                return index + 1
+            elif self._segment_id == 1:
+                index = self._get_segment1_index()
+                return len(self._measurements) - index
+            else:
+                raise NotImplementedError()
+
+        def _get_segment1_index(self) -> int:
+            if len(self._changing_points) == 1:
+                index = self._measurements.index(self._changing_points[0])
+            elif len(self._changing_points) == 2:
+                index = self._measurements.index(self._changing_points[1])
+            else:
+                raise NotImplementedError()
+            return index
+
+        def __getitem__(self, i):
+            measurements = self._measurements
+            if self._segment_id == 0:
+                index = measurements.index(self._changing_points[0])
+                return measurements[:index + 1][i]
+            elif self._segment_id == 1:
+                index = self._get_segment1_index()
+                return measurements[index:][i]
+            else:
+                raise NotImplementedError()
+
+        def __repr__(self):
+            return f"MS({self._segment_id}: {list(self)})"
+
     @property
     def measurements(self):
         return self._measurements
@@ -83,15 +124,8 @@ class SegmentedModel(Model):
         self._measurements = value
         if value is None:
             return
-        index = value.index(self.changing_points[0])
-        self.segment_models[0].measurements = value[:index]
-        if len(self.changing_points) == 1:
-            self.segment_models[1].measurements = value[index:]
-        elif len(self.changing_points) == 2:
-            index2 = value.index(self.changing_points[1])
-            self.segment_models[1].measurements = value[index2:]
-        else:
-            raise NotImplementedError()
+        self.segment_models[0].measurements = self.MeasurementSegmentView(self._measurements, self.changing_points, 0)
+        self.segment_models[1].measurements = self.MeasurementSegmentView(self._measurements, self.changing_points, 1)
 
     @property
     def callpath(self):
@@ -112,6 +146,7 @@ class SegmentedModel(Model):
         self._metric = value
         for model in self.segment_models:
             model.metric = value
+
 
 class ModelSchema(BaseSchema):
     def create_object(self):

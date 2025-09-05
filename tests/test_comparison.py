@@ -6,6 +6,7 @@
 # See the LICENSE file in the base directory for details.
 
 import copy
+import unittest
 from unittest import TestCase
 
 import numpy as np
@@ -30,6 +31,7 @@ from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
 from extrap.entities.function_computation import ComputationFunction
+from extrap.modelers.single_parameter.segmented import SegmentedModeler
 
 
 class TestComparison(TestCase):
@@ -495,3 +497,38 @@ class TestComparison(TestCase):
             " FluxSpectrumAllVolumes::writeToFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) const"))
 
 
+class TestSegmentedComparison(unittest.TestCase):
+    def test_identity_comparison(self):
+        experiment1 = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        modeler1 = SegmentedModeler()
+        ModelGenerator(experiment1, modeler1).model_all()
+        experiment2 = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        modeler2 = SegmentedModeler()
+        ModelGenerator(experiment2, modeler2).model_all()
+        experiment = ComparisonExperiment(experiment1, experiment2, MinimumMatcher())
+        experiment.do_comparison()
+        model = next(iter(experiment.modelers[0].models.values()))
+        model.hypothesis.function.evaluate(np.array([12, 22, 32, 42]))
+
+    def test_identity_comparison_smart(self):
+        experiment1 = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        modeler1 = SegmentedModeler()
+        ModelGenerator(experiment1, modeler1).model_all()
+        experiment2 = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        modeler2 = SegmentedModeler()
+        ModelGenerator(experiment2, modeler2).model_all()
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
+        experiment.do_comparison()
+        model = next(iter(experiment.modelers[0].models.values()))
+        model.hypothesis.function.evaluate(np.array([12, 22, 32, 42]))
+
+    def test_comparison_smart(self):
+        experiment1 = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        modeler1 = SegmentedModeler()
+        ModelGenerator(experiment1, modeler1).model_all()
+        experiment2 = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        ModelGenerator(experiment2).model_all()
+        experiment = ComparisonExperiment(experiment1, experiment2, SmartMatcher())
+        experiment.do_comparison()
+        model = next(iter(experiment.modelers[0].models.values()))
+        model.hypothesis.function.evaluate(np.array([12, 22, 32, 42]))
