@@ -9,6 +9,6 @@ import enum
 
 
 class FunctionFormats(enum.Enum):
-    NONE = None,
+    NONE = enum.auto()
     PYTHON = enum.auto()
     LATEX = enum.auto()
