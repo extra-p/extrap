@@ -123,15 +123,17 @@ class MainWidget(QMainWindow):
         dock.setWidget(self.modeler_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
-        dock = QDockWidget("Aggregation and Analysis", self)
-        self.postprocessing_widget = PostProcessingWidget(self, dock)
-        dock.setWidget(self.postprocessing_widget)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         # Right side: Measurement Wizard
         dock = QDockWidget("Measurement Point Suggestion", self)
         self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
         dock.setWidget(self.measurementWizard_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+
+        dock2 = QDockWidget("Aggregation and Analysis", self)
+        self.postprocessing_widget = PostProcessingWidget(self, dock2)
+        dock2.setWidget(self.postprocessing_widget)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock2)
+        self.tabifyDockWidget(dock2, dock)
 
         # bottom widget
         dock = QDockWidget("Color Info", self)
