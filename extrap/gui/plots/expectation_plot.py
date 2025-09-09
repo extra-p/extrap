@@ -363,15 +363,3 @@ class ComparisonPlot3D(QtInteractor, AbstractPlotWidget):
         screenshot_action = menu.addAction('Screenshot')
         screenshot_action.triggered.connect(self.perform_screenshot)
         menu.exec(event.globalPos())
-
-    def closeEvent(self, QCloseEvent):
-        super().closeEvent(QCloseEvent)
-        self.Finalize()
-
-    def __del__(self):
-        self.Finalize()
-        super().__del__()
-
-    def close(self) -> None:
-        self.Finalize()
-        super().close()

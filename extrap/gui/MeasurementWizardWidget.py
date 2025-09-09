@@ -63,6 +63,7 @@ class MeasurementWizardWidget(QWidget):
             self.empty_label = None
 
         self._layout = QGridLayout(self)
+        self._layout.setContentsMargins(6, 6, 6, 6)
         self._layout.setRowStretch(99, 1)
         self._layout.setColumnStretch(0, 0)
         self._layout.setColumnStretch(1, 1)

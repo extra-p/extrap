@@ -56,6 +56,7 @@ class AxisSelection(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self, parameters):
         self.grid = QGridLayout(self)
+        self.grid.setContentsMargins(6, 6, 6, 6)
         self.grid.setColumnStretch(1, 1)
         self.grid.setColumnStretch(3, 1)
         if self.index == 0:
