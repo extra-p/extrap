@@ -36,7 +36,7 @@ from extrap.gui.ImportOptionsDialog import ImportOptionsDialog
 from extrap.gui.LogWidget import LogWidget
 from extrap.gui.MeasurementWizardWidget import MeasurementWizardWidget
 from extrap.gui.ModelerWidget import ModelerWidget
-from extrap.gui.PlotTypeSelector import PlotTypeSelector
+from extrap.gui.PlotTypeSelector import PlotTypeSelector, PLOT_NAMES
 from extrap.gui.PostProcessingWidget import PostProcessingWidget
 from extrap.gui.RankingWidget import RankingWidget
 from extrap.gui.SelectorWidget import SelectorWidget
@@ -54,6 +54,9 @@ from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.event import Event
 
 DEFAULT_MODEL_NAME = "Default Model"
+_REMEMBER_LAYOUT_STATE_KEY = "REMEMBER_LAYOUT_STATE"
+_LAYOUT_STATE_KEY = "LAYOUT_STATE"
+_LAYOUT_STATE_VERSION = 1
 
 
 class CallPathEnum(Enum):
@@ -80,6 +83,7 @@ class MainWidget(QMainWindow):
         self.plot_formatting_options = PlotFormattingOptions()
         self.experiment_change = True
         self.min_max_value_updated_event = Event(Number, int)
+        self._model_menu = None
         self._init_ui()
 
         signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -108,6 +112,7 @@ class MainWidget(QMainWindow):
 
         # Left side: Callpath and metric selection
         dock = QDockWidget("Selection", self)
+        dock.setObjectName("EP_selection")
         self.selector_widget = SelectorWidget(self, dock)
         dock.setWidget(self.selector_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
@@ -119,17 +124,20 @@ class MainWidget(QMainWindow):
 
         # Right side: Model configurator
         dock = QDockWidget("Modeler", self)
+        dock.setObjectName("EP_modeler")
         self.modeler_widget = ModelerWidget(self, dock)
         dock.setWidget(self.modeler_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         # Right side: Measurement Wizard
         dock = QDockWidget("Measurement Point Suggestion", self)
+        dock.setObjectName("EP_mps")
         self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
         dock.setWidget(self.measurementWizard_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
         dock2 = QDockWidget("Aggregation and Analysis", self)
+        dock2.setObjectName("EP_agg_ana")
         self.postprocessing_widget = PostProcessingWidget(self, dock2)
         dock2.setWidget(self.postprocessing_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock2)
@@ -137,23 +145,27 @@ class MainWidget(QMainWindow):
 
         # bottom widget
         dock = QDockWidget("Color Info", self)
+        dock.setObjectName("EP_color_info")
         self.color_widget = ColorWidget(self)
         self.min_max_value_updated_event += self.color_widget.update_min_max
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
         dock = QDockWidget("Graph Limits", self)
+        dock.setObjectName("EP_graph_limits")
         self.graph_limits_widget = GraphLimitsWidget(self, self.data_display)
         dock.setWidget(self.graph_limits_widget)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock, Qt.Orientation.Horizontal)
 
         dock2 = QDockWidget("Log", self)
+        dock2.setObjectName("EP_log")
         self.log_widget = LogWidget(self)
         dock2.setWidget(self.log_widget)
         self.tabifyDockWidget(dock, dock2)
         dock2.hide()
 
         dock2 = QDockWidget("Ranking", self)
+        dock2.setObjectName("EP_ranking")
         self.ranking_widget = RankingWidget(self)
         dock2.setWidget(self.ranking_widget)
         self.tabifyDockWidget(dock, dock2)
@@ -200,13 +212,13 @@ class MainWidget(QMainWindow):
         select_view_action.setStatusTip('Select the plots you want to view')
         select_view_action.triggered.connect(self.open_select_plots_dialog_box)
 
+        remember_layout_toggle = QAction('Remember layout', self)
+        remember_layout_toggle.setCheckable(True)
+        remember_layout_toggle.setChecked(self.settings.value(_REMEMBER_LAYOUT_STATE_KEY, True, bool))
+        remember_layout_toggle.toggled.connect(self._toggle_remember_layout)
+
         # Plots menu
-        graphs = ['&Line graph', 'Selected models in same &surface plot', 'Selected models in &different surface plots',
-                  'Dominating models in a 3D S&catter plot',
-                  'Max &z as a single surface plot', 'Dominating models and max z as &heat map',
-                  'Selected models in c&ontour plot', 'Selected models in &interpolated contour plots',
-                  '&Measurement points', 'Stacked &area plot', 'Di&fference plot', '&Comparison plot 3D']
-        graph_actions = [QAction(g, self) for g in graphs]
+        graph_actions = [QAction(g, self) for g in PLOT_NAMES]
         for i, g in enumerate(graph_actions):
             slot = (lambda k: lambda: self.data_display.reloadTabs((k,)))(i)
             g.triggered.connect(slot)
@@ -268,11 +280,15 @@ class MainWidget(QMainWindow):
         view_menu = menubar.addMenu('&View')
         view_menu.addAction(change_font_action)
         view_menu.addAction(select_view_action)
+        view_menu.addSeparator()
         view_menu.addAction(toggle_developer_mode)
+        view_menu.addSeparator()
         ui_parts_menu = self.createPopupMenu()
         if ui_parts_menu:
             ui_parts_menu_action = view_menu.addMenu(ui_parts_menu)
             ui_parts_menu_action.setText('Tool &windows')
+
+        view_menu.addAction(remember_layout_toggle)
 
         plots_menu = menubar.addMenu('&Plots')
         for g in graph_actions:
@@ -286,6 +302,8 @@ class MainWidget(QMainWindow):
         model_menu.addAction(metric_delete_action)
         model_menu.addSeparator()
         model_menu.addAction(coordinates_transform)
+        model_menu.setEnabled(False)
+        self._model_menu = model_menu
 
         # filter_menu = menubar.addMenu('Filter')
         # filter_menu.addAction(filter_callpath_action)
@@ -306,6 +324,12 @@ class MainWidget(QMainWindow):
         # Main window
         self.resize(1200, 800)
         self.setCentralWidget(central_widget)
+
+        if remember_layout_toggle.isChecked():
+            dock_layout = self.settings.value(_LAYOUT_STATE_KEY, None)
+            if dock_layout:
+                self.restoreState(dock_layout, _LAYOUT_STATE_VERSION)
+
         self.experiment_change = False
         self.show()
 
@@ -323,6 +347,7 @@ class MainWidget(QMainWindow):
         self.modeler_widget.experimentChanged()
         self.measurementWizard_widget.experimentChanged()
         self.postprocessing_widget.on_experiment_changed(experiment)
+        self._model_menu.setEnabled(True)
         self.experiment_change = False
         self.updateMinMaxValue()
         self.update()
@@ -346,6 +371,7 @@ class MainWidget(QMainWindow):
         msg_box.setDefaultButton(QMessageBox.StandardButton.No)
 
         if msg_box.exec() == QMessageBox.StandardButton.Yes:
+            self.settings.setValue(_LAYOUT_STATE_KEY, self.saveState(_LAYOUT_STATE_VERSION))
             event.accept()
         else:
             event.ignore()
@@ -573,3 +599,7 @@ class MainWidget(QMainWindow):
             init_developer_menu(self, self._developer_menu)
 
         self._developer_menu.menuAction().setVisible(enabled)
+
+    @Slot(bool)
+    def _toggle_remember_layout(self, enabled):
+        self.settings.setValue(_REMEMBER_LAYOUT_STATE_KEY, enabled)

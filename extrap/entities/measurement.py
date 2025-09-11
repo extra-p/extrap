@@ -56,6 +56,8 @@ class Measure(enum.Enum):
     def choices(cls):
         return [m for m in Measure if m != cls.UNKNOWN]
 
+    def pretty_name(self):
+        return self.name.title()
 
 class Measurement(CalculationElement):
     """

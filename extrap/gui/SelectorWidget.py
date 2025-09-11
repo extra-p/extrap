@@ -289,7 +289,7 @@ class SelectorWidget(QWidget):
         dialog.setWindowTitle('Modeler Options: ' + model.name)
         dialog.setLayout(QVBoxLayout(dialog))
         dialog.layout().addWidget(QLabel('Modeler: ' + model.modeler.NAME))
-        dialog.layout().addWidget(QLabel('Uses: ' + str(model.modeler.use_measure)))
+        dialog.layout().addWidget(QLabel('Uses: ' + model.modeler.use_measure.pretty_name()))
         options_widget = ModelerOptionsWidget(dialog, model.modeler, has_reset_button=False)
         dialog.layout().addWidget(options_widget)
         options_widget.setEnabled(False)
