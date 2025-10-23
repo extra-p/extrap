@@ -79,9 +79,9 @@ test-macos:
     - macos
   image: ghcr.io/cirruslabs/macos-sonoma-base:latest
   before_script:
-    - brew install python@3.9
-    - python3.9 --version  # For debugging
-    - python3.9 -m venv venv
+    - brew install python@3.10
+    - python3.10 --version  # For debugging
+    - python3.10 -m venv venv
     - source venv/bin/activate
     - python -m pip install --upgrade pip
     - pip install .
