@@ -45,8 +45,6 @@ class ParallelEfficiencyAnalysis(PostProcessAnalysis):
             function = ComputationFunction(v.hypothesis.function)
             res_param = ComputationFunction.get_param(param_idx)
             serial_function = function.sympy_function.subs(res_param, 1)
-            if serial_function == 0:
-                serial_function = sympy.Float(1e-16)
             if serial_function == function:
                 function = ConstantFunction(1)
             elif function == 0:
