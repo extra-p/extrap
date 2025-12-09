@@ -57,6 +57,8 @@ class MeasurementPointAdvisor:
         measurements = self.experiment.measurements
         for callpath in selected_callpaths:
             core_time_callpath = 0
+            if (callpath, metric) not in measurements:
+                continue
             for measurement in measurements[(callpath, metric)]:
                 core_time_per_point = self.calculate_cost(measurement.coordinate,
                                                           measurement.mean) * measurement.repetitions

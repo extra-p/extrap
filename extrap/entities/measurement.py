@@ -59,6 +59,7 @@ class Measure(enum.Enum):
     def pretty_name(self):
         return self.name.title()
 
+
 class Measurement(CalculationElement):
     """
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
@@ -418,7 +419,7 @@ class Measurement(CalculationElement):
                 result.values = other / self.values
             else:
                 result.values = None
-        return self
+        return result
 
     def __neg__(self):
         return self * -1

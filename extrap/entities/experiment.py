@@ -113,7 +113,8 @@ class Experiment:
 
 class ExperimentSchema(BaseSchema):
     _version_ = fields.Constant(extrap.__version__, data_key=extrap.__title__)
-    scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf([str(s) for s in ScalingType]))
+    scaling = fields.Str(required=False, allow_none=True,
+                         validate=validate.OneOf([str(s) for s in ScalingType] + ['weak_parallel']))
     parameters = fields.List(fields.Pluck(ParameterSchema, 'name'))
     callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
     metrics = ListToMappingField(MetricSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))

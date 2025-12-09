@@ -8,12 +8,16 @@
 from __future__ import annotations
 
 import copy
+import math
 from typing import Dict, Tuple, Union
 
+import numpy as np
+import sympy
 from marshmallow import fields
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.function_computation import ComputationFunction
+from extrap.entities.functions import ConstantFunction
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
 from extrap.entities.parameter import Parameter, ParameterSchema
@@ -41,15 +45,22 @@ class ParallelEfficiencyAnalysis(PostProcessAnalysis):
             function = ComputationFunction(v.hypothesis.function)
             res_param = ComputationFunction.get_param(param_idx)
             serial_function = function.sympy_function.subs(res_param, 1)
-            function = serial_function / function
+            if serial_function == 0:
+                serial_function = sympy.Float(1e-16)
+            if serial_function == function:
+                function = ConstantFunction(1)
+            elif function == 0:
+                function = ConstantFunction(math.nan)
+            else:
+                function = serial_function / function
             hypothesis = copy.copy(v.hypothesis)
             hypothesis.function = function
 
             if v.measurements:
-                measurements = [
-                    float(serial_function.subs(
-                        [(ComputationFunction.get_param(i), c) for i, c in enumerate(m.coordinate)])) / m for m in
-                    v.measurements]
+                measurements = []
+                for m in v.measurements:
+                    measurements.append(float(serial_function.subs(
+                        [(ComputationFunction.get_param(i), c) for i, c in enumerate(m.coordinate)])) / m)
                 hypothesis.compute_cost(measurements)
             else:
                 measurements = None

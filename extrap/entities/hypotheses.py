@@ -310,7 +310,12 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
-        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actual)
+
+        mean_actual = numpy.mean(actual)
+        if mean_actual != 0.0:
+            self._nRSS = math.sqrt(self._RSS) / mean_actual
+        else:
+            self._nRSS = math.nan
 
         relativeDifference = difference / actual
         # relativeDifference[difference == 0] = 0 #TODO check if necessary
