@@ -11,7 +11,7 @@ individuals who have contributed code to this repository:
 * Jonas Klesy (jonas.klesy@googlemail.com)
 * Christof Jugel (christof.jugel@stud.tu-darmstadt.de)
 * Samuel Lokadjaja (samuel.lokadjaja@stud.tu-darmstadt.de)
-* Daniel Lorenz (lorenz@cs.tu-darmstadt.de
+* Daniel Lorenz (lorenz@cs.tu-darmstadt.de)
 * Benedikt Naumann (benedikt.naumann@gmx.de)
 * Jannis Neus (jannis.neus@stud.tu-darmstadt.de)
 * Nicolas Ollagnier (ncls_olg@yahoo.fr)
@@ -22,3 +22,4 @@ individuals who have contributed code to this repository:
 * Johannes Wehrstein (johannes.wehrstein@gmx.de)
 * Paul Wiedeking (p.wiedeking@grs-sim.de)
 * Luis Dreher (luis.dreher@stud.tu-darmstadt.de)
+* Jan André Reuter (j.reuter@fz-juelich.de)
