@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -17,26 +17,69 @@ class TestCaseWithFunctionAssertions(unittest.TestCase):
         import math
         diff = abs(other - function)
         reference = min(abs(function), abs(other))
-        if reference != 0:
+        if reference > 1:
             nondecimal_places = int(math.log10(reference)) + 1
             diff_scaled = diff / (10 ** nondecimal_places)
         else:
             diff_scaled = diff
-        diff_rounded = round(diff_scaled, places)
+        diff_rounded = float(round(diff_scaled, places))
         self.assertTrue(diff_rounded == 0, msg=f"{other} != {function} in {places} places {ctxt}")
 
     # def test_assertApprox(self):
-    #     self.assertApprox(200, 200.001)
-    #     self.assertApprox(200.002, 200.001)
-    #     self.assertApprox(200.0049, 200.000)
-    #     self.assertApprox(200.000, 199.9951)
+    #     self.assertApprox(200.0000, 200.0001)
+    #     self.assertApprox(200.0002, 200.0001)
+    #     self.assertApprox(200.00049, 200.0000)
+    #     self.assertApprox(200.0000, 199.99951)
     #     self.assertApprox(200, 200.4999, places=3)
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(200, 200.001)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(200.002, 200.001)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     self.assertApprox(1, 0.9999, places=3)
+    #     self.assertApprox(0.999, 0.9991, places=3)
+    #     self.assertApprox(0.004, 0.0044, places=3)
+    #     self.assertApprox(1.004, 1.0044, places=3)
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(0.004, 0.0049, places=3)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(1.000, 1.0009, places=3)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+    #
+    #     was_successful = False
+    #     try:
+    #         self.assertApprox(1.000, 0.999, places=3)
+    #         was_successful = True
+    #     except self.failureException: ...
+    #     self.assertFalse(was_successful)
+
+
 
     def assertApproxFunction(self, function, other, **kwargs):
-        if len(kwargs) == 0:
+        if 'places' not in kwargs:
             kwargs['places'] = 6
 
         kwargs['ctxt'] = f"in {other} != {function}"
+        if 'msg' in kwargs and kwargs['msg']:
+            kwargs['ctxt'] += '; MSG: ' + kwargs['msg']
+            del kwargs['msg']
         self.assertApprox(function.constant_coefficient, other.constant_coefficient, **kwargs)
         self.assertEqual(len(function.compound_terms), len(other.compound_terms))
         if isinstance(function, MultiParameterFunction):

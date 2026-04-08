@@ -18,4 +18,6 @@ class ScalingType(Enum):
 
     @classmethod
     def from_str(cls, name: str):
+        if name == "weak_parallel":
+            return cls.WEAK_THREADED
         return cls[name.upper()]

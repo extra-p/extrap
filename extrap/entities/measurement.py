@@ -7,6 +7,13 @@
 
 from __future__ import annotations
 
+import copy
+import enum
+import math
+import numbers
+from collections.abc import Iterable, Sequence
+from itertools import chain, product
+from typing import Union, Generator, Optional
 import enum
 import math
 import numbers
@@ -17,7 +24,10 @@ from typing import Union, Generator, Optional
 import numpy as np
 from marshmallow import fields, post_load
 from numpy import ma
+from numpy import ma
+from numpy.ma.core import MaskedArray
 
+from extrap.entities.calculation_element import CalculationElement
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.coordinate import Coordinate, CoordinateSchema
 from extrap.entities.metric import Metric, MetricSchema
@@ -46,8 +56,10 @@ class Measure(enum.Enum):
     def choices(cls):
         return [m for m in Measure if m != cls.UNKNOWN]
 
+    def pretty_name(self):
+        return self.name.title()
 
-class Measurement:
+class Measurement(CalculationElement):
     """
     This class represents a measurement, i.e. the value measured for a specific metric and callpath at a coordinate.
     """
@@ -90,6 +102,7 @@ class Measurement:
             return values
         if all(isinstance(v, np.ndarray) for v in values):
             return np.ma.array(values)
+        # TODO FIX for sequence of masked arrays
 
         dim_max_len = [(len(values), len(values))]
 
@@ -188,6 +201,11 @@ class Measurement:
         self.minimum += other.minimum
         self.maximum += other.maximum
         self.std = np.sqrt(self.std ** 2 + other.std ** 2)
+        if self.values and other.values:
+            self.values += other.values
+        else:
+            self.values = None
+        # TODO merge count
 
     def __repr__(self):
         return f"Measurement({self.coordinate}: {self.mean:0.6} median={self.median:0.6})"
@@ -221,6 +239,35 @@ class Measurement:
         else:
             raise ValueError("Unknown measure.")
 
+    def __add__(self, other):
+        if isinstance(other, Measurement):
+            result = copy.copy(self)
+            result.merge(other)
+        else:
+            result = copy.copy(self)
+            result.median += other
+            result.mean += other
+            result.minimum += other
+            result.maximum += other
+            result.std = self.std
+            if self.values:
+                self.values += other
+        return result
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        return self.__add__(other * -1)
+
+    def __rsub__(self, other):
+        return (self * -1).__add__(other)
+
+    def __mul__(self, other):
+        result = copy.copy(self)
+        result *= other
+        return result
+
     def __imul__(self, other):
         if isinstance(other, Measurement):
             if self.coordinate != other.coordinate:
@@ -229,10 +276,14 @@ class Measurement:
             self.mean *= other.mean
             self.minimum *= other.minimum
             self.maximum *= other.maximum
-            # Var(XY) = E(X²Y²) - (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
+            # Var(XY) = E(X²Y²) − (E(XY))² = Var(X)Var(Y) + Var(X)(E(Y))² + Var(Y)(E(X))²
             self_var, other_var = self.std ** 2, other.std ** 2
             variance = self_var * other_var + self_var * other.mean ** 2 + other_var * self.mean ** 2
             self.std = np.sqrt(variance)
+            if self.values and other.values:
+                self.values *= other.values
+            else:
+                self.values = None
         else:
 
             self.median *= other
@@ -240,7 +291,168 @@ class Measurement:
             self.minimum *= other
             self.maximum *= other
             self.std *= abs(other)
+            if self.values:
+                self.values *= other
         return self
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __pow__(self, other):
+        result = copy.copy(self)
+        result.median **= other
+        result.mean **= other
+        result.minimum **= other
+        result.maximum **= other
+        variance = (self.std ** 2 + self.mean ** 2) ** other - (self.mean ** 2) ** other
+        result.std = np.sqrt(variance)
+        if result.values:
+            result.values **= other
+        return result
+
+    def __itruediv__(self, other):
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            self.median /= other.median
+            self.mean /= other.mean
+            minimum = self.minimum / other.minimum
+            maximum = self.maximum / other.maximum
+            self.minimum = min(minimum, maximum, self.median)
+            self.maximum = max(minimum, maximum, self.median)
+            # Var(Y/X)~= Var(Y)/E(X)^2 + (E(Y)^2*Var(X))/E(X)^4 - (2*E(Y)*Cov(X,Y))/E(X)^3
+            variance = self.std ** 2 / other.mean ** 2 + (self.mean ** 2 * other.std ** 2) / other.mean ** 4 \
+                       - (2 * self.mean * self.std * other.std) / other.mean ** 3
+            self.std = math.sqrt(variance)
+            if self.values and other.values:
+                self.values /= other.values
+                self.std = np.std(self.values)
+            else:
+                self.values = None
+        else:
+            self.median /= other
+            self.mean /= other
+            self.minimum /= other
+            self.maximum /= other
+            variance = self.std ** 2 / other ** 2
+            self.std = math.sqrt(variance)
+            if self.values:
+                self.values /= other
+        return self
+
+    def __truediv__(self, other):
+        result = copy.copy(self)
+        result /= other
+        return result
+
+    @staticmethod
+    def divide_no0(a: Measurement, b: Measurement) -> Measurement:
+        result = copy.copy(a)
+        if b.mean == 0:
+            result.mean = 1 if a.mean == 0 else math.inf
+        else:
+            result.mean /= b.mean
+        if b.median == 0:
+            result.median = 1 if a.median == 0 else math.inf
+        else:
+            result.median /= b.median
+
+        if b.minimum == 0:
+            minimum = 1 if a.minimum == 0 else math.inf
+        else:
+            minimum = a.minimum / b.minimum
+        if b.maximum == 0:
+            maximum = 1 if a.maximum == 0 else math.inf
+        else:
+            maximum = a.maximum / b.maximum
+        result.minimum = min(minimum, maximum, result.median)
+        result.maximum = max(minimum, maximum, result.median)
+        # Var(Y/X)~= Var(Y)/E(X)^2 + (E(Y)^2*Var(X))/E(X)^4 - (2*E(Y)*Cov(X,Y))/E(X)^3
+        if b.mean == 0:
+            result.std = math.nan
+        else:
+            variance = a.std ** 2 / b.mean ** 2 + (a.mean ** 2 * b.std ** 2) / b.mean ** 4 \
+                       - (2 * a.mean * a.std * b.std) / b.mean ** 3
+            result.std = math.sqrt(variance)
+
+        if a.values and b.values:
+            divisor = b.values.copy()
+            divisor[b.values == 0 & a.values == 0] = 1
+            result.values = a.values / divisor
+        else:
+            result.values = None
+        return result
+
+    def __rtruediv__(self, other):
+        if isinstance(other, Measurement):
+            if self.coordinate != other.coordinate:
+                raise ValueError("Coordinate does not match while merging measurements.")
+            # TODO implement correct division
+            return (self ** -1).__mul__(other)
+        else:
+            result = copy.copy(self)
+            if self.median == 0:
+                result.median = math.inf
+            else:
+                result.median = other / self.median
+            if self.mean == 0:
+                result.mean = math.inf
+            else:
+                result.mean = other / self.mean
+            if self.maximum == 0:
+                result.minimum = math.inf
+            else:
+                result.minimum = other / self.maximum
+            if self.minimum == 0:
+                result.maximum = math.inf
+            else:
+                result.maximum = other / self.minimum
+            # Var(Y/X)~= Var(Y)/E(X)^2 + (E(Y)^2*Var(X))/E(X)^4 - (2*E(Y)*Cov(X,Y))/E(X)^3
+            if self.mean == 0:
+                result.std = math.nan
+            else:
+                variance = (other ** 2 * self.std ** 2) / self.mean ** 4
+                result.std = math.sqrt(variance)
+
+            if self.values:
+                result.values = other / self.values
+            else:
+                result.values = None
+        return self
+
+    def __neg__(self):
+        return self * -1
+
+    def make_one(self):
+        result = copy.copy(self)
+        result.median = 1
+        result.mean = 1
+        result.minimum = 1
+        result.maximum = 1
+        result.std = 0
+        if result.values:
+            result.values = np.ones_like(result.values)
+        return result
+
+    def copy(self):
+        return copy.copy(self)
+
+    @staticmethod
+    def select_measure(measurements: Iterable[Measurement], measure: Union[bool, Measure]) -> Generator[numbers.Real]:
+        if measure == Measure.MEAN:
+            return (m.mean for m in measurements)
+        elif measure == Measure.MEDIAN:
+            return (m.median for m in measurements)
+        elif measure == Measure.MINIMUM:
+            return (m.minimum for m in measurements)
+        elif measure == Measure.MAXIMUM:
+            return (m.maximum for m in measurements)
+        elif measure is True:
+            return (m.median for m in measurements)
+        elif measure is False:
+            return (m.mean for m in measurements)
+        else:
+            raise ValueError("Unknown measure.")
 
 
 class MeasurementSchema(Schema):

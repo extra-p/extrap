@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2022, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -27,11 +27,15 @@ class Callpath(NamedEntityWithTags):
     Empty callpath. Can be used as placeholder.
     """
 
-    def concat(self, *other: str, copy_tags=False):
+    def concat(self, *other: str, copy_tags=False, **tags):
         cp = Callpath('->'.join(itertools.chain((self.name,), other)))
         if copy_tags:
             cp.tags = self.tags.copy()
+        cp.tags.update(tags)
         return cp
+
+    def parts(self):
+        return self.name.split('->')
 
 
 class _EmptyCallpath(Callpath):
@@ -65,8 +69,10 @@ class _EmptyCallpath(Callpath):
         if not self.__is_init:
             raise NotImplementedError()
 
-    def concat(self, *other, copy_tags=False):
-        raise NotImplementedError()
+    def concat(self, *other, copy_tags=False, **tags):
+        cp = Callpath('->'.join(itertools.chain(other)))
+        cp.tags.update(tags)
+        return cp
 
 
 class CallpathSchema(NamedEntityWithTagsSchema):

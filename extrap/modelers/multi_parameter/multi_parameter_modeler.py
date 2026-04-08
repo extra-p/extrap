@@ -45,6 +45,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
     compare_with_RSS = modeler_options.add(False, bool,
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
+    negative_coefficients = modeler_options.add(True, bool)
 
     def __init__(self):
         """
@@ -76,9 +77,14 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
                 measurement.minimum = np.mean([m.minimum for m in ms])
                 measurement.std = np.mean([m.std for m in ms])
             else:
-                measurement.maximum = np.nanmean([m.maximum / m.mean for m in ms]) * measurement.mean
-                measurement.minimum = np.nanmean([m.minimum / m.mean for m in ms]) * measurement.mean
-                measurement.std = np.nanmean([m.std / m.mean for m in ms]) * measurement.mean
+                try:
+                    measurement.maximum = np.nanmean([m.maximum / m.mean for m in ms]) * measurement.mean
+                    measurement.minimum = np.nanmean([m.minimum / m.mean for m in ms]) * measurement.mean
+                    measurement.std = np.nanmean([m.std / m.mean for m in ms]) * measurement.mean
+                except ZeroDivisionError:
+                    measurement.maximum = np.mean([m.maximum for m in ms])
+                    measurement.minimum = np.mean([m.minimum for m in ms])
+                    measurement.std = np.mean([m.std for m in ms])
 
             return measurement
 
@@ -138,7 +144,10 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             result_groups.append(groups)
 
         if self.single_parameter_point_selection == 'all' and not use_all:
-            warnings.warn(f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
+            if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn(
+                    f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
                           f"measurements are needed; one for each combination of parameters.")
 
         with np.errstate(invalid='ignore'):
@@ -189,22 +198,25 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
         # model all single parameter experiments using only the selected points from the step before
         # parameters = list(range(measurements[0].coordinate.dimensions))
 
+        if hasattr(self.single_parameter_modeler, 'negative_coefficients'):
+            self.single_parameter_modeler.negative_coefficients = self.negative_coefficients
+
         models = self.single_parameter_modeler.model(measurements_sp)
         functions = [m.hypothesis.function for m in models]
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn(f"Number of measurements for each parameter needs to be at least "
-                          f"{self.min_measurement_points} in order to create a performance model.")
+            if not (not (len(measurements) < 1) and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn(f"Number of measurements for each parameter needs to be at least "
+                              f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling
         # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
         # use all available additional points for modeling the multi-parameter models
-        values = np.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements))
-        meanModel = np.mean(values)
-        constantCost = np.sum((values - meanModel) * (values - meanModel))
+        meanModel, constantCost = ConstantHypothesis.calculate_constant_indicators(measurements, self.use_measure)
 
         # find out which parameters should be kept
         compound_term_pairs = []
@@ -242,7 +254,8 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             # multi parameter function with newly calculated coefficients using all values
             recomputed_coeffficients_hypothesis = MultiParameterHypothesis(
                 MultiParameterFunction(MultiParameterTerm(compound_term_pairs[0])), self.use_measure)
-            recomputed_coeffficients_hypothesis.compute_coefficients(measurements)
+            recomputed_coeffficients_hypothesis.compute_coefficients(measurements,
+                                                                     negative_coefficients=self.negative_coefficients)
             recomputed_coeffficients_hypothesis.compute_cost(measurements)
 
             # select best
@@ -350,7 +363,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # select one function as the bestHypothesis for the start
         best_hypothesis = copy.deepcopy(hypotheses[0])
-        best_hypothesis.compute_coefficients(measurements)
+        best_hypothesis.compute_coefficients(measurements, negative_coefficients=self.negative_coefficients)
         best_hypothesis.compute_cost(measurements)
         best_hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 
@@ -360,7 +373,7 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # find the best hypothesis
         for i, hypothesis in enumerate(hypotheses):
-            hypothesis.compute_coefficients(measurements)
+            hypothesis.compute_coefficients(measurements, negative_coefficients=self.negative_coefficients)
             hypothesis.compute_cost(measurements)
             hypothesis.compute_adjusted_rsquared(constantCost, measurements)
 

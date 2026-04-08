@@ -1,11 +1,14 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from __future__ import annotations
+
 import math
+from typing import TYPE_CHECKING, Sequence, cast
 
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
@@ -13,21 +16,34 @@ from PySide6.QtWidgets import *  # @UnusedWildImport
 
 from extrap.entities.model import SegmentedModel
 from extrap.gui.TreeModel import TreeModel
+from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.experiment_comparison import COMPARISON_NODE_NAME, TAG_COMPARISON_NODE
+from extrap.gui.TreeModel import TreeModel, TreeItem
+from extrap.gui.components import developer_tools
 from extrap.gui.components.annotation_delegate import AnnotationDelegate
+from extrap.gui.components.richtext_delegate import RichTextDelegate
+
+if TYPE_CHECKING:
+    from extrap.gui.SelectorWidget import SelectorWidget
 
 
 # TODO Expand largest
 
 class TreeView(QTreeView):
 
-    def __init__(self, parent):
+    def __init__(self, parent, selector_widget: SelectorWidget):
         super(TreeView, self).__init__(parent)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setItemDelegateForColumn(2, AnnotationDelegate())
+        self._selector_widget = selector_widget
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._annotation_delegate = AnnotationDelegate()
+        self.setItemDelegateForColumn(2, self._annotation_delegate)
+        self._rich_text_delegate = RichTextDelegate()
+        self.setItemDelegateForColumn(3, self._rich_text_delegate)
         self.setAnimated(True)
         self.setAcceptDrops(True)
+        self._filter_1_percent_time_state = False
 
-    def collapseRecursively(self, index):
+    def collapseRecursively(self, index: QModelIndex):
         if not index.isValid():
             return
 
@@ -36,7 +52,7 @@ class TreeView(QTreeView):
         child_count = index.model().rowCount(parent=index)
         for i in range(0, child_count):
             try:
-                child = index.child(i, 0)
+                child = cast(TreeItem, index.internalPointer()).child(i)
                 self.collapseRecursively(child)
             except AttributeError:
                 pass
@@ -45,7 +61,7 @@ class TreeView(QTreeView):
         root = index.internalPointer()
         root_parent_index = index.parent()
 
-        # find path to node with largest value and expand along path
+        # find path to node with the largest value and expand along path
         arr = self.max_path(model, root, root_parent_index)
         for a in arr:
             self.expand(model.index(a[1].row(), 0, a[2]))
@@ -64,8 +80,15 @@ class TreeView(QTreeView):
         node_index = model.index(node.row(), 0, parent_index)  # get index of current node
         children = [self.max_path(model, c, node_index) for c in node.child_items]  # call max_path on children
 
-        children_max = [max(v for v, _, _ in c) for c in
-                        children]  # find the maximum value in each c, where c is a list of tuples
+        children_max = []
+        for c in children:
+            vs = []
+            for v, _, _ in c:
+                if isinstance(v, Sequence):
+                    vs.extend(v)
+                else:
+                    vs.append(v)
+            children_max.append(max(vs))
 
         ret_list = children[children_max.index(max(children_max))]
         ret_list.insert(0, curr_tuple)
@@ -81,10 +104,36 @@ class TreeView(QTreeView):
         else:
             return None
 
+    def expand_recursively_without_comparison(self, index=None, context=None):
+        if not index or not context:
+            index = self.selectedIndexes()[0]
+            context = type('', (object,), {"treat_comparison_name_as_comparison": None})()
+        node = cast(TreeItem, index.internalPointer())
+
+        for c in node.child_items:
+            child_index = self.model().index(c.row(), 0, index)
+            if c.data().path.tags.get(TAG_COMPARISON_NODE) != 'comparison':
+
+                # Check for COMPARISON_NODE_NAME to support legacy comparison experiments
+                if context.treat_comparison_name_as_comparison is None and c.data().name == COMPARISON_NODE_NAME:
+                    result = QMessageBox.question(self, "Comparison detection",
+                                                  f'Treat nodes which are named "{COMPARISON_NODE_NAME}" as comparison '
+                                                  'nodes?')
+                    if result == QMessageBox.StandardButton.Yes:
+                        context.treat_comparison_name_as_comparison = True
+                        continue
+                    else:
+                        context.treat_comparison_name_as_comparison = False
+                elif context.treat_comparison_name_as_comparison and c.data().name == COMPARISON_NODE_NAME:
+                    continue
+
+                self.expand_recursively_without_comparison(child_index, context)
+        self.expand(index)
+
     def contextMenuEvent(self, event):
         menu = QMenu()
 
-        model: TreeModel = self.model()
+        model = cast(TreeModel, self.model())
         if model is not None:
             if self.selectedIndexes():
                 selectedCallpath = model.getValue(
@@ -97,6 +146,9 @@ class TreeView(QTreeView):
                 expandAction.triggered.connect(self.expandAll)
 
                 menu.addMenu(self._create_expand_collapse_menu(model))
+                if self._selector_widget.main_widget.developer_mode:
+                    menu.addSeparator()
+                    menu.addMenu(self._create_developer_menu(model, selectedModel, selectedCallpath))
                 menu.addSeparator()  # --------------------------------------------------
                 # showCommentsAction = menu.addAction("Show Comments")
                 # showCommentsAction.setEnabled(
@@ -107,6 +159,11 @@ class TreeView(QTreeView):
                 showDataPointsAction.setDisabled(selectedModel is None)
                 showDataPointsAction.triggered.connect(
                     lambda: self.showDataPoints(selectedModel))
+                action = menu.addAction("Calculate complexity comparison")
+                action.setDisabled(selectedModel is None or not isinstance(selectedModel, ComparisonModel))
+                action.triggered.connect(
+                    lambda: developer_tools.calculate_complexity_comparison(model, self.selectedIndexes()))
+
                 copyModel = menu.addAction("Copy model")
                 copyModel.setDisabled(selectedModel is None)
                 copyModel.triggered.connect(
@@ -121,6 +178,8 @@ class TreeView(QTreeView):
         expandSubtree = expand_collapse_submenu.addAction("Expand subtree")
         expandSubtree.triggered.connect(
             lambda: self.expandRecursively(self.selectedIndexes()[0]))
+        expandSubtree = expand_collapse_submenu.addAction("Expand subtree without comparisons")
+        expandSubtree.triggered.connect(self.expand_recursively_without_comparison)
         expandLargest = expand_collapse_submenu.addAction("Expand largest")
         expandLargest.triggered.connect(lambda: self.expand_largest(model, self.selectedIndexes()[0]))
         expand_collapse_submenu.addSeparator()  # --------------------------------------------------
@@ -131,15 +190,34 @@ class TreeView(QTreeView):
             lambda: self.collapseRecursively(self.selectedIndexes()[0]))
         return expand_collapse_submenu
 
+    def _create_developer_menu(self, treeModel:TreeModel, selectedModel, selectedCallpath):
+        submenu = QMenu("Developer tools")
+        action = submenu.addAction("Show tags")
+        action.triggered.connect(lambda: developer_tools.show_info(treeModel, selectedCallpath.path))
+        submenu.addSeparator()
+        action = submenu.addAction("Delete subtree")
+        action.triggered.connect(lambda: developer_tools.delete_subtree(self, treeModel))
+        action = submenu.addAction("Filter: at least 1% of total time")
+        action.setCheckable(True)
+        action.setChecked(self._filter_1_percent_time_state)
+        action.toggled.connect(lambda on: developer_tools.filter_1_percent_time(self, on, treeModel))
+        action = submenu.addAction("Show simplified model")
+        action.triggered.connect(lambda: developer_tools.simplify_model_at_pos(treeModel, selectedModel))
+        submenu.addSeparator()
+        action = submenu.addAction("Generate Latex plot code")
+        action.triggered.connect(lambda: developer_tools.generate_pgfplot_latex(selectedModel))
+        submenu.addSeparator()
+        return submenu
+
     def copy_model_to_clipboard(self, selectedModel):
-        parameters = self.model().main_widget.getExperiment().parameters
+        parameters = cast(TreeModel, self.model()).main_widget.getExperiment().parameters
         function_string = selectedModel.hypothesis.function.to_string(*parameters)
         QGuiApplication.clipboard().setText(function_string)
 
     @staticmethod
     def showComments(model):
         msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
+        msg.setIcon(QMessageBox.Icon.Information)
         msg.setText(
             "Model has the following comments attached (text can be copied to the clipboard using the context menu):")
         allComments = '\n'.join(("– " + c.getMessage())
@@ -147,7 +225,7 @@ class TreeView(QTreeView):
         msg.setInformativeText(allComments)
         msg.setWindowTitle("Model Comments")
         # msg.setDetailedText("The details are as follows:")
-        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
     # print the data points used in compute cost
@@ -158,7 +236,8 @@ class TreeView(QTreeView):
         msgBox.setFixedSize(600, 400)
         layout = QGridLayout()
         msg = QTextEdit()
-        msg.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        msg.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextSelectableByKeyboard)
         msg.setFont(QFont('Courier'))
         layout.addWidget(msg)
         btn = QPushButton('OK', msgBox)
@@ -215,4 +294,4 @@ class TreeView(QTreeView):
         mimeData = self._handle_drop_event(event)
         if mimeData:
             file_name = mimeData.urls()[0].toLocalFile()  # Make sure to pass only python types into lambda
-            QTimer.singleShot(0, lambda: self.parent().parent().main_widget.open_experiment(file_name))
+            QTimer.singleShot(0, lambda: self._selector_widget.main_widget.open_experiment(file_name))

@@ -59,9 +59,16 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 * marshmallow
 * packaging
 * tqdm
+* kaitaistruct
+* protobuf
+* itanium_demangler
+* sympy
+* typing-extensions
 * sklearn
 * PySide6 (for GUI)
 * matplotlib (for GUI)
+* pyvista (for GUI)
+* pyvistaqt (for GUI)
 * pyobjc-framework-Cocoa (only for GUI on macOS)
 
 ### Installation

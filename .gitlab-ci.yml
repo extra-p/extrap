@@ -24,15 +24,16 @@ cache:
 
 before_script:
   - python --version  # For debugging
-  - pip install virtualenv
-  - virtualenv venv
+#  - ls
+#  - rm -rf venv
+#  - ls
+  - python -m venv venv
   - source venv/bin/activate
   - python -m pip install --upgrade pip
   - pip install .
 
-
 .test:
-  script:
+  script:    
     - pip install pytest pytest-cov # flake8
     #    - flake8 --max-line-length=120 extrap tests setup.py
     - cd tests
@@ -67,6 +68,10 @@ test-3.11:
 test-3.12:
   extends: ".test"
   image: "python:3.12"
+
+test-3.13:
+  extends: ".test"
+  image: "python:3.13"
 
 test-macos:
   extends: ".test"

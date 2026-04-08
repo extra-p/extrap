@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -27,6 +27,9 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
+from extrap.gui.plots.difference_plot import DifferencePlot
+from extrap.gui.plots.expectation_plot import ComparisonPlot3D
+from extrap.gui.plots.stacked_area_plot import StackedAreaPlot
 
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = float("inf")
@@ -53,6 +56,7 @@ class AxisSelection(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self, parameters):
         self.grid = QGridLayout(self)
+        self.grid.setContentsMargins(6, 6, 6, 6)
         self.grid.setColumnStretch(1, 1)
         self.grid.setColumnStretch(3, 1)
         if self.index == 0:
@@ -137,8 +141,6 @@ class AxisSelection(QWidget):
                 widget = item.widget()
                 if widget is not None:
                     widget.deleteLater()
-                else:
-                    self.clearLayout(item.layout())
 
     def setMax(self, axis, maxValue):
         if axis <= 2:
@@ -241,8 +243,6 @@ class ValueSelection(QWidget):
                 widget = item.widget()
                 if widget is not None:
                     widget.deleteLater()
-                else:
-                    self.clearLayout(item.layout())
 
 
 #####################################################################
@@ -276,6 +276,7 @@ class DataDisplayManager(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
+        grid.setContentsMargins(6, 6, 6, 6)
 
         self.display_widget = QTabWidget(self)
         self.display_widget.setMovable(True)
@@ -327,11 +328,19 @@ class DataDisplayManager(QWidget):
             5: ("Heat map", HeatMapGraph),
             6: ("Contour plot", IsolinesDisplay),
             7: ("Interpolated contour", InterpolatedContourDisplay),
-            8: ("Measurement points", MeasurementPointsPlot)
+            8: ("Measurement points", MeasurementPointsPlot),
+            9: ("Stacked area plot", StackedAreaPlot),
+            10: ("Difference plot", DifferencePlot)
         }
 
+        if 11 in selectedCheckBoxesIndex:
+            labelText = "Comparison plot"
+            tabStatus = self.is_tab_already_opened(labelText)
+            if tabStatus is False:
+                self.display_widget.addTab(ComparisonPlot3D(self.main_widget, self), labelText)
+
         for i in selectedCheckBoxesIndex:
-            if i == 0:
+            if i == 0 or i == 11:
                 continue
             labelText, plot = graph_widgets[i]
             if not self.is_tab_already_opened(labelText):
@@ -407,6 +416,7 @@ class GraphLimitsWidget(QWidget):
         self.data_display.limits_widget = self
 
         self.grid = QGridLayout(self)
+        self.grid.setContentsMargins(6, 6, 6, 6)
         self.grid.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
 
         self._placeholder = AxisSelection(data_display, self, 0, [])

@@ -5,13 +5,9 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
-import sys
-
 import matplotlib.patches as mpatches
 import numpy as np
-from PySide6.QtWidgets import *  # @UnusedWildImport
 from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.figure import Figure
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
@@ -20,21 +16,8 @@ from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
 
 class DominatingFunctionsAsHeatMap(GraphDisplayWindow):
-    def __init__(self, heatMapGraphWidget, width=5, height=4, dpi=100):
-
-        self.heatMapGraphWidget = heatMapGraphWidget
-        self.isLeft = 1
-        self.isRight = -1
-        self.isInSameLine = 0
-        self.epsilon = sys.float_info.epsilon
-
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        super().__init__(self, self.fig)
-        super().setSizePolicy(self,
-                              QSizePolicy.Expanding,
-                              QSizePolicy.Expanding)
-        super().updateGeometry(self)
-        self.draw_figure()
+    def __init__(self, heatMapGraphWidget, main_widget, width=5, height=4, dpi=100):
+        super().__init__(heatMapGraphWidget, main_widget, width, height, dpi)
 
     def draw_figure(self):
 

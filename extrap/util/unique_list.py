@@ -19,7 +19,19 @@ class UniqueList(list, Sequence[T]):
             self.extend(iterable)
 
     def __setitem__(self, i, value):
-        raise NotImplementedError()
+        if isinstance(i, slice):
+            raise NotImplementedError()
+
+        old_value = self[i]
+        if old_value == value:
+            return
+        elif value in self._set:
+
+            raise ValueError('Value already exists')
+        else:
+            self._set.remove(old_value)
+            self._set.add(value)
+            super().__setitem__(i, value)
 
     def insert(self, index, item):
         if item in self._set:

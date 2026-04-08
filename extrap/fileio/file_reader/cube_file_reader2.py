@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -20,6 +20,8 @@ from typing import Dict, Union, Sequence, Tuple, Optional
 import numpy
 from numpy import ma
 from packaging.version import Version
+from pycubexr import CubexParser
+from pycubexr.utils.exceptions import MissingMetricError
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -32,9 +34,11 @@ from extrap.fileio import io_helper
 from extrap.fileio.file_reader.abstract_directory_reader import AbstractDirectoryReader, \
     AbstractScalingConversionReader
 from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
+from extrap.util.dynamic_options import DynamicOptions
+from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
-from pycubexr import CubexParser
-from pycubexr.utils.exceptions import MissingMetricError
+
+CUBE_CALLSITE_ID_KEY = 'callsite id'
 
 
 @dataclass
@@ -52,8 +56,10 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
     LOADS_FROM_DIRECTORY = True
 
     selected_metrics = None
+    demangle_names = DynamicOptions.add(True, bool)
     use_inclusive_measurements = False
     small_kernel_filter: SmallKernelFilter = None
+    aggregate_unc_cas_counts = DynamicOptions.add(True, bool)
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
@@ -114,6 +120,16 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
         if self.small_kernel_filter:
             self._remove_small_kernels(experiment, total_values, progress_bar)
 
+        if self.aggregate_unc_cas_counts:
+            self._aggregate_unc_cas_counts(experiment, progress_bar)
+
+        if not isinstance(path, list):
+            extra_data_path = Path(path) / "extra_data"
+            if extra_data_path.exists():
+                # breakpoint()
+                self._load_extra_data(experiment, extra_data_path, progress_bar)
+                # breakpoint()
+
         # determine calltree
         call_tree = io_helper.create_call_tree(experiment.callpaths, progress_bar, progress_scale=0.1)
         experiment.call_tree = call_tree
@@ -125,6 +141,43 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
         io_helper.validate_experiment(experiment, progress_bar)
         progress_bar.update()
         return experiment
+
+    def _load_extra_data(self, experiment, path, progress_bar):
+        extra_experiment = self.read_experiment(path, progress_bar)
+        # breakpoint()
+        if extra_experiment.parameters != experiment.parameters:
+            raise FileFormatError("Cannot load extra data without matching parameters.")
+        if extra_experiment.coordinates != experiment.coordinates:
+            raise FileFormatError("Cannot load extra data without matching coordinates.")
+        new_metrics = set(e_metric for e_metric in extra_experiment.metrics if e_metric not in experiment.metrics)
+        experiment.metrics.extend(new_metrics)
+        for (callpath, metric), measurements in extra_experiment.measurements.items():
+            if metric not in new_metrics:
+                continue
+            experiment.callpaths.append(callpath)
+            experiment.measurements[(callpath, metric)] = measurements
+
+    @staticmethod
+    def _aggregate_unc_cas_counts(experiment, progress_bar):
+        cas_metrics = [m for m in experiment.metrics if "UNC_M_CAS_COUNT" in m.name]
+        if cas_metrics:
+            agg_cas_metric = Metric("UNC_M_CAS_COUNT:ALL")
+            experiment.add_metric(agg_cas_metric)
+            for callpath in progress_bar(experiment.callpaths, len(experiment.callpaths),
+                                         scale=0.1):
+                all_measurements = None
+                for cas_metric in cas_metrics:
+                    measurements = experiment.measurements.get((callpath, cas_metric))
+                    if measurements:
+                        if all_measurements is None:
+                            all_measurements = {m.coordinate: m.copy() for m in measurements}
+                        else:
+                            for m in measurements:
+                                all_measurements[m.coordinate].merge(m)
+
+                for m in all_measurements:
+                    m.metric = agg_cas_metric
+                experiment.measurements[callpath, agg_cas_metric] = list(all_measurements.values())
 
     def _aggregate_repetitions_legacy(self, point_group, progress_bar, show_warning_skipped_metrics):
         total_values = defaultdict(list)
@@ -260,19 +313,62 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
 
     def _make_callpath_mapping(self, cnodes):
         callpaths = {}
+        callsites = {}
+        callsite_kernels = {}
+
+        def demangle_name(name):
+            if self.demangle_names:
+                from itanium_demangler import parse as demangle
+                try:
+                    demangled = demangle(name)
+                    if demangled:
+                        name = str(demangled)
+                except NotImplementedError as e:
+                    pass
+            return name.replace('->', '- >')
 
         def walk_tree(parent_cnode, parent_name):
             for cnode in parent_cnode.get_children():
                 name = cnode.region.name
+                name = demangle_name(name)
                 path_name = '->'.join((parent_name, name))
-                callpaths[cnode.id] = Callpath(path_name)
+                callpath = Callpath(path_name)
+                if cnode.region.paradigm == 'cuda':
+                    if cnode.region.role == 'function':
+                        callpath.tags['gpu__kernel'] = True
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsite_kernels[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    elif cnode.region.role == 'wrapper':
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    elif cnode.region.role == 'implicit barrier':
+                        callpath.tags['gpu__sync'] = True
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    elif cnode.region.role == 'artificial':
+                        callpath.tags['gpu__overhead'] = True
+                        if CUBE_CALLSITE_ID_KEY in cnode.parameters:
+                            callsites[cnode.parameters[CUBE_CALLSITE_ID_KEY]] = callpath
+                    else:
+                        warnings.warn(f"Unknown cuda role {cnode.region.role} in {path_name}.")
+
+                callpaths[cnode.id] = callpath
                 walk_tree(cnode, path_name)
 
         for root_cnode in cnodes:
             name = root_cnode.region.name
+            name = demangle_name(name)
             callpath = Callpath(name)
             callpaths[root_cnode.id] = callpath
             walk_tree(root_cnode, name)
+
+        for id, kernel_callpath in callsite_kernels.items():
+            if id in callsites:
+                callsite_callpath = callsites[id]
+                kernel_name = kernel_callpath.name[kernel_callpath.name.rfind('->') + 2:]
+                kernel_callpath.name = callsite_callpath.name + '->[GPU] ' + kernel_name
+            else:
+                warnings.warn(f"Could not find call-site ({id}) for the following kernel: {kernel_callpath.name}")
 
         return callpaths
 

@@ -39,6 +39,7 @@ class AbstractModeler(ABC):
 
     @property
     def use_median(self) -> bool:
+        warnings.warn('use_median is deprecated use use_measure instead', DeprecationWarning)
         if self.use_measure == Measure.MEDIAN:
             return True
         return False

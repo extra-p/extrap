@@ -36,6 +36,7 @@ class ModelerWidget(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         grid = QGridLayout(self)
+        grid.setContentsMargins(6, 6, 6, 6)
         self.setLayout(grid)
 
         self.model_name_edit = QLineEdit(self)
@@ -117,11 +118,11 @@ class ModelerWidget(QWidget):
         if len(experiment.parameters) == 1:
             for i, (name, modeler) in enumerate(single_parameter.all_modelers.items()):
                 self._model_selector.addItem(name, modeler)
-                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
+                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ItemDataRole.ToolTipRole)
         else:
             for i, (name, modeler) in enumerate(multi_parameter.all_modelers.items()):
                 self._model_selector.addItem(name, modeler)
-                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ToolTipRole)
+                self._model_selector.setItemData(i, modeler.DESCRIPTION, Qt.ItemDataRole.ToolTipRole)
         self._model_selector.setCurrentText('Default')
         self._model_selector.currentData()
 

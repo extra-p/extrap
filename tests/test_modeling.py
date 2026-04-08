@@ -1,16 +1,21 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2021, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from extrap.entities.callpath import Callpath
+from extrap.entities.functions import SingleParameterFunction
 from extrap.entities.hypotheses import ConstantHypothesis
 from extrap.entities.hypotheses import SingleParameterHypothesis
 from extrap.entities.metric import Metric
+from extrap.entities.terms import CompoundTerm
+from extrap.entities.measurement import Measurement
+from extrap.entities.coordinate import Coordinate
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.single_parameter.basic import SingleParameterModeler
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
 
 
@@ -81,3 +86,19 @@ class TestModeling(TestCaseWithFunctionAssertions):
         for model in experiment.modelers[0].models.values():
             self.assertApproxFunction(first.hypothesis.function, model.hypothesis.function)
             self.assertEqual(first.hypothesis, model.hypothesis)
+
+    def test_compute_coefficients(self):
+        measurements = [Measurement(Coordinate(x), None, None, 13.0) for x in [1.0, 2.0, 4.0, 16.0]]
+        measurements += [Measurement(Coordinate(32.0), None, None, 12.99999999999999)]
+        f = SingleParameterFunction(CompoundTerm.create(9, 4, 0))
+        f.constant_coefficient = 1.0
+        h = SingleParameterHypothesis(f, False)
+        h.compute_coefficients(measurements,negative_coefficients=False)
+        h.compute_cost(measurements)
+
+    def test_basic_modeling(self):
+        measurements = [Measurement(Coordinate(x), None, None, 13.0) for x in [1.0, 2.0, 4.0, 16.0]]
+        measurements += [Measurement(Coordinate(32.0), None, None, 12.99999999999999)]
+        modeler = SingleParameterModeler()
+        model = modeler.create_model(measurements)
+        print(model.hypothesis)

@@ -11,14 +11,18 @@ import importlib.resources
 import itertools
 import math
 import typing
+from itertools import cycle
 
 import numpy
 from PySide6.QtCore import *  # @UnusedWildImport
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
-from extrap.gui.Utils import formatFormula
-from extrap.gui.Utils import formatNumber
+
+from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.entities.model import Model
 from extrap.gui.plots.AbstractPlotWidget import AbstractPlotWidget
+from extrap.util.exceptions import RecoverableError
+from extrap.util.formatting_helper import format_number_plain_text
 from extrap.util.formatting_helper import replace_method_parameters
 
 if typing.TYPE_CHECKING:
@@ -42,11 +46,13 @@ class GraphWidget(QWidget):
         self.initUI()
         self.set_initial_value()
         self.setMouseTracking(True)
+        self._line_styles = [Qt.PenStyle.SolidLine, Qt.PenStyle.DashLine, Qt.PenStyle.DotLine, Qt.PenStyle.DashDotLine,
+                             Qt.PenStyle.DashDotDotLine]
 
     def initUI(self):
         self.setMinimumWidth(300)
         self.setMinimumHeight(300)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.show()
 
@@ -59,6 +65,13 @@ class GraphWidget(QWidget):
 
         else:
             print("[EXTRAP:] Error: Set maximum for axis other than X-axis.")
+
+    def getMax(self, axis):
+        if axis == 0:
+            return self.max_x
+
+        else:
+            print("[EXTRAP:] Error: Get maximum for axis other than X-axis.")
 
     def logicalXtoPixel(self, lValue):
         """
@@ -87,7 +100,7 @@ class GraphWidget(QWidget):
     def paintEvent(self, event):
         paint = QPainter()
         paint.begin(self)
-        paint.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+        paint.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.TextAntialiasing)
         self.drawGraph(paint)
         paint.end()
 
@@ -216,7 +229,7 @@ class GraphWidget(QWidget):
         """
           This function hides all the datapoints that is being shown on graph.
         """
-        self.datapoints_type = QObject.sender(self).data()
+        self.datapoints_type = typing.cast(QAction, QObject.sender(self)).data()
         self.update()
 
     @Slot()
@@ -263,7 +276,7 @@ class GraphWidget(QWidget):
             callpath_name = model.callpath.name
             data_points = [p for (_, p) in self.calculateDataPoints(model, True)]
             parameters = self.main_widget.getExperiment().parameters
-            model_function_text = 'Model: ' + formatFormula(model.hypothesis.function.to_string(*parameters))
+            model_function_text = 'Model: ' + model.hypothesis.function.to_string(*parameters)
 
             data_points_text = '\n'.join(
                 ('(' + str(x) + ', ' + str(y) + ')') for (x, y) in data_points)
@@ -294,9 +307,24 @@ class GraphWidget(QWidget):
         """
 
         # Get data
-        model_list, selected_call_nodes = self.main_widget.get_selected_models()
-        if not model_list:
+        model_list1, selected_call_nodes1 = self.main_widget.get_selected_models()
+        if not model_list1:
             return
+
+        model_list = []
+        selected_call_nodes = []
+
+        def add_model(model, call_node):
+            if model != Model.ZERO:
+                model_list.append(model)
+                selected_call_nodes.append(call_node)
+
+        for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
+            if isinstance(model, ComparisonModel):
+                for m in model.models:
+                    add_model(m, call_node)
+            else:
+                add_model(model, call_node)
 
         plot_options = self.main_widget.plot_formatting_options
         paint.setFont(QFont(plot_options.font_family, plot_options.font_size))
@@ -307,26 +335,37 @@ class GraphWidget(QWidget):
         y = self.calculateMaxY(model_list) * 1.2
         self.max_y = y
 
-        # Draw coordinate system
-        self.drawAxis(paint, self.main_widget.get_selected_metric())
+        if math.isnan(self.max_y):
+            paint.drawText(QPointF(10, 10),"Cannot draw graph, because NaN was set as maximum.")
+            return
 
-        # Draw functionss
-        index_indicator = 0
-        if not self.combine_all_callpath:
-            for model, call_node in zip(model_list, selected_call_nodes):
-                color = self.main_widget.model_color_map[call_node]
-                self.drawModel(paint, model, color)
-        else:
-            # main_widget = self.main_widget
-            # color = main_widget.model_color_map[selected_call_nodes[0]]
-            self.drawAggregratedModel(paint, model_list)
+        try:
+            # Draw coordinate system
+            self.drawAxis(paint, self.main_widget.get_selected_metric())
 
-        # Draw data points
-        self.drawDataPoints(paint, model_list)
+            # Draw functionss
+            index_indicator = 0
+            if not self.combine_all_callpath:
+                for model, call_node in zip(model_list1, selected_call_nodes1):
+                    color = self.main_widget.model_color_map[call_node]
+                    if isinstance(model, ComparisonModel):
+                        for m, style in zip(model.models, cycle(self._line_styles)):
+                            self.drawModel(paint, m, color, style)
+                    else:
+                        self.drawModel(paint, model, color)
+            else:
+                # main_widget = self.main_widget
+                # color = main_widget.model_color_map[selected_call_nodes[0]]
+                self.drawAggregratedModel(paint, model_list)
 
-        # Draw legend
-        paint.setFont(QFont(plot_options.font_family, plot_options.legend_font_size))
-        self.drawLegend(paint)
+            # Draw data points
+            self.drawDataPoints(paint, model_list)
+
+            # Draw legend
+            paint.setFont(QFont(plot_options.font_family, plot_options.legend_font_size))
+            self.drawLegend(paint)
+        except OverflowError as err:
+            raise RecoverableError(err) from err
 
     def drawDataPoints(self, paint, selected_models):
         if self.show_datapoints is True:
@@ -336,8 +375,10 @@ class GraphWidget(QWidget):
             # data_points_list = list()
             for selected_model in selected_models:
                 if self.datapoints_type == "outlier":
-                    self.showOutlierPoints(paint, selected_model)
-
+                    try:
+                        self.showOutlierPoints(paint, selected_model)
+                    except OverflowError:
+                        pass
                 else:
                     data_points = self.calculateDataPoints(selected_model)
                     self.plotPointsOnGraph(paint, data_points)
@@ -417,12 +458,13 @@ class GraphWidget(QWidget):
             paint.drawText(bounding_rect_text,
                            Qt.TextFlag.TextWordWrap | Qt.TextFlag.TextDontClip, aggregated_callpath_name)
 
-    def drawModel(self, paint, model, color):
+    def drawModel(self, paint, model, color, style=Qt.PenStyle.SolidLine):
         function = model.hypothesis.function
 
         cord_lists = self.calculate_function(function, self.graph_width)
 
         pen = QPen(QColor(color))
+        pen.setStyle(style)
         pen.setWidth(2)
         paint.setPen(pen)
 
@@ -626,7 +668,10 @@ class GraphWidget(QWidget):
         for _ in range(1, number_of_points + 1):
             value = value + axis_range
             if value < 1:
-                digits_after_point = int(math.log10(1 / value)) + 2
+                try:
+                    digits_after_point = int(math.log10(1 / value)) + 2
+                except ValueError:
+                    print(value, 1 / value)
                 value_to_append = float(
                     "{0:.{1}f}".format(value, digits_after_point))
             else:
@@ -661,7 +706,7 @@ class GraphWidget(QWidget):
                 precision = 1
             else:
                 precision = 2
-            value_str = formatNumber(str(value), precision)
+            value_str = format_number_plain_text(value, precision)
             new_mark_list.append(value_str)
         return new_mark_list
 
@@ -678,6 +723,8 @@ class GraphWidget(QWidget):
         """ This function calculates datapoints to be marked on the graph
         """
         datapoints = model.measurements
+        if not datapoints:
+            return []
 
         parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
         datapoint_x_absolute_pos_list = list()
@@ -735,8 +782,9 @@ class GraphWidget(QWidget):
         # Check the maximum value of a displayed data point
         if self.show_datapoints:
             for model in modelList:
-                y = max(model.predictions)
-                y_max = max(y, y_max)
+                if model.predictions is not None and len(model.predictions) > 0:
+                    y = max(model.predictions)
+                    y_max = max(y, y_max)
 
         with numpy.errstate(invalid='ignore', divide='ignore'):
             if self.combine_all_callpath:
@@ -751,7 +799,7 @@ class GraphWidget(QWidget):
                 for model in modelList:
                     function = model.hypothesis.function
                     y = function.evaluate(pv_list)
-                    if math.isinf(y):
+                    if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                         y = max(model.predictions)
                     y_agg += y
                 y_max = max(y_agg, y_max)
@@ -760,7 +808,7 @@ class GraphWidget(QWidget):
             for model in modelList:
                 function = model.hypothesis.function
                 y = function.evaluate(pv_list)
-                if math.isinf(y):
+                if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                     y = max(model.predictions)
                 y_max = max(y, y_max)
 
@@ -769,7 +817,7 @@ class GraphWidget(QWidget):
             for model in modelList:
                 function = model.hypothesis.function
                 y = function.evaluate(pv_list)
-                if math.isinf(y):
+                if math.isinf(y) and model.predictions is not None and len(model.predictions) > 0:
                     y = max(model.predictions)
                 y_max = max(y, y_max)
 
@@ -784,6 +832,8 @@ class GraphWidget(QWidget):
             parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
             for i in range(len(selected_model)):
                 datapoints = selected_model[i].measurements
+                if not datapoints:
+                    continue
                 for datapoint in datapoints:
                     x_value = datapoint.coordinate[parameter_datapoint]
                     if x_value <= self.max_x:
@@ -796,6 +846,8 @@ class GraphWidget(QWidget):
 
         else:
             datapoints = selected_model.measurements
+            if not datapoints:
+                return
             parameter_datapoint = self.main_widget.data_display.getAxisParameter(0).id
             for datapoint in datapoints:
                 x_value = datapoint.coordinate[parameter_datapoint]
@@ -848,7 +900,7 @@ class GraphWidget(QWidget):
         # paint.drawText((x_cordinate/2), y_cordinate-10, selected_callpath.name)
 
     def mousePressEvent(self, event):
-        if event.buttons() & ~Qt.LeftButton:
+        if event.buttons() & ~Qt.MouseButton.LeftButton:
             return
         x = int(event.x())
         y = int(event.y())
@@ -859,7 +911,7 @@ class GraphWidget(QWidget):
             # print ("clicked_x_pos, clicked_y_pos", self.clicked_x_pos, self.clicked_y_pos)
 
     def mouseMoveEvent(self, event):
-        if (event.buttons() & ~Qt.LeftButton):
+        if (event.buttons() & ~Qt.MouseButton.LeftButton):
             return
         if self.clicked_x_pos is None or self.clicked_y_pos is None:
             return
@@ -919,6 +971,7 @@ class GraphWrapperWidget(AbstractPlotWidget):
 
         self.setMax = self._graph_widget.setMax
         self.set_initial_value = self._graph_widget.set_initial_value
+        self.getMax = self._graph_widget.getMax
 
         self.context_menu_button = QToolButton(self)
 
@@ -930,7 +983,7 @@ class GraphWrapperWidget(AbstractPlotWidget):
         button_layout.setContentsMargins(15, 15, 15, 15)
         button_layout.addWidget(self.context_menu_button)
 
-        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignLeft | Qt.AlignBottom)
+        grid.addLayout(button_layout, 0, 0, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
 
     def _context_menu_button_clicked(self):
         if self._graph_widget:

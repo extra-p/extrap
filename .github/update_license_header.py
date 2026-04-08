@@ -22,7 +22,7 @@ license_header += '\n\n'
 find_license_comment = re.compile(r"\s*(?:#.*?\n)+(?:#.*?Copyright.*?(\d\d\d\d).*?\n)(?:#.*?\n)+\s*")
 
 for file_path in file_paths:
-    if file_path.endswith('update_license_header.py'):
+    if file_path.endswith('update_license_header.py') or file_path.endswith('_pb2.py'):
         continue
     if file_path.startswith(os.path.join("..", "venv")):
         continue

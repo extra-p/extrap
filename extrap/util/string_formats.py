@@ -12,3 +12,4 @@ class FunctionFormats(enum.Enum):
     NONE = None,
     PYTHON = 1
     LATEX = 2
+    HTML = 3

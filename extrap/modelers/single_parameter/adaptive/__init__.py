@@ -73,8 +73,8 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
 
     preset = modeler_options.add(0, int, range=range(-2, 2), on_change=_set_preset)
 
-    def __init__(self, use_median=False):
-        super().__init__(use_median)
+    def __init__(self, use_measure=Measure.MEAN):
+        super().__init__(use_measure)
         self.preset = 0
         self.no_constants = False
         self._basic_modeler: AbstractSingleParameterModeler = SingleParameterModeler()

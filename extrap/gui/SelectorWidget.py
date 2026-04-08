@@ -11,10 +11,12 @@ import math
 from typing import Optional, Sequence, TYPE_CHECKING, Tuple
 
 import numpy
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import *  # @UnusedWildImport
 from extrap.entities.calltree import Node
 from extrap.entities.metric import Metric
 from extrap.entities.model import Model
+from extrap.gui.ModelerOptionsWidget import ModelerOptionsWidget
 from extrap.gui.TreeModel import TreeModel, TreeItemFilterProvider
 from extrap.gui.TreeView import TreeView
 from extrap.gui.components.ParameterValueSlider import ParameterValueSlider
@@ -38,6 +40,7 @@ class SelectorWidget(QWidget):
     # noinspection PyAttributeOutsideInit
     def initUI(self):
         self.grid = QGridLayout(self)
+        self.grid.setContentsMargins(6, 6, 6, 6)
         self.setLayout(self.grid)
 
         # Model selection
@@ -65,7 +68,7 @@ class SelectorWidget(QWidget):
 
         # group.setAutoFillBackground(True)
         # Callpath selection
-        self.tree_view = TreeView(group)
+        self.tree_view = TreeView(group, self)
         group_layout.addWidget(self.tree_view)
         # Input variable values
 
@@ -94,6 +97,11 @@ class SelectorWidget(QWidget):
             self.changeAsymptoticBehavior)
         self.toolbar.addWidget(self.asymptoticCheckBox)
 
+        self.show_difference = QCheckBox('Show difference', self.toolbar)
+        self.show_difference.stateChanged.connect(
+            self.changeAsymptoticBehavior)
+        self.toolbar.addWidget(self.show_difference)
+
         self.show_parameters = QCheckBox('Show parameters', self.toolbar)
         # self.show_parameters.toggle()
         self.show_parameters.stateChanged.connect(
@@ -119,9 +127,15 @@ class SelectorWidget(QWidget):
         experiment = self.main_widget.getExperiment()
         parameters = experiment.parameters
         for i, param in enumerate(parameters):
-            new_widget = ParameterValueSlider(self, param, self)
+            new_widget = ParameterValueSlider(param, self)
+            new_widget.valueChanged.connect(self._on_parameter_value_changed)
             self.parameter_sliders.append(new_widget)
             self.grid.addWidget(new_widget, i + 4, 0, 1, 2)
+
+    @Slot(int)
+    def _on_parameter_value_changed(self, value):
+        self.main_widget.updateMinMaxValue()
+        self.tree_model.valuesChanged()
 
     def fillCalltree(self):
         self.tree_model = TreeModel(self)
@@ -147,7 +161,8 @@ class SelectorWidget(QWidget):
                            (c.path, metric) in self.getCurrentModel().models]
         self.main_widget.model_color_map.update(call_tree_nodes)
         self.main_widget.on_selection_changed()
-        self.main_widget.measurementWizard_widget.callpath_selection_changed()
+        #TODO check if necessary:
+        #self.main_widget.measurementWizard_widget.callpath_selection_changed()
 
     def fillMetricList(self):
         self.metric_selector.clear()
@@ -266,6 +281,21 @@ class SelectorWidget(QWidget):
             self.model_selector.removeItem(index)
             del experiment.modelers[index]
 
+    def show_model_options(self):
+        model = self.getCurrentModel()
+        if model is None:
+            return
+        dialog = QDialog(self.main_widget)
+        dialog.setWindowTitle('Modeler Options: ' + model.name)
+        dialog.setLayout(QVBoxLayout(dialog))
+        dialog.layout().addWidget(QLabel('Modeler: ' + model.modeler.NAME))
+        dialog.layout().addWidget(QLabel('Uses: ' + model.modeler.use_measure.pretty_name()))
+        options_widget = ModelerOptionsWidget(dialog, model.modeler, has_reset_button=False)
+        dialog.layout().addWidget(options_widget)
+        options_widget.setEnabled(False)
+        dialog.exec()
+        del dialog
+
     def delete_metric(self):
         reply = QMessageBox.question(self,
                                      'Delete Current Metric',
@@ -324,8 +354,13 @@ class SelectorWidget(QWidget):
             if model is not None:
                 formula = model.hypothesis.function
                 value = formula.evaluate(param_value_list)
-                if not math.isinf(value) and not math.isnan(value):
-                    value_list.append(value)
+                if isinstance(value, Sequence):
+                    for v in value:
+                        if not math.isinf(v) and not math.isnan(v):
+                            value_list.append(v)
+                else:
+                    if not math.isinf(value) and not math.isnan(value):
+                        value_list.append(value)
             children = callpath.childs
             value_list += self.iterate_children(models, param_value_list, children, metric)
         return value_list

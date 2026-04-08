@@ -23,7 +23,7 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         """
 
         # Get data
-        model_list, selected_callpaths = self.main_widget.get_selected_models()
+        model_list, selected_callpaths = self._get_models_to_draw()
         if model_list is None:
             return
 
@@ -61,6 +61,8 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         for model, callpath in zip(model_list, selected_callpaths):
             callpath_color = dict_callpath_color[callpath]
             points = model.measurements
+            if not points:
+                continue
             if parameter_x.id >= 0:
                 xs = np.array([m.coordinate[parameter_x.id] for m in points])
             else:

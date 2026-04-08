@@ -237,5 +237,75 @@ class TestSegmentedModeler(TestCaseWithFunctionAssertions):
         numpy.testing.assert_array_equal(np.array([0.5, 1, 4, 512]), res)
 
 
+class TestMeasurementSegmentView(unittest.TestCase):
+
+    def test_one_change_point(self):
+        measurements = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        change_points = [5]
+        segment0 = SegmentedModel.MeasurementSegmentView(measurements, change_points, 0)
+        segment1 = SegmentedModel.MeasurementSegmentView(measurements, change_points, 1)
+        self.assertEqual(5, len(segment0))
+        self.assertEqual(5, len(segment1))
+
+        self.assertSequenceEqual([1, 2, 3, 4,5], segment0)
+        self.assertSequenceEqual([5, 6, 7, 8, 9], segment1)
+
+        self.assertNotIn(7, segment0)
+        self.assertNotIn(3, segment1)
+
+        self.assertEqual(5, segment0[-1])
+        self.assertEqual(9, segment1[-1])
+
+        self.assertEqual(1, segment0[0])
+        self.assertEqual(5, segment1[0])
+
+        self.assertEqual(5, segment0[4])
+        self.assertEqual(9, segment1[4])
+
+        self.assertRaises(IndexError, segment0.__getitem__, 5)
+        self.assertRaises(IndexError, segment1.__getitem__, 5)
+
+        self.assertRaises(IndexError, segment0.__getitem__, -6)
+        self.assertRaises(IndexError, segment1.__getitem__, -6)
+
+    def test_two_change_points(self):
+        measurements = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        change_points = [5, 6]
+        segment0 = SegmentedModel.MeasurementSegmentView(measurements, change_points, 0)
+        segment1 = SegmentedModel.MeasurementSegmentView(measurements, change_points, 1)
+        self.assertEqual(5, len(segment0))
+        self.assertEqual(5, len(segment1))
+
+        self.assertSequenceEqual([1, 2, 3, 4, 5], segment0)
+        self.assertSequenceEqual([6, 7, 8, 9, 10], segment1)
+
+        self.assertNotIn(7, segment0)
+        self.assertNotIn(3, segment1)
+
+        self.assertEqual(5, segment0[-1])
+        self.assertEqual(10, segment1[-1])
+
+        self.assertEqual(1, segment0[0])
+        self.assertEqual(6, segment1[0])
+
+        self.assertEqual(5, segment0[4])
+        self.assertEqual(10, segment1[4])
+
+        self.assertRaises(IndexError, segment0.__getitem__, 5)
+        self.assertRaises(IndexError, segment1.__getitem__, 5)
+
+        self.assertRaises(IndexError, segment0.__getitem__, -6)
+        self.assertRaises(IndexError, segment1.__getitem__, -6)
+
+    def test_one_change_point_slices(self):
+        measurements = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        change_points = [5]
+        segment0 = SegmentedModel.MeasurementSegmentView(measurements, change_points, 0)
+        segment1 = SegmentedModel.MeasurementSegmentView(measurements, change_points, 1)
+
+        self.assertSequenceEqual([1, 2, 3], segment0[:3])
+        self.assertSequenceEqual([5, 6, 7], segment1[:3])
+
+
 if __name__ == '__main__':
     unittest.main()

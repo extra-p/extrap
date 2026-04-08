@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,6 +11,7 @@ import re
 import warnings
 from collections import defaultdict
 from pathlib import Path
+from typing import List, Tuple
 
 import extrap
 from extrap.entities.scaling_type import ScalingType
@@ -21,8 +22,9 @@ from extrap.util.progress_bar import DUMMY_PROGRESS
 
 
 class AbstractDirectoryReader(FileReader, abc.ABC):
+    allow_one_coordinate = False
 
-    def _find_files_in_directory(self, path, glob_pattern, progress_bar=DUMMY_PROGRESS):
+    def _find_files_in_directory(self, path, glob_pattern, progress_bar=DUMMY_PROGRESS) -> List[Path]:
         path = Path(path)
         if not path.is_dir():
             raise FileFormatError(f'{self.NAME.capitalize()} file path must point to a directory: {path}')
@@ -32,8 +34,9 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
         progress_bar.total += len(files) + 6
         return files
 
-    @staticmethod
-    def _determine_parameters_from_paths(paths, progress_bar=DUMMY_PROGRESS):
+    def _determine_parameters_from_paths(self, paths, progress_bar=DUMMY_PROGRESS) -> Tuple[
+        List[str], List[List[float]]]:
+
         parameter_names_initial = []
         parameter_names = []
         parameter_values = []
@@ -54,7 +57,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
             param_list = re.split('([0-9.,]+)', parameters)
             if len(param_list) <= 1:
                 raise FileFormatError(f"Could not detect parameter in {folder_name}")
-            param_list.remove("")
+            if "" in param_list:
+                param_list.remove("")
 
             parameter_names = [n for i, n in enumerate(param_list) if i % 2 == 0]
             parameter_value = [float(n.replace(',', '.').rstrip('.')) for i, n in enumerate(param_list) if i % 2 == 1]
@@ -88,6 +92,8 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
         parameter_names = [p for p in parameter_names if len(parameter_dict[p]) > 1]
 
         if not parameter_names:
+            if self.allow_one_coordinate:
+                return ['p'], [1] * len(paths)
             raise FileFormatError(f"Could not detect any parameter names. "
                                   f"Please follow the usage guide under "
                                   f"<a href={extrap.__documentation_link__}/file-formats.md#cube-file-format>"

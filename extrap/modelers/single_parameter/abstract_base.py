@@ -34,6 +34,7 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
     minimum_term_contribution = modeler_options.add(0.0005, float,  # value for the minimum term contribution
                                                     'Minimum contribution of a term to be included in the model')
+    negative_coefficients = modeler_options.add(True, bool)
 
     def __init__(self, use_measure: Union[bool, Measure]):
         super().__init__(use_measure)
@@ -71,8 +72,11 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         Creates a constant model that fits the data using a ConstantFunction.
         """
         # compute the constant coefficient
-        mean_model = numpy.mean(
-            numpy.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements)))
+        if len(measurements) == 0:
+            mean_model = 0
+        else:
+            mean_model = numpy.mean(
+                numpy.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements)))
 
         # create a constant function
         constant_function = ConstantFunction(mean_model)
@@ -111,7 +115,8 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     validation_measurement = measurements[element_id]
 
                     # compute the model coefficients based on the training data
-                    next_hypothesis.compute_coefficients(training_measurements)
+                    next_hypothesis.compute_coefficients(training_measurements,
+                                                         negative_coefficients=self.negative_coefficients)
 
                     # check if the constant coefficient should actually be 0
                     next_hypothesis.clean_constant_coefficient(self.epsilon, training_measurements)
@@ -120,11 +125,13 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     next_hypothesis.compute_cost_leave_one_out(training_measurements, validation_measurement)
 
                 # compute the model coefficients using all data
-                next_hypothesis.compute_coefficients(measurements)
+                next_hypothesis.compute_coefficients(measurements,
+                                                     negative_coefficients=self.negative_coefficients)
                 logging.debug("single-parameter model %i: %s", i, next_hypothesis.function)
             else:
                 # compute the model coefficients based on the training data
-                next_hypothesis.compute_coefficients(measurements)
+                next_hypothesis.compute_coefficients(measurements,
+                                                     negative_coefficients=self.negative_coefficients)
 
                 # check if the constant coefficient should actually be 0
                 next_hypothesis.clean_constant_coefficient(

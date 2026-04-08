@@ -62,7 +62,7 @@ def read_jsonlines_file(path, progress_bar=DUMMY_PROGRESS, keep_values=False):
                 raise FileFormatError(f'Missing property in line {ln}: {str(error)}. Line: "{line}"')
 
     # create experiment
-    io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar)
+    io_helper.repetition_dict_to_experiment(complete_data, experiment, progress_bar, keep_values=keep_values)
 
     for p in parameters:
         experiment.add_parameter(p)

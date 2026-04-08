@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import logging
 from typing import Mapping, Dict
 
 from PySide6.QtGui import QColor
@@ -27,6 +28,15 @@ class ModelColorMap(Mapping[Node, str]):
         self.name = ''
         self.default_color = None
         self.dict_callpath_color: Dict[Node, str] = {}
+        
+        self.set_colormap('default')
+
+    def set_colormap(self, name):
+        self.name = name
+        self.color_list = self.colormaps[name]
+        self.default_color = self.color_list[0]
+        keys = list(self.dict_callpath_color.keys())
+        self.update(keys)
 
         self.set_colormap('default')
 
@@ -39,6 +49,7 @@ class ModelColorMap(Mapping[Node, str]):
 
     def __getitem__(self, k):
         if k not in self.dict_callpath_color:
+            logging.info(f'ModelColorMap: Color for "{k}" not found. Using fallback.')
             next_index = len(self)
             if next_index < len(self.color_list):
                 self.dict_callpath_color[k] = self.color_list[next_index]
@@ -46,6 +57,10 @@ class ModelColorMap(Mapping[Node, str]):
                 self.dict_callpath_color[k] = self._create_color(next_index, len(self.color_list))
         else:
             return self.dict_callpath_color[k]
+
+    def get_rgb(self, k):
+        c = QColor(self.__getitem__(k))
+        return c.red(), c.green(), c.blue()
 
     def __len__(self):
         return len(self.dict_callpath_color)

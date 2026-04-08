@@ -8,7 +8,7 @@
 import importlib
 import inspect
 import pkgutil
-from typing import TypeVar, MutableMapping, Iterator, Type, Callable
+from typing import TypeVar, MutableMapping, Iterator, Type, Callable, Iterable
 
 _VT = TypeVar("_VT")
 
@@ -42,13 +42,16 @@ class CaseInsensitiveStringDict(MutableMapping[str, _VT]):
         self.case_mapping[k.lower()] = k
         self.data[k] = value
 
+    def __repr__(self):
+        return 'CaseInsensitive(' + repr(self.data) + ')'
 
-def load_extensions(path: str, pkg_name: str, type_: Type[_VT], post_process: Callable[[_VT], None] = None) -> \
-        MutableMapping[str, Type[_VT]]:
+
+def load_extensions(path: Iterable[str], pkg_name: str, type_: Type[_VT], post_process: Callable[[_VT], None] = None) \
+        -> MutableMapping[str, Type[_VT]]:
     def is_modeler(x):
         return inspect.isclass(x) \
-               and issubclass(x, type_) \
-               and not inspect.isabstract(x)
+            and issubclass(x, type_) \
+            and not inspect.isabstract(x)
 
     modelers = CaseInsensitiveStringDict()
     for _, modname, _ in pkgutil.walk_packages(path=path, prefix=pkg_name + '.', onerror=lambda x: None):

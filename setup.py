@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             "extrap = extrap.extrap.extrapcmd:main",
+            "extrap-comparison=extrap.extrap.extrapcomparison:main"
         ],
 
         "gui_scripts": [
@@ -44,6 +45,7 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
@@ -61,8 +63,17 @@ setup(
         "pycubexr>=1.2.3,<3,!=2.0.0",
         "marshmallow~=3.7",
         "packaging>=20.0",
+        "kaitaistruct~=0.9",
+        "protobuf~=3.14",
+        "itanium-demangler~=1.0",
+        "sympy~=1.8",
+        "typing-extensions~=4.3",
+        "msgpack~=1.0",
+        "scipy~=1.5",
+        "pyvista~=0.42",
+        "pyvistaqt~=0.11",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'",
-        "scikit-learn>=1.2.2"
+        "scikit-learn>=1.2"
     ],
     extras_require={
         "adaptive_modeling": ["extrap-adaptive-modeler>=1.0.2,<3"],

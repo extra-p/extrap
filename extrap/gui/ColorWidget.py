@@ -9,7 +9,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *  # @UnusedWildImport
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
-from extrap.gui.Utils import formatNumber
+from extrap.util.formatting_helper import format_number_plain_text
 
 
 class ColorWidget(QWidget):
@@ -23,16 +23,16 @@ class ColorWidget(QWidget):
 
     def initUI(self):
 
-        self.setMinimumHeight(40)
+        self.setMinimumHeight(30)
         self.setMinimumWidth(200)
-        self.setContentsMargins(10, 10, 10, 10)
+        self.setContentsMargins(6, 6, 6, 6)
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         grid = QGridLayout(self)
         grid.setContentsMargins(5, 0, 5, 0)
         self.setStyleSheet("QLabel {color : white; }")
         grid.addWidget(self.min_label, 0, 0)
-        grid.addWidget(self.max_label, 0, 1, Qt.AlignRight)
+        grid.addWidget(self.max_label, 0, 1, Qt.AlignmentFlag.AlignRight)
         self.setLayout(grid)
         # self.red_component=0
         # self.green_component=0
@@ -83,5 +83,5 @@ class ColorWidget(QWidget):
             paint.drawRect(position, mtop, 1, rect_height - mbottom - mtop)
 
     def update_min_max(self, min_value, max_value):
-        self.min_label.setText(formatNumber(str(min_value)))
-        self.max_label.setText(formatNumber(str(max_value)))
+        self.min_label.setText(format_number_plain_text(min_value))
+        self.max_label.setText(format_number_plain_text(max_value))
