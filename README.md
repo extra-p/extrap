@@ -122,31 +122,51 @@ You can find an overview about all command line options under [docs/command-line
 
 Please cite Extra-P in your publications if it helps your research:
 
-    @inproceedings{calotoiu_ea:2013:modeling,
-      author = {Calotoiu, Alexandru and Hoefler, Torsten and Poke, Marius and Wolf, Felix},
-      month = {November},
-      title = {Using Automated Performance Modeling to Find Scalability Bugs in Complex Codes},
-      booktitle = {Proc. of the ACM/IEEE Conference on Supercomputing (SC13), Denver, CO, USA},
-      year = {2013},
-      pages = {1--12},
-      publisher = {ACM},
-      isbn = {978-1-4503-2378-9},
-      doi = {10.1145/2503210.2503277}
-    }
+Alexandru Calotoiu, Marcin Copik, Fabian Czappa, Alexander Geiß, Gustavo Morais, Marcus Ritter, Sergei Shudler, Torsten Hoefler, Felix Wolf: 
+Extra-P – Empirical Performance Modeling Made Easy. *Frontiers in High Performance Computing*, 3–2025, 2026. [10.3389/fhpcp.2025.1714042](https://doi.org/10.3389/fhpcp.2025.1714042)
 
-### Publications
+```
+@Article{calotoiu_extra-p_2026,
+  author          = {Calotoiu, Alexandru and Copik, Marcin and Czappa, Fabian and Geiß, Alexander and Morais, Gustavo and Ritter, Marcus and Shudler, Sergei and Hoefler, Torsten and Wolf, Felix},
+  title           = {Extra-{P} – {Empirical} {Performance} {Modeling} {Made} {Easy}},
+  journal         = {Frontiers in High Performance Computing},
+  year            = {2026},
+  volume          = {3–2025},
+  issn            = {2813–7337},
+  doi             = {10.3389/fhpcp.2025.1714042}
+}
+```
 
-1. Alexandru Calotoiu, David Beckingsale, Christopher W. Earl, Torsten Hoefler, Ian Karlin, Martin Schulz, Felix Wolf:
-   Fast Multi-Parameter Performance Modeling. In Proc. of the 2016 IEEE International Conference on Cluster Computing (
+### Selected Publications
+
+1. Alexandru Calotoiu, Torsten Hoefler, Marius Poke, Felix Wolf:
+   *Using automated performance modeling to find scalability bugs in complex codes*. In Proc. of the International
+   Conference on High Performance Computing, Networking, Storage and Analysis (SC '13), ACM, 2013.
+   [DOI](https://doi.org/10.1145/2503210.2503277)
+
+2. Alexandru Calotoiu, David Beckingsale, Christopher W. Earl, Torsten Hoefler, Ian Karlin, Martin Schulz, Felix Wolf:
+   *Fast Multi-Parameter Performance Modeling*. In Proc. of the 2016 IEEE International Conference on Cluster Computing (
    CLUSTER), Taipei, Taiwan, pages 172–181, IEEE, September
     2016. [PDF](https://apps.fz-juelich.de/jsc-pubsystem/aigaion/attachments/fastmultiparam.pdf-f839eba376c6d61a8c4cab9860b6b3bf.pdf)
 
-2. Marcus Ritter, Alexandru Calotoiu, Sebastian Rinke, Thorsten Reimann, Torsten Hoefler, Felix Wolf: *Learning
+3. Marcus Ritter, Alexandru Calotoiu, Sebastian Rinke, Thorsten Reimann, Torsten Hoefler, Felix Wolf: *Learning
    Cost-Effective Sampling Strategies for Empirical Performance Modeling.* In Proc. of the 34th IEEE International
    Parallel and Distributed Processing Symposium (IPDPS), New Orleans, LA, USA, pages 884–895, IEEE, May
     2020. [PDF](https://apps.fz-juelich.de/jsc-pubsystem/aigaion/attachments/ritter_ea_2020_ipdps.pdf-01cbe96f7a170aba7c7ef941f966d292.pdf)
 
-3. Marcus Ritter, Alexander Geiß, Johannes Wehrstein, Alexandru Calotoiu, Thorsten Reimann, Torsten Hoefler, Felix Wolf:
+4. Marcus Ritter, Alexander Geiß, Johannes Wehrstein, Alexandru Calotoiu, Thorsten Reimann, Torsten Hoefler, Felix Wolf:
    *Noise-Resilient Empirical Performance Modeling with Deep Neural Networks.* In Proc. of the 35th IEEE International
    Parallel and Distributed Processing Symposium (IPDPS), Portland, Oregon, USA, pages 23–34, IEEE, May
     2021. [PDF](http://htor.inf.ethz.ch/publications/img/noiseresilientmodeling.pdf)
+
+5. Alexander Geiß, Téodora Hovi, Alexandru Calotoiu, Felix Wolf:
+   *Validating the Performance of GPU Ports Using Differential Performance Models*. Future Generation Computer Systems, 174: 1–17, January 2026.
+   [DOI](https://doi.org/10.1016/j.future.2025.108018)
+
+7. Marcus Ritter, Benedict Naumann, Alexandru Calotoiu, Sebastian Rinke, Thorsten Reimann, Torsten Hoefler, Felix Wolf:
+   *Cost-Effective Empirical Performance Modeling*. Transactions on Parallel and Distributed Systems, 37: 575–592, February 2026.
+   [PDF](https://www.parallel.informatik.tu-darmstadt.de/zotero-lists/attachments/GH3LJG4Z_Ritter%20et%20al.%20-%202026%20-%20Cost-Effective%20Empirical%20Performance%20Modeling.pdf)
+
+9. Alexandru Calotoiu, Marcin Copik, Fabian Czappa, Alexander Geiß, Gustavo Morais, Marcus Ritter, Sergei Shudler, Torsten Hoefler, Felix Wolf:
+   *Extra-P – Empirical Performance Modeling Made Easy*. Frontiers in High Performance Computing, 3–2025, March 2026.
+   [DOI](https://doi.org/10.3389/fhpcp.2025.1714042)
