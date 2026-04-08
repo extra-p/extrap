@@ -10,5 +10,5 @@ import enum
 
 class FunctionFormats(enum.Enum):
     NONE = None,
-    PYTHON = enum.auto()
-    LATEX = enum.auto()
+    PYTHON = 1
+    LATEX = 2
