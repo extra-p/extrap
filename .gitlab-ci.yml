@@ -1,5 +1,5 @@
 default:
-  image: python:3.9
+  image: python:3.10
   tags: [ public-docker ]
 
 stages:
@@ -24,16 +24,16 @@ cache:
 
 before_script:
   - python --version  # For debugging
-#  - ls
-#  - rm -rf venv
-#  - ls
+  #  - ls
+  #  - rm -rf venv
+  #  - ls
   - python -m venv venv
   - source venv/bin/activate
   - python -m pip install --upgrade pip
   - pip install .
 
 .test:
-  script:    
+  script:
     - pip install pytest pytest-cov # flake8
     #    - flake8 --max-line-length=120 extrap tests setup.py
     - cd tests
@@ -49,13 +49,13 @@ before_script:
         coverage_format: cobertura
         path: tests/junit/coverage.xml
 
-test-3.8:
-  extends: ".test"
-  image: "python:3.8"
+#test-3.8:
+#  extends: ".test"
+#  image: "python:3.8"
 
-test-3.9:
-  extends: ".test"
-  image: "python:3.9"
+#test-3.9:
+#  extends: ".test"
+#  image: "python:3.9"
 
 test-3.10:
   extends: ".test"
@@ -72,6 +72,10 @@ test-3.12:
 test-3.13:
   extends: ".test"
   image: "python:3.13"
+
+test-3.14:
+  extends: ".test"
+  image: "python:3.14"
 
 test-macos:
   extends: ".test"

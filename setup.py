@@ -53,7 +53,7 @@ setup(
         "Topic :: Software Development",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     include_package_data=True,
     install_requires=[
         "PySide6-Essentials~=6.4",

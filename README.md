@@ -53,7 +53,7 @@ in collaboration with [ETH Zurich](https://spcl.inf.ethz.ch/).
 
 ### Requirements
 
-* Python 3.8 or higher
+* Python 3.10 or higher
 * numpy
 * pycubexr
 * marshmallow
@@ -112,7 +112,8 @@ You can use different input formats as shown in the examples below:
 * Create model and save it to text file at the given
   path: `extrap --out test.txt --text test/data/text/one_parameter_1.txt`
 
-You can find an overview about all command line options under [docs/command-line-options.md](docs/command-line-options.md).
+You can find an overview about all command line options
+under [docs/command-line-options.md](docs/command-line-options.md).
 
 ### License
 
@@ -122,8 +123,10 @@ You can find an overview about all command line options under [docs/command-line
 
 Please cite Extra-P in your publications if it helps your research:
 
-Alexandru Calotoiu, Marcin Copik, Fabian Czappa, Alexander Geiß, Gustavo Morais, Marcus Ritter, Sergei Shudler, Torsten Hoefler, Felix Wolf: 
-Extra-P – Empirical Performance Modeling Made Easy. *Frontiers in High Performance Computing*, 3–2025, 2026. [10.3389/fhpcp.2025.1714042](https://doi.org/10.3389/fhpcp.2025.1714042)
+Alexandru Calotoiu, Marcin Copik, Fabian Czappa, Alexander Geiß, Gustavo Morais, Marcus Ritter, Sergei Shudler, Torsten
+Hoefler, Felix Wolf:
+Extra-P – Empirical Performance Modeling Made Easy. *Frontiers in High Performance Computing*, 3–2025,
+2026. [10.3389/fhpcp.2025.1714042](https://doi.org/10.3389/fhpcp.2025.1714042)
 
 ```
 @Article{calotoiu_extra-p_2026,
@@ -145,7 +148,8 @@ Extra-P – Empirical Performance Modeling Made Easy. *Frontiers in High Perform
    [DOI](https://doi.org/10.1145/2503210.2503277)
 
 2. Alexandru Calotoiu, David Beckingsale, Christopher W. Earl, Torsten Hoefler, Ian Karlin, Martin Schulz, Felix Wolf:
-   *Fast Multi-Parameter Performance Modeling*. In Proc. of the 2016 IEEE International Conference on Cluster Computing (
+   *Fast Multi-Parameter Performance Modeling*. In Proc. of the 2016 IEEE International Conference on Cluster
+   Computing (
    CLUSTER), Taipei, Taiwan, pages 172–181, IEEE, September
     2016. [PDF](https://apps.fz-juelich.de/jsc-pubsystem/aigaion/attachments/fastmultiparam.pdf-f839eba376c6d61a8c4cab9860b6b3bf.pdf)
 
@@ -160,13 +164,16 @@ Extra-P – Empirical Performance Modeling Made Easy. *Frontiers in High Perform
     2021. [PDF](http://htor.inf.ethz.ch/publications/img/noiseresilientmodeling.pdf)
 
 5. Alexander Geiß, Téodora Hovi, Alexandru Calotoiu, Felix Wolf:
-   *Validating the Performance of GPU Ports Using Differential Performance Models*. Future Generation Computer Systems, 174: 1–17, January 2026.
+   *Validating the Performance of GPU Ports Using Differential Performance Models*. Future Generation Computer Systems,
+   174: 1–17, January 2026.
    [DOI](https://doi.org/10.1016/j.future.2025.108018)
 
 7. Marcus Ritter, Benedict Naumann, Alexandru Calotoiu, Sebastian Rinke, Thorsten Reimann, Torsten Hoefler, Felix Wolf:
-   *Cost-Effective Empirical Performance Modeling*. Transactions on Parallel and Distributed Systems, 37: 575–592, February 2026.
+   *Cost-Effective Empirical Performance Modeling*. Transactions on Parallel and Distributed Systems, 37: 575–592,
+   February 2026.
    [PDF](https://www.parallel.informatik.tu-darmstadt.de/zotero-lists/attachments/GH3LJG4Z_Ritter%20et%20al.%20-%202026%20-%20Cost-Effective%20Empirical%20Performance%20Modeling.pdf)
 
-9. Alexandru Calotoiu, Marcin Copik, Fabian Czappa, Alexander Geiß, Gustavo Morais, Marcus Ritter, Sergei Shudler, Torsten Hoefler, Felix Wolf:
+9. Alexandru Calotoiu, Marcin Copik, Fabian Czappa, Alexander Geiß, Gustavo Morais, Marcus Ritter, Sergei Shudler,
+   Torsten Hoefler, Felix Wolf:
    *Extra-P – Empirical Performance Modeling Made Easy*. Frontiers in High Performance Computing, 3–2025, March 2026.
    [DOI](https://doi.org/10.3389/fhpcp.2025.1714042)
