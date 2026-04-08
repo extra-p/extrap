@@ -4,13 +4,13 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+import re
 
 if __name__ == '__main__':
     import os
-    import re
 
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    os.system("protoc -I FileFormat --python_out=. --mypy_out=. FileFormat/*")
+    os.system(r"protoc -I FileFormat --python_out=. --pyi_out=. FileFormat/*")
     import_regex = re.compile(r"^(import\s+[\w_]+_pb2)", re.MULTILINE)
     from_import_regex = re.compile(r"^from\s+([\w_]+_pb2)\s+import", re.MULTILINE)
     from_typing_extensions_regex = re.compile(r"^from\s+typing_extensions\s+import", re.MULTILINE)

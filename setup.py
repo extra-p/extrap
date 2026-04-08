@@ -64,7 +64,7 @@ setup(
         "marshmallow~=3.7",
         "packaging>=20.0",
         "kaitaistruct~=0.9",
-        "protobuf~=3.14",
+        "protobuf~=7.34",
         "itanium-demangler~=1.0",
         "sympy~=1.8",
         "typing-extensions~=4.3",
