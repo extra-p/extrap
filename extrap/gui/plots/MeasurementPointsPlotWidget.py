@@ -98,6 +98,9 @@ class MeasurementPointsPlot(GraphDisplayWindow):
 
         # plot surfaces
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list, max_z)
+
+        rel_heuristic = np.min(z_List) >= 0 and np.max(z_List) <= 1
+
         ax_all.mouse_init()
         ax_all.xaxis.major.formatter._useMathText = True
         ax_all.yaxis.major.formatter._useMathText = True
@@ -113,5 +116,8 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         for i in range(len(Z_List)):
             ax_all.plot_surface(X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]],
                                 rstride=1, cstride=1, antialiased=False, alpha=opacity)
+
+        if rel_heuristic:
+            ax_all.set_zlim(0.0, 1.0)
 
         self.draw_legend(ax_all, dict_callpath_color)

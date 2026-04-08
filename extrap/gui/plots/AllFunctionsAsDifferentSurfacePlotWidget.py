@@ -4,6 +4,7 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+import numpy as np
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
@@ -29,6 +30,8 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
         maxX, maxY = self.get_max()
 
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
+
+        rel_heuristic = np.min(z_List) >= 0 and np.max(z_List) <= 1
 
         # Get the callpath color map
         widget = self.main_widget
@@ -74,6 +77,8 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
             ax.set_ylabel('\n' + y_label, linespacing=3.1)
             ax.set_zlabel(
                 '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+            if rel_heuristic:
+                ax.set_zlim(0, 1)
 
         # draw legend
         self.draw_legend(ax, dict_callpath_color)
