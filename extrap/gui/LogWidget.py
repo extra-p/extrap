@@ -4,10 +4,8 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
-
-import logging
-
 import PySide6
+import logging
 from PySide6.QtGui import QPaintEvent
 from PySide6.QtWidgets import QWidget, QGridLayout, QTextEdit
 
@@ -17,15 +15,15 @@ class LogWidget(QWidget):
         super(LogWidget, self).__init__(parent)
         self.log_box = QTextEdit(self)
         self.initUI()
-        handler = logging.StreamHandler(self)
-        handler.terminator = ' '
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
-        logging.getLogger().addHandler(handler)
+        self._logging_handler = logging.StreamHandler(self)
+        self._logging_handler.terminator = ' '
+        self._logging_handler.setLevel(logging.INFO)
+        self._logging_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+        logging.getLogger().addHandler(self._logging_handler)
 
     def initUI(self):
         layout = QGridLayout(self)
-        layout.setContentsMargins(1,1,1,1)
+        layout.setContentsMargins(1, 1, 1, 1)
         # layout.setContentsMargins(10, 5, 10, 5)
         # layout.setMargin(0, 0, 0, 0)
         self.setLayout(layout)
@@ -42,6 +40,8 @@ class LogWidget(QWidget):
         super().showEvent(event)
 
     def write(self, text):
+        if not self.log_box:
+            return
         if text.startswith('WARNING:'):
             text = '<span style="color:#DF6F0F">' + text + '</span>'
         elif text.startswith('ERROR:'):
@@ -54,3 +54,7 @@ class LogWidget(QWidget):
         scroll_bar.setValue(scroll_bar.maximum())
         scroll_bar = self.log_box.horizontalScrollBar()
         scroll_bar.setValue(scroll_bar.minimum())
+
+    def destroy(self, /, destroyWindow=True, destroySubWindows=True):
+        logging.getLogger().removeHandler(self._logging_handler)
+        super().destroy(destroyWindow, destroySubWindows)
