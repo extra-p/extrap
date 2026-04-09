@@ -6,7 +6,6 @@
 # See the LICENSE file in the base directory for details.
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pyvista
@@ -15,6 +14,7 @@ from PySide6.QtGui import QResizeEvent, QFont, QFontMetrics, QContextMenuEvent, 
 from PySide6.QtWidgets import QMenu, QInputDialog
 from pyvista.plotting import parse_font_family
 from pyvistaqt import QtInteractor
+from typing import TYPE_CHECKING
 from vtkmodules.vtkCommonCore import vtkStringArray
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
@@ -173,7 +173,7 @@ class ComparisonPlot3D(QtInteractor, AbstractPlotWidget):
                 images.append(None)
             else:
                 mesh.texture_map_to_plane(inplace=True)
-                mesh.active_t_coords *= 50
+                mesh.active_texture_coordinates *= 50
                 texture = pyvista.Texture(np.array([[[255, 255, 255], color], [color, color]], dtype=np.uint8))
 
                 texture.repeat = True

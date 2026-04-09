@@ -70,8 +70,8 @@ setup(
         "typing-extensions~=4.3",
         "msgpack~=1.0",
         "scipy~=1.5",
-        "pyvista~=0.42",
-        "pyvistaqt~=0.11",
+        "pyvista~=0.47.2",
+        "pyvistaqt~=0.11.4",
         "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'",
         "scikit-learn>=1.2"
     ],
