@@ -352,7 +352,12 @@ class NumpyField(fields.List):
                 if type(e) == list:
                     stack.append(e)
                 elif type(e) == str:
-                    elem[i] = float(math.nan)
+                    if e.lower() == "inf":
+                        elem[i] = float(math.inf)
+                    elif e.lower() == "-inf":
+                        elem[i] = -math.inf
+                    else:
+                        elem[i] = float(math.nan)
                 elif math.isfinite(e):
                     continue
                 else:
