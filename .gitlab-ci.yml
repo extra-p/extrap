@@ -68,6 +68,14 @@ test-3.12:
   extends: ".test"
   image: "python:3.12"
 
+test-3.13:
+  extends: ".test"
+  image: "python:3.13"
+
+test-3.14:
+  extends: ".test"
+  image: "python:3.14"
+
 test-macos:
   extends: ".test"
   tags:
