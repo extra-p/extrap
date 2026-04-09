@@ -5,12 +5,13 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from collections import defaultdict
+from pathlib import Path
+
 import abc
 import logging
 import re
 import warnings
-from collections import defaultdict
-from pathlib import Path
 from typing import List, Tuple
 
 import extrap
@@ -103,11 +104,11 @@ class AbstractDirectoryReader(FileReader, abc.ABC):
 
 
 class AbstractScalingConversionReader(FileReader, DynamicOptions, abc.ABC):
-    scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK, ScalingType,
+    scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK_THREADED, ScalingType,
                                                    range={i.name.lower(): i.value for i in ScalingType})
     scaling_type.explanation_below = ("Select the type of scaling analysis.<br>"
                                       "Use <b>strong</b> scaling if the problem size remains unchanged while adding "
                                       "more computational resources (e.g., nodes, processes, cores, threads).<br>"
-                                      "If the problem size was scaled alongside the computational resources,"
+                                      "If the problem size was scaled alongside the computational resources, "
                                       "choose either <b>weak</b> scaling or <b>weak_threaded</b> scaling when your "
                                       "application uses multithreading.")

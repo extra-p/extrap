@@ -7,19 +7,19 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+from pathlib import Path
+
 import logging
+import msgpack
 import numbers
+import numpy as np
 import re
 import warnings
-from collections import defaultdict
 from enum import Enum, Flag
 from itertools import groupby
 from operator import itemgetter
-from pathlib import Path
 from typing import Union
-
-import msgpack
-import numpy as np
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
@@ -85,6 +85,7 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
     scaling_type: ScalingType = DynamicOptions.add(ScalingType.WEAK_THREADED, ScalingType,
                                                    range={'weak_threaded': ScalingType.WEAK_THREADED,
                                                           'strong': ScalingType.STRONG})
+    scaling_type.explanation_below = AbstractScalingConversionReader.scaling_type.explanation_below
 
     concurrent_threads: bool = DynamicOptions.add(False, bool)
     inclusive_models: bool = DynamicOptions.add(False, bool)
@@ -139,7 +140,8 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.") from e
                     if magic_string != "EXTRA PROF":
                         raise FileFormatError(f"File {path} is no valid Extra-Prof file.")
-                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, additional_metrics, i,coordinate)
+                    self._read_calltree(call_tree, ep_call_tree, len(point_group), gpu_metrics, additional_metrics, i,
+                                        coordinate)
             for node in call_tree.iterate_nodes():
                 node: _ExtraProfInputNode
                 progress_bar.update(0)
@@ -305,14 +307,14 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                         depth += 1
                     elif func_name[i] == '>':
                         depth -= 1
-                    i += 1 
+                    i += 1
             else:
                 result.append(func_name[i])
                 i += 1
 
         return ''.join(result)
 
-    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, additional_metrics, i,point):
+    def _read_calltree(self, call_tree, ep_root_node, num_values, gpu_metrics, additional_metrics, i, point):
         def _read_calltree_node(parent_node: _ExtraProfInputNode, ep_node):
             name, childs, raw_type, raw_flags, m_duration, m_visits, m_bytes = ep_node[0:7]
             n_type, flags = CallTreeNodeType(raw_type), CallTreeNodeFlags(raw_flags)
@@ -353,7 +355,8 @@ class ExtraProf2Reader(AbstractDirectoryReader, AbstractScalingConversionReader,
                         raise ValueError(f"Unsupported scaling type: {self.scaling_type}")
             if isinstance(m_duration, list):
                 if self.scaling_type == ScalingType.WEAK_THREADED:
-                    if self.sum_gpu_accross_threads and (n_type == CallTreeNodeType.KERNEL or n_type == CallTreeNodeType.OVERLAP):
+                    if self.sum_gpu_accross_threads and (
+                            n_type == CallTreeNodeType.KERNEL or n_type == CallTreeNodeType.OVERLAP):
                         node.duration[i] += sum(m_duration)
                     else:
                         node.duration[i] += np.mean(m_duration)
