@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "extrap"
+dynamic = ["version"]
+description = "Extra-P, automated performance modeling for HPC applications"
+readme = "README.md"
+authors = [{ name = "Extra-P project", email = "extra-p@lists.parallel.informatik.tu-darmstadt.de" }]
+license = { text = "BSD" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "PySide6-Essentials~=6.4",
+    "numpy~=1.18",
+    "matplotlib~=3.6",
+    "tqdm~=4.47",
+    "pycubexr>=1.2.3,<3,!=2.0.0",
+    "marshmallow~=3.7",
+    "packaging>=20.0",
+    "kaitaistruct~=0.9",
+    "protobuf~=7.34",
+    "itanium-demangler~=1.0",
+    "sympy~=1.8",
+    "typing-extensions~=4.3",
+    "msgpack~=1.0",
+    "scipy~=1.5",
+    "pyvista~=0.47.2",
+    "pyvistaqt~=0.11.4",
+    "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'",
+    "scikit-learn>=1.2"
+]
+
+[project.optional-dependencies]
+adaptive_modeling = ["extrap-adaptive-modeler>=1.0.2,<3"]
+
+[project.scripts]
+extrap = "extrap.extrap.extrapcmd:main"
+extrap-gui = "extrap.extrap.extrapgui:main"
+
+[project.urls]
+Homepage = "https://github.com/extra-p/extrap"
+Repository = "https://github.com/extra-p/extrap"
+Documentation = "https://github.com/extra-p/extrap/tree/master/docs"
+
+[tool.setuptools.dynamic]
+version = { attr = "extrap.__version__" }
