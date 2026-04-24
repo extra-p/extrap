@@ -1,4 +1,3 @@
-
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
 # Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
