@@ -5,9 +5,10 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+from collections import defaultdict
+
 import logging
 import os
-from collections import defaultdict
 from itertools import islice
 from typing import List
 
@@ -61,7 +62,7 @@ class NcuReport:
         data = zip(self.result_blocks, list(paths))
         chunk_length = int((len(self.result_blocks) + (os.cpu_count() - 1)) / os.cpu_count())
         reduced = pool.imap_unordered(_convert_and_map_measurements,
-                                      [islice(data, 0 + i, chunk_length + i) for i in
+                                      [list(islice(data, 0 + i, chunk_length + i)) for i in
                                        range(0, len(self.result_blocks), chunk_length)],
                                       1)
         for partition in reduced:
