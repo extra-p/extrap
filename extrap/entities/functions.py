@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -21,6 +21,7 @@ import numpy as np
 import sympy
 from marshmallow import fields
 from numpy.lib.function_base import piecewise
+from marshmallow import fields, pre_load
 
 from extrap.entities.parameter import Parameter
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema, \
@@ -173,11 +174,16 @@ class Function:
         elif self is other:
             return True
         else:
-            if self.__dict__.keys() != other.__dict__.keys():
+            # Compare constant_coefficient
+            if self.constant_coefficient != other.constant_coefficient:
                 return False
 
-            for k in self.__dict__:
-                if np.any(self.__dict__[k] != other.__dict__[k]):
+            # Compare compound_terms by content, not just reference
+            if len(self.compound_terms) != len(other.compound_terms):
+                return False
+
+            for t1, t2 in zip(self.compound_terms, other.compound_terms):
+                if t1 != t2:
                     return False
 
             return True
@@ -387,6 +393,23 @@ class SegmentedFunction(SingleParameterFunction):
         function_string += self.segments[1].to_latex_string(*parameters)
         function_string += f" for ${parameters[0]}>={self.intervals[1][0]}$"
         return function_string
+
+    def __eq__(self, other):
+        if not isinstance(other, SegmentedFunction):
+            return NotImplemented
+        elif self is other:
+            return True
+        else:
+            # Compare segments and intervals
+            if len(self.segments) != len(other.segments):
+                return False
+            if not np.array_equal(self.intervals, other.intervals):
+                return False
+            # Compare each segment
+            for s1, s2 in zip(self.segments, other.segments):
+                if s1 != s2:
+                    return False
+            return True
 
 
 class MultiParameterFunction(Function):
