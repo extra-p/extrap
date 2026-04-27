@@ -7,15 +7,14 @@
 
 from __future__ import annotations
 
-from typing import cast
-
+import matplotlib
 import numpy
 from matplotlib.axes import Axes
-from matplotlib.cm import get_cmap
 from matplotlib.colors import TwoSlopeNorm
 from matplotlib.legend_handler import HandlerTuple
 from matplotlib.patches import Patch
 from matplotlib.ticker import ScalarFormatter
+from typing import cast
 
 from extrap.comparison.entities.comparison_model import ComparisonModel
 from extrap.comparison.experiment_comparison import ComparisonExperiment
@@ -152,7 +151,7 @@ class DifferencePlot(BaseContourGraph):
         #     item.set_fontsize(10)
 
         # Draw isolines
-        colormap = get_cmap(self.colormap)
+        colormap = matplotlib.colormaps[self.colormap]
         red_patch = tuple(Patch(color=colormap(p / 100)) for p in range(0, 50, 2))
         blue_patch = tuple(Patch(color=colormap(p / 100)) for p in range(52, 102, 2))
 
