@@ -63,7 +63,7 @@ setup(
         "pycubexr>=1.2.3,<3,!=2.0.0",
         "marshmallow~=3.7",
         "packaging>=20.0",
-        "pyobjc-framework-Cocoa~=9.0; sys_platform == 'darwin'",
+        "pyobjc-framework-Cocoa>=9.0; sys_platform == 'darwin'",
         "scikit-learn>=1.2.2"
     ],
     extras_require={
