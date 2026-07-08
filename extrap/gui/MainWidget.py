@@ -41,7 +41,9 @@ from extrap.gui.PostProcessingWidget import PostProcessingWidget
 from extrap.gui.RankingWidget import RankingWidget
 from extrap.gui.SelectorWidget import SelectorWidget
 from extrap.gui.StrongScalingConversionDialog import StrongScalingConversionDialog
+from extrap.gui.TabBar import TabBar
 from extrap.gui.comparison.comparison_wizard import ComparisonWizard
+from extrap.gui.components.robust_wizard import RobustModelWizard
 from extrap.gui.components import file_dialog
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.gui.components.about_dialog import AboutDialog
@@ -49,6 +51,7 @@ from extrap.gui.components.developer_tools import init_developer_menu, DEV_CONFI
 from extrap.gui.components.model_color_map import ModelColorMap
 from extrap.gui.components.plot_formatting_options import PlotFormattingOptions, PlotFormattingDialog
 from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.robust import RobustModel
 from extrap.util.deprecation import deprecated
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.event import Event
@@ -115,12 +118,27 @@ class MainWidget(QMainWindow):
         dock.setObjectName("EP_selection")
         self.selector_widget = SelectorWidget(self, dock)
         dock.setWidget(self.selector_widget)
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
         # middle: Graph
 
         self.data_display = DataDisplayManager(self, self)
         central_widget = self.data_display
+
+        # upper: Tab bar for multiple experiments
+        self.dock_tabs = QDockWidget(self)
+        self.dock_tabs.setObjectName("EP_Tabs")
+        self.tab_widget = TabBar(self,parent=dock)
+        self.tab_widget.setMinimumHeight(30)
+        self.tab_widget.setTabsClosable(False)
+        self.tab_widget.tabCloseRequested.connect(self.tab_widget.close_tab)
+        self.tab_widget.currentChanged.connect(self.tab_widget.on_tab_changed)
+        self.dock_tabs.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dock_tabs.setWidget(self.tab_widget)
+        self.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dock_tabs, Qt.Orientation.Horizontal)
+        self.dock_tabs.hide()
+
 
         # Right side: Model configurator
         dock = QDockWidget("Modeler", self)
@@ -135,6 +153,7 @@ class MainWidget(QMainWindow):
         self.measurementWizard_widget = MeasurementWizardWidget(self, dock)
         dock.setWidget(self.measurementWizard_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
 
         dock2 = QDockWidget("Aggregation and Analysis", self)
         dock2.setObjectName("EP_agg_ana")
@@ -142,6 +161,7 @@ class MainWidget(QMainWindow):
         dock2.setWidget(self.postprocessing_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock2)
         self.tabifyDockWidget(dock2, dock)
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
 
         # bottom widget
         dock = QDockWidget("Color Info", self)
@@ -150,12 +170,14 @@ class MainWidget(QMainWindow):
         self.min_max_value_updated_event += self.color_widget.update_min_max
         dock.setWidget(self.color_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
 
         dock = QDockWidget("Graph Limits", self)
         dock.setObjectName("EP_graph_limits")
         self.graph_limits_widget = GraphLimitsWidget(self, self.data_display)
         dock.setWidget(self.graph_limits_widget)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock, Qt.Orientation.Horizontal)
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
 
         dock2 = QDockWidget("Log", self)
         dock2.setObjectName("EP_log")
@@ -163,6 +185,7 @@ class MainWidget(QMainWindow):
         dock2.setWidget(self.log_widget)
         self.tabifyDockWidget(dock, dock2)
         dock2.hide()
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
 
         dock2 = QDockWidget("Ranking", self)
         dock2.setObjectName("EP_ranking")
@@ -170,6 +193,7 @@ class MainWidget(QMainWindow):
         dock2.setWidget(self.ranking_widget)
         self.tabifyDockWidget(dock, dock2)
         dock2.hide()
+        dock.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas ^ Qt.DockWidgetArea.TopDockWidgetArea)
         # Menu creation
 
         # File menu
@@ -251,6 +275,11 @@ class MainWidget(QMainWindow):
         compare_action.setEnabled(False)
         self.compare_action = compare_action
 
+        # robust model creation menu
+        create_robust_action = QAction('Create robust model', self)
+        create_robust_action.setStatusTip('Creates a robust model with two experiments')
+        create_robust_action.triggered.connect(self.create_robust_model_wizard)
+
         # Filter menu
         # filter_callpath_action = QAction('Filter Callpaths', self)
         # filter_callpath_action.setShortcut('Ctrl+F')
@@ -272,6 +301,8 @@ class MainWidget(QMainWindow):
         file_menu.addAction(open_experiment_action)
         file_menu.addAction(save_experiment_action)
         file_menu.addAction(compare_action)
+        file_menu.addSeparator()
+        file_menu.addAction(create_robust_action)
         file_menu.addSeparator()
         file_menu.addAction(screenshot_action)
         file_menu.addSeparator()
@@ -338,6 +369,24 @@ class MainWidget(QMainWindow):
             raise ValueError("Experiment cannot be none.")
         self.experiment_change = True
         self._experiment = experiment
+        # Add tab if this is a new experiment
+
+        tab_name = Path(file_name).name if file_name else "Experiment"
+        is_new_experiment = not any(e == experiment for e, *_ in self.tab_widget.experiments)
+        if is_new_experiment:
+            self.tab_widget._save_tab_state(self.tab_widget._active_tab_index)
+            self.tab_widget.experiments.append((experiment, file_name))
+            new_tab_index = self.tab_widget.addTab(tab_name)
+            self._active_tab_index = new_tab_index
+            self.tab_widget.blockSignals(True)
+            self.tab_widget.setCurrentIndex(new_tab_index)
+            self.tab_widget.blockSignals(False)
+            self.tab_widget.setTabsClosable(True)
+
+        if len(self.tab_widget.experiments) == 1:
+            self.tab_widget.setTabsClosable(False)
+            self.dock_tabs.show()
+
         if file_name is not None:
             self._set_opened_file_name(file_name, compared=compared)
         self.save_experiment_action.setEnabled(True)
@@ -351,6 +400,8 @@ class MainWidget(QMainWindow):
         self.experiment_change = False
         self.updateMinMaxValue()
         self.update()
+        if is_new_experiment:
+            self.tab_widget._restore_tab_state(self._active_tab_index)
 
     def on_selection_changed(self):
         if not self.experiment_change:
@@ -427,6 +478,17 @@ class MainWidget(QMainWindow):
     @deprecated
     def getFontSize(self):
         return self.plot_formatting_options.font_size
+
+    def create_robust_model_wizard(self):
+        rw = RobustModelWizard()
+
+        def on_accept():
+            robust_experiment = RobustModel.createRobustModel(
+                experiment_BB=rw.exp_swc,experiment_TIME=rw.exp_time,use_measure=rw.use_measure)
+            self.set_experiment(robust_experiment)
+
+        rw.accepted.connect(on_accept)
+        rw.open()
 
     def screenshot(self, _checked=False, target=None, name_addition=""):
         """

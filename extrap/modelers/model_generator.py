@@ -86,7 +86,7 @@ class ModelGenerator:
                     raise ValueError(
                         f'A modeler with name "{modeler}" does not exist. For multi-parameter experiments only the '
                         f'following modelers are available "{", ".join(multi_parameter.all_modelers.keys())}".') from e
-                result_modeler.use_measure = use_measure
+            result_modeler.use_measure = use_measure
 
         elif modeler is NotImplemented:
             result_modeler = NotImplemented
