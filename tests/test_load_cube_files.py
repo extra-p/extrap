@@ -8,6 +8,8 @@
 import unittest
 import warnings
 
+import numpy
+
 from extrap.entities.callpath import Callpath
 from extrap.entities.calltree import CallTree, Node
 from extrap.entities.coordinate import Coordinate
@@ -261,6 +263,14 @@ class TestCubeFileLoader(unittest.TestCase):
         self.assertNotEqual([], experiment.callpaths)
         self.assertGreater(len(experiment_ref.callpaths), len(experiment.callpaths))
         self.assertTrue(all(cp in experiment_ref.callpaths for cp in experiment.callpaths))
+
+
+    def test_value_filter_threshold(self):
+        reader = CubeFileReader2()
+        values = numpy.array([1.0, 2.0, 1e14, 3.0])
+        numpy.testing.assert_array_equal(reader._filter_outliers(values), [1.0, 2.0, 3.0])
+        reader.value_filter_threshold = 0
+        numpy.testing.assert_array_equal(reader._filter_outliers(values), values)
 
 
 if __name__ == '__main__':

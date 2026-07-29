@@ -36,6 +36,7 @@ from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 from pycubexr import CubexParser
+from pycubexr.classes.values import CubeValues
 from pycubexr.utils.exceptions import MissingMetricError
 
 CUBE_CALLSITE_ID_KEY = 'callsite id'
@@ -60,6 +61,17 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
     use_inclusive_measurements = False
     small_kernel_filter: SmallKernelFilter = None
     aggregate_unc_cas_counts = DynamicOptions.add(True, bool)
+    value_filter_threshold = DynamicOptions.add(
+        0, float,
+        "Discards individual measurement values above this threshold (e.g. from measurement glitches). "
+        "Set to 0 to disable.", range=range(0, 10 ** 16))
+
+    def _filter_outliers(self, cnode_values):
+        if not self.value_filter_threshold:
+            return cnode_values
+        if isinstance(cnode_values, CubeValues):
+            return cnode_values[cnode_values.astype(float) <= self.value_filter_threshold]
+        return cnode_values[cnode_values <= self.value_filter_threshold]
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
@@ -107,6 +119,8 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             # add measurements to experiment
             for (callpath, metric), values in aggregated_values.items():
                 progress_bar.update(0)
+                if numpy.size(values) == 0:
+                    continue
                 experiment.add_measurement(
                     Measurement(coordinate, callpath, metric, values, keep_values=self.keep_values))
 
@@ -203,7 +217,8 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 if self.small_kernel_filter.callpath is not None \
                                         and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
                                     continue
-                                cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
+                                cnode_values = self._filter_outliers(
+                                    metric_values.cnode_values(r_cnode, convert_to_inclusive=True))
                                 if self.scaling_type == ScalingType.WEAK:
                                     total_values[callpaths[r_cnode.id]].extend(map(float, cnode_values))
                                 elif self.scaling_type == ScalingType.WEAK_THREADED:
@@ -220,9 +235,10 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                             callpath = callpaths[cnode_id]
                             # NOTE: here we can use clustering algorithm to select only certain node level values
                             # create the measurements
-                            cnode_values = metric_values.cnode_values(cnode,
-                                                                      convert_to_exclusive=not self.use_inclusive_measurements,
-                                                                      convert_to_inclusive=self.use_inclusive_measurements)
+                            cnode_values = self._filter_outliers(metric_values.cnode_values(
+                                cnode,
+                                convert_to_exclusive=not self.use_inclusive_measurements,
+                                convert_to_inclusive=self.use_inclusive_measurements))
 
                             # in case of weak scaling calculate mean and median over all mpi process values
                             if self.scaling_type == ScalingType.WEAK:
@@ -269,7 +285,8 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                     if self.small_kernel_filter.callpath is not None \
                                             and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
                                         continue
-                                    cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
+                                    cnode_values = self._filter_outliers(
+                                        metric_values.cnode_values(r_cnode, convert_to_inclusive=True))
                                     if self.scaling_type == ScalingType.WEAK:
                                         total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
                                     elif self.scaling_type == ScalingType.WEAK_THREADED:
@@ -287,9 +304,10 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                                 callpath = callpaths[cnode_id]
                                 # NOTE: here we can use clustering algorithm to select only certain node level values
                                 # create the measurements
-                                cnode_values = metric_values.cnode_values(cnode,
-                                                                          convert_to_exclusive=not self.use_inclusive_measurements,
-                                                                          convert_to_inclusive=self.use_inclusive_measurements)
+                                cnode_values = self._filter_outliers(metric_values.cnode_values(
+                                    cnode,
+                                    convert_to_exclusive=not self.use_inclusive_measurements,
+                                    convert_to_inclusive=self.use_inclusive_measurements))
 
                                 # in case of weak scaling calculate mean and median over all mpi process values
                                 if self.scaling_type == ScalingType.WEAK:
