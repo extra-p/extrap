@@ -64,6 +64,8 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
 
     NOISE_CI = 2
 
+    _scale_up_threshold = modeler_options.add(100, int, name="Sensitivity", range=range(1, 1000))
+
     _cached_mlmodels = {}
 
     def _set_preset(self, value: int):
@@ -136,11 +138,15 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
             models.append(Model(hypothesis))
         return models
 
-    @staticmethod
-    def _preprocess(positions, values):
+    def _preprocess(self, positions, values):
         max_p = np.max(positions)
         max_sp = _BUCKET_COORDINATES[-1]
-        return (positions * max_sp) / max_p, values / positions
+        max_val = np.max(values)
+        if max_val < self._scale_up_threshold:
+            scaled_values = values * (self._scale_up_threshold / max_val)
+        else:
+            scaled_values = values
+        return (positions * max_sp) / max_p, scaled_values / positions
 
     def _predict_functions(self, positions, values, noise_orig):
         tf = load_tensorflow()
