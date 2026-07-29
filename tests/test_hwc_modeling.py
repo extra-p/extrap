@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 from itertools import product
-from math import sin, log
+from math import log
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -14,6 +14,7 @@ from extrap.entities.metric import Metric
 from extrap.fileio.experiment_io import read_experiment
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.modelers.multi_parameter.mp_hardware_counter_modeler import MpHardwareCounterModeler
+from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler
 from extrap.modelers.single_parameter.hardware_counter_modeler import HardwareCounterModeler
 from extrap.util.exceptions import RecoverableError
 from tests.modelling_testcase import TestCaseWithFunctionAssertions
@@ -170,23 +171,24 @@ class TestHwcModeler(TestCaseWithFunctionAssertions):
 
     def test_mp_real_example_modeler(self):
         experiment = read_experiment('data/input/hwc_experiment/no-noise.extra-p')
-        hwcm: HardwareCounterModeler = HardwareCounterModeler()
-        hwcm.number_used_counters = 1
-        hwcm.counter_list = ['PAPI_TOT_INS']
-        hwcm.no_negative_coefficients = False
+
+        default_modeler = MultiParameterModeler()
+        default_modeler.no_negative_coefficients = False
+        ModelGenerator(experiment, default_modeler).model_all()
+
         modeler_test = MpHardwareCounterModeler()
         modeler_test.no_negative_coefficients = False
         ModelGenerator(experiment, modeler_test).model_all()
 
-        for k in experiment.modelers[1].models:
-            self.assertTrue(k in experiment.modelers[0].models)
-        for k in experiment.modelers[0].models:
+        for k in experiment.modelers[2].models:
             self.assertTrue(k in experiment.modelers[1].models)
+        for k in experiment.modelers[1].models:
+            self.assertTrue(k in experiment.modelers[2].models)
             if k[1] != Metric('time'):
-                self.assertApproxModel(experiment.modelers[0].models[k], experiment.modelers[1].models[k])
+                self.assertApproxModel(experiment.modelers[1].models[k], experiment.modelers[2].models[k])
             else:
-                self.assertApprox(experiment.modelers[0].models[k].hypothesis.function.evaluate((1, 1)),
-                                  experiment.modelers[1].models[k].hypothesis.function.evaluate((1, 1)), places=1)
+                self.assertApprox(experiment.modelers[1].models[k].hypothesis.function.evaluate((1, 1)),
+                                  experiment.modelers[2].models[k].hypothesis.function.evaluate((1, 1)), places=1)
 
     def test_hwc_modeler(self):
 
