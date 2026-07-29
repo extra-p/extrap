@@ -20,8 +20,6 @@ from typing import Dict, Union, Sequence, Tuple, Optional
 import numpy
 from numpy import ma
 from packaging.version import Version
-from pycubexr import CubexParser
-from pycubexr.utils.exceptions import MissingMetricError
 
 from extrap.entities.callpath import Callpath
 from extrap.entities.coordinate import Coordinate
@@ -37,6 +35,8 @@ from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
+from pycubexr import CubexParser
+from pycubexr.utils.exceptions import MissingMetricError
 
 CUBE_CALLSITE_ID_KEY = 'callsite id'
 
@@ -249,66 +249,70 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
         aggregated_values = defaultdict(list)
         for path, _ in point_group:
             progress_bar.update()
-            with CubexParser(str(path)) as parsed:
-                root_cnodes = parsed.get_root_cnodes()
-                callpaths = self._make_callpath_mapping(root_cnodes)
-                # iterate over all metrics
-                for cube_metric in parsed.get_metrics():
-                    progress_bar.update(0)
-                    # NOTE: here we could choose which metrics to extract
-                    if self.selected_metrics and cube_metric.name not in self.selected_metrics:
-                        continue
-                    try:
-                        metric_values = parsed.get_metric_values(metric=cube_metric, cache=False)
-                        # create the metrics
-                        metric = Metric(cube_metric.name)
+            try:
+                with CubexParser(str(path)) as parsed:
+                    root_cnodes = parsed.get_root_cnodes()
+                    callpaths = self._make_callpath_mapping(root_cnodes)
+                    # iterate over all metrics
+                    for cube_metric in parsed.get_metrics():
+                        progress_bar.update(0)
+                        # NOTE: here we could choose which metrics to extract
+                        if self.selected_metrics and cube_metric.name not in self.selected_metrics:
+                            continue
+                        try:
+                            metric_values = parsed.get_metric_values(metric=cube_metric, cache=False)
+                            # create the metrics
+                            metric = Metric(cube_metric.name)
 
-                        if self.small_kernel_filter and self.small_kernel_filter.metric == metric:
-                            for r_cnode in root_cnodes:
-                                if self.small_kernel_filter.callpath is not None \
-                                        and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
-                                    continue
-                                cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
+                            if self.small_kernel_filter and self.small_kernel_filter.metric == metric:
+                                for r_cnode in root_cnodes:
+                                    if self.small_kernel_filter.callpath is not None \
+                                            and self.small_kernel_filter.callpath != callpaths[r_cnode.id]:
+                                        continue
+                                    cnode_values = metric_values.cnode_values(r_cnode, convert_to_inclusive=True)
+                                    if self.scaling_type == ScalingType.WEAK:
+                                        total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
+                                    elif self.scaling_type == ScalingType.WEAK_THREADED:
+                                        values = cnode_values.astype(float)
+                                        if values.any():
+                                            zero_value_mask = values == 0
+                                            masked_array = ma.array(values, mask=zero_value_mask)
+                                        total_values[callpaths[r_cnode.id]].append(masked_array)
+                                    elif self.scaling_type == ScalingType.STRONG:
+                                        total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
+
+                            for cnode_id in metric_values.cnode_indices:
+                                progress_bar.update(0)
+                                cnode = parsed.get_cnode(cnode_id)
+                                callpath = callpaths[cnode_id]
+                                # NOTE: here we can use clustering algorithm to select only certain node level values
+                                # create the measurements
+                                cnode_values = metric_values.cnode_values(cnode,
+                                                                          convert_to_exclusive=not self.use_inclusive_measurements,
+                                                                          convert_to_inclusive=self.use_inclusive_measurements)
+
+                                # in case of weak scaling calculate mean and median over all mpi process values
                                 if self.scaling_type == ScalingType.WEAK:
-                                    total_values[callpaths[r_cnode.id]].append(cnode_values.astype(float))
+                                    aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
                                 elif self.scaling_type == ScalingType.WEAK_THREADED:
                                     values = cnode_values.astype(float)
-                                    if values.any():
-                                        zero_value_mask = values == 0
-                                        masked_array = ma.array(values, mask=zero_value_mask)
-                                    total_values[callpaths[r_cnode.id]].append(masked_array)
+                                    if not values.any():
+                                        aggregated_values[(callpath, metric)].append(ma.array(values))
+                                    else:
+                                        zero_value_mask = (values == 0)
+                                        aggregated_values[(callpath, metric)].append(
+                                            ma.array(values, mask=zero_value_mask))
+                                # in case of strong scaling calculate the sum over all mpi process values
                                 elif self.scaling_type == ScalingType.STRONG:
-                                    total_values[callpaths[r_cnode.id]].append(cnode_values.sum().astype(float))
+                                    aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
 
-                        for cnode_id in metric_values.cnode_indices:
-                            progress_bar.update(0)
-                            cnode = parsed.get_cnode(cnode_id)
-                            callpath = callpaths[cnode_id]
-                            # NOTE: here we can use clustering algorithm to select only certain node level values
-                            # create the measurements
-                            cnode_values = metric_values.cnode_values(cnode,
-                                                                      convert_to_exclusive=not self.use_inclusive_measurements,
-                                                                      convert_to_inclusive=self.use_inclusive_measurements)
-
-                            # in case of weak scaling calculate mean and median over all mpi process values
-                            if self.scaling_type == ScalingType.WEAK:
-                                aggregated_values[(callpath, metric)].append(cnode_values.astype(float))
-                            elif self.scaling_type == ScalingType.WEAK_THREADED:
-                                values = cnode_values.astype(float)
-                                if not values.any():
-                                    aggregated_values[(callpath, metric)].append(ma.array(values))
-                                else:
-                                    zero_value_mask = (values == 0)
-                                    aggregated_values[(callpath, metric)].append(ma.array(values, mask=zero_value_mask))
-                            # in case of strong scaling calculate the sum over all mpi process values
-                            elif self.scaling_type == ScalingType.STRONG:
-                                aggregated_values[(callpath, metric)].append(cnode_values.sum().astype(float))
-
-                    # Take care of missing metrics
-                    except MissingMetricError as e:  # @UnusedVariable
-                        show_warning_skipped_metrics.add(e.metric.name)
-                        logging.info(
-                            f'The cubex file {Path(*path.parts[-2:])} does not contain data for the metric "{e.metric.name}"')
+                        # Take care of missing metrics
+                        except MissingMetricError as e:  # @UnusedVariable
+                            show_warning_skipped_metrics.add(e.metric.name)
+                            logging.info(
+                                f'The cubex file {Path(*path.parts[-2:])} does not contain data for the metric "{e.metric.name}"')
+            except Exception as err:
+                raise FileFormatError(f"Loading of cubex file {path} failed") from err
         return aggregated_values, total_values
 
     def _make_callpath_mapping(self, cnodes):
