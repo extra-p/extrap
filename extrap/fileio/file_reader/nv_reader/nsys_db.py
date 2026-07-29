@@ -955,4 +955,9 @@ FROM TARGET_INFO_CUDA_GPU
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.db.close()
+        self.close()
+
+    def close(self):
+        if self.db is not None:
+            self.db.close()
+            self.db = None

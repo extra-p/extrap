@@ -115,16 +115,16 @@ class DynamicOptionsWidget(QWidget):
             field.stateChanged[int].connect(slot)
         elif option.type is float:
             field = QDoubleSpinBox()
-            field.setValue(value)
             if isinstance(option.range, range):
                 field.setRange(option.range.start, option.range.stop)
+            field.setValue(value)
             field.valueChanged[float].connect(slot)
         elif option.type is int:
             field = QSpinBox()
-            field.setValue(value)
             if isinstance(option.range, range):
                 field.setRange(option.range.start, option.range.stop)
-                field.setSingleStep(option.range.step)
+                field.setValue(option.range.step)
+            field.setValue(value)
             field.valueChanged[int].connect(slot)
         else:
             field = QLineEdit(str(value), self)
