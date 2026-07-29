@@ -1,9 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
+import numpy as np
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
@@ -22,7 +24,7 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         """
 
         # Get data
-        model_list, selected_callpaths = self.main_widget.get_selected_models()
+        model_list, selected_call_nodes = self._get_models_to_draw()
         if model_list is None:
             return
 
@@ -30,6 +32,8 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         maxX, maxY = self.get_max()
 
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
+
+        rel_heuristic = np.min(z_List) >= 0 and np.max(z_List) <= 1
 
         # Get the callpath color map
         widget = self.main_widget
@@ -61,9 +65,13 @@ class AllFunctionsAsOneSurfacePlot(GraphDisplayWindow):
         ax_all.set_ylabel('\n' + y_label, linespacing=3.1)
         ax_all.set_zlabel(
             '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+        opacity = widget.plot_formatting_options.surface_opacity
         for i in range(len(Z_List)):
             ax_all.plot_surface(
-                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])
+                X, Y, Z_List[i], color=dict_callpath_color[selected_call_nodes[i]], alpha=opacity)
+
+        if rel_heuristic:
+            ax_all.set_zlim(0, 1)
 
         # draw legend
         self.draw_legend(ax_all, dict_callpath_color)

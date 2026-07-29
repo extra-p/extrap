@@ -367,10 +367,15 @@ def find_child_node(root_node, level, callpath_elements, loop_id):
                 return find_child_node(new_root_node, level, callpath_elements, loop_id)
 
 
-def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
+def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS, collect_and_return=False):
+    errors = []
+
     def require(cond, message):
         if not cond:
-            raise InvalidExperimentError(message)
+            if collect_and_return:
+                errors.append(message)
+            else:
+                raise InvalidExperimentError(message)
 
     progress_bar.step('Validating experiment')
 
@@ -382,14 +387,26 @@ def validate_experiment(experiment: Experiment, progress_bar=DUMMY_PROGRESS):
     require(len(experiment.callpaths) > 0, "Callpaths are missing.")
     require(len(experiment.call_tree.childs) > 0, "Calltree is missing.")
     for c in experiment.coordinates:
-        require(len(c) == length_parameters,
-                f'The number of coordinate units of {c} does not match the number of '
-                f'parameters ({length_parameters}).')
+        if not len(c) == length_parameters:
+            error_msg = f'The number of coordinate units of {c} does not match the number of ' \
+                        f'parameters ({length_parameters}).'
+            if collect_and_return:
+                errors.append(error_msg)
+            else:
+                raise InvalidExperimentError(error_msg)
 
-    for k, m in progress_bar(experiment.measurements.items(), len(experiment.measurements)):
-        require(len(m) == length_coordinates,
-                f'The number of measurements ({len(m)}) for {k} does not match the number of coordinates '
-                f'({length_coordinates}).')
+    for k, measurements in progress_bar(experiment.measurements.items(), len(experiment.measurements)):
+        if not (len(measurements) == length_coordinates or k[0].lookup_tag('validation__ignore__num_measurements',
+                                                                           False)):
+            error_msg = (f'The number of measurements ({len(measurements)}) for {k} does not match the number of '
+                         f'coordinates ({length_coordinates}) for the following coordinates: ')
+            error_msg += ','.join(
+                [str(c.as_tuple()) for c in experiment.coordinates if c not in (m.coordinate for m in measurements)])
+            if collect_and_return:
+                errors.append(error_msg)
+            else:
+                raise InvalidExperimentError(error_msg)
+    return errors
 
 
 @dataclass

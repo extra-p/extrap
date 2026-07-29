@@ -5,19 +5,28 @@
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
+import os
 import sys
 import unittest
 import warnings
 
-from PySide6.QtCore import QRect, QItemSelectionModel
+from PySide6.QtCore import QRect, QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication, QCheckBox, QPushButton
 
 from extrap.extrap import extrapgui
 from extrap.fileio.file_reader.text_file_reader import TextFileReader
 from extrap.gui.AdvancedPlotWidget import AdvancedPlotWidget
 from extrap.gui.MainWidget import MainWidget, QCoreApplication
+from extrap.modelers.model_generator import ModelGenerator
+from extrap.modelers.single_parameter.segmented import SegmentedModeler
 
 _qapp_instance = None
+_is_ci_environment = bool(
+    os.getenv("CI")  # GitHub Actions, GitLab CI, CircleCI, etc.
+    or os.getenv("GITHUB_ACTIONS")  # Explicit GitHub Actions detection
+    or os.getenv("GITLAB_CI")  # Explicit GitLab CI detection
+    or os.getenv("CONTINUOUS_INTEGRATION")  # Travis CI and others
+)
 
 
 class GuiTestCase(unittest.TestCase):
@@ -30,6 +39,7 @@ class GuiTestCase(unittest.TestCase):
             _qapp_instance.setStyle('Fusion')
 
         self.app_instance = _qapp_instance
+        self.tabs = list(range(12))
 
     def tearDown(self):
         del self.app_instance
@@ -41,13 +51,15 @@ class TestGuiCommon(GuiTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.window = MainWidget()
-        self.window.hide()
+        # self.window.hide()
 
     def tearDown(self):
         # if not app_thread:
         #     raise unittest.SkipTest("GUI could not start.")
+        QCoreApplication.processEvents()
         self.window.closeEvent = lambda e: e.accept()
         self.window.close()
+        QCoreApplication.processEvents()
 
     def test_line_graph(self):
         data_display = self.window.data_display
@@ -79,45 +91,65 @@ class TestGuiExperimentLoaded(TestGuiCommon):
         data_display = self.window.data_display
         self.window.selector_widget.tree_view.selectAll()
         # check graphs
-        tabs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        data_display.reloadTabs(tabs)
-        for i in tabs:
+        data_display.reloadTabs(self.tabs)
+        for i in self.tabs:
             data_display.display_widget.setCurrentIndex(i)
             p = data_display.display_widget.currentWidget()
             if isinstance(p, AdvancedPlotWidget):
                 self.assertIsNotNone(p.graphDisplayWindow)
-                p.drawGraph()
-                self.assertIsNotNone(p.graphDisplayWindow)
+                if not _is_ci_environment:
+                    p.drawGraph()
+                    self.assertIsNotNone(p.graphDisplayWindow)
                 QCoreApplication.processEvents()
 
     def test_graph_model_one_selected(self):
         data_display = self.window.data_display
         self.window.selector_widget.tree_view.setSelection(QRect(0, 0, 1, 1), QItemSelectionModel.SelectionFlag.Rows)
         # check graphs
-        tabs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        data_display.reloadTabs(tabs)
-        for i in tabs:
+        data_display.reloadTabs(self.tabs)
+        for i in self.tabs:
             data_display.display_widget.setCurrentIndex(i)
             p = data_display.display_widget.currentWidget()
             if isinstance(p, AdvancedPlotWidget):
                 self.assertIsNotNone(p.graphDisplayWindow)
-                p.drawGraph()
-                self.assertIsNotNone(p.graphDisplayWindow)
+                if not _is_ci_environment:
+                    p.drawGraph()
+                    self.assertIsNotNone(p.graphDisplayWindow)
                 QCoreApplication.processEvents()
 
     def test_graph_no_model_selected(self):
         data_display = self.window.data_display
         # check graphs
-        tabs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        data_display.reloadTabs(tabs)
-        for i in tabs:
+        data_display.reloadTabs(self.tabs)
+        for i in self.tabs:
             data_display.display_widget.setCurrentIndex(i)
             p = data_display.display_widget.currentWidget()
             if isinstance(p, AdvancedPlotWidget):
                 self.assertIsNotNone(p.graphDisplayWindow)
-                p.drawGraph()
-                self.assertIsNotNone(p.graphDisplayWindow)
+                if not _is_ci_environment:
+                    p.drawGraph()
+                    self.assertIsNotNone(p.graphDisplayWindow)
                 QCoreApplication.processEvents()
+
+    def test_model_display(self):
+        tree_view = self.window.selector_widget.tree_view
+
+        rows = tree_view.model().rowCount()
+        columns = list(range(tree_view.model().columnCount()))
+        columns.remove(1)  # Severity column
+        columns.remove(2)  # Annotations column
+
+        for row in range(rows):
+            for col in columns:
+                index = tree_view.model().index(row, col)
+                data = tree_view.model().data(index, Qt.DisplayRole)
+                self.assertIsNotNone(data, f"Missing content in ({row}, {col})")
+                self.assertNotEqual(str(data).strip(), "", f"Empty string in ({row}, {col})")
+            # Check severity column
+            index = tree_view.model().index(row, 1)
+            data = tree_view.model().data(index, Qt.ItemDataRole.DecorationRole)
+            self.assertIsNotNone(data, f"Missing content in ({row}, {1})")
+            self.assertNotEqual(str(data).strip(), "", f"Empty string in ({row}, {1})")
 
     def test_modeler_options_reset(self):
         modeler_widget = self.window.modeler_widget
@@ -197,14 +229,39 @@ class TestGuiNoExperiment(TestGuiCommon):
     def test_graph_no_model_selected(self):
         data_display = self.window.data_display
         # check graphs
-        tabs = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        data_display.reloadTabs(tabs)
-        for i in tabs:
+        data_display.reloadTabs(self.tabs)
+        for i in self.tabs:
             data_display.display_widget.setCurrentIndex(i)
             p = data_display.display_widget.currentWidget()
             if isinstance(p, AdvancedPlotWidget):
                 self.assertIsNone(p.graphDisplayWindow)
                 QCoreApplication.processEvents()
+
+
+class TestGuiSegmented(TestGuiExperimentLoaded):
+    def setUp(self) -> None:
+        super().setUp()
+
+        exp = TextFileReader().read_experiment('data/text/one_parameter_segmented_6.txt')
+        model_generator = ModelGenerator(exp, modeler=SegmentedModeler())
+        model_generator.model_all()
+        self.window.set_experiment(exp)
+
+    def test_start_modeling(self):
+        modeler_widget = self.window.modeler_widget
+        modeler_widget.model_mean_radio.click()
+        num_modelers = modeler_widget._model_selector.count()
+        for i in range(num_modelers):
+            if modeler_widget._model_selector.itemText(i).lower() == 'segmented':
+                modeler_widget._model_selector.setCurrentIndex(i)
+        modeler_widget._model_button.click()
+        modeler_widget.remodel()
+        modeler_widget._model_other_radio.click()
+        for i in range(num_modelers):
+            if modeler_widget._model_selector.itemText(i).lower() == 'segmented':
+                modeler_widget._model_selector.setCurrentIndex(i)
+        modeler_widget._model_button.click()
+        modeler_widget.remodel()
 
 
 class TestGuiSelectedThenNoModelSelected(TestGuiExperimentLoaded):

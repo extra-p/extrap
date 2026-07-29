@@ -9,14 +9,18 @@ import math
 from abc import ABC, abstractmethod
 from itertools import chain
 from numbers import Real
-from typing import Tuple, List, Union, Mapping
+from typing import Tuple, List, Union, Mapping, Sequence
 
 import numpy as np
+import sympy
 from marshmallow import fields, validate
 
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.fraction import Fraction
 from extrap.entities.parameter import Parameter
+from extrap.util import sympy_functions
+from extrap.util.formatting_helper import format_number_html
+from extrap.util.serialization_schema import Schema, NumberField
 from extrap.util.serialization_schema import Schema, NumberField, NumpyField, VariantSchemaField
 from extrap.util.string_formats import FunctionFormats
 
@@ -33,6 +37,9 @@ class Term(ABC):
     @abstractmethod
     def to_string(self, *, format: FunctionFormats = None):
         raise NotImplementedError
+
+    def to_html(self):
+        return self.to_string()
 
     def reset_coefficients(self):
         self.coefficient = 1
@@ -60,6 +67,9 @@ class SingleParameterTerm(Term, ABC):
     @abstractmethod
     def to_string(self, parameter: Union[Parameter, str] = 'p', *, format: FunctionFormats = None):
         raise NotImplementedError
+
+    def to_html(self, parameter: Union[Parameter, str] = 'p'):
+        return self.to_string(parameter)
 
 
 class SimpleTerm(SingleParameterTerm):
@@ -90,6 +100,10 @@ class SimpleTerm(SingleParameterTerm):
             self.evaluate = self._evaluate_polynomial
         elif self._term_type == "logarithm":
             self.evaluate = self._evaluate_logarithm
+        elif self._term_type == NotImplemented:
+            pass
+        else:
+            raise ValueError(f"Unknown term type: {self._term_type}")
 
     def reset_coefficients(self):
         pass
@@ -107,11 +121,36 @@ class SimpleTerm(SingleParameterTerm):
             elif format == FunctionFormats.LATEX:
                 return f"\\log2{{{parameter}}}^{{{self.exponent}}}"
             return f"log2({parameter})^({self.exponent})"
+        raise ValueError(f"Unknown term type: {self._term_type}")
+
+    def to_html(self, parameter='p'):
+        if self.exponent == 1:
+            if self._term_type == "polynomial":
+                return str(parameter)
+            elif self._term_type == "logarithm":
+                return f"log<sub>2</sub>({parameter})"
+
+        if isinstance(self.exponent, Fraction):
+            exponent = self.exponent
+        else:
+            exponent = format_number_html(self.exponent)
+
+        if self._term_type == "polynomial":
+            return f"{parameter}<sup>{exponent}</sup>"
+        elif self._term_type == "logarithm":
+            return f"log<sub>2</sub>({parameter})<sup>{exponent}</sup>"
+        raise ValueError(f"Unknown term type: {self._term_type}")
 
     def _evaluate_polynomial(self, parameter_value):
+        if isinstance(parameter_value, sympy.Symbol):
+            return parameter_value ** self._exponent
         return parameter_value ** self._float_exponent
 
     def _evaluate_logarithm(self, parameter_value):
+        if isinstance(parameter_value, sympy.Symbol):
+            log = sympy_functions.log2(parameter_value)
+            log **= self._exponent
+            return log
         log = np.log2(parameter_value)
         log **= self._float_exponent
         return log
@@ -156,6 +195,12 @@ class CompoundTerm(SingleParameterTerm):
         elif format == FunctionFormats.LATEX:
             joiner = '\\cdot '
         function_string = joiner.join(term_list)
+        return function_string
+
+    def to_html(self, parameter='p'):
+        function_string = ' * '.join(t.to_html(parameter) for t in self.simple_terms)
+        if self.coefficient != 1:
+            function_string = format_number_html(self.coefficient) + ' * ' + function_string
         return function_string
 
     def __imul__(self, term: SimpleTerm):
@@ -245,14 +290,21 @@ class SegmentedTerm(CompoundTerm):
 
         return function_string
 
+    def to_html(self, parameter='p'):
+        function_string = "{" + self.segments[0].to_html(parameter)
+        function_string += f" <b>for</b> {parameter}&le;{format_number_html(self.intervals[0][1])}; "
+        function_string += self.segments[1].to_html(parameter)
+        function_string += f" <b>for</b> {parameter}&ge;{format_number_html(self.intervals[1][0])}}}"
+        return function_string
+
     def to_latex_string(self, parameter):
         """
         Return a math string (using latex encoding) representation of the function.
         """
         function_string = "(" + self.segments[0].to_latex_string(parameter).replace("$", "")
-        function_string += f" for {parameter}<={self.intervals[0][1]}\n"
+        function_string += f" for {parameter}\\leq{self.intervals[0][1]}\n"
         function_string += self.segments[1].to_latex_string(*parameter).replace("$", "")
-        function_string += f" for {parameter}>={self.intervals[1][0]})"
+        function_string += f" for {parameter}\\geq{self.intervals[1][0]})"
         return function_string
 
 
@@ -272,7 +324,7 @@ class MultiParameterTerm(Term):
         for _, t in self.parameter_term_pairs:
             t.reset_coefficients()
 
-    def evaluate(self, parameter_values: Union[Tuple[float], Coordinate]):
+    def evaluate(self, parameter_values: Union[Sequence[float], Coordinate]):
         function_value = self.coefficient
         for param, term in self.parameter_term_pairs:
             parameter_value = parameter_values[param]
@@ -296,6 +348,16 @@ class MultiParameterTerm(Term):
         if format == FunctionFormats.LATEX:
             joiner = '\\cdot '
         function_string = joiner.join(term_list)
+        return function_string
+
+    def to_html(self, *parameters: Union[Parameter, str, Mapping[int, Union[Parameter, str]]]):
+        if len(parameters) == 0:
+            parameters = DEFAULT_PARAM_NAMES
+        elif len(parameters) == 1 and not isinstance(parameters[0], str):
+            parameters = parameters[0]
+        function_string = ' * '.join(term.to_html(parameters[param]) for param, term in self.parameter_term_pairs)
+        if self.coefficient != 1:
+            function_string = format_number_html(self.coefficient) + ' * ' + function_string
         return function_string
 
     def __imul__(self, parameter_term_pair: Tuple[int, SingleParameterTerm]):
@@ -325,7 +387,7 @@ class SimpleTermSchema(TermSchema):
     exponent = NumberField()
 
     def create_object(self):
-        return SimpleTerm(None, 0)
+        return SimpleTerm(NotImplemented, 0)
 
 
 class CompoundTermSchema(TermSchema):

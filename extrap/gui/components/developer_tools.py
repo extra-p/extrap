@@ -1,0 +1,198 @@
+# This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
+#
+# Copyright (c) 2023-2025, Technical University of Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of a BSD-style license.
+# See the LICENSE file in the base directory for details.
+
+from __future__ import annotations
+import typing
+from collections import defaultdict
+from dataclasses import dataclass
+
+import numpy as np
+from PySide6.QtCore import QSize
+from PySide6.QtWidgets import QMessageBox, QMenu, QInputDialog, QSizePolicy
+
+from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.entities.function_computation import ComputationFunction
+from extrap.entities.metric import Metric
+from extrap.entities.model import Model
+
+from extrap.modelers.postprocessing.aggregation.sum_aggregation import SumAggregation
+
+if typing.TYPE_CHECKING:
+    from extrap.gui.MainWidget import MainWidget
+    from extrap.gui.TreeModel import TreeModel
+
+
+@dataclass
+class DeveloperConfig:
+    reader_allow_one_coordinate = False
+
+
+DEV_CONFIG = DeveloperConfig()
+
+
+def init_developer_menu(main_widget: MainWidget, menu: QMenu):
+    action = menu.addAction("Resize plot to format")
+    action.triggered.connect(lambda: central_widget_resize(main_widget))
+    action = menu.addAction("Get current plot size")
+    action.triggered.connect(lambda: central_widget_current_size(main_widget))
+    menu.addSeparator()
+    action = menu.addAction("Allow importing only one coordinate")
+    action.setCheckable(True)
+    action.setChecked(DEV_CONFIG.reader_allow_one_coordinate)
+
+    def allow_one_coordinate_toggled(val):
+        DEV_CONFIG.reader_allow_one_coordinate = val
+
+    action.toggled.connect(allow_one_coordinate_toggled)
+
+
+def calculate_complexity_comparison(tree_model, selected_indices):
+    selected_callpaths = (tree_model.getValue(idx) for idx in selected_indices)
+    selected_models = (tree_model.getSelectedModel(sc.path) for sc in selected_callpaths if sc is not None)
+    for model in selected_models:
+        if not model:
+            continue
+        if isinstance(model, ComparisonModel):
+            model.add_complexity_comparison_annotation()
+
+
+def show_info(model, callpath):
+    if not model and not callpath:
+        return
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Information)
+    if callpath:
+        msg.setText(
+            f"Tags for callpath {callpath}:")
+        allComments = '\n'.join(f"{tag}: {value}" for tag, value in callpath.tags.items())
+        msg.setInformativeText(allComments)
+    msg.setWindowTitle("Model Info")
+    # msg.setDetailedText("The details are as follows:")
+    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msg.exec_()
+
+
+def filter_1_percent_time(tree_view, on, tree_model):
+    tree_view._filter_1_percent_time_state = on
+    filter_id_percent_time = 'develop__filter_1_percent_time'
+    if on:
+        model_set = tree_view._selector_widget.getCurrentModel()
+        measure = model_set.modeler.use_measure
+        t_metric = Metric('time')
+        total_time = defaultdict(int)
+        for (callpath,
+             metric), measurements in tree_view._selector_widget.main_widget.getExperiment().measurements.items():
+            if metric != t_metric:
+                continue
+            if callpath.lookup_tag(SumAggregation.TAG_CATEGORY) is None and \
+                    not callpath.lookup_tag(SumAggregation.TAG_USAGE_DISABLED, False):
+                for measurement in measurements:
+                    total_time[measurement.coordinate] += measurement.value(measure)
+
+        def filter_(node):
+            if model_set is None or node.path is None:
+                return True
+
+            model = model_set.models.get((node.path, t_metric))
+            if model:
+                ratios = [measurement.value(measure) / total_time[measurement.coordinate] for measurement in
+                          model.measurements]
+                node.path.tags['devel__filter__ratio'] = ratios
+                return any(r >= 0.01 for r in ratios)
+            else:
+                return True
+
+        tree_model.item_filter.put_condition(filter_id_percent_time, filter_)
+    else:
+        tree_model.item_filter.remove_condition(filter_id_percent_time)
+
+
+def delete_subtree(tree_view, model):
+    if not tree_view.selectedIndexes():
+        return
+    selectedCallpaths = [model.getValue(i) for i in tree_view.selectedIndexes()]
+
+    for selectedCallpath in selectedCallpaths:
+        if not selectedCallpath.path:
+            continue
+        callpath = selectedCallpath.path
+        main_widget: MainWidget = tree_view._selector_widget.main_widget
+        experiment = main_widget.getExperiment()
+        callpaths_to_delete = [(i, c) for i, c in enumerate(experiment.callpaths) if
+                               c.name.startswith(callpath.name)]
+
+        for callpath_index, callpath_to_delete in reversed(callpaths_to_delete):
+            del experiment.callpaths[callpath_index]  # make sure to delete only once
+            for metric in experiment.metrics:
+                key = (callpath_to_delete, metric)
+                experiment.measurements.pop(key, None)
+                for modeler in experiment.modelers:
+                    modeler.models.pop(key, None)
+    tree_view.model().valuesChanged()
+
+
+def simplify_model_at_pos(tree_model: TreeModel, model):
+    if not model:
+        return
+    parameters = tree_model.selector_widget.getParameterValues()
+    result = []
+    if isinstance(model, ComparisonModel):
+        for model in model.models:
+            if isinstance(model.hypothesis.function, ComputationFunction):
+                func = model.hypothesis.function.sympy_function
+
+                terms = []
+                for sterm in func.args:
+                    term = ComputationFunction.from_sympy(sterm, False, model.hypothesis.function._ftype)
+                    terms.append((term.evaluate(parameters), term))
+                result.extend(str(s[0]) + ', ' + s[1].to_string() for s in sorted(terms, key=lambda t: t[0]))
+            else:
+                result.append(model.hypothesis.function.to_string())
+            result.append("\n")
+        QMessageBox.information(None, "Function", "\n".join(r for r in result))
+
+
+def central_widget_resize(main_widget):
+    widget = main_widget.centralWidget().display_widget.currentWidget()
+    if widget is not None:
+        size_str, res = QInputDialog.getText(main_widget, "Set size", "Size:", text="400, 400")
+        if not res:
+            return
+        split = size_str.split(',')
+        if len(split) != 2:
+            return
+        size = QSize(*[int(s.strip()) for s in split])
+        widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        widget.setMaximumSize(size)
+        widget.setMinimumSize(size)
+        widget.resize(size)
+
+
+def central_widget_current_size(main_widget):
+    widget = main_widget.centralWidget().display_widget.currentWidget()
+    if widget is not None:
+        QMessageBox.information(main_widget, "Current size", str(widget.size()))
+
+
+def generate_pgfplot_latex(model: Model):
+    if not model:
+        return
+    coordinates = [m.coordinate[0] for m in model.measurements]
+
+    x_max = max(coordinates)
+    x_min = min(coordinates)
+    x = np.linspace(x_min, 2 * x_max, 120)
+    y = model.hypothesis.function.evaluate(x)
+
+    output = r"\addplot[only marks] coordinates {"
+    for m in model.measurements:
+        output += rf"({m.coordinate[0]:.4f},{m.median:.4f}) "
+    output += "};\n"
+    output += r"\addplot[mark=none] coordinates {" + " ".join(f"({x:.4f},{y:.4f})" for x, y in zip(x, y))
+    output += " };"
+
+    QMessageBox.information(None, "Latex PGF Plot", output)

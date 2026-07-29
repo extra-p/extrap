@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -14,6 +14,7 @@ import numpy as np
 from PySide6.QtGui import QIntValidator, QPalette, QColor
 from PySide6.QtWidgets import *  # @UnusedWildImport
 
+from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.gui.Utils import clear_layout
 from extrap.gui.components.ProgressWindow import ProgressWindow
 from extrap.mpa.gpr_selection_strategy import analyze_noise
@@ -62,6 +63,7 @@ class MeasurementWizardWidget(QWidget):
             self.empty_label = None
 
         self._layout = QGridLayout(self)
+        self._layout.setContentsMargins(6, 6, 6, 6)
         self._layout.setRowStretch(99, 1)
         self._layout.setColumnStretch(0, 0)
         self._layout.setColumnStretch(1, 1)
@@ -375,6 +377,9 @@ class MeasurementWizardWidget(QWidget):
 
         if model_parameters == 0:
             self.init_empty()
+        elif isinstance(self.experiment, ComparisonExperiment):
+            self.init_empty('<b>You have loaded an experiment comparison.</b>'
+                            ' Suggestions for further measurements are only possible for individual experiments.')
         elif not experiment_has_repetitions(self.experiment):
             self.init_empty('<b>Please load a performance experiment that contains repetition information to get '
                             'suggestions for further measurement points.</b><br>'

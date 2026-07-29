@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -64,6 +64,8 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
 
     NOISE_CI = 2
 
+    _scale_up_threshold = modeler_options.add(100, int, name="Sensitivity", range=range(1, 1000))
+
     _cached_mlmodels = {}
 
     def _set_preset(self, value: int):
@@ -73,7 +75,7 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
 
     preset = modeler_options.add(0, int, range=range(-2, 2), on_change=_set_preset)
 
-    def __init__(self, use_measure=False):
+    def __init__(self, use_measure=Measure.MEAN):
         super().__init__(use_measure)
         self.preset = 0
         self.no_constants = False
@@ -86,7 +88,8 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
                 "You can do that using 'pip install extrap[adaptive_modeling]'.")
 
         all_models = []
-        for _, measurement_group in groupby(measurement_list_, key=lambda ms: {m.coordinate[0] for m in ms}):
+        for _, measurement_group in groupby(measurement_list_,
+                                            key=lambda ms: ({m.coordinate[0] for m in ms}, ms[0].metric)):
             measurement_list = list(measurement_group)
 
             positions = np.array([m.coordinate[0] for m in measurement_list[0]])
@@ -135,11 +138,15 @@ class AdaptiveModeler(AbstractSingleParameterModeler):
             models.append(Model(hypothesis))
         return models
 
-    @staticmethod
-    def _preprocess(positions, values):
+    def _preprocess(self, positions, values):
         max_p = np.max(positions)
         max_sp = _BUCKET_COORDINATES[-1]
-        return (positions * max_sp) / max_p, values / positions
+        max_val = np.max(values)
+        if max_val < self._scale_up_threshold:
+            scaled_values = values * (self._scale_up_threshold / max_val)
+        else:
+            scaled_values = values
+        return (positions * max_sp) / max_p, scaled_values / positions
 
     def _predict_functions(self, positions, values, noise_orig):
         tf = load_tensorflow()

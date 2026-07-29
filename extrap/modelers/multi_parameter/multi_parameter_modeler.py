@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -11,7 +11,6 @@ import warnings
 from typing import Sequence
 
 import numpy as np
-
 from extrap.entities.coordinate import Coordinate
 from extrap.entities.functions import ConstantFunction
 from extrap.entities.functions import MultiParameterFunction
@@ -145,13 +144,15 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
             result_groups.append(groups)
 
         if self.single_parameter_point_selection == 'all' and not use_all:
-            warnings.warn(f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
+            if not (len(measurements) >= 1 and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn(
+                    f"Could not use all measurement points. At least {self.min_measurement_points ** 2} "
                           f"measurements are needed; one for each combination of parameters.")
 
-        previous = np.seterr(invalid='ignore')
-        combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
-                                 for p, grp in enumerate(result_groups)]
-        np.seterr(**previous)
+        with np.errstate(invalid='ignore'):
+            combined_measurements = [[make_measurement(c, ms) for c, ms in grp.items() if ms]
+                                     for p, grp in enumerate(result_groups)]
 
         return combined_measurements
 
@@ -205,17 +206,17 @@ class MultiParameterModeler(AbstractMultiParameterModeler, SingularModeler):
 
         # check if the number of measurements satisfies the requirements of the modeler (>=5)
         if len(measurements) < self.min_measurement_points:
-            warnings.warn(f"Number of measurements for each parameter needs to be at least "
-                          f"{self.min_measurement_points} in order to create a performance model.")
+            if not (not (len(measurements) < 1) and measurements[0].callpath and measurements[0].callpath.lookup_tag(
+                    'validation__ignore__num_measurements', False)):
+                warnings.warn(f"Number of measurements for each parameter needs to be at least "
+                              f"{self.min_measurement_points} in order to create a performance model.")
             # return None
 
         # get the coordinates for modeling
         # coordinates = list(dict.fromkeys(m.coordinate for m in measurements).keys())
 
         # use all available additional points for modeling the multi-parameter models
-        values = np.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements))
-        meanModel = np.mean(values)
-        constantCost = np.sum((values - meanModel) * (values - meanModel))
+        meanModel, constantCost = ConstantHypothesis.calculate_constant_indicators(measurements, self.use_measure)
 
         # find out which parameters should be kept
         compound_term_pairs = []

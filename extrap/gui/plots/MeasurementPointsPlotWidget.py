@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -23,7 +23,7 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         """
 
         # Get data
-        model_list, selected_callpaths = self.main_widget.get_selected_models()
+        model_list, selected_callpaths = self._get_models_to_draw()
         if model_list is None:
             return
 
@@ -61,6 +61,8 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         for model, callpath in zip(model_list, selected_callpaths):
             callpath_color = dict_callpath_color[callpath]
             points = model.measurements
+            if not points:
+                continue
             if parameter_x.id >= 0:
                 xs = np.array([m.coordinate[parameter_x.id] for m in points])
             else:
@@ -96,6 +98,9 @@ class MeasurementPointsPlot(GraphDisplayWindow):
 
         # plot surfaces
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list, max_z)
+
+        rel_heuristic = np.min(z_List) >= 0 and np.max(z_List) <= 1
+
         ax_all.mouse_init()
         ax_all.xaxis.major.formatter._useMathText = True
         ax_all.yaxis.major.formatter._useMathText = True
@@ -107,8 +112,12 @@ class MeasurementPointsPlot(GraphDisplayWindow):
         ax_all.set_title("Measurement Points")
         # ax_all.zaxis.set_major_locator(LinearLocator(10))
         # ax_all.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+        opacity = widget.plot_formatting_options.surface_opacity / 4
         for i in range(len(Z_List)):
             ax_all.plot_surface(X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]],
-                                rstride=1, cstride=1, antialiased=False, alpha=0.1)
+                                rstride=1, cstride=1, antialiased=False, alpha=opacity)
+
+        if rel_heuristic:
+            ax_all.set_zlim(0.0, 1.0)
 
         self.draw_legend(ax_all, dict_callpath_color)

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -113,7 +113,8 @@ class Experiment:
 
 class ExperimentSchema(BaseSchema):
     _version_ = fields.Constant(extrap.__version__, data_key=extrap.__title__)
-    scaling = fields.Str(required=False, allow_none=True, validate=validate.OneOf([str(s) for s in ScalingType]))
+    scaling = fields.Str(required=False, allow_none=True,
+                         validate=validate.OneOf([str(s) for s in ScalingType] + ['weak_parallel']))
     parameters = fields.List(fields.Pluck(ParameterSchema, 'name'))
     callpaths = ListToMappingField(CallpathSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
     metrics = ListToMappingField(MetricSchema, 'name', list_type=UniqueList, dump_condition=lambda x: bool(x.tags))
@@ -185,9 +186,7 @@ class ExperimentSchema(BaseSchema):
 
         obj.call_tree = io_helper.create_call_tree(obj.callpaths)
         for modeler in obj.modelers:
-            modeler.experiment = obj
-            for key, model in modeler.models.items():
-                model.measurements = obj.measurements[key]
+            modeler.restore_from_exp(obj)
             pbar.update()
 
         return obj

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -32,11 +32,13 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
     compare_with_RSS = modeler_options.add(False, bool,
                                            'If enabled the models are compared using their residual sum of squares '
                                            '(RSS) instead of their symmetric mean absolute percentage error (SMAPE)')
+    minimum_term_contribution = modeler_options.add(0.0005, float,  # value for the minimum term contribution
+                                                    'Minimum contribution of a term to be included in the model')
     negative_coefficients = modeler_options.add(True, bool)
 
     def __init__(self, use_measure: Union[bool, Measure]):
         super().__init__(use_measure)
-        self.epsilon = 0.0005  # value for the minimum term contribution
+        self.epsilon = 0.0005
 
     def compare_hypotheses(self, old: Hypothesis, new: SingleParameterHypothesis, measurements: Sequence[Measurement]):
         """
@@ -50,13 +52,13 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         # get the compound terms of the new hypothesis
         compound_terms = new.function.compound_terms
 
-        previous = numpy.seterr(divide='ignore', invalid='ignore')
-        # for all compound terms check if they are smaller than minimum allowed contribution
-        for term in compound_terms:
-            # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
-            if term.coefficient == 0 or new.calc_term_contribution(term, measurements) < self.epsilon:
-                return False
-        numpy.seterr(**previous)
+        with numpy.errstate(divide='ignore', invalid='ignore'):
+            # for all compound terms check if they are smaller than minimum allowed contribution
+            for term in compound_terms:
+                # ignore this hypothesis, since one of the terms contributes less than epsilon to the function
+                if (term.coefficient == 0
+                        or new.calc_term_contribution(term, measurements) < self.minimum_term_contribution):
+                    return False
 
         # print smapes in debug mode
         logging.debug("next hypothesis SMAPE: %g RSS: %g", new.SMAPE, new.RSS)
@@ -70,8 +72,11 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
         Creates a constant model that fits the data using a ConstantFunction.
         """
         # compute the constant coefficient
-        mean_model = numpy.mean(
-            numpy.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements)))
+        if len(measurements) == 0:
+            mean_model = 0
+        else:
+            mean_model = numpy.mean(
+                numpy.fromiter(Measurement.select_measure(measurements, self.use_measure), float, len(measurements)))
 
         # create a constant function
         constant_function = ConstantFunction(mean_model)
@@ -110,7 +115,8 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     validation_measurement = measurements[element_id]
 
                     # compute the model coefficients based on the training data
-                    next_hypothesis.compute_coefficients(training_measurements)
+                    next_hypothesis.compute_coefficients(training_measurements,
+                                                         negative_coefficients=self.negative_coefficients)
 
                     # check if the constant coefficient should actually be 0
                     next_hypothesis.clean_constant_coefficient(self.epsilon, training_measurements)
@@ -119,11 +125,13 @@ class AbstractSingleParameterModeler(AbstractModeler, ABC):
                     next_hypothesis.compute_cost_leave_one_out(training_measurements, validation_measurement)
 
                 # compute the model coefficients using all data
-                next_hypothesis.compute_coefficients(measurements)
+                next_hypothesis.compute_coefficients(measurements,
+                                                     negative_coefficients=self.negative_coefficients)
                 logging.debug("single-parameter model %i: %s", i, next_hypothesis.function)
             else:
                 # compute the model coefficients based on the training data
-                next_hypothesis.compute_coefficients(measurements)
+                next_hypothesis.compute_coefficients(measurements,
+                                                     negative_coefficients=self.negative_coefficients)
 
                 # check if the constant coefficient should actually be 0
                 next_hypothesis.clean_constant_coefficient(

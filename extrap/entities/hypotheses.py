@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -12,6 +12,7 @@ from typing import Sequence
 import numpy
 import scipy.optimize
 from marshmallow import fields
+from sympy import factor
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
 from extrap.entities.measurement import Measurement, Measure
@@ -37,6 +38,10 @@ class Hypothesis:
             use_measure = Measure.from_use_median(use_measure)
         self._use_measure = use_measure
         self._costs_are_calculated = False
+
+    @property
+    def use_measure(self) -> Measure:
+        return self._use_measure
 
     @property
     def RSS(self):
@@ -98,6 +103,15 @@ class Hypothesis:
     def compute_cost(self, measurements: Sequence[Measurement]):
         raise NotImplementedError()
 
+    def define_costs_as_unknown(self):
+        self._RSS = math.nan
+        self._rRSS = math.nan
+        self._nRSS = math.nan
+        self._SMAPE = math.nan
+        self._AR2 = math.nan
+        self._RE = math.nan
+        self._costs_are_calculated = True
+
     def is_valid(self):
         """
         Checks if there is a numeric imprecision. If this is the case the hypothesis will be ignored.
@@ -145,7 +159,43 @@ class Hypothesis:
         elif self is other:
             return True
         else:
-            return self.__dict__ == other.__dict__
+            return (self.function == other.function and
+                    self._RSS == other._RSS and
+                    self._nRSS == other._nRSS and
+                    self._rRSS == other._rRSS and
+                    self._SMAPE == other._SMAPE and
+                    self._RE == other._RE and
+                    self._AR2 == other._AR2 and
+                    self._costs_are_calculated == other._costs_are_calculated and
+                    self._use_measure == other._use_measure)
+
+    @staticmethod
+    def calculate_constant_indicators(measurements, use_measure):
+        # TODO Update with select measure
+        mean_model = 0
+        constant_cost = 0
+        for m in measurements:
+            mean_model += m.value(use_measure) / float(len(measurements))
+        for m in measurements:
+            constant_cost += (m.value(use_measure) - mean_model) * (m.value(use_measure) - mean_model)
+        return mean_model, constant_cost
+
+    @staticmethod
+    def infer_best_type(hypotheses):
+        has_constant = False
+        has_single = False
+        for h in hypotheses:
+            if isinstance(h, MultiParameterHypothesis):
+                return MultiParameterHypothesis
+            elif isinstance(h, SingleParameterHypothesis):
+                has_single = True
+            elif isinstance(h, ConstantHypothesis):
+                has_constant = True
+        if has_single:
+            return SingleParameterHypothesis
+        if has_constant:
+            return ConstantHypothesis
+        return Hypothesis
 
 
 MAX_HYPOTHESIS = Hypothesis(Function(), Measure.UNKNOWN)
@@ -207,12 +257,12 @@ class ConstantHypothesis(Hypothesis):
             abssum = abs(actual) + abs(predicted)
             if abssum != 0:
                 smape += abs(difference) / abssum * 2
-
-        self._SMAPE = smape / len(measurements) * 100
-        if numpy.mean(actuals) != 0.0:
-            self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
-        else:
-            self._nRSS = math.nan
+        if measurements:
+            self._SMAPE = smape / len(measurements) * 100
+            if numpy.mean(actuals) != 0.0:
+                self._nRSS = math.sqrt(self._RSS) / numpy.mean(actuals)
+            else:
+                self._nRSS = math.nan
         self._costs_are_calculated = True
 
 
@@ -260,13 +310,20 @@ class SingleParameterHypothesis(Hypothesis):
 
         difference = predicted - actual
         self._RSS = numpy.sum(difference * difference)
-        self._nRSS = math.sqrt(self._RSS) / numpy.mean(actual)
+
+        mean_actual = numpy.mean(actual)
+        if mean_actual != 0.0:
+            self._nRSS = math.sqrt(self._RSS) / mean_actual
+        else:
+            self._nRSS = math.nan
 
         relativeDifference = difference / actual
+        # relativeDifference[difference == 0] = 0 #TODO check if necessary
         self._rRSS = numpy.sum(relativeDifference * relativeDifference)
 
         absolute_error = numpy.abs(difference)
         relative_error = absolute_error / actual
+        # relative_error[absolute_error == 0] = 0 #TODO check if necessary
         self._RE = numpy.mean(relative_error)
 
         abssum = numpy.abs(actual) + numpy.abs(predicted)
@@ -290,6 +347,7 @@ class SingleParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
+
         b_list = numpy.fromiter(Measurement.select_measure(measurements, self._use_measure), float, len(measurements))
         points = numpy.fromiter((m.coordinate[0] for m in measurements), float, len(measurements))
 
@@ -304,7 +362,20 @@ class SingleParameterHypothesis(Hypothesis):
         B = b_list
 
         if not negative_coefficients:
-            X, _ = scipy.optimize.nnls(A, B)
+            try:
+                X, _ = scipy.optimize.nnls(A, B)
+            except (RuntimeError, ValueError) as e:
+                X = None
+                factor: int = 1
+                relaxed_tolerance = max(max(A.shape), max(B.shape)) * numpy.linalg.norm(A, 1.)
+                while X is None:
+                    try:
+                        X, _ = scipy.optimize.nnls(A, B, atol=relaxed_tolerance * factor)
+                        print(factor, X, A, B)
+                    except RuntimeError:
+                        factor *= 10
+                    except ValueError:
+                        breakpoint()
         else:
             X, _, _, _ = numpy.linalg.lstsq(A, B, None)
         # logging.debug("Coefficients:"+str(X))
@@ -358,14 +429,24 @@ class MultiParameterHypothesis(Hypothesis):
             abssum = abs(actual) + abs(predicted)
 
             # calculate relative error
-            absolute_error = abs(predicted - actual)
-            relative_error = absolute_error / actual
+            absolute_error = abs(difference)
+            if absolute_error == 0:
+                relative_error = 0
+            elif actual == 0:
+                relative_error = math.nan
+            else:
+                relative_error = absolute_error / actual
             re_sum = re_sum + relative_error
 
             self._RSS += difference * difference
 
-            relativeDifference = difference / actual
-            self._rRSS += relativeDifference * relativeDifference
+            if difference == 0:
+                relative_difference = 0
+            elif actual == 0:
+                relative_difference = math.nan
+            else:
+                relative_difference = difference / actual
+            self._rRSS += relative_difference * relative_difference
 
             if abssum != 0.0:
                 # This `if` condition prevents a division by zero, but it is correct: if sum is 0,
@@ -396,6 +477,7 @@ class MultiParameterHypothesis(Hypothesis):
         """
         Computes the coefficients of the function using the least squares solution.
         """
+        import scipy.optimize
         # creating a numpy matrix representation of the lgs
         a_list = []
 
@@ -415,13 +497,24 @@ class MultiParameterHypothesis(Hypothesis):
         A = numpy.array(a_list)
         B = numpy.fromiter(Measurement.select_measure(measurements, self._use_measure), float, len(measurements))
         if not negative_coefficients:
-            coeffs, _ = scipy.optimize.nnls(A, B)
+            try:
+                coeffs, _ = scipy.optimize.nnls(A, B)
+            except (RuntimeError, ValueError) as e:
+                coeffs = None
+                factor: int = 1
+                relaxed_tolerance = max(max(A.shape), max(B.shape)) * numpy.linalg.norm(A, 1.)
+                while coeffs is None:
+                    try:
+                        coeffs, _ = scipy.optimize.nnls(A, B, atol=relaxed_tolerance * factor)
+                        print(factor, coeffs, A, B)
+                    except (RuntimeError, ValueError):
+                        factor *= 10
         else:
             try:
                 coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, None)
                 if rank < A.shape[1]:  # if rcond is to big the rank of A collapses and the coefficients are wrong
-                    coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B,
-                                                                           -1)  # retry with rcond = machine precision
+                    # retry with rcond = machine precision
+                    coeffs, residuals, rank, sing_val = numpy.linalg.lstsq(A, B, -1)
             except numpy.linalg.LinAlgError as e:
                 # sometimes first try does not work
                 coeffs, _, rank, _ = numpy.linalg.lstsq(A, B, None)

@@ -8,9 +8,13 @@
 from PySide6.QtWidgets import QFileDialog
 
 
-def show(parent, on_accept, caption='', directory='', filter='', file_mode=None, accept_mode=QFileDialog.AcceptOpen):
+def show(parent, on_accept, caption='', directory='', filter='', file_mode=None,
+         accept_mode=QFileDialog.AcceptMode.AcceptOpen):
     if file_mode is None:
-        file_mode = QFileDialog.ExistingFile if accept_mode == QFileDialog.AcceptOpen else QFileDialog.AnyFile
+        if accept_mode == QFileDialog.AcceptMode.AcceptOpen:
+            file_mode = QFileDialog.FileMode.ExistingFile
+        else:
+            file_mode = QFileDialog.FileMode.AnyFile
     f_dialog = QFileDialog(parent, caption, directory, filter)
     f_dialog.setAcceptMode(accept_mode)
     f_dialog.setFileMode(file_mode)
@@ -32,8 +36,8 @@ showOpen = show
 
 
 def showSave(parent, on_accept, caption='', directory='', filter=''):
-    return show(parent, on_accept, caption, directory, filter, accept_mode=QFileDialog.AcceptSave)
+    return show(parent, on_accept, caption, directory, filter, accept_mode=QFileDialog.AcceptMode.AcceptSave)
 
 
 def showOpenDirectory(parent, on_accept, caption='', directory='', filter=''):
-    return show(parent, on_accept, caption, directory, filter, file_mode=QFileDialog.Directory)
+    return show(parent, on_accept, caption, directory, filter, file_mode=QFileDialog.FileMode.Directory)

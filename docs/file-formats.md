@@ -8,22 +8,26 @@ File format documentation
 * [Cube file format](#cube-file-format)
 * [Experiment format](#experiment-format)
 * [Extra-P 3.0 file format](#extra-p-30-file-format)
+* [Nsight Systems with Extra-Prof data file format](#nsight-systems-with-extra-prof-data-file-format)
+* [Extra-Profiler data file format](#extra-profiler-data-file-format)
 
 Text file format
 ----------------
 The text file format is a basic input format consisting of 5 sections:
 
-- PARAMETER: 
+- PARAMETER:
   This section defines the names of the modeling parameters separated by spaces.
-  Also, multiple sections can be used. 
-  
+  Also, multiple sections can be used.
+
   Example: `PARAMETER <name> <...>`
-  
-- POINTS: Defines the coordinates of the measurement points. Uses braces to separate the points consisting of coordinates.
+
+- POINTS: Defines the coordinates of the measurement points. Uses braces to separate the points consisting of
+  coordinates.
 
   Example: `POINTS ((<coordinate1>) (<coordinate2>) (<...>)) ((<coordinate1b>) (<coordinate2b>) (<...>)) (<...>)`
-  
-- METRIC: Defines the metric for the following data sections. Is optional. Applies to all following data sections until another metric is defined.
+
+- METRIC: Defines the metric for the following data sections. Is optional. Applies to all following data sections until
+  another metric is defined.
 
   Example: `METRIC <name>`
 
@@ -31,9 +35,9 @@ The text file format is a basic input format consisting of 5 sections:
 
   Example: `REGION <callpath>`
 
-- DATA: Defines the measurement data for one point. Use one data section for each point. 
+- DATA: Defines the measurement data for one point. Use one data section for each point.
   The number of sections after a region section must exactly equal the number of points.
-  
+
   Example: `DATA <value> <...>`
 
 A general subset of the format is defined by the following ABNF grammar:
@@ -93,11 +97,11 @@ The lines are structured as follows:
 {"parameters":{"<parameter name>":<parameter value>};"metric":"<metric name>";"callpath":"<callpath>";"value":<measurement value>}
 ```
 
-JSON format 
+JSON format
 -----------
 
 Extra-P supports two different JSON formats (`*.json`).
-The newer, recommended one is less verbose. 
+The newer, recommended one is less verbose.
 The structure is defined by the following schema and is also shown in this example:
 
 ```json
@@ -195,44 +199,44 @@ It uses the following structure:
 
 ```json
 {
-    "callpaths": [
+  "callpaths": [
+    {
+      "id": 1,
+      "name": "<callpath>"
+    }
+  ],
+  "coordinates": [
+    {
+      "id": 1,
+      "parameter_value_pairs": [
         {
-            "id": 1,
-            "name": "<callpath>"
+          "parameter_id": 1,
+          "parameter_value": 0
         }
-    ],
-    "coordinates": [
-        {
-            "id": 1,
-            "parameter_value_pairs": [
-                {
-                    "parameter_id": 1,
-                    "parameter_value": 0
-                }
-            ]
-        }
-    ],
-    "measurements": [
-        {
-            "callpath_id": 1,
-            "coordinate_id": 1,
-            "id": 1,
-            "metric_id": 1,
-            "value": 0.0
-        }
-    ],
-    "metrics": [
-        {
-            "id": 1,
-            "name": "<metric name>"
-        }
-    ],
-    "parameters": [
-        {
-            "id": 1,
-            "name": "<parameter name>"
-        }
-    ]
+      ]
+    }
+  ],
+  "measurements": [
+    {
+      "callpath_id": 1,
+      "coordinate_id": 1,
+      "id": 1,
+      "metric_id": 1,
+      "value": 0.0
+    }
+  ],
+  "metrics": [
+    {
+      "id": 1,
+      "name": "<metric name>"
+    }
+  ],
+  "parameters": [
+    {
+      "id": 1,
+      "name": "<parameter name>"
+    }
+  ]
 }
 ```
 
@@ -245,26 +249,43 @@ Herby, each line of the file, delimited with '\n', contains a JSON object which 
 The minimal required structure of the JSON objects is as follows:
 
 ```json
-{ "params": { "<parameter1>": 0, "...": "..." }, "value": 0.0 }
+{
+  "params": {
+    "<parameter1>": 0,
+    "...": "..."
+  },
+  "value": 0.0
+}
 ```
 
 Value may also be a list of values:
 
 ```json
-{ "...": "...", "value": [0.0, 0.1, 0.2] }
+{
+  "...": "...",
+  "value": [
+    0.0,
+    0.1,
+    0.2
+  ]
+}
 ```
 
 Optionally the callpath and/or metric can also be defined:
 
 ```json
-{ "...": "...", "callpath": "<callpath>", "metric": "<metric>"}
+{
+  "...": "...",
+  "callpath": "<callpath>",
+  "metric": "<metric>"
+}
 ```
 
 For more examples see [tests/data/jsonlines](../tests/data/jsonlines).
 
 Cube file format
 -----------------------
-The Cube file format is based on a directory structure. 
+The Cube file format is based on a directory structure.
 All measurements are organized in a directory, which contains directories for each measurement point.
 Each directory for a measurement point must contain one or more Cube files (*.cubex), containing the actual measurement.
 The names of Cube files must not start with a dot `.`, otherwise they will be ignored.
@@ -316,8 +337,8 @@ cube file folder
 Experiment format
 -----------------
 The Extra-P experiment format (`.extra-p`) is a ZIP-file containing a file called `experiment.json`.
-This file contains the actual experiment data serialized to JSON. 
-It is generated by serializing an `Experiment` object which represents an experiment internally. 
+This file contains the actual experiment data serialized to JSON.
+It is generated by serializing an `Experiment` object which represents an experiment internally.
 The basic structure of the `experiment.json` file is given by the following JSON schema:
 
 ```json
@@ -325,7 +346,10 @@ The basic structure of the `experiment.json` file is given by the following JSON
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
     "Number": {
-      "type": ["number", "string"],
+      "type": [
+        "number",
+        "string"
+      ],
       "pattern": "^-?inf$|^nan$|^\\d*\\/\\d*$"
     },
     "MeasurementSchema": {
@@ -333,13 +357,25 @@ The basic structure of the `experiment.json` file is given by the following JSON
       "properties": {
         "coordinate": {
           "type": "array",
-          "items": {"$ref": "#/definitions/Number"}
+          "items": {
+            "$ref": "#/definitions/Number"
+          }
         },
-        "maximum": {"$ref": "#/definitions/Number"},
-        "mean": {"$ref": "#/definitions/Number"},
-        "median": {"$ref": "#/definitions/Number"},
-        "minimum": {"$ref": "#/definitions/Number"},
-        "std": {"$ref": "#/definitions/Number"}
+        "maximum": {
+          "$ref": "#/definitions/Number"
+        },
+        "mean": {
+          "$ref": "#/definitions/Number"
+        },
+        "median": {
+          "$ref": "#/definitions/Number"
+        },
+        "minimum": {
+          "$ref": "#/definitions/Number"
+        },
+        "std": {
+          "$ref": "#/definitions/Number"
+        }
       },
       "additionalProperties": false
     },
@@ -356,11 +392,21 @@ The basic structure of the `experiment.json` file is given by the following JSON
     "HypothesisSchema": {
       "type": "object",
       "properties": {
-        "AR2": {"$ref": "#/definitions/Number"},
-        "RE": {"$ref": "#/definitions/Number"},
-        "RSS": {"$ref": "#/definitions/Number"},
-        "rRSS": {"$ref": "#/definitions/Number"},
-        "SMAPE": {"$ref": "#/definitions/Number"},
+        "AR2": {
+          "$ref": "#/definitions/Number"
+        },
+        "RE": {
+          "$ref": "#/definitions/Number"
+        },
+        "RSS": {
+          "$ref": "#/definitions/Number"
+        },
+        "rRSS": {
+          "$ref": "#/definitions/Number"
+        },
+        "SMAPE": {
+          "$ref": "#/definitions/Number"
+        },
         "_costs_are_calculated": {
           "title": "_costs_are_calculated",
           "type": "boolean"
@@ -387,14 +433,18 @@ The basic structure of the `experiment.json` file is given by the following JSON
             "$ref": "#/definitions/CompoundTermSchema"
           }
         },
-        "constant_coefficient": {"$ref": "#/definitions/Number"}
+        "constant_coefficient": {
+          "$ref": "#/definitions/Number"
+        }
       },
       "additionalProperties": true
     },
     "CompoundTermSchema": {
       "type": "object",
       "properties": {
-        "coefficient": {"$ref": "#/definitions/Number"},
+        "coefficient": {
+          "$ref": "#/definitions/Number"
+        },
         "simple_terms": {
           "title": "simple_terms",
           "type": "array",
@@ -409,12 +459,19 @@ The basic structure of the `experiment.json` file is given by the following JSON
     "SimpleTermSchema": {
       "type": "object",
       "properties": {
-        "coefficient": {"$ref": "#/definitions/Number"},
-        "exponent": {"$ref": "#/definitions/Number"},
+        "coefficient": {
+          "$ref": "#/definitions/Number"
+        },
+        "exponent": {
+          "$ref": "#/definitions/Number"
+        },
         "term_type": {
           "title": "term_type",
           "type": "string",
-          "enum": ["polynomial", "logarithm"]
+          "enum": [
+            "polynomial",
+            "logarithm"
+          ]
         }
       },
       "additionalProperties": false
@@ -498,8 +555,15 @@ The basic structure of the `experiment.json` file is given by the following JSON
         },
         "scaling": {
           "title": "scaling",
-          "type": ["string", "null"],
-          "enum": ["strong", "weak", null]
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "strong",
+            "weak",
+            null
+          ]
         }
       },
       "additionalProperties": false
@@ -511,5 +575,103 @@ The basic structure of the `experiment.json` file is given by the following JSON
 
 Extra-P 3.0 file format
 -----------------------
-The Extra-P 3.0 file format uses binary encoding of experiments. 
-It is only included for backwards compatibility and should not be used for new data.  
+The Extra-P 3.0 file format uses binary encoding of experiments.
+It is only included for backwards compatibility and should not be used for new data.
+
+Nsight Systems with extra-data file format
+------------------------------------------
+The Nsight file format is based on a directory structure similar to the Cube file format.
+All measurements are organized in a directory, which contains directories for each *measurement point and repetition*.
+Each directory for a measurement point must contain one or more SQLite3 files (*.sqlite),
+containing the actual measurements for each rank of the application.
+The names of the SQLite3 files must not start with a dot `.`, otherwise they will be ignored.
+
+The name of the dictionary indicates the measurement point for the different parameters.
+It should be structured in the following way:
+
+```
+NAME = [PREFIX "."] PARAMETER-VALUE-PAIRS [".r" REPETITION-NUMBER]
+PARAMETER-VALUE-PAIRS = PARAMETER-NAME PARAMETER-VALUE *(["."/","] PARAMETER-NAME PARAMETER-VALUE) 
+```
+
+Examples for possible name structures are:
+
+* `mm.a1.1b1.1c1.1`
+* `mm.x1y1z1`
+* `mm.x1y1z1.r1`
+* `mm.a1,1.b1,1.c1,1.r1`
+* `mm.x1.1,y1,1,z1.1.r1`
+* `mm.x1.1.y1.1.z1.1.r1`
+* `mm.x1.y1.z1.r1`
+* `x1y1z1`
+
+The overall directory structure should be similar to the following:
+
+```
+Nsight file folder
+|
++--+mm.x10000y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x1000y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x100y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x10y1z1.r1
+|  +--profile0.sqlite
+|  +--profile1.sqlite
++--+mm.x1y1z1.r1
+   +--profile0.sqlite
+   +--profile1.sqlite
+```
+
+Extra-Profiler data file format
+-------------------------------
+The Extra-Profiler file format is based on a directory structure similar to the Cube file format.
+All measurements are organized in a directory, which contains directories for each *measurement point and repetition*.
+Each directory for a measurement point must contain one or more Extra-Profiler files (*.extra-prof.msgpack),
+containing the actual measurements for each rank of the application.
+The names of the Extra-Profiler files must not start with a dot `.`, otherwise they will be ignored.
+
+The name of the dictionary indicates the measurement point for the different parameters.
+It should be structured in the following way:
+
+```
+NAME = [PREFIX "."] PARAMETER-VALUE-PAIRS [".r" REPETITION-NUMBER]
+PARAMETER-VALUE-PAIRS = PARAMETER-NAME PARAMETER-VALUE *(["."/","] PARAMETER-NAME PARAMETER-VALUE) 
+```
+
+Examples for possible name structures are:
+
+* `mm.a1.1b1.1c1.1`
+* `mm.x1y1z1`
+* `mm.x1y1z1.r1`
+* `mm.a1,1.b1,1.c1,1.r1`
+* `mm.x1.1,y1,1,z1.1.r1`
+* `mm.x1.1.y1.1.z1.1.r1`
+* `mm.x1.y1.z1.r1`
+* `x1y1z1`
+
+The overall directory structure should be similar to the following:
+
+```
+Extra-Profile folder
+|
++--+mm.x10000y1z1.r1
+|  +--profile0.extra-prof.msgpack
+|  +--profile1.extra-prof.msgpack
++--+mm.x1000y1z1.r1
+|  +--profile0.extra-prof.msgpack
+|  +--profile1.extra-prof.msgpack
++--+mm.x100y1z1.r1
+|  +--profile0.extra-prof.msgpack
+|  +--profile1.extra-prof.msgpack
++--+mm.x10y1z1.r1
+|  +--profile0.extra-prof.msgpack
+|  +--profile1.extra-prof.msgpack
++--+mm.x1y1z1.r1
+   +--profile0.extra-prof.msgpack
+   +--profile1.extra-prof.msgpack
+```

@@ -73,6 +73,7 @@ class TestVersionCheck(unittest.TestCase):
             write_experiment(self.experiment, tmp)
             with warnings.catch_warnings(record=True) as record:
                 warnings.simplefilter('ignore', DeprecationWarning)
+                warnings.simplefilter('ignore', ResourceWarning)
                 read_experiment(tmp)
             self.assertFalse(record)
 
@@ -86,6 +87,7 @@ class TestVersionCheck(unittest.TestCase):
                 file.writestr(EXPERIMENT_DATA_FILE, json.dumps(data))
             with warnings.catch_warnings(record=True) as record:
                 warnings.simplefilter('ignore', DeprecationWarning)
+                warnings.simplefilter('ignore', ResourceWarning)
                 read_experiment(tmp)
             self.assertFalse(record)
 
@@ -102,6 +104,7 @@ class TestVersionCheck(unittest.TestCase):
                 file.writestr(EXPERIMENT_DATA_FILE, json.dumps(data))
             with warnings.catch_warnings(record=True) as record:
                 warnings.simplefilter('ignore', DeprecationWarning)
+                warnings.simplefilter('ignore', ResourceWarning)
                 read_experiment(tmp)
             self.assertFalse(record)
 
@@ -115,6 +118,7 @@ class TestVersionCheck(unittest.TestCase):
                 file.writestr(EXPERIMENT_DATA_FILE, json.dumps(data))
             with warnings.catch_warnings(record=True) as record:
                 warnings.simplefilter('ignore', DeprecationWarning)
+                warnings.simplefilter('ignore', ResourceWarning)
                 read_experiment(tmp)
             self.assertFalse(record)
 

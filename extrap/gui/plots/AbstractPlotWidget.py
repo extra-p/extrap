@@ -19,6 +19,12 @@ class AbstractPlotWidget(QWidget):
         """
 
     @abstractmethod
+    def getMax(self, axis):
+        """
+        This function returns the highest value that is shown on a specific axis.
+        """
+
+    @abstractmethod
     def set_initial_value(self):
         """
           This function sets the initial value for different parameters required for graph.

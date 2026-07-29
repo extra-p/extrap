@@ -1,9 +1,11 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
+import numpy as np
 
 from extrap.gui.plots.BaseGraphWidget import GraphDisplayWindow
 
@@ -21,7 +23,7 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
         """
 
         # Get data
-        model_list, selected_callpaths = self.main_widget.get_selected_models()
+        model_list, selected_callpaths = self._get_models_to_draw()
         if model_list is None:
             return
 
@@ -29,6 +31,8 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
         maxX, maxY = self.get_max()
 
         X, Y, Z_List, z_List = self.calculate_z_models(maxX, maxY, model_list)
+
+        rel_heuristic = np.min(z_List) >= 0 and np.max(z_List) <= 1
 
         # Get the callpath color map
         widget = self.main_widget
@@ -57,6 +61,8 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
         if y_label.startswith("_"):
             y_label = y_label[1:]
 
+        opacity = widget.plot_formatting_options.surface_opacity
+
         # Draw the graphs in subplots
         for i in range(len(Z_List)):
             ax = self.fig.add_subplot(
@@ -67,11 +73,13 @@ class AllFunctionsAsDifferentSurfacePlot(GraphDisplayWindow):
             ax.yaxis.major.formatter._useMathText = True
             ax.zaxis.major.formatter._useMathText = True
             ax.plot_surface(
-                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]])
+                X, Y, Z_List[i], color=dict_callpath_color[selected_callpaths[i]], alpha=opacity)
             ax.set_xlabel('\n' + x_label)
             ax.set_ylabel('\n' + y_label, linespacing=3.1)
             ax.set_zlabel(
                 '\n' + self.main_widget.get_selected_metric().name, linespacing=3.1)
+            if rel_heuristic:
+                ax.set_zlim(0, 1)
 
         # draw legend
         self.draw_legend(ax, dict_callpath_color)

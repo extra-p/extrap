@@ -70,6 +70,7 @@ class ValueWriter:
                 index.append(pos)
                 format.write_array(file, val)
 
+        pos = 0
         idx_file = zipfile.ZipInfo("values/" + str(self.chunk_index) + ".indx")
         idx_file.compress_type = zipfile.ZIP_STORED
         with self._zipfile.open(idx_file, 'w') as file:
@@ -86,8 +87,8 @@ class ValueWriter:
             file.write(b"Extra-P INDEX\0\0\0")
             file.write(struct.pack('<Q', len(index)))
 
-            for pos in index:
-                file.write(struct.pack('<Q', pos))
+            for val_pos in index:
+                file.write(struct.pack('<Q', val_pos))
 
     def flush(self):
         if self.index == 0:

@@ -4,8 +4,10 @@
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
+
 import importlib.util
 import unittest
+from fractions import Fraction
 
 import numpy as np
 
@@ -110,3 +112,42 @@ class TestAdaptiveModeling(unittest.TestCase):
             self.assertEqual(nc, modeler._noise_category(nc))
         for nc in adaptive._NOISE_CATEGORIES:
             self.assertEqual(nc, modeler._noise_category(np.array([nc])))
+
+    def test_small_values(self):
+        modeler = AdaptiveModeler()
+        data = [[(32.0, 0.302197),
+                 (64.0, 0.693342),
+                 (128.0, 1.64162),
+                 (256.0, 3.86245),
+                 (512.0, 8.46065),
+                 (1024.0, 17.8264)],
+                [(2.0, 0.302197),
+                 (3.0, 0.307578),
+                 (4.0, 0.347365),
+                 (5.0, 0.386287),
+                 (6.0, 0.403243),
+                 ]]
+
+        measurements = [[Measurement(Coordinate(p), None, None, v * 100000) for p, v in row] for row in data]
+
+        models = modeler.model(measurements)
+
+        self.assertEqual(2, len(models))
+        print(models[0].hypothesis.function)
+        print(models[1].hypothesis.function)
+        self.assertEqual(models[0].hypothesis.function.compound_terms[0].simple_terms[0].exponent, Fraction(3 / 4))
+        self.assertEqual(models[0].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
+        self.assertEqual(models[1].hypothesis.function.compound_terms[0].simple_terms[0].exponent, Fraction(1 / 2))
+        self.assertEqual(models[1].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
+
+        measurements = [[Measurement(Coordinate(p), None, None, v) for p, v in row] for row in data]
+        modeler._scale_up_threshold = 100
+        models = modeler.model(measurements)
+
+        self.assertEqual(2, len(models))
+        print(models[0].hypothesis.function)
+        print(models[1].hypothesis.function)
+        self.assertNotIsInstance(models[0].hypothesis, ConstantHypothesis)
+        self.assertNotIsInstance(models[1].hypothesis, ConstantHypothesis)
+        self.assertEqual(models[0].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')
+        self.assertEqual(models[1].hypothesis.function.compound_terms[0].simple_terms[0].term_type, 'polynomial')

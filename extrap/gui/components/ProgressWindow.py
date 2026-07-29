@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2023, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2025, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -33,12 +33,12 @@ class ProgressWindow(ProgressBar):
         self.dialog.setMinimumDuration(500)
         self.dialog.setWindowTitle(self.desc)
         self.dialog.setAutoClose(False)
-        self.dialog.setWindowModality(Qt.WindowModal)
-        self.dialog.setWindowFlag(Qt.WindowCloseButtonHint, False)
-        self.dialog.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.dialog.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
+        self.dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         label = QLabel()
-        label.setTextFormat(Qt.PlainText)
-        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        label.setTextFormat(Qt.TextFormat.PlainText)
+        label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.dialog.setLabel(label)
         self._cancel_event = Event()
         self._internal_cancel_event = Event()

@@ -1,6 +1,6 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
@@ -19,6 +19,7 @@ from marshmallow.fields import Field
 from marshmallow.schema import Schema as _Schema
 
 from extrap.entities.fraction import Fraction
+from extrap.util.exceptions import SerializationError
 
 
 class SchemaMeta(type(_Schema), type(ABC)):
@@ -91,13 +92,24 @@ class BaseSchema(Schema):
             return super(BaseSchema, self).load(data, **kwargs)
 
     def dump(self, obj, **kwargs):
-        if self.__is_direct_subclass(type(self), BaseSchema) and type(obj).__name__ in self._subclasses:
-            return self._subclasses[type(obj).__name__]().dump(obj, **kwargs)
+        obj_type = type(obj)
+        if self.__is_direct_subclass(type(self), BaseSchema) and obj_type.__name__ in self._subclasses:
+            return self._subclasses[obj_type.__name__]().dump(obj, **kwargs)
         else:
-            result = super(BaseSchema, self).dump(obj, **kwargs)
-            if type(obj).__name__ in self._subclasses:
-                result[self.type_field] = type(obj).__name__
-            return result
+            try:
+                serialization_type = type(self.create_object())
+            except NotImplementedError as e:
+                raise SerializationError() from e
+            if serialization_type != obj_type:
+                raise SerializationError(f"The serialization schema ({type(self)}, {serialization_type}) does not "
+                                         f"match the type of the serialized object ({obj_type}).")
+            try:
+                result = super(BaseSchema, self).dump(obj, **kwargs)
+                if obj_type.__name__ in self._subclasses:
+                    result[self.type_field] = obj_type.__name__
+                return result
+            except Exception as e:
+                raise SerializationError(f"Serialization in {type(self).__name__} failed. " + str(e)) from e
 
 
 def make_value_schema(class_, value):
@@ -216,6 +228,8 @@ class NumberField(fields.Number):
             return None
         elif isinstance(value, Fraction):
             return self._to_string(value)
+        elif isinstance(value, complex):
+            raise SerializationError("The number field does not support serialization of complex values.")
         elif math.isnan(value) or math.isinf(value):
             return self._to_string(value)
         else:
@@ -352,7 +366,12 @@ class NumpyField(fields.List):
                 if type(e) == list:
                     stack.append(e)
                 elif type(e) == str:
-                    elem[i] = float(math.nan)
+                    if e.lower() == "inf":
+                        elem[i] = float(math.inf)
+                    elif e.lower() == "-inf":
+                        elem[i] = -math.inf
+                    else:
+                        elem[i] = float(math.nan)
                 elif math.isfinite(e):
                     continue
                 else:

@@ -1,23 +1,27 @@
 # This file is part of the Extra-P software (http://www.scalasca.org/software/extra-p)
 #
-# Copyright (c) 2020-2024, Technical University of Darmstadt, Germany
+# Copyright (c) 2020-2026, Technical University of Darmstadt, Germany
 #
 # This software may be modified and distributed under the terms of a BSD-style license.
 # See the LICENSE file in the base directory for details.
 
 from __future__ import annotations
 
+import copy
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 import matplotlib
 import numpy as np
 from PySide6.QtWidgets import QSizePolicy
+from extrap.util.formatting_helper import replace_method_parameters
 from matplotlib import patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 
+from extrap.comparison.entities.comparison_model import ComparisonModel
+from extrap.comparison.experiment_comparison import ComparisonExperiment
 from extrap.util.formatting_helper import replace_method_parameters
 
 if TYPE_CHECKING:
@@ -32,8 +36,8 @@ class GraphDisplayWindow(FigureCanvas):
                                     'font.size': self.main_widget.plot_formatting_options.font_size}):
             self.fig = Figure(figsize=(width, height), dpi=dpi, layout='tight')
             super().__init__(self.fig)
-            super().setSizePolicy(QSizePolicy.Expanding,
-                                  QSizePolicy.Expanding)
+            super().setSizePolicy(QSizePolicy.Policy.Expanding,
+                                  QSizePolicy.Policy.Expanding)
             super().updateGeometry()
             self.draw_figure()
 
@@ -105,15 +109,14 @@ class GraphDisplayWindow(FigureCanvas):
         # Get the z value for the x and y value
         z_List = list()
         Z_List = list()
-        previous = np.seterr(invalid='ignore', divide='ignore')
-        for model in model_list:
-            function = model.hypothesis.function
-            zs = self.calculate_z_optimized(X, Y, function)
-            Z = zs.reshape(X.shape)
-            z_List.append(zs)
-            Z_List.append(Z)
-            max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
-        np.seterr(**previous)
+        with np.errstate(invalid='ignore', divide='ignore'):
+            for model in model_list:
+                function = model.hypothesis.function
+                zs = self.calculate_z_optimized(X, Y, function)
+                Z = zs.reshape(X.shape)
+                z_List.append(zs)
+                Z_List.append(Z)
+                max_z = max(max_z, np.max(zs[np.logical_not(np.isinf(zs))]))
         for z, Z in zip(z_List, Z_List):
             z[np.isinf(z)] = max_z
             Z[np.isinf(Z)] = max_z
@@ -124,9 +127,11 @@ class GraphDisplayWindow(FigureCanvas):
         patches = list()
         for key, value in dict_callpath_color.items():
             labelName = str(key.name)
+            if self.main_widget.plot_formatting_options.shorten_names:
+                labelName = replace_method_parameters(labelName)
             if labelName.startswith("_"):
                 labelName = labelName[1:]
-            patch = mpatches.Patch(color=value, label=replace_method_parameters(labelName))
+            patch = mpatches.Patch(color=value, label=labelName)
             patches.append(patch)
         leg = ax_all.legend(handles=patches, fontsize=self.main_widget.plot_formatting_options.legend_font_size,
                             loc="upper right", bbox_to_anchor=(1, 1))
@@ -144,6 +149,33 @@ class GraphDisplayWindow(FigureCanvas):
         if maxY < lower_max:
             maxY = lower_max
         return maxX, maxY
+
+    def _get_models_to_draw(self):
+        model_list1, selected_call_nodes1 = self.main_widget.get_selected_models()
+        if not model_list1:
+            return None, None
+        model_list = []
+        selected_call_nodes = []
+        for i, (model, call_node) in enumerate(zip(model_list1, selected_call_nodes1)):
+            if isinstance(model, ComparisonModel):
+                if len(model_list1) == 1:
+                    comp_exp: ComparisonExperiment = self.main_widget.getExperiment()
+                    comp_call_nodes = []
+                    for m, name in zip(model.models, comp_exp.experiment_names):
+                        model_list.append(m)
+                        comp_call_node = copy.copy(call_node)
+                        comp_call_node.name = f'[{name}] ' + comp_call_node.name
+                        selected_call_nodes.append(comp_call_node)
+                        comp_call_nodes.append(comp_call_node)
+                    self.main_widget.model_color_map.update(comp_call_nodes)
+                else:
+                    for m in model.models:
+                        model_list.append(m)
+                        selected_call_nodes.append(call_node)
+            else:
+                model_list.append(model)
+                selected_call_nodes.append(call_node)
+        return model_list, selected_call_nodes
 
 
 class BaseContourGraph(GraphDisplayWindow):

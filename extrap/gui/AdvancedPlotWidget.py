@@ -53,6 +53,17 @@ class AdvancedPlotWidget(AbstractPlotWidget):
         else:
             print("[EXTRA-P:] Error: Set maximum for axis other than X-axis.")
 
+    def getMax(self, axis):
+        """ This function sets the highest value of x and y that is being shown on x axis and y axis.
+        """
+        if axis == 0:
+            return self.max_x
+        elif axis == 1:
+            return self.max_y
+
+        else:
+            print("[EXTRA-P:] Error: Set maximum for axis other than X-axis.")
+
     def getMaxX(self):
         """ 
            This function returns the highest value of x that is being shown on x-axis.
