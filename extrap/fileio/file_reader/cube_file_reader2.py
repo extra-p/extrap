@@ -65,13 +65,14 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
         0, float,
         "Discards individual measurement values above this threshold (e.g. from measurement glitches). "
         "Set to 0 to disable.", range=range(0, 10 ** 16))
+    allow_incomplete_measurements = DynamicOptions.add(False, bool)
 
     def _filter_outliers(self, cnode_values):
         if not self.value_filter_threshold:
             return cnode_values
         if isinstance(cnode_values, CubeValues):
-            return cnode_values[cnode_values.astype(float) <= self.value_filter_threshold]
-        return cnode_values[cnode_values <= self.value_filter_threshold]
+            return cnode_values[cnode_values.astype(float) < self.value_filter_threshold]
+        return cnode_values[cnode_values < self.value_filter_threshold]
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
@@ -126,10 +127,11 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
 
         progress_bar.step("Unify calltrees")
         callpaths_to_merge = self._determine_and_add_common_callpaths(experiment, num_points, progress_bar)
-        if self.use_inclusive_measurements:
-            self._delete_callpaths_from_experiment(experiment, callpaths_to_merge, progress_bar)
-        else:
-            self._merge_callpaths_into_existing_calltree(experiment, callpaths_to_merge, progress_bar)
+        if not self.allow_incomplete_measurements:
+            if self.use_inclusive_measurements:
+                self._delete_callpaths_from_experiment(experiment, callpaths_to_merge, progress_bar)
+            else:
+                self._merge_callpaths_into_existing_calltree(experiment, callpaths_to_merge, progress_bar)
 
         if self.small_kernel_filter:
             self._remove_small_kernels(experiment, total_values, progress_bar)
@@ -151,8 +153,11 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
         if show_warning_skipped_metrics:
             warnings.warn("The following metrics were skipped because they contained no data: "
                           f"{', '.join(show_warning_skipped_metrics)}. For more details see log.")
-
-        io_helper.validate_experiment(experiment, progress_bar)
+        if self.allow_incomplete_measurements:
+            warnings.warn("You chose to disable the validation of the experiment to allow incomplete measurements. "
+                          "Please check if the models match your expectation.")
+        else:
+            io_helper.validate_experiment(experiment, progress_bar)
         progress_bar.update()
         return experiment
 
