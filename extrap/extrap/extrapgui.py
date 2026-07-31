@@ -27,6 +27,7 @@ from extrap.fileio.file_reader.abstract_directory_reader import AbstractScalingC
 from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.gui.MainWidget import MainWidget
 from extrap.util.exceptions import RecoverableError, CancelProcessError
+from extrap.util.options_parser import ImportHelpAction, ImportOptionsAction
 from extrap.util.warnings import DetailedWarning
 
 TRACEBACK = logging.DEBUG - 1
@@ -103,6 +104,12 @@ def parse_arguments(args=None):
     parser.add_argument("--keep-values", action="store_true", default=False, dest='keep_values',
                         help="Keeps the original values after import")
 
+    parser.add_argument("--import-options", dest="import_options", default={}, nargs='+',
+                        metavar="KEY=VALUE", action=ImportOptionsAction,
+                        help="Options for the selected input reader")
+    parser.add_argument("--help-import", choices=list(all_readers.keys()), type=str.lower,
+                        help="Show help for import options and exit", action=ImportHelpAction)
+
     arguments = parser.parse_args(args)
     return arguments
 
@@ -121,6 +128,9 @@ def load_from_command(arguments, window):
                     file_reader.keep_values = arguments.keep_values
                 elif arguments.keep_values:
                     warnings.warn(f"Keeping values is not supported by the {reader.NAME} reader.")
+                for name, value in arguments.import_options.items():
+                    if value is not None:
+                        setattr(file_reader, name, value)
                 window.import_file(file_reader.read_experiment, file_name=arguments.path,
                                    model=file_reader.GENERATE_MODELS_AFTER_LOAD, reader=file_reader)
                 return

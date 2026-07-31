@@ -25,6 +25,18 @@ class TestConsole(unittest.TestCase):
     def test_help_modeler_options(self):
         self.assertRaisesRegex(SystemExit, '0', extrap.main, ['--help-modeler', 'Default'])
 
+    def test_help_import_options(self):
+        self.assertRaisesRegex(SystemExit, '0', extrap.main, ['--help-import', 'cube'])
+
+    def test_import_options(self):
+        extrap.main(['--cube', 'data/cubeset/single_parameter/', '--import-options', 'aggregate_unc_cas_counts=false'])
+        self.assertRaisesRegex(SystemExit, '[^0]', extrap.main,
+                               ['--cube', 'data/cubeset/single_parameter/',
+                                '--import-options', 'does_not_exist=1'])
+        self.assertRaisesRegex(SystemExit, '[^0]', extrap.main,
+                               ['--text', 'data/text/one_parameter_1.txt',
+                                '--import-options', 'aggregate_unc_cas_counts=false'])
+
     def test_text(self):
         extrap.main(['--text', 'data/text/one_parameter_1.txt'])
         self.assertRaisesRegex(SystemExit, '[^0]', extrap.main, ['--text', 'data/text/does_not_exist.txt'])

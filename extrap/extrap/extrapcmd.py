@@ -27,6 +27,7 @@ from extrap.modelers import single_parameter
 from extrap.modelers.abstract_modeler import MultiParameterModeler
 from extrap.modelers.model_generator import ModelGenerator
 from extrap.util.exceptions import RecoverableError
+from extrap.util.options_parser import ImportOptionsAction, ImportHelpAction
 from extrap.util.options_parser import ModelerOptionsAction, ModelerHelpAction
 from extrap.util.options_parser import SINGLE_PARAMETER_MODELER_KEY, SINGLE_PARAMETER_OPTIONS_KEY
 from extrap.util.progress_bar import ProgressBar
@@ -65,6 +66,11 @@ def main(args=None, prog=None):
                                     names_of_scaling_conversion_readers + ") (default: %(default)s)")
     input_options.add_argument("--keep-values", action="store_true", default=False, dest='keep_values',
                                help="Keeps the original values after import")
+    input_options.add_argument("--import-options", dest="import_options", default={}, nargs='+',
+                               metavar="KEY=VALUE", action=ImportOptionsAction,
+                               help="Options for the selected input reader")
+    input_options.add_argument("--help-import", choices=list(all_readers.keys()), type=str.lower,
+                               help="Show help for import options and exit", action=ImportHelpAction)
 
     modeling_options = parser.add_argument_group("Modeling options")
     measure_group = modeling_options.add_mutually_exclusive_group(required=False)
@@ -166,6 +172,10 @@ def main(args=None, prog=None):
                     elif arguments.keep_values:
                         warnings.warn(
                             f"Keeping values is not supported by the {reader.NAME} reader.")
+
+                    for name, value in arguments.import_options.items():
+                        if value is not None:
+                            setattr(file_reader, name, value)
 
                     if reader.LOADS_FROM_DIRECTORY:
                         if os.path.isdir(arguments.path):

@@ -164,3 +164,43 @@ class ModelerOptionsAction(Action):
         if parser is not None:
             options = parser.parse_args(values)
             setattr(namespace, self.dest, dict(options.__dict__))
+
+
+def _selected_reader(namespace: Namespace, all_readers):
+    for reader in all_readers.values():
+        if getattr(namespace, reader.NAME, False):
+            return reader
+    return None
+
+
+class ImportHelpAction(Action):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        from extrap.fileio.file_reader import all_readers
+        reader = all_readers[values]
+        sub_parser = _create_parser(reader(), values, nested_sp=False)
+        sub_parser.prog = f'{reader.CMD_ARGUMENT} --import-options'
+        sub_parser.print_help()
+        parser.exit()
+
+
+class ImportOptionsAction(Action):
+    # noinspection PyShadowingBuiltins, PyUnusedLocal
+    def __init__(self, option_strings: Sequence[Text], dest: Text, help, **kwargs) -> None:
+        super().__init__(option_strings, dest, help=help, **kwargs)
+
+    def __call__(self, parser: ArgumentParser, namespace: Namespace, values: Union[Text, Sequence[Any], None],
+                 option_string: Optional[Text] = ...) -> None:
+        from extrap.fileio.file_reader import all_readers
+        reader = _selected_reader(namespace, all_readers)
+        if reader is None:
+            raise argparse.ArgumentError(self,
+                                         'The reader for the import options cannot be resolved. '
+                                         'Please specify the input option (e.g. --cube) before --import-options.')
+        sub_parser = _create_parser(reader(), reader.NAME, nested_sp=False)
+        sub_parser.prog = f'{reader.CMD_ARGUMENT} --import-options'
+        options = sub_parser.parse_args(values)
+        setattr(namespace, self.dest, dict(options.__dict__))
