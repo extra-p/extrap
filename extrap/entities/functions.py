@@ -11,7 +11,6 @@ import math
 import numbers
 import warnings
 from itertools import chain
-from typing import List, Mapping, Union, Sequence
 from numbers import Number
 from typing import List, Mapping, Union
 from typing import Sequence
@@ -20,13 +19,10 @@ import numpy
 import numpy as np
 import sympy
 from marshmallow import fields
-from numpy.lib.function_base import piecewise
-from marshmallow import fields, pre_load
 
 from extrap.entities.parameter import Parameter
-from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema, \
-    SegmentedTerm
 from extrap.entities.terms import CompoundTerm, MultiParameterTerm, CompoundTermSchema, MultiParameterTermSchema
+from extrap.entities.terms import SegmentedTerm
 from extrap.util.formatting_helper import format_number_html
 from extrap.util.latex_formatting import frmt_scientific_coefficient
 from extrap.util.serialization_schema import BaseSchema, NumberField, NumpyField, VariantSchemaField

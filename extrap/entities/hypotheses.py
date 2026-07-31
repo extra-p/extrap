@@ -12,7 +12,6 @@ from typing import Sequence
 import numpy
 import scipy.optimize
 from marshmallow import fields
-from sympy import factor
 
 from extrap.entities.functions import Function, MultiParameterFunction, FunctionSchema
 from extrap.entities.measurement import Measurement, Measure
@@ -146,6 +145,7 @@ class Hypothesis:
         else:
             points = numpy.array([m.coordinate[0] for m in measurements])
 
+        actual[actual == 0] = 1
         contribution = numpy.abs(term.evaluate(points) / actual)
         maximum_term_contribution = contribution.max()
         return maximum_term_contribution

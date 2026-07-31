@@ -127,10 +127,10 @@ def main(args=None, prog=None):
         # %(message)s", level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p", filename="../temp/extrap.log", filemode="w")
         logging.basicConfig(
             format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s",
-            level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p")
+            level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p", force=True)
     else:
         logging.basicConfig(
-            format="%(levelname)s: %(message)s", level=loglevel)
+            format="%(levelname)s: %(message)s", level=loglevel, force=True)
 
     # check scaling type
     scaling_type = arguments.scaling_type

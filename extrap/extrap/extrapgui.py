@@ -43,9 +43,9 @@ def main(*, args=None, test=False):
     log_level = min(logging.getLevelName(arguments.log_level.upper()), logging.INFO)
     if arguments.log_file:
         logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level,
-                            filename=arguments.log_file)
+                            filename=arguments.log_file, force=True)
     else:
-        logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level)
+        logging.basicConfig(format="%(levelname)s: %(asctime)s: %(message)s", level=log_level, force=True)
     logging.getLogger().handlers[0].setLevel(logging.getLevelName(arguments.log_level.upper()))
 
     QCoreApplication.setApplicationName(extrap.__title__)

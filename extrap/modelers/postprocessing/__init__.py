@@ -95,7 +95,8 @@ class PostProcess(DynamicOptions, ABC):
 
 class PostProcessSchema(BaseSchema):
     def create_object(self):
-        logging.debug(f"Created placeholder for unknown post process")
+        if logging.root.handlers:  # necessary to prevent the creation of a root handler before the actual configuration in extrapcmd or extrapgui
+            logging.debug(f"Created placeholder for unknown post process")
         return _EmptyPostProcess(None)
 
 

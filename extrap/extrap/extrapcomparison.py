@@ -91,10 +91,10 @@ def main(raw_args=None, prog=None):
     if loglevel == logging.DEBUG:
         logging.basicConfig(
             format="%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s - %(funcName)10s(): %(message)s",
-            level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p")
+            level=loglevel, datefmt="%m/%d/%Y %I:%M:%S %p", force=True)
     else:
         logging.basicConfig(
-            format="%(levelname)s: %(message)s", level=loglevel)
+            format="%(levelname)s: %(message)s", level=loglevel, force=True)
 
     with ProgressBar(desc='Loading experiment 1', disable=arguments.disable_progress) as pbar:
         exp1 = read_experiment(arguments.path1, pbar)
