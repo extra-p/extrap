@@ -72,7 +72,9 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             return cnode_values
         if isinstance(cnode_values, CubeValues):
             return cnode_values[cnode_values.astype(float) < self.value_filter_threshold]
-        return cnode_values[cnode_values < self.value_filter_threshold]
+        if not (cnode_values < self.value_filter_threshold).any():
+            return cnode_values
+        return ma.array(cnode_values, mask=cnode_values >= self.value_filter_threshold)
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read the paths of the cube files in the given directory with dir_name
@@ -120,7 +122,7 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
             # add measurements to experiment
             for (callpath, metric), values in aggregated_values.items():
                 progress_bar.update(0)
-                if numpy.size(values) == 0:
+                if len(values) == 0 or all(len(v) == 0 for v in values):
                     continue
                 experiment.add_measurement(
                     Measurement(coordinate, callpath, metric, values, keep_values=self.keep_values))
@@ -276,6 +278,8 @@ class CubeFileReader2(AbstractDirectoryReader, AbstractScalingConversionReader, 
                     callpaths = self._make_callpath_mapping(root_cnodes)
                     # iterate over all metrics
                     for cube_metric in parsed.get_metrics():
+                        if self.use_inclusive_measurements and cube_metric.name == 'max_time':
+                            continue
                         progress_bar.update(0)
                         # NOTE: here we could choose which metrics to extract
                         if self.selected_metrics and cube_metric.name not in self.selected_metrics:

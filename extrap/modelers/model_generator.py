@@ -11,7 +11,7 @@ import itertools
 from collections.abc import Collection
 from typing import Dict, Union, Tuple, TYPE_CHECKING
 
-from marshmallow import fields, post_dump, pre_load
+from marshmallow import fields
 
 from extrap.entities.callpath import Callpath, CallpathSchema
 from extrap.entities.measurement import Measure
@@ -23,8 +23,8 @@ from extrap.modelers.abstract_modeler import AbstractModeler, MultiParameterMode
 from extrap.modelers.modeler_options import modeler_options
 from extrap.modelers.postprocessing import PostProcess, PostProcessSchema
 from extrap.modelers.postprocessing.aggregation import Aggregation
-from extrap.util.exceptions import RecoverableError
 from extrap.util import deprecation
+from extrap.util.exceptions import RecoverableError
 from extrap.util.progress_bar import DUMMY_PROGRESS
 from extrap.util.serialization_schema import TupleKeyDict, BaseSchema
 
@@ -105,13 +105,16 @@ class ModelGenerator:
 
     def model_all(self, progress_bar=DUMMY_PROGRESS, auto_append=True):
         models = self._modeler.model(list(self.experiment.measurements.values()), progress_bar)
+        self.add_models(models, self.experiment.measurements, auto_append)
+
+    def add_models(self, models, measurements, auto_append=True):
         self.models = {
-            k: m for k, m in zip(self.experiment.measurements.keys(), models)
+            k: m for k, m in zip(measurements.keys(), models)
         }
         for (callpath, metric), model in self.models.items():
             model.callpath = callpath
             model.metric = metric
-            model.measurements = self.experiment.measurements[(callpath, metric)]
+            model.measurements = measurements[(callpath, metric)]
         if auto_append:
             # add the modeler with the results to the experiment
             self.experiment.add_modeler(self)

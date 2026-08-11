@@ -245,6 +245,44 @@ class TestHwcModeler(TestCaseWithFunctionAssertions):
         self.assertRaisesRegex(RecoverableError, r'Missing PAPI_TOT_INS, which is necessary for weighting\.',
                                hwcm.model, measurements[0:1])
 
+    def test_top_exponent(self):
+        measurements = self._prepare_measurements()
+        hwcm = HardwareCounterModeler()
+        hwcm.counter_selection_strategy = 'top_exponent'
+        models = hwcm.model(measurements)
+        time_model = None
+        for m in models:
+            if m.metric.name == 'time':
+                self.assertEqual(None, time_model)
+                time_model = m
+
+        self.assertEqual(2, len(time_model.hypothesis.function.compound_terms))
+        max_exponent = max(
+            (term.exponent for ct in time_model.hypothesis.function.compound_terms
+             for term in ct.simple_terms if term.term_type == 'polynomial'),
+            default=0
+        )
+        self.assertEqual(2, max_exponent)
+
+    def test_top_value(self):
+        measurements = self._prepare_measurements()
+        hwcm = HardwareCounterModeler()
+        hwcm.counter_selection_strategy = 'top_value'
+        models = hwcm.model(measurements)
+        time_model = None
+        for m in models:
+            if m.metric.name == 'time':
+                self.assertEqual(None, time_model)
+                time_model = m
+
+        self.assertEqual(3, len(time_model.hypothesis.function.compound_terms))
+        max_exponent = max(
+            (term.exponent for ct in time_model.hypothesis.function.compound_terms
+             for term in ct.simple_terms if term.term_type == 'polynomial'),
+            default=0
+        )
+        self.assertEqual(2, max_exponent)
+
     def test_hwc_modeler_tot_ins(self):
         measurements = self._prepare_measurements_tot_ins()
 
@@ -369,3 +407,40 @@ class TestHwcModeler(TestCaseWithFunctionAssertions):
         time_model.hypothesis.function.reset_coefficients()
         tot_ins_model.hypothesis.function.reset_coefficients()
         self.assertEqual(tot_ins_model.hypothesis.function, time_model.hypothesis.function)
+
+    def test_hwc_modeler_annotations(self):
+        measurements = self._prepare_measurements()
+        hwcm = HardwareCounterModeler()
+        hwcm.number_used_counters = 2
+        models = hwcm.model(measurements)
+
+        time_model = None
+        for m in models:
+            if m.metric.name == 'time':
+                time_model = m
+                break
+
+        self.assertIsNotNone(time_model)
+        self.assertEqual(1, len(time_model.annotations))
+        self.assertEqual('Counter Selection', time_model.annotations[0].NAME)
+        self.assertEqual('top_value', time_model.annotations[0].strategy)
+        self.assertEqual(2, len(time_model.annotations[0].counters))
+
+    def test_hwc_modeler_weighted_annotations(self):
+        measurements = self._prepare_measurements()
+        hwcm = HardwareCounterModeler()
+        hwcm.weighted_terms = True
+        hwcm.number_used_counters = 3
+        models = hwcm.model(measurements)
+
+        time_model = None
+        for m in models:
+            if m.metric.name == 'time':
+                time_model = m
+                break
+
+        self.assertIsNotNone(time_model)
+        self.assertEqual(1, len(time_model.annotations))
+        self.assertEqual('Counter Selection', time_model.annotations[0].NAME)
+        self.assertEqual('weighted', time_model.annotations[0].strategy)
+        self.assertGreater(len(time_model.annotations[0].counters), 0)

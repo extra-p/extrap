@@ -7,6 +7,7 @@
 
 import json
 import logging
+import warnings
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import Union
@@ -22,6 +23,7 @@ from extrap.fileio.file_reader import FileReader
 from extrap.fileio.file_reader.file_reader_mixin import TKeepValuesReader
 from extrap.fileio.file_reader.jsonlines_file_reader import read_jsonlines_file
 from extrap.fileio.io_helper import create_call_tree
+from extrap.util.dynamic_options import DynamicOptions
 from extrap.util.exceptions import FileFormatError
 from extrap.util.progress_bar import DUMMY_PROGRESS, ProgressBar
 
@@ -34,6 +36,7 @@ class JsonFileReader(FileReader, TKeepValuesReader):
     DESCRIPTION = "Load data from JSON or JSON Lines input file"
     FILTER = "JSON (Lines) Files (*.json *.jsonl);;All Files (*)"
     CMD_ARGUMENT = "--json"
+    allow_incomplete_measurements = DynamicOptions.add(False, bool)
 
     def read_experiment(self, path: Union[Path, str], progress_bar: ProgressBar = DUMMY_PROGRESS) -> Experiment:
         # read lines from json file
@@ -66,7 +69,11 @@ class JsonFileReader(FileReader, TKeepValuesReader):
         call_tree = create_call_tree(experiment.callpaths, progress_bar)
         experiment.call_tree = call_tree
 
-        io_helper.validate_experiment(experiment, progress_bar)
+        if self.allow_incomplete_measurements:
+            warnings.warn("You chose to disable the validation of the experiment to allow incomplete measurements. "
+                          "Please check if the models match your expectation.")
+        else:
+            io_helper.validate_experiment(experiment, progress_bar)
 
         return experiment
 
