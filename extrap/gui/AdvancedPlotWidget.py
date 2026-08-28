@@ -87,6 +87,9 @@ class AdvancedPlotWidget(AbstractPlotWidget):
             self.toolbar = MyCustomToolbar(self.graphDisplayWindow, self)
             self.grid.addWidget(self.graphDisplayWindow)
             self.grid.addWidget(self.toolbar)
+            controls_widget = self.graphDisplayWindow.get_controls_widget()
+            if controls_widget is not None:
+                self.grid.addWidget(controls_widget)
         else:
             self.graphDisplayWindow.redraw()
 

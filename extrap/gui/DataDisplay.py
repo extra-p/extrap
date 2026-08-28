@@ -27,6 +27,7 @@ from extrap.gui.plots.InterpolatedContourDisplayWidget import InterpolatedContou
 from extrap.gui.plots.IsolinesDisplayWidget import IsolinesDisplay
 from extrap.gui.plots.MaxZAsSingleSurfacePlotWidget import MaxZAsSingleSurfacePlot
 from extrap.gui.plots.MeasurementPointsPlotWidget import MeasurementPointsPlot
+from extrap.gui.plots.MultiParameterMeasurementPointsPlotWidget import MultiParameterMeasurementPointsPlot
 
 MIN_PARAM_VALUE = 0.01
 MAX_PARAM_VALUE = float("inf")
@@ -312,6 +313,7 @@ class DataDisplayManager(QWidget):
         # 6: IsolinesDisplayWidget
         # 7: InterpolatedContourDisplayWidget
         # 8: Measurement Points
+        # 9: MultiParameterMeasurementPointsPlotWidget
         if 0 in selectedCheckBoxesIndex:
             labelText = "Line graph"
             tabStatus = self.is_tab_already_opened(labelText)
@@ -327,7 +329,8 @@ class DataDisplayManager(QWidget):
             5: ("Heat map", HeatMapGraph),
             6: ("Contour plot", IsolinesDisplay),
             7: ("Interpolated contour", InterpolatedContourDisplay),
-            8: ("Measurement points", MeasurementPointsPlot)
+            8: ("Measurement points", MeasurementPointsPlot),
+            9: ("Measurement points (3 parameters)", MultiParameterMeasurementPointsPlot)
         }
 
         for i in selectedCheckBoxesIndex:
@@ -373,10 +376,10 @@ class DataDisplayManager(QWidget):
         old_value = self.axis_selections[index].getValue()
         for i in self.axis_selections:
             if i.index != index:
-                if i.getParameter().name == newName:
+                if i.getParameter().name == newName.name:
                     self.setMaxValue(index, i.getValue())
                     self.setMaxValue(i.index, old_value)
-                    i.switchParameter(oldName)
+                    i.switchParameter(oldName.name)
                     i.maxChanged()
                     self.axis_selections[index].maxChanged()
                     self.updateWidget()

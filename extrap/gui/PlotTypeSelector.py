@@ -22,7 +22,8 @@ class PlotTypeSelector(QDialog):
         plotTypes = ['Line graph', 'Selected models in same surface plot', 'Selected models in different surface plots',
                      'Dominating models in a 3D Scatter plot', 'Max z as a single surface plot',
                      'Dominating models and max z as heat map', 'Selected models in contour plot',
-                     'Selected models in interpolated contour plots', 'Measurement points']
+                     'Selected models in interpolated contour plots', 'Measurement points',
+                     'Measurement points (3 parameters)']
 
         layout = QVBoxLayout()
 
