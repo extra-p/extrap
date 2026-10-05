@@ -3,14 +3,14 @@
 **Automated performance modeling for HPC applications**
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/extrap?style=plastic)](https://badge.fury.io/py/extrap)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/extra-p/extrap?style=plastic)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/tuda-hpclab/extrap?style=plastic)
 [![PyPI version](https://badge.fury.io/py/extrap.png)](https://badge.fury.io/py/extrap)
 [![PyPI - License](https://img.shields.io/pypi/l/extrap?style=plastic)](https://badge.fury.io/py/extrap)
-![GitHub issues](https://img.shields.io/github/issues/extra-p/extrap?style=plastic)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/extra-p/extrap?style=plastic)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/extra-p/extrap/python-package.yml?style=plastic)
+![GitHub issues](https://img.shields.io/github/issues/tuda-hpclab/extrap?style=plastic)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/tuda-hpclab/extrap?style=plastic)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/tuda-hpclab/extrap/python-package.yml?style=plastic)
 
-[<img alt="Screenshot of Extra-P" src="https://github.com/extra-p/extrap/raw/master/docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
+[<img alt="Screenshot of Extra-P" src="https://github.com/tuda-hpclab/extrap/raw/master/docs/images/extra-p-2d.png" height="200" align="right" title="Screenshot of Extra-P"/>](docs/images/extra-p-2d.png)
 Extra-P is an automatic performance-modeling tool that supports the user in the identification of *scalability bugs*.
 A scalability bug is a part of the program whose scaling behavior is unintentionally poor,
 that is, much worse than expected. A performance model is a formula that expresses a performance metric of interest
