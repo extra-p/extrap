@@ -9,7 +9,8 @@ import dataclasses
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout, QComboBox
+from PySide6.QtWidgets import QDialog, QFormLayout, QFontComboBox, QSpinBox, QDialogButtonBox, QLayout, QComboBox, \
+    QCheckBox, QWidget, QHBoxLayout
 
 from extrap.gui.components.model_color_map import ModelColorMap
 
@@ -19,6 +20,9 @@ class PlotFormattingOptions:
     font_family: str = 'Arial'
     font_size: int = 10
     legend_font_size: int = 6
+    log_x: bool = False
+    log_y: bool = False
+    log_z: bool = False
 
 
 class PlotFormattingDialog(QDialog):
@@ -52,6 +56,20 @@ class PlotFormattingDialog(QDialog):
         self._colormap_selector.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         layout.addRow("Colormap", self._colormap_selector)
 
+        log_axes_widget = QWidget()
+        log_axes_layout = QHBoxLayout(log_axes_widget)
+        log_axes_layout.setContentsMargins(0, 0, 0, 0)
+        self._log_x_selector = QCheckBox("X")
+        self._log_x_selector.setChecked(self._options.log_x)
+        self._log_y_selector = QCheckBox("Y")
+        self._log_y_selector.setChecked(self._options.log_y)
+        self._log_z_selector = QCheckBox("Z")
+        self._log_z_selector.setChecked(self._options.log_z)
+        log_axes_layout.addWidget(self._log_x_selector)
+        log_axes_layout.addWidget(self._log_y_selector)
+        log_axes_layout.addWidget(self._log_z_selector)
+        layout.addRow("Logarithmic axes", log_axes_widget)
+
         _dialog_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         _dialog_buttons.accepted.connect(self.accept)
         _dialog_buttons.rejected.connect(self.reject)
@@ -64,5 +82,8 @@ class PlotFormattingDialog(QDialog):
         self._options.font_size = self._font_size_selector.value()
         self._options.legend_font_size = self._legend_font_size_selector.value()
         self._model_color_map.set_colormap(self._colormap_selector.currentText())
+        self._options.log_x = self._log_x_selector.isChecked()
+        self._options.log_y = self._log_y_selector.isChecked()
+        self._options.log_z = self._log_z_selector.isChecked()
 
         super().accept()

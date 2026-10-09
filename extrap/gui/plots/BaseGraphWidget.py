@@ -35,6 +35,7 @@ class GraphDisplayWindow(FigureCanvas):
                                   QSizePolicy.Expanding)
             super().updateGeometry()
             self.draw_figure()
+            self._apply_log_axes()
 
     def redraw(self):
         with matplotlib.rc_context({'font.family': self.main_widget.plot_formatting_options.font_family,
@@ -42,8 +43,58 @@ class GraphDisplayWindow(FigureCanvas):
             rotation = self._save_rotation()
             self.fig.clear()
             self.draw_figure()
+            self._apply_log_axes()
             self._restore_rotation(rotation)
             self.fig.canvas.draw_idle()
+
+    def _apply_log_axes(self):
+        """ Applies the logarithmic axis settings from the plot formatting options to every
+            plot Axes in the figure (skipping colorbars, which have no meaningful data scale).
+        """
+        options = self.main_widget.plot_formatting_options
+        for ax in self.fig.axes:
+            if ax.get_label() == '<colorbar>':
+                continue
+            ax.set_xscale('log' if options.log_x else 'linear')
+            ax.set_yscale('log' if options.log_y else 'linear')
+            if hasattr(ax, 'set_zscale'):
+                ax.set_zscale('log' if options.log_z else 'linear')
+
+    def get_controls_widget(self):
+        """ Returns an optional widget with extra, plot-specific controls (e.g. filters)
+            to be shown alongside the plot, or None if the plot has none.
+        """
+        return None
+
+    def redraw_preserving_limits(self):
+        """ Like redraw(), but keeps the current x/y/z axis limits (e.g. from a manual
+            zoom) instead of letting them auto-rescale to whatever is drawn this time.
+            Intended for redraws triggered by a pure display filter (show/hide something)
+            rather than by an actual change of the underlying data or its range.
+        """
+        limits = self._save_axis_limits()
+        self.redraw()
+        self._restore_axis_limits(limits)
+        self.fig.canvas.draw_idle()
+
+    def _save_axis_limits(self):
+        limits = []
+        for ax in self.fig.axes:
+            if ax.get_label() == '<colorbar>':
+                limits.append(None)
+                continue
+            limits.append((ax.get_xlim(), ax.get_ylim(), ax.get_zlim() if hasattr(ax, 'get_zlim') else None))
+        return limits
+
+    def _restore_axis_limits(self, limits):
+        for ax, entry in zip(self.fig.axes, limits):
+            if entry is None:
+                continue
+            xlim, ylim, zlim = entry
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            if zlim is not None and hasattr(ax, 'set_zlim'):
+                ax.set_zlim(zlim)
 
     def _save_rotation(self):
         return [(ax.elev, ax.azim) if isinstance(ax, Axes3D) else (None, None) for ax in self.fig.axes]
@@ -74,9 +125,12 @@ class GraphDisplayWindow(FigureCanvas):
         pixelGap = (upperlimit - lowerlimit) / numberOfPixels
         return pixelGap
 
-    def calculate_z_optimized(self, X, Y, function):
+    def calculate_z_optimized(self, X, Y, function, param_overrides=None):
         """
            This function evaluates the function passed to it.
+           param_overrides can be used to override the fixed value of a non-axis
+           parameter (e.g. to evaluate the model at a specific value of a third
+           parameter instead of the one selected in the UI).
         """
         xs, ys = X.reshape(-1), Y.reshape(-1)
         points = np.ndarray((len(self.main_widget.data_display.parameters), len(xs)))
@@ -84,6 +138,9 @@ class GraphDisplayWindow(FigureCanvas):
         parameter_value_list = self.main_widget.data_display.getValues()
         for p, v in parameter_value_list.items():
             points[p] = v
+        if param_overrides:
+            for p, v in param_overrides.items():
+                points[p] = v
         param1 = self.main_widget.data_display.getAxisParameter(0).id
         param2 = self.main_widget.data_display.getAxisParameter(1).id
         if param1 >= 0:
